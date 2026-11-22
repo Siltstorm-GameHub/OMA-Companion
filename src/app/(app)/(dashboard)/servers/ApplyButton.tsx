@@ -82,10 +82,10 @@ export default function ApplyButton({
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Kurze Nachricht (optional)"
           rows={2}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-white/20 resize-none"
+          className="bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-line-strong resize-none"
         />
         <div className="flex gap-2 justify-end">
-          <button onClick={() => setShowMessageBox(false)} className="text-xs px-2.5 py-1.5 rounded-lg text-gray-500 hover:bg-white/8 transition-colors">
+          <button onClick={() => setShowMessageBox(false)} className="text-xs px-2.5 py-1.5 rounded-lg text-gray-500 hover:bg-line transition-colors">
             Abbrechen
           </button>
           <button onClick={apply} disabled={loading}

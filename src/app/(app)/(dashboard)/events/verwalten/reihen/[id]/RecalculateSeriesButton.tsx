@@ -63,7 +63,7 @@ export default function RecalculateSeriesButton({ seriesId, finishedCount }: { s
         {busy ? "Wird neu berechnet…" : `Abgeschlossene Events neu berechnen (${finishedCount})`}
       </button>
       {result && (
-        <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2 text-xs text-gray-300 space-y-1">
+        <div className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-gray-300 space-y-1">
           <p>{result.recalculated} Event{result.recalculated === 1 ? "" : "s"} neu berechnet. Änderungen insgesamt:</p>
           <p className="text-gray-400">
             Tabellenpunkte {signed(result.delta.tablePoints)} · Münzen {signed(result.delta.coins)} · Rang-Punkte {signed(result.delta.rankPoints)}

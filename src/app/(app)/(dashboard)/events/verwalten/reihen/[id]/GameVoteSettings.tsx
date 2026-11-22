@@ -62,7 +62,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
     }
   }
 
-  const input = "w-20 bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "w-20 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-teal-500/40";
   const num = (k: keyof typeof GAME_VOTE_LIMITS) => (
     <input type="number" min={GAME_VOTE_LIMITS[k][0]} max={GAME_VOTE_LIMITS[k][1]} value={cfg[k]} className={input}
       onChange={e => set(k, Number(e.target.value))} />
@@ -114,7 +114,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
           <label className="flex flex-wrap items-center gap-2">
             Zwischenstand zeigen:
             <select value={cfg.showCounts} onChange={e => set("showCounts", e.target.value as GameVoteConfig["showCounts"])}
-              className="bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-xs text-white">
+              className="bg-line border border-line-strong rounded-lg px-2 py-1 text-xs text-white">
               <option value="always">immer</option>
               <option value="after_vote">erst nach der eigenen Stimme</option>
               <option value="after_end">erst nach dem Ende</option>
@@ -126,7 +126,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
       <Button size="sm" onClick={save} disabled={saving}>Speichern</Button>
 
       {initial.enabled && upcoming.length > 0 && (
-        <div className="border-t border-white/[0.06] pt-3 space-y-2">
+        <div className="border-t border-line pt-3 space-y-2">
           <p className="text-xs text-gray-400">Kommende Termine ohne Spielwahl:</p>
           {upcoming.map(e => (
             <div key={e.id} className="flex items-center gap-3 text-xs">

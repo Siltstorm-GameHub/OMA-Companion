@@ -63,7 +63,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
                       <span className="text-xs text-amber-400 font-semibold flex items-center gap-0.5 tabular-nums">+{quest.reward}<CoinIcon size={10} /></span>
                     </div>
                   </div>
-                  <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-line rounded-full overflow-hidden">
                     <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -79,7 +79,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
           <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Swords className="w-3.5 h-3.5" /> Turnier-Ergebnisse
           </h2>
-          <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+          <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-line">
             {tournamentParticipations.map(p => {
               const myMatches = p.event.matches;
               const wins      = myMatches.filter(m => m.winnerId === userId).length;
@@ -100,8 +100,8 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
                   </div>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
                     p.finalRank === 1  ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                    p.eliminated       ? "bg-white/[0.04] text-gray-500 border-white/[0.06]" :
-                                         "bg-white/[0.04] text-gray-400 border-white/[0.06]"
+                    p.eliminated       ? "bg-line text-gray-500 border-line" :
+                                         "bg-line text-gray-400 border-line"
                   }`}>
                     {p.finalRank === 1 ? <><WinIcon size={11} /> Sieger</> : p.eliminated ? "Ausgeschieden" : "Aktiv"}
                   </span>

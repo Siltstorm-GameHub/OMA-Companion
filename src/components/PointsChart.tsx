@@ -17,7 +17,7 @@ interface Props {
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass rounded-xl px-3 py-2 text-xs border border-white/10 shadow-xl">
+    <div className="glass rounded-card px-3 py-2 text-xs border border-line-strong shadow-xl">
       <p className="text-gray-400 mb-0.5">{label}</p>
       <p className="text-amber-400 font-bold">{payload[0].value.toLocaleString("de-DE")} Pts</p>
     </div>

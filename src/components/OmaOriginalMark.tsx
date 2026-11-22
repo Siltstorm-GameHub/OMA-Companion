@@ -42,7 +42,7 @@ export default function OmaOriginalMark({ variant = "chip", className = "" }: { 
 export function OmaOriginalSeal({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 shrink-0 rounded-full pl-0.5 pr-3 py-0.5 border border-teal-400/60 bg-black/70 backdrop-blur-sm shadow-[0_1px_8px_rgba(0,0,0,0.5)] whitespace-nowrap ${className}`}
+      className={`inline-flex items-center gap-2 shrink-0 rounded-full pl-0.5 pr-3 py-0.5 border border-teal-400/60 bg-black/70 shadow-card whitespace-nowrap ${className}`}
       title="Eigenes Event der Old Masters Allies"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}

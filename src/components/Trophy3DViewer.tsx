@@ -134,7 +134,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
           type="button"
           onClick={() => setZoomOpen(true)}
           aria-label={`${current.title} vergrößert ansehen`}
-          className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-black/20 border border-white/[0.08] hover:border-amber-400/40 transition-colors group/mini"
+          className="relative shrink-0 w-24 h-24 rounded-xl overflow-hidden bg-black/20 border border-line hover:border-amber-400/40 transition-colors group/mini"
         >
           <TrophyCanvas item={current} interactive={false} />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/mini:bg-black/30 transition-colors pointer-events-none">
@@ -166,13 +166,13 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
         <div className="flex items-center gap-3 px-4 pb-4">
           <button onClick={() => go(-1)}
             aria-label="Vorheriger Pokal"
-            className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-white/[0.08] transition-colors">
+            className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-line border border-line text-gray-300 hover:bg-line transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <p className="flex-1 text-center text-[10px] text-gray-600 tabular-nums">Pokal {clampedIndex + 1} von {count}</p>
           <button onClick={() => go(1)}
             aria-label="Nächster Pokal"
-            className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-white/[0.08] transition-colors">
+            className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-line border border-line text-gray-300 hover:bg-line transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

@@ -306,7 +306,7 @@ export default function FfaView({
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[300px]">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
+                  <tr className="border-b border-line text-[10px] text-gray-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
                     {(!isAvg || showAvgFieldCols) && statFields.map(f => (
@@ -328,7 +328,7 @@ export default function FfaView({
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-line">
                   {ranked.map((r, i) => {
                     const isMe   = r.userId === userId;
                     const avgT     = avgTotals.get(r.userId);
@@ -340,7 +340,7 @@ export default function FfaView({
                     const eventLigapunkte = ligaPunkteByUser[r.userId] ?? 0;
                     const winnerBonusIfWon = projectedWinnerBonusByUser[r.userId] ?? 0;
                     return (
-                      <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
+                      <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-surface-2"}`}>
                         <td className="px-4 py-3 text-center">
                           {place <= 3
                             ? <span className="text-base">{MEDAL[place - 1]}</span>
@@ -366,7 +366,7 @@ export default function FfaView({
                               </span>
                             )}
                             {excludedSet.has(r.userId) && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
                                 Ungewertet
                               </span>
                             )}
@@ -519,7 +519,7 @@ export default function FfaView({
           </h2>
           <div className="space-y-2">
             {upcomingMatches.map(match => (
-              <div key={match.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+              <div key={match.id} className="glass rounded-card px-4 py-3 flex items-center gap-3">
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
                     <p className="text-sm font-bold text-white">{getBerlinDateParts(match.scheduledAt).day}</p>
@@ -542,14 +542,14 @@ export default function FfaView({
                     const isMe = e.userId === userId;
                     return u ? (
                       <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${
-                        isMe ? "border-rose-700 text-rose-300 bg-rose-900/20" : "border-white/10 text-gray-400 glass-heavy"
+                        isMe ? "border-rose-700 text-rose-300 bg-rose-900/20" : "border-line-strong text-gray-400 glass-heavy"
                       }`}>
                         {uname(u)}
                       </span>
                     ) : null;
                   })}
                   {match.entries.length > 4 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full border border-white/10 text-gray-500">
+                    <span className="text-xs px-2 py-0.5 rounded-full border border-line-strong text-gray-500">
                       +{match.entries.length - 4}
                     </span>
                   )}
@@ -587,9 +587,9 @@ export default function FfaView({
               }
 
               return (
-                <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-white/5"}`}>
+                <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-line"}`}>
                   <button
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] text-left"
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-2 text-left"
                     onClick={() => toggle(match.id)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -627,10 +627,10 @@ export default function FfaView({
                   </button>
 
                   {isExp && (
-                    <div className="border-t border-white/5 overflow-x-auto">
+                    <div className="border-t border-line overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider bg-white/[0.02]">
+                          <tr className="border-b border-line text-[10px] text-gray-500 uppercase tracking-wider bg-surface-2">
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
                             {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>
@@ -640,7 +640,7 @@ export default function FfaView({
                             )}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y divide-line">
                           {[...match.entries]
                             .sort((a, b) => isAvg
                               // Richtung wie im Gesamtranking, Einträge ohne Werte immer ans Ende
@@ -653,7 +653,7 @@ export default function FfaView({
                               const isWinner = isAvg && !!e.userId && matchWinnerIds.has(e.userId);
                               const avg    = isAvg ? entryAvg(e.statsJson, statFields) : null;
                               return (
-                                <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-white/[0.02]"}`}>
+                                <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-surface-2"}`}>
                                   <td className="px-4 py-2.5">
                                     <div className="flex items-center gap-1.5">
                                       {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}

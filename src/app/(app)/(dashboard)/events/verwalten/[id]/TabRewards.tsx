@@ -24,7 +24,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
           {!event.series && (
             <>
               {/* Teilnahme */}
-              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+              <div className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <CoinIcon size={16} />
                   <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
@@ -49,7 +49,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
 
               {/* Platzierungen (nur Turniere) */}
               {hasPlacement && (
-              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+              <div className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
                 <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
                   <span />

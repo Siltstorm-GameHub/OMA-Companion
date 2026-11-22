@@ -12,8 +12,8 @@ import { NumberInput } from "@/components/ui/NumberInput";
 /** Umfrage im Editor — `locked` = es gibt schon Stimmen, dann nicht mehr änderbar. */
 export type PollDraft = PollInput & { locked?: boolean };
 
-const INPUT = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
-const SMALL = "bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
+const INPUT = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
 
 export function emptyPoll(): PollDraft {
   return { question: "", kind: "opinion", options: ["", ""], correctIndex: null, participationReward: 0, correctReward: 0, closesAt: null };
@@ -39,7 +39,7 @@ export default function PostPollEditor({
   const set = (patch: Partial<PollDraft>) => p && onChange({ ...p, ...patch });
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02]">
+    <div className="rounded-lg border border-line-strong bg-surface-2">
       <button type="button" onClick={onToggle} aria-expanded={open}
         className="w-full px-3 py-2 flex items-center justify-between text-left text-[11px] text-gray-400 hover:text-white">
         <span className="inline-flex items-center gap-1.5"><Vote className="w-3.5 h-3.5" /> Umfrage{p ? `: ${p.question || "ohne Frage"}` : ""}</span>

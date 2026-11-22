@@ -15,7 +15,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
             Umfrage
           </h2>
           {!isPollOnly && !isFinishedSummary && pollsConfig.length > 0 && (
-            <p className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-xs text-gray-300">
+            <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 text-xs text-gray-300">
               Nach dem Abschluss {pollsConfig.length === 1 ? "startet die Umfrage" : "starten die Umfragen"}{" "}
               {pollsConfig.map(pc => `„${pc.label || pc.question}“`).join(", ")}. Die Sieger-Belohnung wird nach Ablauf
               automatisch vergeben, du musst danach nichts mehr tun.
@@ -69,7 +69,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                         <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
                           pollExcluded.has(u.id)
                             ? "bg-red-900/30 border border-red-700/40 text-red-300"
-                            : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:border-white/20"
+                            : "bg-surface-2 border border-line text-gray-400 hover:border-line-strong"
                         }`}>
                           <input
                             type="checkbox"

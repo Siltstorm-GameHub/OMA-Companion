@@ -68,11 +68,11 @@ export default function EventHowTo({ steps }: { steps: HowToStep[] }) {
         {steps.map((s, i) => (
           <li key={s.key} className={`flex items-start gap-2 rounded-xl px-3 py-2 sm:flex-1 sm:min-w-[10rem] border ${
             s.state === "current" ? "border-teal-400/40 bg-teal-400/[0.07]"
-              : s.state === "done" ? "border-white/[0.06] bg-white/[0.02] opacity-75"
-                : "border-white/[0.06]"
+              : s.state === "done" ? "border-line bg-surface-2 opacity-75"
+                : "border-line"
           }`}>
             <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-              s.state === "done" ? "bg-teal-400/20 text-teal-300" : s.state === "current" ? "bg-teal-400 text-teal-950" : "bg-white/[0.06] text-gray-400"
+              s.state === "done" ? "bg-teal-400/20 text-teal-300" : s.state === "current" ? "bg-teal-400 text-teal-950" : "bg-line text-gray-400"
             }`}>
               {s.state === "done" ? <Check className="w-3 h-3" /> : i + 1}
             </span>

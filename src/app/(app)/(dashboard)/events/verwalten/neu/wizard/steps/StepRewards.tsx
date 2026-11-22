@@ -14,7 +14,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
   const { eventType, spectatorMode, seriesMode, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll, rewardLimits: lim } = w;
   if (w.isBlocksChallenge) {
     return (
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm text-gray-300">
+      <div className="rounded-xl p-4 border border-line bg-surface-2 text-sm text-gray-300">
         Bei einer OMA-Blocks-Challenge gibt es keine Platzierungen — die Belohnung für alle mit Mindestbeitrag
         hast du schon in den Grunddaten festgelegt. Sie wird nach dem Ende automatisch ausgezahlt, wenn das Ziel erreicht ist.
       </div>
@@ -22,7 +22,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
   }
   return (
     <div className="space-y-6">
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2">
         <div className="flex items-center gap-2 mb-3">
           <Image src="/Muenze Icon.png" alt="Münzen" width={20} height={20} />
           <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
@@ -59,7 +59,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
       {eventType === "community" ? (
         <p className="text-[11px] text-gray-500 -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
       ) : (
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2">
         <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
           Platzierungs-Belohnungen
           <InfoTooltip text="Münzen und Rang-Punkte, die je nach Endplatzierung im Turnier vergeben werden (🥇 1. Platz, 🥈 2. Platz, 🥉 3. Platz). Wird erst vergeben, wenn das Event/Turnier abgeschlossen und die finale Platzierung eingetragen ist." />

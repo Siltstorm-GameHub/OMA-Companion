@@ -61,7 +61,7 @@ export default function PayoutsClient() {
     <div className="space-y-6">
       <section className="space-y-2">
         <h2 className={LABEL}>Nächster Lauf (Vorschau)</h2>
-        <div className="glass rounded-xl p-3 space-y-2">
+        <div className="glass rounded-card p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" loading={previewBusy} onClick={loadPreview}>Vorschau berechnen</Button>
             <Button size="sm" variant="danger" loading={runBusy} disabled={!preview || preview.pendingCount === 0} onClick={runNow}>Jetzt ausführen (nur Admin)</Button>
@@ -73,7 +73,7 @@ export default function PayoutsClient() {
                 Woche {formatBerlinDate(preview.weekStart)} – {formatBerlinDate(new Date(new Date(preview.weekEnd).getTime() - 1))}:{" "}
                 <span className="text-white font-semibold">{preview.pendingCount}</span> offen, zusammen <span className="text-white font-semibold">{preview.pendingCoins}</span> Münzen
               </p>
-              <div className="max-h-72 overflow-y-auto divide-y divide-white/[0.04]">
+              <div className="max-h-72 overflow-y-auto divide-y divide-line">
                 {preview.rows.map((r, i) => (
                   <div key={i} className="py-1.5 flex items-center justify-between gap-3 text-xs">
                     <span className="text-gray-200 truncate">{r.user} <span className="text-gray-600">· {getCommunityJob(r.jobKey)?.label ?? r.jobKey}</span></span>
@@ -91,7 +91,7 @@ export default function PayoutsClient() {
 
       <section className="space-y-2">
         <h2 className={LABEL}>Täglicher Lauf (letzte 10)</h2>
-        <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+        <div className="glass rounded-card overflow-hidden divide-y divide-line">
           {runs === null && <div className="p-4"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>}
           {runs?.length === 0 && <p className="p-4 text-xs text-gray-600">Noch kein Lauf protokolliert (wird ab dem nächsten Cron-Lauf aufgezeichnet).</p>}
           {runs?.map(r => (
@@ -111,14 +111,14 @@ export default function PayoutsClient() {
         {weeks === null && <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
         {weeks?.length === 0 && <p className="text-xs text-gray-600">Noch keine Auszahlungen.</p>}
         {weeks?.map(w => (
-          <div key={w.weekStart} className="glass rounded-xl p-3 space-y-2">
+          <div key={w.weekStart} className="glass rounded-card p-3 space-y-2">
             <p className="text-xs text-white font-semibold">Woche ab {formatBerlinDate(w.weekStart)} <span className="text-gray-500 font-normal">· {w.totalCoins} Münzen gesamt</span></p>
             <div className="space-y-1.5">
               {w.jobs.map(j => (
                 <div key={j.jobKey} className="text-xs flex flex-wrap items-center justify-between gap-2">
                   <span className="text-gray-200">{j.label} <span className="text-gray-500">· {j.paid} {j.paid === 1 ? "Mitglied" : "Mitglieder"}, {j.coins} Münzen{j.zero > 0 ? `, ${j.zero} ohne Gehalt` : ""}</span></span>
                   <span className="flex flex-wrap gap-1">
-                    {j.tiers.map(t => <span key={t.label} className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">{t.label}: {t.count}</span>)}
+                    {j.tiers.map(t => <span key={t.label} className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">{t.label}: {t.count}</span>)}
                   </span>
                 </div>
               ))}

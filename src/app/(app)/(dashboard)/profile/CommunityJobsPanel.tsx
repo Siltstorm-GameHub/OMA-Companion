@@ -134,14 +134,14 @@ export default function CommunityJobsPanel() {
         </span>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto bg-gray-900 border border-white/5 rounded-xl p-1" role="tablist" aria-label="Job auswählen">
+      <div className="flex gap-1 overflow-x-auto bg-gray-900 border border-line rounded-xl p-1" role="tablist" aria-label="Job auswählen">
         {overview.catalog.map(job => {
           const Icon = JOB_ICONS[job.key] ?? Briefcase;
           const active = job.key === jobKey;
           return (
             <button key={job.key} role="tab" aria-selected={active} onClick={() => selectJob(job.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
+                active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
               }`}>
               <Icon className={`w-3.5 h-3.5 ${active ? "text-teal-400" : "text-gray-600"}`} />
               {job.label}
@@ -221,7 +221,7 @@ function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountP
 const SWITCH_ON = "bg-teal-500 text-black shadow-sm";
 const SWITCH_OFF = "text-gray-300 hover:text-white";
 const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
-const CALM_CHIP = "text-gray-300 bg-white/[0.06] border-white/10";
+const CALM_CHIP = "text-gray-300 bg-line border-line-strong";
 
 interface Recommendations {
   events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string; trainingSessionId?: string }[];
@@ -334,7 +334,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   return (
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/[0.04] flex items-center gap-2.5">
+      <div className="p-4 border-b border-line flex items-center gap-2.5">
         <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4 text-teal-400" />
         </div>
@@ -345,7 +345,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       </div>
 
       {/* Dashboard */}
-      <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
+      <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
         <DashTile tone="blue" icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche"
           value={latestPayout ? `${latestPayout.coinsAwarded} Münzen` : "–"}
           sub={latestPayout ? (latestPayout.tierLabel ?? "Keine Bewertung") : undefined} />
@@ -365,9 +365,9 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 
       {/* Anleitung */}
       {jobGuide && (
-        <div className="border-b border-white/[0.04]">
+        <div className="border-b border-line">
           <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
-            className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-white/[0.02] transition-colors">
+            className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-surface-2 transition-colors">
             <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
               <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dieser Job
             </span>
@@ -393,7 +393,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-white/[0.04]" role="tablist">
+      <div className="flex border-b border-line" role="tablist">
         {([["work", "Arbeit", recCount], ["pay", "Gehalt", 0]] as const).map(([key, label, count]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
             className={`flex-1 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest transition-colors border-b-2 ${
@@ -408,7 +408,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       <>
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0 || (recs.xboxDeals?.length ?? 0) > 0 || (recs.gamePassNew?.length ?? 0) > 0 || (recs.gamePassLeaving?.length ?? 0) > 0) && (
-        <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-4">
+        <div className="p-4 border-b border-line bg-blue-500/[0.02] space-y-4">
           <SectionHeader tone="blue" icon={<Lightbulb className="w-3.5 h-3.5" />} title="Empfehlungen für deine Beiträge" />
 
           {recs.events.length > 0 && (() => {
@@ -425,7 +425,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
                 <div className="space-y-1.5">
                   {visibleEvents.map(e => (
-                    <div key={e.eventId} className="flex items-center gap-3 rounded-xl bg-white/[0.03] border border-white/[0.05] px-3 py-2.5">
+                    <div key={e.eventId} className="flex items-center gap-3 rounded-xl bg-surface-2 border border-line px-3 py-2.5">
                       {e.urgency && (
                         <span className={`shrink-0 min-w-[3.25rem] text-center text-[10px] font-semibold rounded-lg px-2 py-1 border ${
                           e.urgent ? URGENT_CHIP : CALM_CHIP
@@ -490,7 +490,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                       : <Rocket className="w-3.5 h-3.5 text-blue-400" />} {activeDef.title}
                   </p>
                   {available.length > 1 && (
-                    <div className="flex flex-wrap rounded-2xl bg-white/[0.06] border border-white/15 p-0.5 text-xs font-semibold gap-0.5" role="tablist">
+                    <div className="flex flex-wrap rounded-2xl bg-line border border-line-strong p-0.5 text-xs font-semibold gap-0.5" role="tablist">
                       {available.map(t => (
                         <button key={t.key} role="tab" aria-selected={activeTab === t.key} onClick={() => setFeedTab(t.key)}
                           className={`px-3.5 py-1.5 rounded-full transition-colors ${activeTab === t.key ? SWITCH_ON : SWITCH_OFF}`}>
@@ -503,7 +503,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                   {items.map(s => (
                     <div key={`${activeTab}-${s.id}`}
-                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.06] hover:border-teal-500/30 transition-colors flex flex-col">
+                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-surface-2 border border-line hover:border-teal-500/30 transition-colors flex flex-col">
                       <a href={s.url} target="_blank" rel="noopener noreferrer" className="block">
                         <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
                           {s.headerImage && (
@@ -538,12 +538,12 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 
       {/* Aktive Community-Server */}
       {onlineServers.length > 0 && (
-        <div className="p-4 border-b border-white/[0.04] space-y-2">
+        <div className="p-4 border-b border-line space-y-2">
           <SectionHeader tone="teal" icon={<ServerIcon className="w-3.5 h-3.5" />} title="Aktive Community-Server" />
           <div className="space-y-1">
             {onlineServers.map(s => (
               <Link key={s.id} href="/servers"
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-surface-2 hover:bg-line transition-colors">
                 <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-300 truncate">{s.name}</p>
@@ -560,7 +560,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       )}
 
       {/* Werkzeuge */}
-      <div className="p-4 border-b border-white/[0.04] space-y-3">
+      <div className="p-4 border-b border-line space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
           action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
         <JobToolContent key={`${toolsKey}-${workKey}`} jobKey={workKey} coachSelf={coachSelf} onDuplicate={p => openCreateForm(undefined, p)} onCompose={openCreateForm} />
@@ -583,7 +583,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         const posPct = (v: number) => (span > 0 ? Math.min(100, Math.max(0, ((v - minV) / span) * 100)) : 0);
         const fillPct = posPct(ownVotes);
         return (
-          <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
+          <div className="p-4 border-b border-line bg-amber-500/[0.025] space-y-2.5">
             <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
             <p className="text-[11px] text-gray-500 leading-relaxed">
               Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
@@ -599,7 +599,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                   // nicht mehr zueinander passen. Stattdessen wird nur das Label je Marker an den
                   // Rändern per Ankerpunkt (0%/-50%/-100%) so verschoben, dass es nicht übersteht.
                   <div className="relative pt-3 pb-5">
-                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-2 rounded-full bg-line overflow-hidden">
                       <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
                         style={{ width: `${fillPct}%` }} />
                     </div>
@@ -644,7 +644,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             {payouts.map((p, i) => {
               const weekLabel = `${formatBerlinDate(new Date(p.weekStart))} – ${formatBerlinDate(new Date(new Date(p.weekEnd).getTime() - 1))}`;
               return (
-                <div key={p.id} className={`text-xs rounded-lg px-2.5 py-1.5 space-y-0.5 ${i === 0 ? "bg-white/[0.04]" : ""}`}>
+                <div key={p.id} className={`text-xs rounded-lg px-2.5 py-1.5 space-y-0.5 ${i === 0 ? "bg-line" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-gray-500">{weekLabel}</span>
                     <span className={`font-medium ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
@@ -789,13 +789,13 @@ function EditDeleteBar({
 /** Kleine quadratische Vorschau für Bild-Beiträge (Fotograf-Assets, Marketing-Posts) — macht die
  * sonst reinen Text-Zeilen in "Werkzeuge" auf einen Blick erkennbar statt nur an der Caption. */
 function Thumb({ url }: { url: string | null }) {
-  if (!url) return <div className="w-8 h-8 rounded-md bg-white/[0.04] border border-white/10 shrink-0" />;
+  if (!url) return <div className="w-8 h-8 rounded-md bg-line border border-line-strong shrink-0" />;
   if (isVideoUrl(url)) {
-    return <video src={url} muted playsInline className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0" />;
+    return <video src={url} muted playsInline className="w-8 h-8 rounded-md object-cover border border-line-strong shrink-0" />;
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element -- kleine Listen-Vorschau beliebiger Blob-URLs
-    <img src={url} alt="" className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0" />
+    <img src={url} alt="" className="w-8 h-8 rounded-md object-cover border border-line-strong shrink-0" />
   );
 }
 
@@ -923,7 +923,7 @@ function defaultTrainingStart(): string {
   return toLocalInput(d);
 }
 
-const INPUT_CLS = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
+const INPUT_CLS = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
 
 function MeetingLink({ url }: { url?: string | null }) {
   if (!url) return null;
@@ -1024,7 +1024,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Termine</p>
           {mine.map(s => editing === s.id ? (
-            <div key={s.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+            <div key={s.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" className={`w-full ${INPUT_CLS}`} />
               <div className="flex flex-wrap items-center gap-2">
                 <input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} className={INPUT_CLS} />
@@ -1156,7 +1156,7 @@ function CoachRatingsReceived() {
   if (!items) return null;
   const average = items.length > 0 ? items.reduce((sum, r) => sum + r.stars, 0) / items.length : 0;
   return (
-    <div className="pt-3 mt-3 border-t border-white/[0.04] space-y-1.5">
+    <div className="pt-3 mt-3 border-t border-line space-y-1.5">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Bewertungen</p>
         {items.length > 0 && <Button size="sm" variant="ghost" onClick={() => setDisputeOpen(true)}>Ansehen/Anfechten</Button>}
@@ -1225,14 +1225,14 @@ function IdeaList() {
   return (
     <div className="space-y-1.5">
       {items.map(i => editing === i.id ? (
-        <div key={i.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+        <div key={i.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
           <input value={title} onChange={e => setTitle(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+            className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
+            className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white resize-none" />
           {i._count.votes > 0 && (
             <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200} placeholder="Was hast du geändert? (alle Bewerter werden informiert und dürfen neu bewerten)"
-              className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600" />
+              className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600" />
           )}
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
@@ -1320,13 +1320,13 @@ function GuideForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-3">
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Titel, z.B. „Erste Schritte in R6 Siege“"
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <div className="space-y-1">
         <GameNameInput value={game} onChange={v => setGame(v.slice(0, 40))} placeholder="Spiel (optional) — sein Cover erscheint bei deiner Anleitung"
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       </div>
       <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
           <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
@@ -1395,9 +1395,9 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
   return (
     <div className="space-y-3">
       <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titel"
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Text" rows={5}
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       {prefill?.link && (
         <p className="text-[11px] text-gray-500 flex items-center gap-1">
           <Tag className="w-3 h-3" /> Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.
@@ -1409,12 +1409,12 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             <label className="space-y-1 text-[11px] text-gray-500">
               Beginn
               <input type="datetime-local" value={startAt} min={toLocalInput(new Date())} onChange={e => setStartAt(e.target.value)}
-                className="block bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
+                className="block bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
             </label>
             <label className="space-y-1 text-[11px] text-gray-500">
               Plätze (optional)
               <NumberInput min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
-                className="block w-28 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+                className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
             </label>
           </div>
           <div className="flex flex-wrap items-end gap-3">
@@ -1439,7 +1439,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             </label>
           </div>
           <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} maxLength={300} placeholder="Treffpunkt-Link (optional, z.B. Discord-Voice-Kanal)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
           {channels.length > 0 && (
             <Select value={channelId} onChange={e => setChannelId(e.target.value)} className="w-full">
               <option value="">Keine Discord-Ankündigung</option>

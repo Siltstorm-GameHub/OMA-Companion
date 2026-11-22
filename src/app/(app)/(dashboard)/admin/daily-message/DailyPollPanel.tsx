@@ -249,21 +249,21 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
           <label className="text-xs text-gray-400 mb-1.5 block">Titel</label>
           <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             maxLength={80} placeholder="z.B. Welches Spiel spielen wir nächstes Event?"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors" />
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors" />
         </div>
 
         <div>
           <label className="text-xs text-gray-400 mb-1.5 block">Frage</label>
           <textarea required value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
             maxLength={300} rows={2} placeholder="Die Frage, die alle beantworten sollen …"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none" />
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none" />
         </div>
 
         {/* Event-Verknüpfung */}
         <div>
           <label className="text-xs text-gray-400 mb-1.5 block">Zu einem Event (optional)</label>
           <select value={form.eventId} onChange={e => setForm(f => ({ ...f, eventId: e.target.value }))}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors">
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors">
             <option value="" className="bg-gray-900">Kein Event, nur Startseite</option>
             {/* Beim Bearbeiten älterer Umfragen: verknüpftes Event auch dann anbieten, wenn es nicht mehr in der Auswahl ist */}
             {editId && form.eventId && !events.some(ev => ev.id === form.eventId) && (
@@ -299,7 +299,7 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
                   value={o.label}
                   onChange={e => updateOption(i, { label: e.target.value, gameName: null, steamAppId: null })}
                   placeholder={`Option ${i + 1} (Text oder Spieltitel)`}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+                  className="flex-1 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
                 />
                 <div className="w-56 shrink-0">
                   <PollOptionGameInput
@@ -333,13 +333,13 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
             <label className="text-xs text-gray-400 mb-1.5 block">Anzeigen ab</label>
             <input required type="datetime-local" value={form.startDate}
               onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
+              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
           </div>
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block">Anzeigen bis</label>
             <input required type="datetime-local" value={form.endDate}
               onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
+              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
           </div>
         </div>
 
@@ -389,7 +389,7 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
           </label>
           <NumberInput min={0} value={form.rewardCoins}
             onChange={e => setForm(f => ({ ...f, rewardCoins: Math.max(0, parseInt(e.target.value) || 0) }))}
-            className="w-32 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
+            className="w-32 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors" />
         </div>
 
         <button type="submit" disabled={saving}
@@ -423,11 +423,11 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
                   <p className="text-sm font-semibold text-white leading-snug">{p.title}</p>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => toggleActive(p)} title={p.isActive ? "Deaktivieren" : "Aktivieren"}
-                      className={`p-1.5 rounded-md transition-colors ${p.isActive ? "text-purple-400 hover:bg-purple-500/10" : "text-gray-600 hover:bg-white/5"}`}>
+                      className={`p-1.5 rounded-md transition-colors ${p.isActive ? "text-purple-400 hover:bg-purple-500/10" : "text-gray-600 hover:bg-line"}`}>
                       {p.isActive ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                     </button>
                     <button onClick={() => startEdit(p)}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
+                      className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-line transition-colors">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => handleDelete(p.id)} disabled={deleting === p.id}
@@ -461,13 +461,13 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
                 </div>
 
                 {expandedId === p.id && p.votes.length > 0 && (
-                  <div className="mt-2.5 space-y-1.5 border-t border-white/5 pt-2.5">
+                  <div className="mt-2.5 space-y-1.5 border-t border-line pt-2.5">
                     {p.votes.map(v => (
                       <div key={v.id} className="flex items-center gap-2 text-[11px]">
                         {v.user.image ? (
                           <img src={v.user.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                         ) : (
-                          <div className="w-5 h-5 rounded-full bg-white/10 shrink-0" />
+                          <div className="w-5 h-5 rounded-full bg-line shrink-0" />
                         )}
                         <span className="text-gray-300 font-medium shrink-0">{v.user.username ?? v.user.name ?? "Unbekannt"}</span>
                         <span className="text-gray-600 truncate flex-1 min-w-0">{voteAnswerText(v, p.options)}</span>

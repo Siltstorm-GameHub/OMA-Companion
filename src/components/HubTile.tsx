@@ -44,19 +44,19 @@ export default function HubTile({
 
   return (
     <section aria-label={ariaLabel}
-      className={`surface flex h-full flex-col overflow-hidden rounded-lg border ${highlighted ? a.borderStrong : a.border} shadow-[0_4px_24px_rgba(0,0,0,0.45)] ${className}`}>
+      className={`surface flex h-full flex-col overflow-hidden rounded-card border ${highlighted ? a.borderStrong : a.border} shadow-card ${className}`}>
       <div className="relative aspect-video shrink-0 overflow-hidden">{media}</div>
 
       <div className="flex h-[64px] shrink-0 items-center gap-3 px-3.5">{main}</div>
 
       <ul className="shrink-0">
         {filled.map(r => (
-          <li key={r.key} className="h-[34px] border-t border-white/[0.05]">
+          <li key={r.key} className="h-[34px] border-t border-line">
             <RowInner row={r} hover={a.hover} />
           </li>
         ))}
         {filled.length < 2 && (
-          <li className={`border-t border-white/[0.05] ${filled.length === 0 ? "h-[68px]" : "h-[34px]"}`}>
+          <li className={`border-t border-line ${filled.length === 0 ? "h-[68px]" : "h-[34px]"}`}>
             <Link href={placeholderRow.href} className={`flex h-full items-center px-3.5 text-[11px] text-gray-500 transition-colors ${a.hover} hover:text-gray-300`}>
               {placeholderRow.label}
             </Link>
@@ -65,7 +65,7 @@ export default function HubTile({
       </ul>
 
       <Link href={footer.href}
-        className={`mt-auto flex h-[38px] shrink-0 items-center justify-between border-t border-white/[0.05] px-3.5 text-[11px] font-semibold ${a.footer} transition-colors ${a.hover}`}>
+        className={`mt-auto flex h-[38px] shrink-0 items-center justify-between border-t border-line px-3.5 text-[11px] font-semibold ${a.footer} transition-colors ${a.hover}`}>
         <span>{footer.label}</span>
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>

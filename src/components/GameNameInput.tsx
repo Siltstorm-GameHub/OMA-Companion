@@ -221,7 +221,6 @@ export default function GameNameInput({
           style={{
             background: "rgba(13,13,18,0.98)",
             border: "1px solid rgba(255,255,255,0.1)",
-            backdropFilter: "blur(16px)",
           }}
         >
           {/* Ladezustand */}

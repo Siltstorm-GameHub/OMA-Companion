@@ -171,7 +171,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
 
       <Modal open={open} onClose={handleClose} size="drawer">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-line shrink-0">
           {avatarSrc ? (
             <img src={avatarSrc} alt="" className="w-9 h-9 rounded-full ring-1 ring-white/10 shrink-0" />
           ) : (
@@ -183,14 +183,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             <p className="font-semibold text-white truncate">{displayName}</p>
             <p className="text-xs text-gray-500">Admin · Verlauf & Anpassung</p>
           </div>
-          <button onClick={handleClose} aria-label="Schließen" className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+          <button onClick={handleClose} aria-label="Schließen" className="p-2 rounded-lg hover:bg-line text-gray-500 hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Stats bar */}
         {user && (
-          <div className="grid grid-cols-2 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
+          <div className="grid grid-cols-2 gap-px bg-line border-b border-line shrink-0">
             {[
               { label: "Münzen",         value: user.points.toLocaleString("de-DE"),     color: "text-amber-400", coin: true },
               { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400",  coin: false },
@@ -207,7 +207,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         )}
 
         {/* Tabs */}
-        <div className="px-4 py-2.5 border-b border-white/[0.06] shrink-0">
+        <div className="px-4 py-2.5 border-b border-line shrink-0">
           <Tabs
             variant="pill"
             active={tab}
@@ -223,15 +223,15 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         {tab === "history" && (
           <>
             {/* Filter */}
-            <div className="flex gap-1 px-4 py-2 border-b border-white/[0.06] shrink-0">
+            <div className="flex gap-1 px-4 py-2 border-b border-line shrink-0">
               {(["all", "pos", "neg"] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                     filter === f
-                      ? "bg-white/[0.08] text-white"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                      ? "bg-line text-white"
+                      : "text-gray-500 hover:text-gray-300 hover:bg-line"
                   }`}
                 >
                   {f === "all" ? `Alle (${transactions.length})` :
@@ -256,15 +256,15 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
               )}
               {!loading && grouped.map(([month, txs]) => (
                 <div key={month}>
-                  <div className="flex items-center gap-3 px-4 py-2 sticky top-0 bg-gray-950/95 backdrop-blur-sm z-10">
+                  <div className="flex items-center gap-3 px-4 py-2 sticky top-0 bg-gray-950/95 z-10">
                     <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{month}</span>
-                    <div className="flex-1 h-px bg-white/[0.04]" />
+                    <div className="flex-1 h-px bg-line" />
                     <span className="text-[10px] text-gray-600 tabular-nums">
                       {txs.reduce((s, t) => s + t.amount, 0) > 0 ? "+" : ""}
                       {txs.reduce((s, t) => s + t.amount, 0).toLocaleString("de-DE")}
                     </span>
                   </div>
-                  <div className="divide-y divide-white/[0.03]">
+                  <div className="divide-y divide-line">
                     {txs.map(tx => {
                       const isPos   = tx.amount > 0;
                       const isRank  = isRankPointsTx(tx.reason);
@@ -279,7 +279,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                         : (isPos ? "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/15"  : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15");
 
                       return (
-                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors">
                           {/* Typ-Icon */}
                           <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-base leading-none ${iconBg}`}>
                             {isRank ? "🏆" : <img src="/Muenze Icon.png" alt="Münzen" width={18} height={18} style={{ objectFit: "contain" }} />}
@@ -317,7 +317,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             </div>
 
             {!loading && transactions.length > 0 && (
-              <div className="px-4 py-3 border-t border-white/[0.06] shrink-0">
+              <div className="px-4 py-3 border-t border-line shrink-0">
                 <p className="text-[10px] text-gray-600 text-center">
                   {transactions.length} Transaktionen · max. 200 angezeigt
                 </p>
@@ -343,14 +343,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                 min="0"
                 value={editCoins}
                 onChange={e => setEditCoins(e.target.value)}
-                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
                 placeholder="Neuer Münzen-Stand"
               />
               <input
                 type="text"
                 value={reasonCoins}
                 onChange={e => setReasonCoins(e.target.value)}
-                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/20"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/20"
                 placeholder="Grund (optional) – z.B. LUL Season 1 Münzen"
               />
             </div>
@@ -368,14 +368,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                 min="0"
                 value={editRank}
                 onChange={e => setEditRank(e.target.value)}
-                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
                 placeholder="Neuer Rang-Punkte-Stand"
               />
               <input
                 type="text"
                 value={reasonRank}
                 onChange={e => setReasonRank(e.target.value)}
-                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/20"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/20"
                 placeholder="Grund (optional) – z.B. LUL Season 1 Platz 3"
               />
             </div>
@@ -390,7 +390,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                     onChange={e => setClearHistory(e.target.checked)}
                     className="sr-only"
                   />
-                  <div className={`w-4 h-4 rounded border transition-colors ${clearHistory ? "bg-red-500 border-red-500" : "bg-white/[0.05] border-white/[0.15]"} flex items-center justify-center`}>
+                  <div className={`w-4 h-4 rounded border transition-colors ${clearHistory ? "bg-red-500 border-red-500" : "bg-line border-line-strong"} flex items-center justify-center`}>
                     {clearHistory && <Trash2 className="w-2.5 h-2.5 text-white" />}
                   </div>
                 </div>
@@ -421,7 +421,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             {user && (
               <button
                 onClick={() => { setEditCoins(String(user.points)); setEditRank(String(user.rankPoints)); setClearHistory(false); }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-gray-500 hover:text-gray-300 hover:bg-line transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" /> Auf aktuelle Werte zurücksetzen
               </button>

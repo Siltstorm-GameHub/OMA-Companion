@@ -218,7 +218,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
               <Plus className="w-4 h-4" /> Neues Event
             </Link>
           ) : (
-            <span className="rounded-lg border border-white/[0.08] px-3 py-1.5 text-sm text-gray-500">
+            <span className="rounded-lg border border-line px-3 py-1.5 text-sm text-gray-500">
               <Plus className="inline w-4 h-4 -mt-0.5" /> Neues Event
             </span>
           )}
@@ -228,7 +228,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
               <Plus className="w-4 h-4" /> Neue Eventreihe
             </Link>
           ) : (
-            <span className="rounded-lg border border-white/[0.08] px-3 py-1.5 text-sm text-gray-500">
+            <span className="rounded-lg border border-line px-3 py-1.5 text-sm text-gray-500">
               <Plus className="inline w-4 h-4 -mt-0.5" /> Neue Eventreihe
             </span>
           )}
@@ -238,7 +238,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
             {VIEWS.map((v) => (
               <Link key={v.key} href={v.href} aria-current={v.key === view ? "true" : undefined}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  v.key === view ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                  v.key === view ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                 }`}>
                 {v.label}
               </Link>

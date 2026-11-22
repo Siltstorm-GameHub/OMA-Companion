@@ -45,7 +45,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
 
       {/* Namen-Liste einfügen (z.B. aus Discord kopiert) statt einzeln zu suchen */}
       {pasteImportOpen && (
-        <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+        <div className="rounded-lg border border-line bg-surface-2 p-3 space-y-2">
           <p className="text-[11px] text-gray-500">
             Namen oder Usernamen einfügen, getrennt durch Zeilenumbruch oder Komma. Gefundene Mitglieder werden als Spieler ausgewählt.
           </p>
@@ -74,7 +74,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-400">Als Spieler:</span>
               {bulkSelected.map(id => (
-                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-gray-200">
+                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-line px-2 py-0.5 text-xs text-gray-200">
                   {nameOf(id)}
                   <button type="button" aria-label={`${nameOf(id)} abwählen`} onClick={() => setBulkSelected(prev => prev.filter(x => x !== id))}>
                     <X className="w-3 h-3 text-gray-500 hover:text-white" />
@@ -91,7 +91,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-400">Als Zuschauer:</span>
               {bulkSelectedSpectators.map(id => (
-                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-gray-200">
+                <span key={id} className="inline-flex items-center gap-1 rounded-full bg-line px-2 py-0.5 text-xs text-gray-200">
                   {nameOf(id)}
                   <button type="button" aria-label={`${nameOf(id)} abwählen`} onClick={() => setBulkSelectedSpectators(prev => prev.filter(x => x !== id))}>
                     <X className="w-3 h-3 text-gray-500 hover:text-white" />
@@ -184,7 +184,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
 
       {/* Angemeldete Zuschauer */}
       {ctx.spectatorMode && (
-        <div className="pt-2 border-t border-white/[0.05]">
+        <div className="pt-2 border-t border-line">
           <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest mb-1.5">
             👁️ Zuschauer ({spectatorIds.size})
           </p>

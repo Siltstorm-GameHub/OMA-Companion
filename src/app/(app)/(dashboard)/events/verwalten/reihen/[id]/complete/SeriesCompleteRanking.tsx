@@ -57,8 +57,8 @@ export default function SeriesCompleteRanking({ ctx }: { ctx: SeriesComplete }) 
                       onDragStart={() => onDragStart(idx)}
                       onDragOver={e => onDragOver(e, idx)}
                       onDragEnd={() => setDragIdx(null)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border transition-colors cursor-grab active:cursor-grabbing ${
-                        isTied ? "border-blue-500/30 bg-blue-500/[0.04]" : "border-white/[0.05]"
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-2 border transition-colors cursor-grab active:cursor-grabbing ${
+                        isTied ? "border-blue-500/30 bg-blue-500/[0.04]" : "border-line"
                       } ${dragIdx === idx ? "opacity-50" : ""}`}
                     >
                       <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />

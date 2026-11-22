@@ -22,7 +22,7 @@ const SCALAR_FIELDS: { key: ScalarKey; label: string }[] = [
   { key: "goalSeriesPoints",       label: "Community-Ziel: Tabellenpunkte je Belohntem" },
 ];
 
-const inputCls = "w-full bg-gray-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-teal-500/50 disabled:opacity-60";
+const inputCls = "w-full bg-gray-900 border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-teal-500/50 disabled:opacity-60";
 
 function NumberField({ label, value, onChange, disabled, step = 1 }: {
   label: string; value: number; onChange: (v: number) => void; disabled: boolean; step?: number;

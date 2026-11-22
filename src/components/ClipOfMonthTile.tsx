@@ -42,7 +42,7 @@ function TwitchIcon({ className }: { className?: string }) {
 
 function Pill({ children }: { children: ReactNode }) {
   return (
-    <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-[#0b0d12]/90 px-2 py-1 text-[11px] font-semibold text-violet-300 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+    <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-canvas px-2 py-1 text-[11px] font-semibold text-violet-300 shadow-card">
       {children}
     </span>
   );
@@ -125,7 +125,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
           {winners.length > 1 && <> · Gleichstand mit {winners.length - 1}</>}
         </p>
       </div>
-      <Link href="/clip-des-monats" className={`${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`}>
+      <Link href="/clip-des-monats" className={`${BTN} border border-line bg-line text-gray-300 hover:bg-line`}>
         <Play className="w-3 h-3" fill="currentColor" /> Ansehen
       </Link>
     </>
@@ -135,7 +135,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
         <p className="truncate text-[15px] font-bold text-white leading-tight">Noch keine Clips</p>
         <p className="truncate text-[11px] text-gray-400">Reich deinen besten Moment ein.</p>
       </div>
-      <Link href="/clip-des-monats" className={`${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`}>Ansehen</Link>
+      <Link href="/clip-des-monats" className={`${BTN} border border-line bg-line text-gray-300 hover:bg-line`}>Ansehen</Link>
     </>
   );
 

@@ -34,7 +34,7 @@ export default function ProfileLoading() {
           <div className="space-y-2">
             <Skeleton className="h-3 w-28" />
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="glass rounded-xl p-4 space-y-2">
+              <div key={i} className="glass rounded-card p-4 space-y-2">
                 <div className="flex justify-between">
                   <Skeleton className="h-4 w-40" />
                   <Skeleton className="h-4 w-16" />
@@ -45,7 +45,7 @@ export default function ProfileLoading() {
           </div>
         </div>
         <div className="space-y-5">
-          <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+          <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex justify-between items-center px-4 py-3">
                 <Skeleton className="h-3.5 w-28" />

@@ -51,7 +51,7 @@ export default function SquadsListClient({ squads, isAdmin }: { squads: Squad[];
     <div className="space-y-4">
       {isAdmin && (
         creating ? (
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+          <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-gray-500 block mb-1">Name</label>
@@ -94,7 +94,7 @@ export default function SquadsListClient({ squads, isAdmin }: { squads: Squad[];
           {squads.map(s => (
             <Link key={s.id} href={`/admin/squads/${s.id}`}
               className={`rounded-xl p-4 border transition-colors ${
-                s.hidden ? "border-white/[0.06] bg-white/[0.01] opacity-70" : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
+                s.hidden ? "border-line bg-surface-2 opacity-70" : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <div className="flex items-center gap-2 mb-1">
                 <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />

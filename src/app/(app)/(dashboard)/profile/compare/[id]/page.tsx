@@ -37,7 +37,7 @@ function StatBar({ labelA, labelB, valA, valB, colorA = "bg-rose-500", colorB = 
         <span className={`font-bold ${valA >= valB ? "text-white" : "text-gray-500"}`}>{valA.toLocaleString("de-DE")}</span>
         <span className={`font-bold ${valB >= valA ? "text-white" : "text-gray-500"}`}>{valB.toLocaleString("de-DE")}</span>
       </div>
-      <div className="h-2 rounded-full overflow-hidden flex bg-white/[0.05]">
+      <div className="h-2 rounded-full overflow-hidden flex bg-line">
         <div className={`${colorA} transition-all duration-700`} style={{ width: `${pctA}%` }} />
         <div className={`${colorB} flex-1 transition-all duration-700`} />
       </div>
@@ -107,8 +107,6 @@ export default async function CompareProfilePage({
 
       {/* Header */}
       <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/8 via-transparent to-blue-500/8 pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
 
         <div className="relative flex items-center justify-between gap-4">
           <Avatar user={me}       accent="ring-rose-500/30" />
@@ -120,7 +118,7 @@ export default async function CompareProfilePage({
                 <p className="text-gray-500">Rang</p>
                 <p className="font-bold text-white">#{myRank}</p>
               </div>
-              <div className="w-px bg-white/[0.06]" />
+              <div className="w-px bg-line" />
               <div className="text-center">
                 <p className="text-gray-500">Rang</p>
                 <p className="font-bold text-white">#{oppRank}</p>

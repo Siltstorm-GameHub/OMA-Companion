@@ -9,7 +9,7 @@ export default function RankingTabs({ tabs }: { tabs: { key: string; label: stri
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="font-display text-lg font-bold text-white">Rangliste</h2>
-        <div className="flex rounded-lg bg-white/[0.04] p-0.5 text-xs font-semibold">
+        <div className="flex rounded-lg bg-line p-0.5 text-xs font-semibold">
           {tabs.map((t) => (
             <button
               key={t.key}

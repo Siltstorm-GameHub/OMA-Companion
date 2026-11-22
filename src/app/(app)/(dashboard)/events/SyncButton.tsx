@@ -40,7 +40,7 @@ export default function SyncButton() {
     <button
       onClick={handleSync}
       disabled={loading}
-      className="flex items-center gap-2 glass hover:bg-white/[0.06] disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all border border-white/[0.08] hover:border-white/[0.15]"
+      className="flex items-center gap-2 glass hover:bg-line disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-card transition-all border border-line hover:border-line-strong"
     >
       <Upload className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
       {loading ? "Wird gepusht..." : "Zu Discord pushen"}

@@ -116,7 +116,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                         {GENRES.map(g => (
                           <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
                             className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                              genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                              genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                             }`}>
                             <AppIcon kind="genre" name={g.value} size={28} />
                             <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
@@ -214,7 +214,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
                   placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
               </div>
-              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02]">
+              <div className="rounded-lg border border-line bg-surface-2">
                 <button type="button" onClick={() => setPartnersOpen(o => !o)} aria-expanded={partnersOpen}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left">
                   <Tv2 className="w-4 h-4 text-[#9146ff]" />
@@ -224,7 +224,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   </span>
                 </button>
                 {partnersOpen && (
-                  <div className="border-t border-white/[0.06] px-3 py-2 space-y-1.5">
+                  <div className="border-t border-line px-3 py-2 space-y-1.5">
                     {!partnersLoaded ? (
                       <p className="text-xs text-gray-600">Lädt…</p>
                     ) : allPartners.length === 0 ? (
@@ -257,7 +257,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
           {/* ── Rechte Spalte: Vorschau, Sichtbarkeit, Erweitert ── */}
           <aside className="space-y-4 min-w-0">
             <Panel title="So sieht es aus">
-              <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+              <div className="overflow-hidden rounded-xl border border-line bg-surface-2">
                 <div className="relative">
                   <GameCover game={game || title} coverUrl={coverImageUrl || null} className="w-full aspect-[1200/630]" rounded="rounded-none" fallbackVariant="plain" />
                   <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
@@ -315,7 +315,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   {STATUS_OPTIONS.map(s => (
                     <button key={s} type="button" onClick={() => pickStatus(s)}
                       className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                        status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
+                        status === s ? STATUS_STYLES[s] : "text-gray-600 border-line hover:text-gray-400"
                       }`}>
                       {STATUS_LABELS_DE[s]}
                     </button>

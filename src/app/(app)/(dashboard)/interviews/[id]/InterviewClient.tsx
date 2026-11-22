@@ -65,7 +65,7 @@ export default function InterviewClient({ interview }: { interview: Interview })
             {canAnswer ? (
               <textarea value={answers[i]} onChange={e => setAnswers(a => a.map((x, j) => (j === i ? e.target.value : x)))} rows={3} maxLength={1500}
                 placeholder="Deine Antwort (leer lassen, wenn du nicht antworten möchtest)"
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+                className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
             ) : (
               <p className="text-sm text-gray-300 whitespace-pre-line">{interview.answers[i] || <span className="text-gray-600">—</span>}</p>
             )}

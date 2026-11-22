@@ -158,7 +158,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
               placeholder="Spielname, z.B. Rocket League"
               aria-label="Spielname"
               maxLength={MAX_GAME_NAME_LENGTH}
-              className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
+              className="w-full bg-line border border-line-strong rounded-xl pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
             />
             {searching && <Loader2 className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />}
           </div>
@@ -189,7 +189,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Bei Steam gefunden</p>
               {result.steam.map(s => s.existingSlug ? (
                 <Link key={s.appId} href={`/spiele/${s.existingSlug}`} onClick={onClose}
-                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] opacity-70 hover:opacity-100 transition-opacity">
+                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
                   <span className="flex-1 min-w-0 text-sm text-gray-300 truncate">{s.name}</span>
@@ -197,7 +197,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                 </Link>
               ) : (
                 <button key={s.appId} type="button" onClick={() => pick({ steamAppId: s.appId }, s.name)}
-                  className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
+                  className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
                   <span className="flex-1 min-w-0 text-sm text-white truncate">{s.name}</span>
@@ -223,13 +223,13 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                 );
                 return g.existingSlug ? (
                   <Link key={g.igdbId} href={`/spiele/${g.existingSlug}`} onClick={onClose}
-                    className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] opacity-70 hover:opacity-100 transition-opacity">
+                    className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
                     {inner}
                     <span className="text-[11px] text-gray-500 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
                   </Link>
                 ) : (
                   <button key={g.igdbId} type="button" onClick={() => pick({ igdbId: g.igdbId }, g.name)}
-                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-white/[0.06] hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
+                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
                     {inner}
                     <Plus className="w-4 h-4 text-teal-400 shrink-0" />
                   </button>
@@ -247,7 +247,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
           {result && (
             <button type="button" onClick={startManual}
-              className="w-full text-left rounded-xl px-3 py-2.5 border border-dashed border-white/10 hover:border-white/25 text-sm text-gray-400 hover:text-white transition-colors">
+              className="w-full text-left rounded-xl px-3 py-2.5 border border-dashed border-line-strong hover:border-white/25 text-sm text-gray-400 hover:text-white transition-colors">
               {result.steam.length === 0 && result.igdb.length === 0 && result.local.length === 0 && !result.steamError && <span className="block text-xs text-gray-500 mb-0.5">Nichts gefunden.</span>}
               „{trimmed}“ ohne Steam eintragen <span className="text-gray-600">(z.B. Konsolen-, Handy- oder Brettspiele)</span>
             </button>
@@ -288,7 +288,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                   onChange={e => setStep({ ...step, name: e.target.value.slice(0, MAX_GAME_NAME_LENGTH) })}
                   aria-label="Spielname"
                   placeholder="Spielname"
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40"
+                  className="w-full bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40"
                 />
               )}
               {step.description && <p className="text-xs text-gray-400 mt-1 line-clamp-3">{step.description}</p>}
@@ -306,7 +306,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
           <GameFieldsForm value={fields} onChange={setFields} sources={step.sources} showDescription={!step.description} />
 
-          <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
             <Button variant="ghost" onClick={back} icon={<ArrowLeft className="w-4 h-4" />}>Zurück</Button>
             <Button onClick={submit} loading={saving} disabled={!step.name.trim()} icon={<Plus className="w-4 h-4" />}>Hinzufügen</Button>
           </div>

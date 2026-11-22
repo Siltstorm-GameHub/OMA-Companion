@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Square } from "@/components/icons";
 import { ShieldAlert, LogIn } from "@/components/icons";
 import { ExternalLink, CheckSquare } from "@/components/icons";
-import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 const RULES = [
   {
@@ -51,13 +50,12 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: "var(--bg-base, #080c18)" }}>
-      <AnimatedBackground />
 
       <div className="relative z-10 w-full max-w-lg">
 
         {/* Header */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-[0_0_28px_rgba(244,63,94,0.25)] ring-1 ring-rose-500/30 mb-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-rose-500/30 mb-4">
             <Image src="/brand/logo-256.png" alt="OMA" width={56} height={56} className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center gap-2 mb-2">
@@ -71,13 +69,13 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
         </div>
 
         {/* Rules Card */}
-        <div className="glass card-shine rounded-2xl overflow-hidden mb-4">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
+        <div className="glass rounded-2xl overflow-hidden mb-4">
+          <div className="px-5 py-4 border-b border-line">
             <h2 className="text-sm font-bold text-white">Serverregeln</h2>
             <p className="text-xs text-gray-500 mt-0.5">Lies die Regeln sorgfältig durch, bevor du beitrittst.</p>
           </div>
 
-          <div className="divide-y divide-white/[0.04] max-h-72 overflow-y-auto">
+          <div className="divide-y divide-line max-h-72 overflow-y-auto">
             {RULES.map(rule => (
               <div key={rule.number} className="px-5 py-3.5 flex gap-3">
                 <span className="text-xs font-bold text-rose-500/70 shrink-0 w-6 mt-0.5">{rule.number}</span>
@@ -92,7 +90,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
           {/* Checkbox */}
           <button
             onClick={() => setAccepted(a => !a)}
-            className="w-full flex items-center gap-3 px-5 py-4 border-t border-white/[0.06] hover:bg-white/[0.02] transition-colors text-left"
+            className="w-full flex items-center gap-3 px-5 py-4 border-t border-line hover:bg-surface-2 transition-colors text-left"
           >
             {accepted
               ? <CheckSquare className="w-5 h-5 text-teal-400 shrink-0" />
@@ -114,8 +112,8 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
               aria-disabled={!accepted}
               className={`flex items-center justify-center gap-2.5 w-full py-3.5 px-6 rounded-xl font-bold text-sm transition-all duration-200 ${
                 accepted
-                  ? "bg-indigo-500 hover:bg-indigo-400 text-white shadow-[0_0_24px_rgba(99,102,241,0.3)] hover:shadow-[0_0_32px_rgba(99,102,241,0.45)] hover:-translate-y-0.5 active:translate-y-0"
-                  : "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed pointer-events-none"
+                  ? "bg-indigo-500 hover:bg-indigo-400 text-white hover:-translate-y-0.5 active:translate-y-0"
+                  : "bg-line text-gray-600 border border-line cursor-not-allowed pointer-events-none"
               }`}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 shrink-0">
@@ -125,7 +123,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
               <ExternalLink className="w-3.5 h-3.5 opacity-60" />
             </a>
           ) : (
-            <div className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-gray-600">
+            <div className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-surface-2 border border-line text-xs text-gray-600">
               Kein Einladungslink konfiguriert — wende dich an einen Admin.
             </div>
           )}
@@ -133,7 +131,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
           <button
             onClick={handleLogin}
             disabled={loggingIn}
-            className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl text-sm font-medium text-gray-400 hover:text-white border border-white/[0.06] hover:border-white/[0.12] transition-colors disabled:opacity-50"
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl text-sm font-medium text-gray-400 hover:text-white border border-line hover:border-line-strong transition-colors disabled:opacity-50"
           >
             <LogIn className="w-4 h-4" />
             {loggingIn ? "Weiterleitung…" : "Bereits beigetreten? Jetzt einloggen"}

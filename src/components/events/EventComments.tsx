@@ -171,7 +171,7 @@ export default function EventComments({
             </div>
 
             {data.locked ? (
-              <p className="shrink-0 border-t border-white/5 px-4 py-3 text-xs text-gray-500">🔒 Die Absprachen zu diesem Event sind geschlossen.</p>
+              <p className="shrink-0 border-t border-line px-4 py-3 text-xs text-gray-500">🔒 Die Absprachen zu diesem Event sind geschlossen.</p>
             ) : (
               <Composer eventId={eventId} onSent={async () => { stickToBottom.current = true; await load(); }} />
             )}
@@ -235,7 +235,7 @@ function PinnedItem({ c, eventId, canPin, onChange }: { c: EventCommentDTO; even
       {canPin && (
         <button type="button" title="Lösen" aria-label="Nachricht lösen"
           onClick={() => api(`/api/events/${eventId}/comments/${c.id}`, "PATCH", { pinned: false }).then(onChange).catch(e => toast.error(e.message))}
-          className="shrink-0 p-1 rounded-lg text-amber-200/60 hover:text-white hover:bg-white/10">
+          className="shrink-0 p-1 rounded-lg text-amber-200/60 hover:text-white hover:bg-line">
           <X className="w-3.5 h-3.5" />
         </button>
       )}
@@ -270,7 +270,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
   };
 
   return (
-    <div className={`group relative flex gap-2.5 rounded-xl px-1.5 ${grouped ? "pt-0.5 pb-1" : "pt-2 pb-1"} hover:bg-white/[0.02]`}>
+    <div className={`group relative flex gap-2.5 rounded-xl px-1.5 ${grouped ? "pt-0.5 pb-1" : "pt-2 pb-1"} hover:bg-surface-2`}>
       <div className="w-7 shrink-0">
         {!grouped && <RankedAvatar userId={c.user.id} src={c.user.image} alt={c.user.name} size={28} variant="flat" />}
       </div>
@@ -287,7 +287,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
         {editing ? (
           <div className="space-y-1.5">
             <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={2} autoFocus
-              className="w-full rounded-lg bg-black/30 border border-white/10 px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/50" />
+              className="w-full rounded-lg bg-black/30 border border-line-strong px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/50" />
             <div className="flex gap-2 text-xs">
               <button type="button" disabled={busy} onClick={() => run(async () => { await api(base, "PATCH", { content: draft }); setEditing(false); })}
                 className="px-2.5 py-1 rounded-lg bg-teal-500 text-teal-950 font-semibold disabled:opacity-50">Speichern</button>
@@ -307,7 +307,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
               <button key={r.emoji} type="button" disabled={locked || busy} title={r.users.join(", ")}
                 onClick={() => run(() => api(`${base}/reactions`, "POST", { emoji: r.emoji }))}
                 className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
-                  r.mine ? "bg-teal-500/15 border-teal-500/40 text-teal-200" : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.06]"}`}>
+                  r.mine ? "bg-teal-500/15 border-teal-500/40 text-teal-200" : "bg-surface-2 border-line-strong text-gray-300 hover:bg-line"}`}>
                 <span>{r.emoji}</span><span className="tabular-nums">{r.count}</span>
               </button>
             ))}
@@ -317,7 +317,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
           <div className="flex gap-1 mt-1">
             {REACTION_EMOJIS.map(e => (
               <button key={e} type="button" onClick={() => { setPicker(false); run(() => api(`${base}/reactions`, "POST", { emoji: e })); }}
-                className="text-base w-8 h-8 rounded-lg hover:bg-white/10 active:scale-95">{e}</button>
+                className="text-base w-8 h-8 rounded-lg hover:bg-line active:scale-95">{e}</button>
             ))}
           </div>
         )}
@@ -325,7 +325,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
 
       {/* Aktionen: Desktop beim Hover, mobil dezent immer sichtbar */}
       {!locked && !editing && (
-        <div className="flex items-start gap-0.5 shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity sm:absolute sm:right-1 sm:top-1 sm:rounded-lg sm:bg-[#121418]/95 sm:border sm:border-white/10">
+        <div className="flex items-start gap-0.5 shrink-0 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity sm:absolute sm:right-1 sm:top-1 sm:rounded-lg sm:bg-[#121418]/95 sm:border sm:border-line-strong">
           <IconBtn label="Reagieren" onClick={() => setPicker(p => !p)}><Smile className="w-3.5 h-3.5" /></IconBtn>
           {canPin && (
             <IconBtn label={c.pinned ? "Lösen" : "Anpinnen"} onClick={() => run(async () => {
@@ -350,7 +350,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
 function IconBtn({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" title={label} aria-label={label} onClick={onClick}
-      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10">
+      className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-line">
       {children}
     </button>
   );
@@ -375,12 +375,12 @@ function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
     ? summary.late.map(l => `${l.name}${l.lateMin ? ` (+${l.lateMin} min)` : ""}`)
     : openKey ? summary[openKey] : [];
   return (
-    <div className="shrink-0 border-b border-white/5 px-3 py-2 bg-white/[0.015]">
+    <div className="shrink-0 border-b border-line px-3 py-2 bg-surface-2">
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         <span className="text-[11px] text-gray-500 mr-1">Rückmeldungen ({total} Spieler):</span>
         {items.filter(i => i.count > 0).map(i => (
           <button key={i.key} type="button" onClick={() => setOpenKey(k => (k === i.key ? null : i.key))} aria-expanded={openKey === i.key}
-            className={`px-2 py-1 rounded-lg border transition-colors ${openKey === i.key ? "bg-white/10 border-white/25" : "border-white/10 hover:bg-white/[0.05]"} ${i.tone}`}>
+            className={`px-2 py-1 rounded-lg border transition-colors ${openKey === i.key ? "bg-line border-white/25" : "border-line-strong hover:bg-line"} ${i.tone}`}>
             {i.icon} {i.count} {i.label}
           </button>
         ))}
@@ -427,16 +427,16 @@ export function StatusBar({ eventId, myStatus, isPlayer, readyOpensAt, onPosted,
 
   const chip = (active: boolean) =>
     `text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 ${
-      active ? "bg-white/10 border-white/25 text-white" : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.07]"}`;
+      active ? "bg-line border-white/25 text-white" : "bg-surface-2 border-line-strong text-gray-300 hover:bg-line"}`;
 
   return (
-    <div className={compact ? "" : "shrink-0 border-b border-white/5 px-3 py-2.5"}>
+    <div className={compact ? "" : "shrink-0 border-b border-line px-3 py-2.5"}>
       <div className="flex flex-wrap items-center gap-1.5">
         {!compact && <span className="text-[11px] text-gray-500 mr-1">Kurz Bescheid geben:</span>}
         <button type="button" disabled={busy} onClick={() => setLateOpen(o => !o)} className={chip(myStatus?.status === "late")}>⏰ Komme später</button>
         <button type="button" disabled={busy} onClick={() => post("absent")} className={chip(myStatus?.status === "absent")}>❌ Kann nicht</button>
         {readyLocked(readyOpensAt) ? (
-          <span className="text-xs px-2.5 py-1.5 rounded-lg border border-white/5 text-gray-500" title="„Bin bereit“ ist erst 30 Minuten vor Eventbeginn möglich">
+          <span className="text-xs px-2.5 py-1.5 rounded-lg border border-line text-gray-500" title="„Bin bereit“ ist erst 30 Minuten vor Eventbeginn möglich">
             ⏳ Bereit ab {formatBerlinTime(readyOpensAt!)} Uhr
           </span>
         ) : (
@@ -530,12 +530,12 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
   }
 
   return (
-    <div className="relative shrink-0 border-t border-white/5 p-2.5">
+    <div className="relative shrink-0 border-t border-line p-2.5">
       {mentionQuery && results.length > 0 && (
-        <div className="absolute bottom-full left-2.5 right-2.5 mb-1 glass-heavy rounded-xl border border-white/10 overflow-hidden z-20">
+        <div className="absolute bottom-full left-2.5 right-2.5 mb-1 glass-heavy rounded-card border border-line-strong overflow-hidden z-20">
           {results.map(u => (
             <button key={u.id} type="button" onMouseDown={e => { e.preventDefault(); pickMention(u); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-white hover:bg-white/10">
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-white hover:bg-line">
               <RankedAvatar userId={u.id} src={u.image} alt={u.username ?? u.name ?? ""} size={20} variant="flat" />
               {u.username ?? u.name}
             </button>
@@ -554,7 +554,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
             }
             if (e.key === "Escape") setMentionQuery(null);
           }}
-          className="block flex-1 min-w-0 min-h-10 resize-none rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
+          className="block flex-1 min-w-0 min-h-10 resize-none rounded-xl bg-black/30 border border-line-strong px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
         <button type="button" onClick={send} disabled={sending || !text.trim() || visibleLength > COMMENT_MAX_LENGTH}
           aria-label="Senden"
           className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-teal-500 text-teal-950 hover:bg-teal-400 disabled:opacity-40 transition-colors">

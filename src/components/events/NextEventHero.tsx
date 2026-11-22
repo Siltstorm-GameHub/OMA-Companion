@@ -22,7 +22,7 @@ export default function NextEventHero({
 
   return (
     <section aria-label="Dein nächstes Event"
-      className="surface group relative flex flex-col sm:flex-row overflow-hidden rounded-lg border border-teal-400/40 shadow-[0_4px_24px_rgba(0,0,0,0.4)] focus-within:ring-2 focus-within:ring-teal-400/60">
+      className="surface group relative flex flex-col sm:flex-row overflow-hidden rounded-card border border-teal-400/40 shadow-card focus-within:ring-2 focus-within:ring-teal-400/60">
       <div className="relative sm:w-[38%] aspect-video sm:aspect-auto sm:min-h-[150px] shrink-0 overflow-hidden">
         <GameCover game={ev.game} coverUrl={ev.coverUrl} className="absolute inset-0 w-full h-full" rounded="rounded-none" brandBadge omaOriginal={ev.omaOriginal}
           imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
@@ -63,7 +63,7 @@ export default function NextEventHero({
             </a>
           )}
           <a href={`/api/events/${ev.id}/ics`} download
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] transition-colors">
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line transition-colors">
             <CalendarPlus className="w-3.5 h-3.5" /> In den Kalender
           </a>
         </div>

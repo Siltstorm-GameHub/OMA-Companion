@@ -21,11 +21,11 @@ export default function LeaderboardLoading() {
 
       {/* List */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="flex gap-3 px-4 py-2.5 border-b border-white/[0.05]">
+        <div className="flex gap-3 px-4 py-2.5 border-b border-line">
           <Skeleton className="h-3 w-6" />
           <Skeleton className="h-3 w-20" />
         </div>
-        <div className="divide-y divide-white/[0.04]">
+        <div className="divide-y divide-line">
           {Array.from({ length: 10 }).map((_, i) => (
             <SkeletonLeaderboardRow key={i} />
           ))}

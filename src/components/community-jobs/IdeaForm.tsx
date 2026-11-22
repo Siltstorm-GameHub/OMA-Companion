@@ -27,8 +27,8 @@ export interface IdeaPrefill {
   title?: string; body?: string; link?: string; linkLabel?: string; eventId?: string; reportId?: string; imageUrl?: string;
 }
 
-const FIELD = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
-const SMALL = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const FIELD = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -212,29 +212,29 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         </div>
         <div className="flex items-center gap-0.5">
           <button onClick={() => togglePanel("emoji")} disabled={preview} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={panel === "emoji"}
-            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-colors"><Smile className="w-3.5 h-3.5" /></button>
+            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors"><Smile className="w-3.5 h-3.5" /></button>
           <button onClick={() => togglePanel("mention")} disabled={preview} title="Spieler erwähnen" aria-label="Spieler erwähnen" aria-expanded={panel === "mention"}
-            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-colors"><AtSign className="w-3.5 h-3.5" /></button>
+            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors"><AtSign className="w-3.5 h-3.5" /></button>
           <Button size="sm" variant="ghost" onClick={() => setPreview(v => !v)}>{preview ? "Bearbeiten" : "Vorschau"}</Button>
         </div>
       </div>
 
       {panel === "emoji" && !preview && <EmojiPanel onPick={insertText} onClose={() => setPanel(null)} />}
       {panel === "mention" && !preview && (
-        <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
+        <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <input value={mentionQuery} onChange={e => setMentionQuery(e.target.value)} autoFocus placeholder="Spieler suchen (mind. 2 Zeichen)…" aria-label="Spieler suchen" className={`flex-1 ${SMALL}`} />
             <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
           </div>
           {mentionResults.map(u => (
             <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
-              className="block w-full text-left text-xs text-gray-200 hover:text-teal-300 px-1.5 py-0.5 rounded hover:bg-white/[0.05] transition-colors">{u.username ?? u.name}</button>
+              className="block w-full text-left text-xs text-gray-200 hover:text-teal-300 px-1.5 py-0.5 rounded hover:bg-line transition-colors">{u.username ?? u.name}</button>
           ))}
         </div>
       )}
 
       {preview ? (
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-1.5">
+        <div className="rounded-lg border border-line-strong bg-surface-2 p-3 space-y-1.5">
           <p className="text-sm font-semibold text-white flex items-center gap-1.5"><Lightbulb className="w-3.5 h-3.5 text-amber-400" />{title || "—"}</p>
           <MarkdownLite text={description || "—"} className="text-xs text-gray-300" />
         </div>
@@ -259,12 +259,12 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
             <span key={u} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau, Blob-Host */}
               <img src={u} alt="" className="w-16 h-16 rounded-lg object-cover" />
-              <button onClick={() => setImages(cur => cur.filter(x => x !== u))} aria-label="Bild entfernen" className="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 border border-white/20 p-0.5 text-gray-300 hover:text-red-400"><X className="w-3 h-3" /></button>
+              <button onClick={() => setImages(cur => cur.filter(x => x !== u))} aria-label="Bild entfernen" className="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 border border-line-strong p-0.5 text-gray-300 hover:text-red-400"><X className="w-3 h-3" /></button>
             </span>
           ))}
           {images.length < IDEA_MAX_IMAGES && (
             <>
-              <label className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-white/15 rounded-lg px-2.5 py-2 cursor-pointer hover:border-teal-500/30 transition-colors">
+              <label className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-line-strong rounded-lg px-2.5 py-2 cursor-pointer hover:border-teal-500/30 transition-colors">
                 {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Hochladen
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ""; }} />
@@ -276,7 +276,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         </div>
         <PhotoRequestButton requesterJob="visionaer" eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
         {panel === "cover" && (
-          <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-2">
+          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2">
             <GameCoverPicker value={pickedCover} onChange={setPickedCover} />
             <div className="flex justify-end gap-1.5">
               <Button size="sm" variant="ghost" onClick={() => setPanel(null)}>Abbrechen</Button>
@@ -288,7 +288,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           </div>
         )}
         {panel === "library" && (
-          <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
+          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <input value={libraryQuery} onChange={e => setLibraryQuery(e.target.value)} placeholder="Mediathek durchsuchen…" aria-label="Mediathek durchsuchen" className={`flex-1 ${SMALL}`} />
               <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
@@ -314,7 +314,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         <input value={steamInput} onChange={e => setSteamInput(e.target.value)} placeholder="Steam-Store-Link, z.B. https://store.steampowered.com/app/252950" className={FIELD} />
         {gameError && <p className="text-[11px] text-amber-400">{gameError}</p>}
         {game && (
-          <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] border border-white/10 p-2">
+          <div className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2">
             {game.image && (
               // eslint-disable-next-line @next/next/no-img-element -- Steam-Header-Bild
               <img src={game.image} alt="" className="w-24 h-11 rounded object-cover shrink-0" />

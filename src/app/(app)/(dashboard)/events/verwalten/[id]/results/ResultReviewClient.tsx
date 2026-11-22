@@ -40,7 +40,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const inputCls =
-  "w-full px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
+  "w-full px-2.5 py-1.5 rounded-lg bg-surface-2 border border-line-strong text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
 function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; match: ReviewMatch; sub: Sub; statFields: string[] }) {
   const router = useRouter();
@@ -85,7 +85,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
   const st = STATUS[sub.status];
 
   return (
-    <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
+    <div className="rounded-xl border border-line p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-white">
           {sub.forUser && <>Werte von <span className="font-medium">{sub.forUser.name}</span> · </>}
@@ -97,7 +97,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
 
       <div className="flex flex-wrap gap-2">
         {sub.screenshotUrls.map((u) => (
-          <button key={u} type="button" onClick={() => setZoom(u)} className="w-28 h-20 rounded-lg overflow-hidden border border-white/10">
+          <button key={u} type="button" onClick={() => setZoom(u)} className="w-28 h-20 rounded-lg overflow-hidden border border-line-strong">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={u} alt="Nachweis" className="w-full h-full object-cover" />
           </button>
@@ -223,7 +223,7 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
       <div className="flex flex-wrap items-center gap-2">
         {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"}`}>
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
             {label}
           </button>
         ))}

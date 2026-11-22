@@ -125,7 +125,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       ) : (
         <div className="space-y-2">
           {servers.map((server) => (
-            <div key={server.id} className="rounded-xl glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: server.isOnline ? 1 : 0.6 }}>
+            <div key={server.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: server.isOnline ? 1 : 0.6 }}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <GameCover game={server.game} className="w-9 h-9" rounded="rounded-lg" />
                 <div className="flex-1 min-w-0">
@@ -160,10 +160,10 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     )}
                   </Link>
                   <button onClick={() => (editingId === server.id ? setEditingId(null) : startEdit(server))}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title="Bearbeiten" aria-label="Bearbeiten">
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors" title="Bearbeiten" aria-label="Bearbeiten">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => toggleOnline(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors"
+                  <button onClick={() => toggleOnline(server)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors"
                     title={server.isOnline ? "Online — klicken, um als offline anzuzeigen" : "Offline — klicken, um als online anzuzeigen"}
                     aria-label={server.isOnline ? "Als offline anzeigen" : "Als online anzeigen"} aria-pressed={server.isOnline}>
                     {server.isOnline ? <ToggleRight className="w-4 h-4 text-emerald-400" /> : <ToggleLeft className="w-4 h-4" />}
@@ -176,7 +176,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
               </div>
 
               {editingId === server.id && (
-                <div className="px-4 pb-4 border-t border-white/[0.05] pt-3">
+                <div className="px-4 pb-4 border-t border-line pt-3">
                   <ServerForm value={editForm} onChange={setEditForm} variant="edit" submitLabel="Speichern"
                     saving={savingEdit} onSubmit={() => saveEdit(server.id)} />
                 </div>

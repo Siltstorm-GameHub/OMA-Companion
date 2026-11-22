@@ -60,10 +60,10 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
         <Archive className="w-3.5 h-3.5 text-gray-600" /> Vergangene Saisons
       </h2>
-      <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+      <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
         {archivedSeasons.map(s => (
           <Link key={s.id} href={`/events/series/${s.id}`}
-            className={`flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group ${s.id === currentId ? "bg-white/[0.03]" : ""}`}>
+            className={`flex items-center gap-3.5 px-4 py-3 hover:bg-surface-2 transition-colors group ${s.id === currentId ? "bg-surface-2" : ""}`}>
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
               <Archive className="w-3.5 h-3.5 text-amber-400" />
             </div>
@@ -124,7 +124,7 @@ function SeasonSwitcher({ currentId, seasons }: {
             className={`shrink-0 text-xs rounded-full px-3 py-1.5 border transition-colors whitespace-nowrap ${
               current
                 ? "bg-teal-500/15 border-teal-500/40 text-teal-200 font-semibold"
-                : "border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20"
+                : "border-line text-gray-400 hover:text-white hover:border-line-strong"
             }`}>
             Saison {s.seasonNumber ?? i + 1}
             {s.status === "active" && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 align-middle" title="Aktuelle Saison" />}
@@ -852,7 +852,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 p-4 sm:p-5 border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+        <div className="flex flex-col gap-2 p-4 sm:p-5 border-t lg:border-t-0 lg:border-l border-line">
           {isArchived ? (
             <>
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-400">
@@ -895,7 +895,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                 <EventCardActions ev={nextSource} card={nextCard} viewer={viewer} userId={userId} />
                 <a href={`/api/events/${nextSource.id}/ics`} download
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08]">
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line">
                   <CalendarPlus className="w-3.5 h-3.5" /> Kalender
                 </a>
               </div>
@@ -910,7 +910,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
 
         {series.description && (
-          <p className="lg:col-span-2 px-4 sm:px-5 py-3 border-t border-white/[0.06] text-sm text-gray-400 leading-relaxed">{series.description}</p>
+          <p className="lg:col-span-2 px-4 sm:px-5 py-3 border-t border-line text-sm text-gray-400 leading-relaxed">{series.description}</p>
         )}
       </section>
 
@@ -974,7 +974,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               <p className="text-[11px] font-semibold text-gray-500 mb-2.5">Punktesystem</p>
               <div className="flex flex-wrap gap-2">
                 {punkteItems.map((p, i) => (
-                  <span key={i} className="flex items-center gap-2 glass-heavy rounded-lg px-2.5 py-1.5" title={p.who}>
+                  <span key={i} className="flex items-center gap-2 glass-heavy rounded-card px-2.5 py-1.5" title={p.who}>
                     <span className="text-sm">{p.emoji}</span>
                     <span className="text-xs text-gray-300">{p.label}</span>
                     <span className="text-xs font-bold text-teal-400">{p.pts}</span>

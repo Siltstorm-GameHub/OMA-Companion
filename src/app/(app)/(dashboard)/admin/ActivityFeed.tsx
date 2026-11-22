@@ -45,8 +45,8 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
                   ? "text-teal-300 bg-teal-500/15 border-teal-500/30"
                   : f === "coins"
                     ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
-                    : "text-white bg-white/10 border-white/15"
-                : "text-gray-500 bg-transparent border-white/[0.06] hover:text-gray-300 hover:border-white/10"
+                    : "text-white bg-line border-line-strong"
+                : "text-gray-500 bg-transparent border-line hover:text-gray-300 hover:border-line-strong"
             }`}
           >
             {f === "all"   && "Alle"}
@@ -58,7 +58,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
       </div>
 
       <div className="glass card-shine rounded-2xl">
-        <div className="overflow-y-auto divide-y divide-white/[0.04]" style={{ maxHeight: "480px" }}>
+        <div className="overflow-y-auto divide-y divide-line" style={{ maxHeight: "480px" }}>
           {filtered.length === 0 && (
             <p className="text-sm text-gray-600 px-4 py-6 text-center">Keine Aktivitäten</p>
           )}
@@ -66,7 +66,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
             const type = txType(tx.reason);
             const isPositive = tx.amount > 0;
             return (
-              <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-3">
+              <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors gap-3">
                 <div className="min-w-0 flex-1">
                   <Link href={`/profile/${tx.user.id}`} className="text-sm text-white font-medium hover:underline">
                     {tx.user.username ?? tx.user.name ?? "?"}

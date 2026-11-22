@@ -68,7 +68,7 @@ export default function MyMatchCard({
       </div>
 
       {report && (
-        <div className="space-y-2 border-t border-white/[0.06] pt-3">
+        <div className="space-y-2 border-t border-line pt-3">
           <MatchForm
             key={`${report.id}:${me?.id ?? ""}`}
             eventId={eventId}

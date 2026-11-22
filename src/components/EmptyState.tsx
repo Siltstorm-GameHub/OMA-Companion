@@ -153,7 +153,6 @@ const ILLUSTRATIONS = {
 export function EmptyState({ type, title, description, action }: EmptyStateProps) {
   return (
     <div className="glass card-shine rounded-2xl p-12 text-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
       <div className="relative flex flex-col items-center">
         <div className="mb-5 opacity-90">
           {ILLUSTRATIONS[type]}
@@ -162,7 +161,7 @@ export function EmptyState({ type, title, description, action }: EmptyStateProps
         <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-5">{description}</p>
         {action && (
           <Link href={action.href}
-            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors shadow-[0_0_16px_rgba(244,63,94,0.2)] active:scale-[0.97]">
+            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors active:scale-[0.97]">
             {action.label}
           </Link>
         )}

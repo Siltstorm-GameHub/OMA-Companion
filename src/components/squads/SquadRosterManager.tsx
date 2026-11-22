@@ -87,7 +87,7 @@ export default function SquadRosterManager({
       {ConfirmDialogElement}
       <div className="space-y-1.5">
         {memberships.map(m => (
-          <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+          <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-2 border border-line">
             <Avatar u={m.user} />
             <span className="text-sm text-white flex-1 truncate">{userName(m.user)}</span>
             {m.role === "captain" && (
@@ -115,7 +115,7 @@ export default function SquadRosterManager({
       </div>
 
       {/* Mitglied hinzufügen */}
-      <div className="pt-3 border-t border-white/[0.06] flex items-center gap-2 flex-wrap">
+      <div className="pt-3 border-t border-line flex items-center gap-2 flex-wrap">
         <select value={addUserId} onChange={e => setAddUserId(e.target.value)}
           className={`${inputCls} flex-1 min-w-[180px]`}>
           <option value="">– User auswählen –</option>

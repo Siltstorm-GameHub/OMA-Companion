@@ -30,15 +30,15 @@ export function DropMenu({ trigger, label, items, align = "right" }: {
   return (
     <div ref={ref} className="relative shrink-0">
       <button type="button" onClick={() => setOpen(o => !o)} aria-label={label} aria-expanded={open}
-        className="flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06]">
+        className="flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-line">
         {trigger}
       </button>
       {open && (
-        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-white/[0.1] bg-gray-900 shadow-xl`}>
+        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl`}>
           {visible.map(it => (
             <button key={it.label} role="menuitem" type="button" disabled={it.disabled}
               onClick={() => { setOpen(false); it.onClick(); }}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/[0.06] disabled:opacity-40 ${it.danger ? "text-red-300" : "text-gray-200"}`}>
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-line disabled:opacity-40 ${it.danger ? "text-red-300" : "text-gray-200"}`}>
               {it.icon}{it.label}
             </button>
           ))}
@@ -70,16 +70,16 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
         </p>
         {resultsHref && (
           <Link href={resultsHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-white/[0.06]">
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line">
             Ergebnis-Meldungen
             {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{pendingCount}</span>}
           </Link>
         )}
         <DropMenu label="Werkzeuge" items={tools}
-          trigger={<span className="inline-flex items-center gap-1 rounded-lg border border-white/[0.1] px-2.5 py-1.5 text-xs font-semibold text-gray-200">Werkzeuge <ChevronDown className="w-3.5 h-3.5" /></span>} />
+          trigger={<span className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200">Werkzeuge <ChevronDown className="w-3.5 h-3.5" /></span>} />
       </div>
       {total > 0 && (
-        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
         </div>
       )}
@@ -134,7 +134,7 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
   };
 
   return (
-    <ul className="divide-y divide-white/[0.05]">
+    <ul className="divide-y divide-line">
       {items.map(s => {
         const what = s.isDuel
           ? <>{s.player1 ?? "?"} <b className="text-white tabular-nums">{s.score1 ?? "–"} : {s.score2 ?? "–"}</b> {s.player2 ?? "?"}</>
@@ -152,7 +152,7 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
               {busy === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Übernehmen
             </button>
             <button type="button" onClick={() => act(s.id, "reject")} disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.1] px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-white/[0.06] disabled:opacity-50">
+              className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-line disabled:opacity-50">
               <X className="w-3.5 h-3.5" /> Ablehnen
             </button>
             <Link href={resultsHref} className="text-[11px] text-gray-500 hover:text-gray-300">Prüfen</Link>
@@ -174,7 +174,7 @@ export function StatStandingsTable({ rows, fields, isAvg, hasPoints, nameOf, max
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-gray-500 border-b border-white/[0.06]">
+          <tr className="text-gray-500 border-b border-line">
             <th className="py-1.5 pr-2 text-left font-medium w-8">#</th>
             <th className="py-1.5 pr-3 text-left font-medium">Spieler</th>
             {fields.map(f => <th key={f} className="py-1.5 px-2 text-right font-medium">{isAvg ? `Ø ${f}` : f}</th>)}
@@ -185,7 +185,7 @@ export function StatStandingsTable({ rows, fields, isAvg, hasPoints, nameOf, max
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={r.userId} className="border-b border-white/[0.04] last:border-0">
+            <tr key={r.userId} className="border-b border-line last:border-0">
               <td className="py-1.5 pr-2">{i < 3 ? medal[i] : <span className="text-gray-500">{i + 1}</span>}</td>
               <td className="py-1.5 pr-3 text-white whitespace-nowrap">{nameOf(r.userId)}</td>
               {fields.map(f => (

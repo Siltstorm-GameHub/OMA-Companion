@@ -48,7 +48,6 @@ export function DailyMessageBanner({
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
-        boxShadow: "0 0 20px rgba(168,85,247,0.06)",
         ...(fill ? { height: "100%", boxSizing: "border-box" as const, alignItems: "center" } : {}),
       }}
     >
@@ -72,7 +71,7 @@ export function DailyMessageBanner({
       {/* Dismiss */}
       <button
         onClick={dismiss}
-        className="shrink-0 self-start p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors"
+        className="shrink-0 self-start p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-line transition-colors"
         aria-label="Schließen"
       >
         <X className="w-4 h-4" />

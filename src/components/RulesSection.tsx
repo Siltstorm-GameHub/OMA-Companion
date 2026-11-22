@@ -2,7 +2,7 @@ import { ScrollText } from "@/components/icons";
 
 function RuleItem({ i, line }: { i: number; line: string }) {
   return (
-    <div className="flex items-start gap-3 glass-heavy rounded-xl px-3 py-2.5">
+    <div className="flex items-start gap-3 glass-heavy rounded-card px-3 py-2.5">
       <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold bg-teal-500/10 border border-teal-500/25 text-teal-400 mt-0.5">
         {i + 1}
       </span>

@@ -200,7 +200,7 @@ export default function GameVoteSection({
           return (
             <div key={c.id}
               className={`flex gap-3 rounded-xl border p-2.5 transition-colors ${
-                isWinner ? "border-emerald-400/50 bg-emerald-500/10" : picked ? "border-teal-400/40 bg-teal-500/[0.07]" : "border-white/[0.07] bg-white/[0.02]"
+                isWinner ? "border-emerald-400/50 bg-emerald-500/10" : picked ? "border-teal-400/40 bg-teal-500/[0.07]" : "border-line bg-surface-2"
               }`}>
               <GameCover game={c.name} coverUrl={c.coverUrl} className="w-24 aspect-[16/9] shrink-0" rounded="rounded-lg" fallbackVariant="plain" />
               <div className="flex-1 min-w-0 space-y-1">
@@ -217,7 +217,7 @@ export default function GameVoteSection({
                     ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime-400/10 text-lime-200">Kostenlos</span>
                     : c.subscriptionLabels.length > 0
                       ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime-400/10 text-lime-200">{c.subscriptionLabels.join(" / ")}</span>
-                      : c.priceLabel && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-gray-300">{c.discountPercent > 0 ? `−${c.discountPercent} % · ` : ""}{c.priceLabel}</span>}
+                      : c.priceLabel && <span className="text-[10px] px-1.5 py-0.5 rounded bg-line text-gray-300">{c.discountPercent > 0 ? `−${c.discountPercent} % · ` : ""}{c.priceLabel}</span>}
                 </div>
                 {c.fitLabel && <p className="text-[11px] text-gray-500 line-clamp-2">{c.fitLabel}</p>}
               </div>
@@ -225,7 +225,7 @@ export default function GameVoteSection({
                 {open && view.canVote ? (
                   <button type="button" onClick={() => toggle(c.id)} aria-pressed={picked}
                     className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                      picked ? "bg-teal-500 text-white" : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
+                      picked ? "bg-teal-500 text-white" : "bg-line text-gray-300 hover:bg-line"
                     }`}>
                     {picked && <Check className="w-3.5 h-3.5" />} Würde ich spielen
                   </button>
@@ -250,10 +250,10 @@ export default function GameVoteSection({
       )}
 
       {canManage && view.status !== "closed" && (
-        <div className="flex gap-2 items-center flex-wrap border-t border-white/[0.06] pt-3">
+        <div className="flex gap-2 items-center flex-wrap border-t border-line pt-3">
           <span className="text-[11px] text-gray-500">Verwalten:</span>
           <select value={addId} onChange={e => setAddId(e.target.value)}
-            className="flex-1 min-w-[180px] bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white">
+            className="flex-1 min-w-[180px] bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white">
             <option value="">Spiel aus der Spieleliste hinzufügen …</option>
             {addable.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
@@ -301,9 +301,9 @@ function RulesForm({ eventId, view, rules, format, allGames }: {
     }
   }
 
-  const input = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "w-full bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
   return (
-    <div className="border-t border-white/[0.06] pt-3 space-y-2.5">
+    <div className="border-t border-line pt-3 space-y-2.5">
       <p className="text-sm font-semibold text-white">{allGames ? "Spiel festlegen" : "Regeln festlegen"}</p>
       <p className="text-[11px] text-gray-500">
         {allGames
@@ -312,7 +312,7 @@ function RulesForm({ eventId, view, rules, format, allGames }: {
         Erst nach der Freigabe kann ausgelost werden; die Reihe merkt sich Regeln{format ? " und Format" : ""} für das nächste Mal.
       </p>
       {!allGames && view.decidedByLabel && (
-        <p className={`text-[11px] rounded-lg px-2.5 py-1.5 ${close || view.decidedBy === "no_votes" ? "bg-amber-500/10 text-amber-200" : "bg-white/[0.03] text-gray-400"}`}>
+        <p className={`text-[11px] rounded-lg px-2.5 py-1.5 ${close || view.decidedBy === "no_votes" ? "bg-amber-500/10 text-amber-200" : "bg-surface-2 text-gray-400"}`}>
           Ergebnis: {view.decidedByLabel}.{close ? " Knapp — du kannst auch ein anderes Spiel nehmen." : ""}
         </p>
       )}

@@ -41,7 +41,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
                 : goalStatus.reached ? "Geschafft 🎉" : "läuft"}
             </span>
           </div>
-          <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={Math.floor(goalStatus.percent)} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-2 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={Math.floor(goalStatus.percent)} aria-valuemin={0} aria-valuemax={100}>
             <div className={`h-full rounded-full ${goalStatus.reached ? "bg-emerald-400" : "bg-teal-400"}`} style={{ width: `${goalStatus.percent}%` }} />
           </div>
           {goalStatus.rewarded.length > 0 ? (
@@ -49,7 +49,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
               <p className="text-[11px] text-gray-500 mb-1">Belohnt ({goalStatus.rewarded.length})</p>
               <ul className="flex flex-wrap gap-1.5">
                 {goalStatus.rewarded.map(r => (
-                  <li key={r.id} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-gray-200">
+                  <li key={r.id} className="rounded-full bg-line px-2 py-0.5 text-xs text-gray-200">
                     {r.name}
                     <span className="text-gray-500">
                       {r.coins != null && r.coins > 0 ? ` · ${r.coins} Münzen` : ""}{r.seriesPoints > 0 ? ` · ${r.seriesPoints} Tabellenpunkte` : ""}
@@ -61,12 +61,12 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           ) : (
             <p className="text-[11px] text-gray-500">Noch niemand belohnt.</p>
           )}
-          <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-line">
             <p className="flex-1 min-w-[200px] text-[11px] text-gray-500">
               Einen Wert korrigiert? „Neu auswerten“ bucht die Ziel-Münzen zurück und vergibt sie mit den aktuellen Werten neu.
             </p>
             <button type="button" onClick={reevaluateGoal} disabled={reevaluating}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 disabled:opacity-50">
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-line hover:bg-line border border-line-strong text-gray-200 disabled:opacity-50">
               {reevaluating ? "Wertet aus…" : "Neu auswerten"}
             </button>
           </div>
@@ -75,7 +75,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
 
       {/* ── Einstellungen ── */}
       {goalCapable ? (
-        <section aria-label="Ziel einstellen" className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+        <section aria-label="Ziel einstellen" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
           <h2 className="text-sm font-semibold text-white">Ziel einstellen</h2>
           {event.series ? (
             <div className="flex gap-2 flex-wrap">
@@ -86,7 +86,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
               ] as const).map(([value, label, hint]) => (
                 <button key={value} type="button" onClick={() => setGoalMode(value)} aria-pressed={goalMode === value}
                   className={`flex-1 min-w-[150px] text-left rounded-lg p-2.5 border transition-colors ${
-                    goalMode === value ? "border-teal-500/60 bg-teal-500/10" : "border-white/[0.08] bg-white/[0.02] hover:border-white/15"
+                    goalMode === value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                   }`}>
                   <span className={`block text-sm font-semibold ${goalMode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
                   <span className="block text-[11px] text-gray-500">{hint}</span>
@@ -107,7 +107,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
         </section>
       ) : !hasTournament && eventKind === "community" ? (
         // "Ohne Platzierung" ohne Spielplan: Ziel direkt einrichten (legt eine Werte-Erfassung an)
-        <section aria-label="Ziel einrichten" className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+        <section aria-label="Ziel einrichten" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
           <h2 className="text-sm font-semibold text-white">Gemeinsames Ziel einrichten</h2>
           <p className="text-xs text-gray-400">
             Für ein Ziel werden Werte gezählt, z. B. Tore oder Schritte. Lege fest, welche Werte erfasst werden. Eingetragen
@@ -126,7 +126,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           <p className="text-[11px] text-gray-500">„Ziel anlegen“ gilt sofort.</p>
         </section>
       ) : (
-        <section aria-label="Kein Ziel möglich" className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-2">
+        <section aria-label="Kein Ziel möglich" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-2">
           <p className="text-sm text-gray-300">
             {hasTournament
               ? `Das Format „${formatLabel(event.format)}“ kennt kein Community-Ziel.`

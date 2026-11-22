@@ -15,7 +15,7 @@ function ServerRow({ server, isLast }: { server: Server; isLast: boolean }) {
     <motion.div layout transition={{ type: "spring", stiffness: 380, damping: 32 }}>
       <Link
         href="/servers"
-        className="flex items-center gap-3 px-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
+        className="flex items-center gap-3 px-3.5 py-3 transition-all duration-200 group hover:bg-surface-2 active:scale-[0.99]"
         style={{
           borderBottom: isLast ? "" : "1px solid rgba(255,255,255,0.05)",
           opacity: isOffline ? 0.55 : 1,

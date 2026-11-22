@@ -80,7 +80,7 @@ export default function StudioEditor({ onExported, allowWatermark = false }: { o
   return (
     <div className="space-y-3">
       {!image ? (
-        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
+        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
           <Upload className="w-5 h-5 text-gray-500" />
           <span className="text-xs text-gray-500">Screenshot oder Foto auswählen</span>
           <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
@@ -88,7 +88,7 @@ export default function StudioEditor({ onExported, allowWatermark = false }: { o
         </label>
       ) : (
         <>
-          <div className="rounded-xl overflow-hidden border border-white/10">
+          <div className="rounded-xl overflow-hidden border border-line-strong">
             <canvas ref={canvasRef} width={format.width} height={format.height} className="w-full h-auto block" style={{ maxHeight: "70vh", objectFit: "contain" }} />
           </div>
 
@@ -121,7 +121,7 @@ export default function StudioEditor({ onExported, allowWatermark = false }: { o
               {template.fields.map(f => (
                 <input key={f.key} value={values[f.key] ?? ""} placeholder={f.placeholder} maxLength={f.maxLength}
                   onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+                  className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
               ))}
             </div>
           )}

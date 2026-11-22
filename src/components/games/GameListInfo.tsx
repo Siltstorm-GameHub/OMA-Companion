@@ -17,7 +17,7 @@ export default function GameListInfo({ info }: { info: Info | null }) {
   return (
     <Link
       href={`/spiele/${info.slug}`}
-      className="inline-flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] hover:border-teal-500/30 px-2.5 py-1 text-[11px] text-gray-400 transition-colors"
+      className="inline-flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-lg border border-line bg-surface-2 hover:bg-line hover:border-teal-500/30 px-2.5 py-1 text-[11px] text-gray-400 transition-colors"
       title="In der Spieleliste ansehen und bewerten"
     >
       {parts.length === 0 ? (

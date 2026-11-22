@@ -48,7 +48,7 @@ export function AvatarStack({
       ))}
       {overflow > 0 && (
         <div
-          className={`${sz} rounded-full ring-2 ring-black/60 bg-white/10 text-gray-400 font-bold flex items-center justify-center text-[9px]`}
+          className={`${sz} rounded-full ring-2 ring-black/60 bg-line text-gray-400 font-bold flex items-center justify-center text-[9px]`}
           style={{ marginLeft: "-6px" }}
         >
           +{overflow}

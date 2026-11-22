@@ -90,7 +90,7 @@ export default function DisputeVotesModal({
       ) : (
         <div className="space-y-2">
           {votes.map(v => (
-            <div key={v.id} className="bg-white/[0.03] rounded-lg p-3 space-y-1.5">
+            <div key={v.id} className="bg-surface-2 rounded-lg p-3 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-300">
                   {v.voter.username ?? v.voter.name}
@@ -106,7 +106,7 @@ export default function DisputeVotesModal({
               ) : disputingId === v.id ? (
                 <div className="space-y-1.5">
                   <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Begründung für die Anfechtung" rows={2}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+                    className="w-full bg-line border border-line-strong rounded-lg px-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
                   <div className="flex justify-end gap-1.5">
                     <Button size="sm" variant="ghost" onClick={() => setDisputingId(null)}>Abbrechen</Button>
                     <Button size="sm" loading={busy} disabled={!reason.trim()} onClick={() => fileDispute(v.id)}>Absenden</Button>

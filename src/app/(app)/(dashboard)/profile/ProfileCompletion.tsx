@@ -56,12 +56,11 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
 
   return (
     <div className="glass card-shine relative overflow-hidden rounded-2xl animate-slide-up">
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-500/8 via-transparent to-transparent pointer-events-none" />
 
       <button
         onClick={toggle}
         aria-expanded={!collapsed}
-        className="relative w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors"
+        className="relative w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-surface-2 transition-colors"
       >
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-white">Profil vervollständigen</h2>
@@ -80,7 +79,7 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
           <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }}
+              style={{ width: `${pct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)" }}
             />
           </div>
 
@@ -91,7 +90,7 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
                 onClick={() => !item.done && openSection(item.sectionId, item.openEvent, item.tab)}
                 disabled={item.done}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors ${
-                  item.done ? "cursor-default" : "hover:bg-white/[0.04] cursor-pointer"
+                  item.done ? "cursor-default" : "hover:bg-line cursor-pointer"
                 }`}
               >
                 {item.done ? (

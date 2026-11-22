@@ -251,7 +251,7 @@ export default async function EventsPage() {
         {recentResults.length > 0 && (
           <section aria-label="Kürzlich beendet" className="space-y-2">
             <h2 className="flex items-center gap-3 text-xs font-semibold text-gray-300">
-              Kürzlich beendet <span className="h-px flex-1 bg-white/[0.06]" />
+              Kürzlich beendet <span className="h-px flex-1 bg-line" />
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {recentResults.map(r => <RecentResultCard key={r.id} r={r} />)}
@@ -263,10 +263,10 @@ export default async function EventsPage() {
           <EventFilterShell games={gameChips} loggedIn={!!userId}>
             {groups.map(group => (
               <section key={group.key} data-ev-section aria-label={group.label} className="mb-5 last:mb-0">
-                <h2 className="sticky top-0 z-20 flex items-center gap-3 py-1.5 -mx-5 px-5 sm:mx-0 sm:px-0 bg-[#0b0d12]/90 backdrop-blur text-xs font-semibold text-gray-300 tracking-wide">
+                <h2 className="sticky top-0 z-20 flex items-center gap-3 py-1.5 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-xs font-semibold text-gray-300 tracking-wide">
                   {group.label}
                   <span className="text-gray-600 font-normal">{group.items.length}</span>
-                  <span className="h-px flex-1 bg-white/[0.06]" />
+                  <span className="h-px flex-1 bg-line" />
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mt-2">
                   {group.items.map(item => {
@@ -334,9 +334,9 @@ export default async function EventsPage() {
       {visibleFinished.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-3 pb-1">
-            <div className="h-px flex-1 bg-white/[0.05]" />
+            <div className="h-px flex-1 bg-line" />
             <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Abgeschlossen</span>
-            <div className="h-px flex-1 bg-white/[0.05]" />
+            <div className="h-px flex-1 bg-line" />
           </div>
 
           {visibleFinished.map(({ ev }) => {
@@ -345,7 +345,7 @@ export default async function EventsPage() {
               return (
                 <EventCardLink key={`ev-fin-${ev.id}`}
                   href={cardHref}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-line bg-surface-2 opacity-50 hover:opacity-75 transition-opacity group">
                   <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
                     <GateLink href={`/tournament/${ev.id}`}
@@ -368,7 +368,7 @@ export default async function EventsPage() {
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
-                    <span className="text-[10px] text-gray-600 bg-gray-800/60 border border-white/[0.04] px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] text-gray-600 bg-gray-800/60 border border-line px-1.5 py-0.5 rounded">
                       Beendet
                     </span>
                   </div>

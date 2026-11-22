@@ -46,7 +46,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
   return (
     <div ref={rootRef}>
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.03] hover:border-white/25 px-3 py-2 transition-colors">
+        className="flex items-center gap-3 rounded-xl border border-line-strong bg-surface-2 hover:border-white/25 px-3 py-2 transition-colors">
         <span className="flex items-center justify-center w-9 h-9 rounded-lg" style={{ background: `${color}1f`, border: `1px solid ${color}55` }}>
           {currentId ? <SeriesIcon name={value} className="w-5 h-5" /> : <span className="text-gray-300 text-lg leading-none">+</span>}
         </span>
@@ -54,11 +54,11 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
       </button>
 
       {open && (
-        <div className="mt-2 w-full max-w-md rounded-2xl border border-white/[0.12] bg-[#12181b] p-3 space-y-3">
+        <div className="mt-2 w-full max-w-md rounded-2xl border border-line-strong bg-[#12181b] p-3 space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Suchen, z. B. Schwert, Pokal, Feuer…"
-              className="w-full rounded-lg bg-white/[0.05] border border-white/[0.08] pl-9 pr-8 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
+              className="w-full rounded-lg bg-line border border-line pl-9 pr-8 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
             {query && (
               <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                 <X className="w-4 h-4" />
@@ -71,7 +71,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
               {PICTO_CATEGORIES.map(c => (
                 <button key={c.name} type="button" onClick={() => setCat(c.name)}
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                    cat === c.name ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-white/10 text-gray-500 hover:text-gray-300"
+                    cat === c.name ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-line-strong text-gray-500 hover:text-gray-300"
                   }`}>
                   {c.name}
                 </button>

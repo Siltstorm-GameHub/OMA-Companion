@@ -65,7 +65,7 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
                   {shortDate(e.startAt)}
                 </span>
               </Link>
-              {!last && <span className={`mt-[10px] h-0.5 flex-1 rounded ${lineDone ? "bg-teal-500/70" : "bg-white/[0.08]"}`} />}
+              {!last && <span className={`mt-[10px] h-0.5 flex-1 rounded ${lineDone ? "bg-teal-500/70" : "bg-line"}`} />}
             </li>
           );
         })}

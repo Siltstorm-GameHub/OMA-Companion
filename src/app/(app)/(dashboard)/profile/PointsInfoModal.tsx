@@ -34,7 +34,7 @@ export default function PointsInfoModal() {
       <button
         onClick={() => setOpen(true)}
         title="Punktesystem erklären"
-        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white border border-white/10 hover:border-white/20 px-2.5 py-1.5 rounded-lg transition-all"
+        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white border border-line-strong hover:border-line-strong px-2.5 py-1.5 rounded-lg transition-all"
       >
         <Info className="w-3.5 h-3.5" />
         Info
@@ -71,7 +71,7 @@ export default function PointsInfoModal() {
                   {COIN_SOURCES.map(group => (
                     <div key={group.group}>
                       <p className="text-[10px] text-gray-600 font-medium mb-1 ml-1">{group.group}</p>
-                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
+                      <div className="rounded-xl bg-surface-2 border border-line divide-y divide-line">
                         {group.items.map(s => (
                           <div key={s.label} className="flex items-center justify-between px-3 py-2.5 gap-3">
                             <div className="min-w-0">

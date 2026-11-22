@@ -17,7 +17,7 @@ export function Chip({ active, onClick, children, disabled }: { active: boolean;
       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-50 ${
         active
           ? "bg-teal-500/20 border-teal-400/60 text-teal-100"
-          : "border-white/[0.08] text-gray-300 hover:border-teal-500/40 hover:bg-teal-500/10"
+          : "border-line text-gray-300 hover:border-teal-500/40 hover:bg-teal-500/10"
       }`}
     >
       {children}
@@ -88,7 +88,7 @@ export default function GameFieldsForm({
   const set = <K extends keyof GameFields>(key: K, v: GameFields[K]) => onChange({ ...value, [key]: v });
   const shows = (...fields: (keyof GameFields)[]) => !only || fields.some(f => only.includes(f));
   const locked = (field: keyof GameFields) => !!only && !only.includes(field);
-  const inputClass = "w-20 bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+  const inputClass = "w-20 bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
   return (
     <div className="space-y-5">
@@ -173,7 +173,7 @@ export default function GameFieldsForm({
             onChange={e => set("description", e.target.value.slice(0, MAX_GAME_DESCRIPTION_LENGTH) || null)}
             rows={3}
             placeholder="Worum geht's? (optional)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
           />
         </Section>
       )}

@@ -94,7 +94,7 @@ function ThumbVote({ entry, meId, onChange }: { entry: FeedEntry; meId?: string;
 
   return (
     <button onClick={toggle} disabled={busy} aria-pressed={voted} aria-label={voted ? "Daumen zurücknehmen" : "Daumen hoch"}
-      className={`relative z-20 self-start inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 backdrop-blur-sm ${voted ? THUMB_ON : THUMB_OFF}`}>
+      className={`relative z-20 self-start inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 ${voted ? THUMB_ON : THUMB_OFF}`}>
       <ThumbsUp className={`w-3.5 h-3.5 ${voted ? "fill-current" : ""}`} /> <span className="tabular-nums">{count}</span>
     </button>
   );

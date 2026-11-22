@@ -71,7 +71,7 @@ export default function GameListClient({
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)", boxShadow: "0 0 20px rgba(20,184,166,0.10)" }}>
+              style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)" }}>
               <Gamepad2 className="w-4.5 h-4.5 text-teal-400" />
             </div>
             <h1 className="font-display text-2xl font-black text-white tracking-tight">Spieleliste</h1>
@@ -106,7 +106,7 @@ export default function GameListClient({
 
       {/* Ansicht: GameSwipe oder Liste */}
       {swipe && (
-        <div className="grid grid-cols-2 gap-1 rounded-xl p-1 bg-white/[0.03] border border-white/[0.06] max-w-xs">
+        <div className="grid grid-cols-2 gap-1 rounded-xl p-1 bg-surface-2 border border-line max-w-xs">
           {([["swipe", "GameSwipe", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => setView(key)} aria-pressed={view === key}
               className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
@@ -143,7 +143,7 @@ export default function GameListClient({
             onChange={e => set("q", e.target.value)}
             placeholder="Spiel suchen …"
             aria-label="Spiel suchen"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-9 pr-8 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
+            className="w-full bg-line border border-line-strong rounded-xl pl-9 pr-8 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
           />
           {filters.q && (
             <button type="button" onClick={() => set("q", "")} aria-label="Suche leeren"
@@ -162,7 +162,7 @@ export default function GameListClient({
         </label>
         <button type="button" onClick={pickRandom} disabled={visible.length === 0} title="Zufälliges Spiel aus den Treffern"
           aria-label="Zufälliges Spiel aus den Treffern"
-          className="shrink-0 w-11 rounded-xl border border-white/10 text-gray-300 hover:text-teal-200 hover:border-teal-500/40 flex items-center justify-center disabled:opacity-40 transition-colors">
+          className="shrink-0 w-11 rounded-xl border border-line-strong text-gray-300 hover:text-teal-200 hover:border-teal-500/40 flex items-center justify-center disabled:opacity-40 transition-colors">
           <Dices className="w-4.5 h-4.5" />
         </button>
       </div>
@@ -186,7 +186,7 @@ export default function GameListClient({
           <Chip active={filters.mineOnly} onClick={() => set("mineOnly", !filters.mineOnly)}>Meine</Chip>
           <button type="button" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              moreCount > 0 ? "border-teal-400/60 text-teal-100 bg-teal-500/10" : "border-white/[0.08] text-gray-300 hover:border-white/20"}`}>
+              moreCount > 0 ? "border-teal-400/60 text-teal-100 bg-teal-500/10" : "border-line text-gray-300 hover:border-line-strong"}`}>
             <Settings2 className="w-3.5 h-3.5" /> Mehr Filter{moreCount > 0 ? ` (${moreCount})` : ""}
           </button>
           {filterCount > 0 && (
@@ -249,7 +249,7 @@ export default function GameListClient({
               <Plus className="w-4 h-4" /> Spiel hinzufügen
             </button>
             {isModerator && (
-              <Link href="/admin/spiele" className="inline-flex items-center rounded-xl px-3.5 py-2 text-sm border border-white/10 text-gray-300 hover:text-white">
+              <Link href="/admin/spiele" className="inline-flex items-center rounded-xl px-3.5 py-2 text-sm border border-line-strong text-gray-300 hover:text-white">
                 Zum Admin-Bereich
               </Link>
             )}
@@ -262,7 +262,7 @@ export default function GameListClient({
           <div className="flex justify-center gap-2 flex-wrap">
             {filterCount > 0 && (
               <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })}
-                className="rounded-xl px-3.5 py-2 text-sm border border-white/10 text-gray-300 hover:text-white">Filter zurücksetzen</button>
+                className="rounded-xl px-3.5 py-2 text-sm border border-line-strong text-gray-300 hover:text-white">Filter zurücksetzen</button>
             )}
             {filters.q.trim().length >= 2 && (
               <button type="button" onClick={() => setAddOpen(true)}

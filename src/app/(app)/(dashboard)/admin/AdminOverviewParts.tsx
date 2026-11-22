@@ -37,7 +37,7 @@ export function InboxList({ label, items, now }: { label: string; items: InboxIt
   return (
     <div className="mt-2">
       <p className="text-[11px] font-semibold text-gray-500">{label}</p>
-      <ul className="divide-y divide-white/[0.05]">
+      <ul className="divide-y divide-line">
         {items.map((t) => {
           const I = ICONS[t.icon as keyof typeof ICONS] ?? CalendarClock;
           return (
@@ -62,7 +62,7 @@ function whenLabel(d: Date, now: Date) {
 export function UpcomingList({ events, now }: { events: UpcomingEvent[]; now: Date }) {
   if (events.length === 0) return <p className="mt-2 text-sm text-gray-500">In den nächsten 48 Stunden steht kein Event an.</p>;
   return (
-    <ul className="mt-1 divide-y divide-white/[0.05]">
+    <ul className="mt-1 divide-y divide-line">
       {events.map((e) => {
         const empty = e.players === 0;
         const full = e.maxPlayers != null && e.players >= e.maxPlayers;
@@ -79,7 +79,7 @@ export function UpcomingList({ events, now }: { events: UpcomingEvent[]; now: Da
                 )}
               </span>
               <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
-                empty ? "bg-amber-500/15 text-amber-300" : full ? "bg-teal-500/15 text-teal-300" : "bg-white/[0.05] text-gray-300"
+                empty ? "bg-amber-500/15 text-amber-300" : full ? "bg-teal-500/15 text-teal-300" : "bg-line text-gray-300"
               }`} title="Anmeldungen als Spieler">
                 {empty ? "0 Anm." : e.maxPlayers ? `${e.players}/${e.maxPlayers}` : e.players}
               </span>
@@ -94,7 +94,7 @@ export function UpcomingList({ events, now }: { events: UpcomingEvent[]; now: Da
 function PulseTile({ label, p, hint }: { label: string; p: PulseValue; hint?: string }) {
   const tone = p.delta > 0 ? "text-emerald-300" : p.delta < 0 ? "text-red-300" : "text-gray-500";
   return (
-    <div className="rounded-xl bg-white/[0.03] p-3" title={hint}>
+    <div className="rounded-xl bg-surface-2 p-3" title={hint}>
       <p className="text-[11px] text-gray-500">{label}</p>
       <p className="mt-0.5 flex items-baseline gap-1.5">
         <span className="text-lg font-bold text-white tabular-nums">{fmt(p.value)}</span>
@@ -118,7 +118,7 @@ export function PulseGrid({ pulse }: { pulse: { activeMembers: PulseValue; newMe
 export function NotableList({ items }: { items: NotableTx[] }) {
   if (items.length === 0) return <p className="mt-2 text-sm text-gray-500">Keine Korrekturen, manuellen Buchungen oder großen Beträge.</p>;
   return (
-    <ul className="mt-1 divide-y divide-white/[0.05]">
+    <ul className="mt-1 divide-y divide-line">
       {items.map((t) => (
         <li key={t.id} className="flex items-center gap-3 py-2">
           <span className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ export function RunningList({ items, now }: { items: { key: string; title: strin
     return days > 0 ? `noch ${days} ${days === 1 ? "Tag" : "Tage"}` : h > 0 ? `noch ${h} Std` : `noch ${min} Min`;
   };
   return (
-    <ul className="mt-1 divide-y divide-white/[0.05]">
+    <ul className="mt-1 divide-y divide-line">
       {items.map((r) => (
         <li key={r.key}>
           <Link href={r.href} className="group flex items-center gap-3 py-2 text-sm">

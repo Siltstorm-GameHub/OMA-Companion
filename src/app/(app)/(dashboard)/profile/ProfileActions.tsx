@@ -15,7 +15,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const TEXTAREA = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none";
+const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none";
 const HELP_MAX = 500;
 const QUESTIONS_MAX = 10;
 
@@ -53,7 +53,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
     }
   }
 
-  const BTN = "inline-flex items-center gap-1.5 text-xs glass border border-white/[0.08] text-gray-300 hover:text-white hover:border-teal-500/30 px-3 py-2 rounded-xl transition-all";
+  const BTN = "inline-flex items-center gap-1.5 text-xs glass border border-line text-gray-300 hover:text-white hover:border-teal-500/30 px-3 py-2 rounded-card transition-all";
 
   return (
     <>
@@ -97,7 +97,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
             <div key={i} className="flex items-center gap-2">
               <input value={q} onChange={e => setQuestions(qs => qs.map((x, j) => (j === i ? e.target.value : x)))}
                 placeholder={`Frage ${i + 1}`} aria-label={`Frage ${i + 1}`}
-                className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600" />
+                className="flex-1 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600" />
               {questions.length > 1 && (
                 <button type="button" aria-label="Frage entfernen" onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))}
                   className="text-gray-600 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -119,7 +119,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
       <Modal open={dialog === "squad"} onClose={close} title={`${displayName} zu einem Squad hinzufügen`}>
         <div className="space-y-3">
           <select value={squadId} onChange={e => setSquadId(e.target.value)} aria-label="Squad auswählen"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white">
             {captainSquads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <div className="flex justify-end">

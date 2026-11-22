@@ -71,12 +71,12 @@ export default function ModerationClient() {
         <span className="relative flex-1 min-w-[10rem]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen: Text oder Autor"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
         </span>
       </div>
 
       {items === null ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div> : (
-        <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+        <div className="glass rounded-card overflow-hidden divide-y divide-line">
           {items.length === 0 && <p className="p-4 text-xs text-gray-600">Nichts gefunden.</p>}
           {items.map(item => (
             <div key={`${item.type}-${item.id}`} className="p-3 flex items-start gap-3">

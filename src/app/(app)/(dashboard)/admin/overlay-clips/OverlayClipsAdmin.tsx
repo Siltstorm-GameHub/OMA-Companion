@@ -138,7 +138,7 @@ export default function OverlayClipsAdmin() {
           ) : (
             <ul className="space-y-1.5">
               {filtered.map(c => (
-                <li key={c.id} className={`flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-xl border px-2.5 py-2 ${c.restriction ? "border-rose-500/20 bg-rose-500/5" : "border-white/[0.08]"}`}>
+                <li key={c.id} className={`flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-xl border px-2.5 py-2 ${c.restriction ? "border-rose-500/20 bg-rose-500/5" : "border-line"}`}>
                   {c.thumbnailUrl
                     // eslint-disable-next-line @next/next/no-img-element -- Twitch-Vorschaubild, externe Quelle
                     ? <img src={c.thumbnailUrl} alt="" className="w-24 aspect-video rounded-md object-cover shrink-0 bg-black/40" />
@@ -156,7 +156,7 @@ export default function OverlayClipsAdmin() {
                         onClick={() => put({ gameId: c.gameId, gameName: c.game, mature: true }, `game-${c.gameId}`)}
                         disabled={busy === `game-${c.gameId}`}
                         title="Alle Clips dieses Spiels aus dem Loop nehmen (Alters-Hinweis bei Twitch)"
-                        className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-white/[0.08] text-gray-400 hover:text-rose-300 hover:border-rose-400/40 disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-line text-gray-400 hover:text-rose-300 hover:border-rose-400/40 disabled:opacity-50"
                       >
                         <ShieldAlert className="w-3.5 h-3.5" /> Spiel sperren
                       </button>

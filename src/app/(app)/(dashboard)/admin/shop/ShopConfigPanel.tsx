@@ -89,11 +89,11 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
           {prizes.map((prize) => {
             const chance = totalWeight > 0 ? formatFixed(((prize.weight / totalWeight) * 100), 1) : "0,0";
             return (
-              <div key={prize.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <div key={prize.id} className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg bg-surface-2 border border-line">
                 <select
                   value={prize.type}
                   onChange={(e) => updatePrize(prize.id, "type", e.target.value as WheelPrize["type"])}
-                  className="px-2 py-1.5 rounded-md bg-white/[0.04] border border-white/10 text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
                 >
                   {(Object.keys(TYPE_LABEL) as WheelPrize["type"][]).map((t) => (
                     <option key={t} value={t}>{TYPE_LABEL[t]}</option>
@@ -105,7 +105,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   value={prize.label}
                   onChange={(e) => updatePrize(prize.id, "label", e.target.value)}
                   placeholder="Beschriftung"
-                  className="flex-1 min-w-[100px] px-2 py-1.5 rounded-md bg-white/[0.04] border border-white/10 text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="flex-1 min-w-[100px] px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
                 />
 
                 {prize.type === "points" && (
@@ -114,7 +114,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                     value={prize.value}
                     onChange={(e) => updatePrize(prize.id, "value", e.target.value)}
                     placeholder="Münzen"
-                    className="w-20 px-2 py-1.5 rounded-md bg-white/[0.04] border border-white/10 text-white text-xs focus:outline-none focus:border-teal-500/50"
+                    className="w-20 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
                   />
                 )}
 
@@ -123,7 +123,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   value={prize.weight}
                   onChange={(e) => updatePrize(prize.id, "weight", parseInt(e.target.value, 10) || 0)}
                   title="Gewichtung"
-                  className="w-16 px-2 py-1.5 rounded-md bg-white/[0.04] border border-white/10 text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="w-16 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
                 />
                 <span className="text-[10px] text-gray-500 w-12 tabular-nums shrink-0">{chance}%</span>
 

@@ -48,7 +48,7 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
               <p className="text-[11px] text-gray-500">
                 Wird bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben — nicht mehr pro einzelnem Event.
               </p>
-              <p className="text-[11px] text-gray-500 pt-1 border-t border-white/[0.05]">
+              <p className="text-[11px] text-gray-500 pt-1 border-t border-line">
                 Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Reihentabellen-Konfiguration" weiter unten.
               </p>
               <Checkbox

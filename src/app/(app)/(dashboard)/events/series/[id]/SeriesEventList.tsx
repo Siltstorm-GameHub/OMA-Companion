@@ -17,7 +17,7 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
       </h2>
 
       {!hasAny && (
-        <div className="glass rounded-xl px-4 py-8 text-center text-sm text-gray-600">
+        <div className="glass rounded-card px-4 py-8 text-center text-sm text-gray-600">
           Noch keine Events in dieser Reihe
         </div>
       )}
@@ -34,11 +34,11 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
             <button
               onClick={() => setPastOpen(o => !o)}
               aria-expanded={pastOpen}
-              className="w-full flex items-center gap-2 glass rounded-xl px-4 py-3 hover:bg-white/[0.03] transition-colors group">
+              className="w-full flex items-center gap-2 glass rounded-card px-4 py-3 hover:bg-surface-2 transition-colors group">
               <span className="flex-1 text-left text-xs font-medium text-gray-500 group-hover:text-gray-300 transition-colors">
                 Vergangene Events
               </span>
-              <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded-full bg-white/[0.04] tabular-nums">
+              <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded-full bg-line tabular-nums">
                 {past.length}
               </span>
               {pastOpen

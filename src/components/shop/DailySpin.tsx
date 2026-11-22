@@ -444,10 +444,10 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
               disabled={done || spinning}
               className={`w-full max-w-[220px] py-3 rounded-xl text-sm font-semibold transition-all ${
                 done
-                  ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
+                  ? "bg-line text-gray-600 border border-line cursor-not-allowed"
                   : spinning
                   ? "bg-amber-700/60 text-amber-300 cursor-wait"
-                  : "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_32px_rgba(245,158,11,0.5)] active:scale-[0.97]"
+                  : "bg-amber-500 hover:bg-amber-400 text-black active:scale-[0.97]"
               }`}
             >
               {done ? "✓ Bereits gedreht" : spinning ? "🎡 Dreht…" : "🎡 Drehen!"}
@@ -457,7 +457,7 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
 
         {/* Ergebnis-Footer */}
         {done && result && (
-          <div className="result-pop border-t border-white/[0.04] px-5 py-2.5 flex items-center justify-between gap-4">
+          <div className="result-pop border-t border-line px-5 py-2.5 flex items-center justify-between gap-4">
             <p className="text-xs text-gray-500">
               Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span>
             </p>

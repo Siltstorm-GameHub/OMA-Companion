@@ -67,7 +67,7 @@ export default async function ClipGaleriePage() {
         return (
           <section key={year} aria-label={`Clip-Jahr ${year}`} className="space-y-4">
             <h2 className="flex items-center gap-3 text-sm font-semibold text-gray-300">
-              {year} <span className="h-px flex-1 bg-white/[0.06]" />
+              {year} <span className="h-px flex-1 bg-line" />
             </h2>
 
             {yearlyWinners.length > 0 && yearly && (

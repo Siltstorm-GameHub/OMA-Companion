@@ -136,7 +136,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
     <div className="space-y-2">
       {big.map(item => <SpotlightCard key={item.eventId} item={item} />)}
       {small.length > 0 && (
-        <div className="surface rounded-xl overflow-hidden divide-y divide-white/[0.05] border border-teal-500/10">
+        <div className="surface rounded-card overflow-hidden divide-y divide-line border border-teal-500/10">
           {small.map(item => <CompactRow key={item.eventId} item={item} />)}
         </div>
       )}
@@ -178,7 +178,7 @@ function SpotlightCard({ item }: { item: GoalItem }) {
           </div>
           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-300 shrink-0" />
         </div>
-        <div className="mt-2 h-2 w-full rounded-full bg-white/[0.06] overflow-hidden"
+        <div className="mt-2 h-2 w-full rounded-full bg-line overflow-hidden"
           role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(main.percent)}>
           <div className={`h-full rounded-full ${reached ? "bg-gradient-to-r from-amber-400 to-amber-300" : "bg-gradient-to-r from-teal-500 to-emerald-400"}`}
             style={{ width: `${main.percent}%` }} />
@@ -214,7 +214,7 @@ function CompactRow({ item }: { item: GoalItem }) {
       : <span>{item.remainingLabel ?? "läuft"}</span>;
   return (
     <Link href={`/tournament/${item.eventId}`}
-      className="group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-white/[0.035]">
+      className="group flex items-center gap-3 px-3 py-2 transition-colors hover:bg-surface-2">
       <ProgressRing percent={main.percent} reached={reached} />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-200 truncate group-hover:text-white">

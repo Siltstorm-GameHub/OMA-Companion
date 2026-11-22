@@ -53,7 +53,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     if (part.startsWith("__") && part.endsWith("__") && part.length > 4) return <strong key={key} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
     if (part.startsWith("*") && part.endsWith("*") && part.length > 2) return <em key={key}>{part.slice(1, -1)}</em>;
     if (part.startsWith("_") && part.endsWith("_") && part.length > 2) return <em key={key}>{part.slice(1, -1)}</em>;
-    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) return <code key={key} className="px-1 rounded bg-white/10 text-[0.9em]">{part.slice(1, -1)}</code>;
+    if (part.startsWith("`") && part.endsWith("`") && part.length > 2) return <code key={key} className="px-1 rounded bg-line text-[0.9em]">{part.slice(1, -1)}</code>;
     const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
     if (link) {
       // @-Erwähnung: [@Name](user:<id>) → Link aufs Profil
@@ -161,17 +161,17 @@ export default function MarkdownLite({ text, className = "" }: { text: string; c
           case "ol":
             return <ol key={key} className="list-decimal pl-5 space-y-0.5">{b.items.map((it, j) => <li key={j}>{renderInline(it, `${key}-${j}`)}</li>)}</ol>;
           case "hr":
-            return <hr key={key} className="border-white/10" />;
+            return <hr key={key} className="border-line-strong" />;
           case "table":
             return (
               <div key={key} className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr>{b.header.map((h, j) => <th key={j} className="text-left font-semibold text-gray-200 border-b border-white/15 px-2 py-1">{renderInline(h, `${key}-h${j}`)}</th>)}</tr>
+                    <tr>{b.header.map((h, j) => <th key={j} className="text-left font-semibold text-gray-200 border-b border-line-strong px-2 py-1">{renderInline(h, `${key}-h${j}`)}</th>)}</tr>
                   </thead>
                   <tbody>
                     {b.rows.map((row, r) => (
-                      <tr key={r} className="border-b border-white/5">
+                      <tr key={r} className="border-b border-line">
                         {row.map((c, j) => <td key={j} className="px-2 py-1 text-gray-300">{renderInline(c, `${key}-${r}-${j}`)}</td>)}
                       </tr>
                     ))}

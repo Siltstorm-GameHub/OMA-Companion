@@ -21,7 +21,7 @@ export default function StepIndicator({ w }: { w: EventWizard }) {
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                 done   ? "bg-teal-500 text-white"
                 : active ? "bg-teal-500/20 border-2 border-teal-500 text-teal-400"
-                : "bg-white/5 border border-white/10 text-gray-500"
+                : "bg-line border border-line-strong text-gray-500"
               }`}>
                 {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
               </div>
@@ -30,7 +30,7 @@ export default function StepIndicator({ w }: { w: EventWizard }) {
               }`}>{label}</span>
             </div>
             {i < labels.length - 1 && (
-              <div className={`h-px mx-0.5 ${i < step ? "bg-teal-500/50" : "bg-white/8"}`} style={{ width: 14 }} />
+              <div className={`h-px mx-0.5 ${i < step ? "bg-teal-500/50" : "bg-line"}`} style={{ width: 14 }} />
             )}
           </div>
         );

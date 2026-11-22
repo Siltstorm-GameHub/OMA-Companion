@@ -22,7 +22,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const TEXTAREA = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none";
+const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none";
 
 export default function CoachRatingSection() {
   const [coaches, setCoaches] = useState<Coach[] | null>(null);
@@ -57,7 +57,7 @@ export default function CoachRatingSection() {
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Coach für Spiel/Sprache suchen…" aria-label="Coach suchen"
-              className="w-56 bg-white/[0.04] border border-white/10 rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+              className="w-56 bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
           </div>
         )}
       </div>
@@ -131,13 +131,13 @@ function TrainingRatingChip({ coachId, trainingSessionId, label, onRated }: {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs bg-white/[0.03] border border-white/10 rounded-full px-3 py-1.5 text-gray-300 hover:text-white hover:border-teal-500/30 transition-colors">
+        className="inline-flex items-center gap-1.5 text-xs bg-surface-2 border border-line-strong rounded-full px-3 py-1.5 text-gray-300 hover:text-white hover:border-teal-500/30 transition-colors">
         {label} <Star className="w-3 h-3 text-amber-400" />
       </button>
     );
   }
   return (
-    <div className="w-full bg-white/[0.03] rounded-lg p-3 space-y-2">
+    <div className="w-full bg-surface-2 rounded-lg p-3 space-y-2">
       <p className="text-xs text-white">{label} bewerten</p>
       <RatingForm coachId={coachId} trainingSessionId={trainingSessionId} onDone={onRated} onCancel={() => setOpen(false)} />
     </div>
@@ -165,7 +165,7 @@ function CoachCard({ coach }: { coach: Coach }) {
   }
 
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 space-y-2">
+    <div className="rounded-xl bg-surface-2 border border-line p-3 space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="min-w-0 space-y-1">
           <p className="text-sm text-white flex items-center gap-1.5">

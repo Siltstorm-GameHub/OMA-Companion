@@ -18,12 +18,12 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
           <Section title="Umfragen">
             <div className="space-y-2">
               {polls.map((p, i) => (
-                <div key={i} className="rounded-lg border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+                <div key={i} className="rounded-lg border border-line bg-surface-2 overflow-hidden">
                   {/* Header */}
                   <button
                     type="button"
                     onClick={() => setExpandedPoll(expandedPoll === i ? null : i)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-surface-2 transition-colors"
                   >
                     <span className="text-sm font-medium text-white">{p.label || `Umfrage ${i + 1}`}</span>
                     <div className="flex items-center gap-2">
@@ -36,7 +36,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                     </div>
                   </button>
                   {expandedPoll === i && (
-                    <div className="px-3 pb-3 space-y-3 border-t border-white/[0.06] pt-3">
+                    <div className="px-3 pb-3 space-y-3 border-t border-line pt-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Label (interner Name)</label>

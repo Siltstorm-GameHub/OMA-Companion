@@ -388,7 +388,7 @@ function DiscordPreview({ rule, title, body }: { rule: NotificationRuleRow; titl
 function PushPreview({ title, body }: { title: string; body: string }) {
   const plain = (t: string) => t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/<a?:(\w+):\d+>/g, ":$1:");
   return (
-    <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-white/[0.06] flex gap-2.5">
+    <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-line flex gap-2.5">
       <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">OMA</div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-white break-words">{plain(title) || "–"}</p>
@@ -418,7 +418,7 @@ function Toggle({ on, onClick, label, icon: Icon }: { on: boolean; onClick: () =
       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
         on
           ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-          : "bg-white/[0.02] text-gray-600 border-white/[0.06] hover:border-white/[0.12]"
+          : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
       }`}
     >
       <Icon className="w-3.5 h-3.5" />
@@ -616,10 +616,10 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Suchen in ${rules.length} Benachrichtigungen (Name, Text, Schlüssel …)`}
-            className="flex-1 min-w-0 rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
+            className="flex-1 min-w-0 rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
           />
           {query && (
-            <button onClick={() => setQuery("")} title="Suche leeren" className="p-2 rounded-xl text-gray-500 hover:text-white border border-white/[0.06]">
+            <button onClick={() => setQuery("")} title="Suche leeren" className="p-2 rounded-xl text-gray-500 hover:text-white border border-line">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -634,7 +634,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                 className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors ${
                   channelFilter === f.id
                     ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-                    : "bg-white/[0.02] text-gray-500 border-white/[0.06] hover:border-white/[0.12]"
+                    : "bg-surface-2 text-gray-500 border-line hover:border-line-strong"
                 }`}
               >
                 {f.label} <span className="opacity-60">{count}</span>
@@ -662,7 +662,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
               <a
                 key={cat}
                 href={`#notif-cat-${cat}`}
-                className="px-2 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.06] text-[11px] text-gray-400 hover:text-white hover:border-white/[0.15] transition-colors"
+                className="px-2 py-0.5 rounded-md bg-surface-2 border border-line text-[11px] text-gray-400 hover:text-white hover:border-line-strong transition-colors"
               >
                 {CATEGORY_LABELS[cat] ?? cat} <span className="opacity-50">{total}</span>
               </a>
@@ -692,7 +692,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
               {filtering ? `${rows.length} von ${total}` : total}
             </span>
             {dirtyInCat > 0 && <span className="text-[10px] text-amber-400">● {dirtyInCat} ungespeichert</span>}
-            <span className="flex-1 h-px bg-white/[0.05] ml-2" />
+            <span className="flex-1 h-px bg-line ml-2" />
           </button>
           {catOpen && rows.map((r) => {
             const selectedLink = PAGE_LINKS.find((p) => p.url === r.urlTemplate);
@@ -715,7 +715,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
 
             return (
               <div key={r.key} className={`glass card-shine rounded-2xl overflow-hidden ${allOff ? "opacity-60" : ""}`}>
-                <div className={`flex items-center justify-between gap-3 px-4 py-2.5 ${isOpen ? "border-b border-white/[0.05]" : ""}`}>
+                <div className={`flex items-center justify-between gap-3 px-4 py-2.5 ${isOpen ? "border-b border-line" : ""}`}>
                   <button onClick={() => toggleSet(setOpenRules, r.key)} className="min-w-0 flex-1 flex items-center gap-2.5 text-left">
                     <ChevronDown className={`w-3.5 h-3.5 text-gray-500 shrink-0 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
                     <div className="min-w-0">
@@ -728,7 +728,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   </button>
                   <div className="flex items-center gap-1 shrink-0">
                     {allOff ? (
-                      <span className="text-[10px] text-gray-500 px-1.5 py-0.5 rounded-md border border-white/[0.06]">aus</span>
+                      <span className="text-[10px] text-gray-500 px-1.5 py-0.5 rounded-md border border-line">aus</span>
                     ) : badges.map((b) => (
                       <span
                         key={b.label}
@@ -745,7 +745,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         onClick={() => deleteRule(r)}
                         disabled={deletingKey === r.key}
                         title="Regel löschen"
-                        className="ml-1 flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-white/[0.06] hover:border-red-500/20 transition-colors disabled:opacity-40"
+                        className="ml-1 flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-line hover:border-red-500/20 transition-colors disabled:opacity-40"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -779,7 +779,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
                             r.eventAudience === "all"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-                              : "bg-white/[0.02] text-gray-600 border-white/[0.06] hover:border-white/[0.12]"
+                              : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
                           }`}
                         >
                           <Users className="w-3.5 h-3.5" />
@@ -790,7 +790,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
                             r.eventAudience === "participants"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
-                              : "bg-white/[0.02] text-gray-600 border-white/[0.06] hover:border-white/[0.12]"
+                              : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
                           }`}
                         >
                           <UserCheck className="w-3.5 h-3.5" />
@@ -857,7 +857,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         min={1}
                         value={r.reminderHoursBefore ?? 24}
                         onChange={(e) => update(r.key, { reminderHoursBefore: Number(e.target.value) || 24 })}
-                        className="w-20 rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors"
+                        className="w-20 rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors"
                       />
                     </div>
                   )}
@@ -870,7 +870,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       value={r.titleTemplate}
                       onChange={(e) => update(r.key, { titleTemplate: e.target.value })}
                       onFocus={() => setLastField((s) => ({ ...s, [r.key]: "title" }))}
-                      className="w-full rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors"
+                      className="w-full rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors"
                     />
                   </div>
 
@@ -883,7 +883,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       onChange={(e) => update(r.key, { bodyTemplate: e.target.value })}
                       onFocus={() => setLastField((s) => ({ ...s, [r.key]: "body" }))}
                       rows={r.bodyTemplate.includes("\n") ? 3 : 2}
-                      className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none resize-none transition-colors"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none resize-none transition-colors"
                     />
                   </div>
 
@@ -901,7 +901,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             value={toHex(r.discordColor ?? defaultColor(r.key))}
                             onChange={(e) => update(r.key, { discordColor: parseInt(e.target.value.slice(1), 16) })}
                             title="Farbe des Rands am Discord-Embed"
-                            className="w-7 h-6 rounded cursor-pointer bg-transparent border border-white/[0.08]"
+                            className="w-7 h-6 rounded cursor-pointer bg-transparent border border-line"
                           />
                           {r.discordColor != null ? (
                             <button onClick={() => update(r.key, { discordColor: null })} className="text-[10px] text-gray-500 hover:text-gray-300">
@@ -947,7 +947,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                     </div>
 
                     {pickerFor?.key === r.key && (
-                      <div className="rounded-xl border border-white/[0.08] bg-gray-900/80 p-2">
+                      <div className="rounded-xl border border-line bg-gray-900/80 p-2">
                         <div className="flex items-center justify-between mb-2 px-1">
                           <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
                             Server-Emojis ({emojis.length})
@@ -962,7 +962,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                               key={emoji.id}
                               onClick={() => insertEmoji(r.key, pickerFor.field, emoji)}
                               title={`:${emoji.name}:`}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors shrink-0"
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-line transition-colors shrink-0"
                             >
                               <img
                                 src={`https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? "gif" : "webp"}?size=32`}
@@ -1002,7 +1002,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       type="button"
                       ref={(el) => { linkBtnRefs.current[r.key] = el; }}
                       onClick={() => toggleLinkDrop(r.key)}
-                      className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-gray-800/80 border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+                      className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-gray-800/80 border border-line hover:border-line-strong transition-colors"
                     >
                       <span className={selectedLink ? "text-white" : "text-gray-600"}>
                         {selectedLink ? `${selectedLink.label} (${selectedLink.url})` : "Keine Verlinkung"}
@@ -1033,12 +1033,12 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
             <div
               ref={linkDropRef}
               style={{ position: "fixed", top: linkDropRect.top, left: linkDropRect.left, width: linkDropRect.width }}
-              className="z-[100] rounded-xl overflow-hidden shadow-xl bg-gray-900/98 border border-white/[0.08] max-h-56 overflow-y-auto"
+              className="z-[100] rounded-xl overflow-hidden shadow-xl bg-gray-900/98 border border-line max-h-56 overflow-y-auto"
             >
               <button
                 type="button"
                 onClick={() => { update(activeRule.key, { urlTemplate: null }); setLinkDropFor(null); }}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-line transition-colors"
               >
                 <span>Keine Verlinkung</span>
                 {!activeRule.urlTemplate && <Check className="w-3.5 h-3.5 text-indigo-400" />}
@@ -1048,7 +1048,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   key={p.url}
                   type="button"
                   onClick={() => { update(activeRule.key, { urlTemplate: p.url }); setLinkDropFor(null); }}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors ${activeRule.urlTemplate === p.url ? "text-indigo-300" : "text-gray-300"}`}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-line transition-colors ${activeRule.urlTemplate === p.url ? "text-indigo-300" : "text-gray-300"}`}
                 >
                   <span>{p.label}</span>
                   <span className="flex items-center gap-2">

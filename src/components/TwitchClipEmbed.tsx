@@ -32,7 +32,7 @@ export default function TwitchClipEmbed({ clipUrl, thumbnailUrl, title, parent, 
     <button
       type="button"
       onClick={() => slug ? setPlaying(true) : window.open(clipUrl, "_blank", "noopener,noreferrer")}
-      className="relative aspect-video w-full block group bg-white/[0.03]"
+      className="relative aspect-video w-full block group bg-surface-2"
     >
       {thumbnailUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

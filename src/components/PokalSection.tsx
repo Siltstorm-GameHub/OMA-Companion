@@ -38,7 +38,7 @@ export default function PokalSection({ pokale, ownerName }: Props) {
               className={`flex flex-col items-center gap-2 rounded-2xl border p-3 ${
                 p.isSeries
                   ? "border-amber-500/30 bg-amber-500/[0.06] col-span-2 sm:col-span-1"
-                  : "border-white/[0.07] bg-white/[0.03]"
+                  : "border-line bg-surface-2"
               }`}
             >
               <div
@@ -50,12 +50,12 @@ export default function PokalSection({ pokale, ownerName }: Props) {
                   alt={getPokalCategoryLabel(p.category)}
                   width={imgSize}
                   height={imgSize}
-                  className="object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]"
+                  className="object-contain drop-shadow-card"
                 />
               </div>
               <span
                 className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${
-                  CATEGORY_BADGE_CLASS[p.category] ?? "bg-white/10 text-gray-300 border-white/20"
+                  CATEGORY_BADGE_CLASS[p.category] ?? "bg-line text-gray-300 border-line-strong"
                 }`}
               >
                 {p.isSeries ? "Eventreihe" : "Event"} · {getPokalCategoryLabel(p.category)}

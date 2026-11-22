@@ -73,7 +73,7 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
   if (!me) return null;
   if (!me.loggedIn) {
     return (
-      <div className="shrink-0 border-t border-white/[0.06] p-2.5">
+      <div className="shrink-0 border-t border-line p-2.5">
         <a
           href={loginHref}
           className="flex items-center justify-center gap-2 w-full rounded-lg py-2 text-sm font-medium text-white bg-[#9146ff] hover:bg-[#7c3aed] transition-colors"
@@ -85,7 +85,7 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
   }
 
   return (
-    <div className="shrink-0 border-t border-white/[0.06] p-2.5 space-y-1.5">
+    <div className="shrink-0 border-t border-line p-2.5 space-y-1.5">
       {channels.length > 1 && (
         <div className="flex flex-wrap gap-1">
           {channels.map(c => (
@@ -94,7 +94,7 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
               onClick={() => setPicked(c.login)}
               aria-pressed={target === c.login}
               className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-colors ${
-                target === c.login ? "border-white/30 text-white" : "border-white/[0.06] text-gray-500 hover:text-gray-300"
+                target === c.login ? "border-white/30 text-white" : "border-line text-gray-500 hover:text-gray-300"
               }`}
               style={target === c.login ? { background: `${c.color}33` } : undefined}
             >

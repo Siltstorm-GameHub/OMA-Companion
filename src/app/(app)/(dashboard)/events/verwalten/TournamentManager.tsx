@@ -953,7 +953,7 @@ export default function TournamentManager({
     return (
       <div key={match.id}
         className={`rounded-lg border overflow-hidden ${
-          isLive ? "border-red-500/60 shadow-[0_0_10px_rgba(239,68,68,0.15)]"
+          isLive ? "border-red-500/60"
           : isPlayed && !isEditing ? "border-gray-700 opacity-80" : "border-gray-600"
         }`}>
         {/* Match header */}
@@ -1459,7 +1459,7 @@ export default function TournamentManager({
       {([["tree", "Baum"], ["list", "Liste"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setDuelView(k)} aria-pressed={duelView === k}
           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            duelView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+            duelView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
           }`}>
           {label}
         </button>
@@ -1498,7 +1498,7 @@ export default function TournamentManager({
       {([["random", "Zufällig"], ["rank", "Nach Rangpunkten setzen"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setSeeding(k)} aria-pressed={seeding === k}
           title={k === "rank" ? "Die Stärksten (Rangpunkte) treffen erst spät aufeinander bzw. landen in verschiedenen Gruppen" : undefined}
-          className={`rounded-md px-2 py-1 text-[11px] transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"}`}>
+          className={`rounded-md px-2 py-1 text-[11px] transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
           {label}
         </button>
       ))}
@@ -1534,7 +1534,7 @@ export default function TournamentManager({
                     : <>{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</>}
                 </span>
               </p>
-              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-line overflow-hidden">
                 <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />
               </div>
             </div>
@@ -1824,7 +1824,7 @@ export default function TournamentManager({
             {([["table", "Tabelle"], ["rounds", "Runden"]] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setStatView(k)} aria-pressed={statView === k}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  statView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                  statView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                 }`}>
                 {label}
               </button>
@@ -1837,7 +1837,7 @@ export default function TournamentManager({
           </div>
           {goalBar}
           {statView === "table" && (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+            <div className="rounded-xl border border-line bg-surface-2 p-3">
               <StatStandingsTable rows={standings} fields={visibleStatFields} isAvg={tournament.format === "avg_stats"}
                 hasPoints={!!eventPoints} nameOf={nameOfUser} maxRounds={sp?.played ?? 0} />
             </div>

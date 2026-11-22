@@ -15,7 +15,7 @@ export default function SquadsSection({ squads }: { squads: ProfileSquad[] }) {
       <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">
         {squads.map(s => (
           <Link key={s.id} href={`/squads/${s.id}`}
-            className="flex items-center gap-1.5 rounded-full pl-2 pr-3 py-1.5 border border-white/[0.08] bg-white/[0.02] hover:border-white/20 transition-colors">
+            className="flex items-center gap-1.5 rounded-full pl-2 pr-3 py-1.5 border border-line bg-surface-2 hover:border-line-strong transition-colors">
             <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
             <span className="text-xs font-medium text-white">{s.name}</span>
             {s.role === "captain" && <Crown className="w-3 h-3 text-amber-400 shrink-0" />}

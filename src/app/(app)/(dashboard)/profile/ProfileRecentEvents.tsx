@@ -41,18 +41,18 @@ export default function ProfileRecentEvents({ eventRegs, userId, isOwn }: { even
           {isOwn && <Link href="/events" className="mt-1 inline-block text-xs text-teal-400 hover:text-teal-300">Zu den Events →</Link>}
         </div>
       ) : (
-        <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+        <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
           {eventRegs.map(reg => {
             const place = placementOf(reg.event.finalRankingJson, userId);
             const upcoming = reg.event.status && reg.event.status !== "finished" && reg.event.status !== "umfrage";
             const badge = place
-              ? <span className={`shrink-0 min-w-[2.25rem] text-center text-xs font-bold px-1.5 py-0.5 rounded-md border tabular-nums ${PLACE_CLS[place - 1] ?? "bg-white/[0.04] text-gray-300 border-white/[0.08]"}`}>{place}.</span>
-              : <span className="shrink-0 min-w-[2.25rem] text-center text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-white/[0.08] text-gray-400">
+              ? <span className={`shrink-0 min-w-[2.25rem] text-center text-xs font-bold px-1.5 py-0.5 rounded-md border tabular-nums ${PLACE_CLS[place - 1] ?? "bg-line text-gray-300 border-line"}`}>{place}.</span>
+              : <span className="shrink-0 min-w-[2.25rem] text-center text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-line text-gray-400">
                   {upcoming ? "bald" : reg.role === "spectator" ? "Zusch." : "dabei"}
                 </span>;
             return (
               <Link key={reg.id} href={`/tournament/${reg.event.id}`}
-                className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-white/[0.03] transition-colors group">
+                className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-surface-2 transition-colors group">
                 {badge}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">{reg.event.title}</p>

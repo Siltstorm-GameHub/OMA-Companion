@@ -77,9 +77,9 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
     }
   }
 
-  const input = "bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
   return (
-    <div className="border-t border-white/[0.06] p-4 space-y-5 bg-black/20">
+    <div className="border-t border-line p-4 space-y-5 bg-black/20">
       <div className="grid sm:grid-cols-[1fr_9rem_9rem] gap-3">
         <label className="space-y-1">
           <span className="text-xs font-semibold text-gray-300">Name</span>
@@ -262,14 +262,14 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
       <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(VIEW_LABELS) as View[]).map(v => (
           <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${view === v ? "bg-purple-600/20 border-purple-400/40 text-purple-200" : "border-white/[0.08] text-gray-400 hover:text-white"}`}>
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${view === v ? "bg-purple-600/20 border-purple-400/40 text-purple-200" : "border-line text-gray-400 hover:text-white"}`}>
             {VIEW_LABELS[v]}{v === "PENDING" && pendingCount > 0 ? ` (${pendingCount})` : ""}
           </button>
         ))}
         <div className="relative ml-auto">
           <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen …" aria-label="Spiel suchen"
-            className="w-48 bg-white/[0.04] border border-white/10 rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-48 bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
         </div>
       </div>
 
@@ -313,9 +313,9 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
               </div>
 
               {mergeFor === g.id && (
-                <div className="border-t border-white/[0.06] p-3 flex flex-wrap items-center gap-2 bg-black/20 text-xs text-gray-300">
+                <div className="border-t border-line p-3 flex flex-wrap items-center gap-2 bg-black/20 text-xs text-gray-300">
                   <span>„{g.name}“ aufgehen lassen in:</span>
-                  <select value={mergeTarget} onChange={e => setMergeTarget(e.target.value)} className="input-glass rounded-lg px-2 py-1.5 text-xs text-white max-w-xs">
+                  <select value={mergeTarget} onChange={e => setMergeTarget(e.target.value)} className="input-glass rounded-card px-2 py-1.5 text-xs text-white max-w-xs">
                     <option value="">Spiel wählen …</option>
                     {games.filter(x => x.id !== g.id).sort((a, b) => a.name.localeCompare(b.name, "de")).map(x => (
                       <option key={x.id} value={x.id}>{x.name}</option>

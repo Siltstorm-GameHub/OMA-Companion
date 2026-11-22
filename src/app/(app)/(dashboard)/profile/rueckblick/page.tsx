@@ -71,9 +71,7 @@ export default async function YearReviewPage({
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/12 via-transparent to-rose-500/8 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent pointer-events-none" />
 
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -93,7 +91,7 @@ export default async function YearReviewPage({
                   className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
                     y === year
                       ? "bg-violet-500/15 text-violet-300 border-violet-500/30"
-                      : "bg-white/[0.03] text-gray-500 border-white/[0.08] hover:text-gray-300 hover:border-white/[0.15]"
+                      : "bg-surface-2 text-gray-500 border-line hover:text-gray-300 hover:border-line-strong"
                   }`}>
                   {y}
                 </Link>
@@ -106,12 +104,11 @@ export default async function YearReviewPage({
       {/* ── Rang-Reise & Münzen ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/8 to-transparent pointer-events-none" />
           <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5" /> Punkte-Reise
           </p>
           <div className="relative flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-white/10 bg-white/[0.04] text-gray-200 tabular-nums">
+            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-line-strong bg-line text-gray-200 tabular-nums">
               <RankPointsIcon size={14} /> {review.rankPointsStart.toLocaleString("de-DE")}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-600 shrink-0" />
@@ -126,7 +123,6 @@ export default async function YearReviewPage({
         </div>
 
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/8 to-transparent pointer-events-none" />
           <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <CoinIcon size={13} /> Münzen
           </p>
@@ -161,7 +157,6 @@ export default async function YearReviewPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {review.biggestWin && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/8 to-transparent pointer-events-none" />
               <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">🏆 Größter Gewinn</p>
               <p className="relative text-lg font-black text-amber-400 tabular-nums flex items-center gap-1.5">
                 +{review.biggestWin.amount.toLocaleString("de-DE")} <CoinIcon size={14} />
@@ -171,7 +166,6 @@ export default async function YearReviewPage({
           )}
           {review.busiestMonth && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
               <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">📈 Aktivster Monat</p>
               <p className="relative text-lg font-black text-white">{MONTH_NAMES[review.busiestMonth.month - 1]}</p>
               <p className="relative text-xs text-gray-400 mt-1">{review.busiestMonth.count} Aktivitäten</p>
@@ -189,7 +183,7 @@ export default async function YearReviewPage({
           <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">
             {review.newPokale.map(p => (
               <div key={p.id} title={p.title}
-                className="flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02]">
+                className="flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border border-line bg-surface-2">
                 {/* eslint-disable-next-line @next/next/no-img-element -- lokales, statisches Icon */}
                 <img
                   src={POKAL_CATEGORY_IMAGE[p.category as keyof typeof POKAL_CATEGORY_IMAGE]}
@@ -209,21 +203,18 @@ export default async function YearReviewPage({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {review.lul && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
               <p className="relative text-2xl font-black text-white tabular-nums">{review.lul.points}</p>
               <p className="relative text-xs text-gray-400 mt-1.5">LuL-Punkte · {review.lul.spieltage} Spieltage{review.lul.wins > 0 ? ` · ${review.lul.wins} Siege` : ""}</p>
             </div>
           )}
           {review.predictions && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
               <p className="relative text-2xl font-black text-white tabular-nums">{review.predictions.correct}/{review.predictions.total}</p>
               <p className="relative text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Target className="w-3 h-3" /> Vorhersagen richtig</p>
             </div>
           )}
           {review.donationsTotal > 0 && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/8 to-transparent pointer-events-none" />
               <p className="relative text-2xl font-black text-white tabular-nums">{review.donationsTotal.toLocaleString("de-DE")}€</p>
               <p className="relative text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Heart className="w-3 h-3" /> gespendet</p>
             </div>

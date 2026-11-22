@@ -18,7 +18,7 @@ export default function SectionTabs({ tabs, ariaLabel, initial }: { tabs: Sectio
           <button key={t.key} type="button" role="tab" aria-selected={active === t.key} id={`tab-${t.key}`} aria-controls={`panel-${t.key}`}
             onClick={() => setActive(t.key)}
             className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              active === t.key ? "border-teal-400 bg-teal-500 text-teal-950" : "border-white/[0.1] text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04]"
+              active === t.key ? "border-teal-400 bg-teal-500 text-teal-950" : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
             }`}>
             {t.label}
           </button>

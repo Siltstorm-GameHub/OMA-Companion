@@ -13,7 +13,7 @@ const TABS = [
 
 export default function EventsSectionNav({ active }: { active: (typeof TABS)[number]["key"] }) {
   return (
-    <nav aria-label="Events" className="flex gap-1 border-b border-white/[0.06] overflow-x-auto scrollbar-none whitespace-nowrap">
+    <nav aria-label="Events" className="flex gap-1 border-b border-line overflow-x-auto scrollbar-none whitespace-nowrap">
       {TABS.map((t) => {
         const on = t.key === active;
         return (

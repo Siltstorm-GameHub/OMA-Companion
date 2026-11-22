@@ -161,7 +161,7 @@ export default function RegisterButton({
             className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold border transition-colors disabled:opacity-70 ${
               waitPos !== null
                 ? "bg-amber-500/10 text-amber-300 border-amber-500/25 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/25"
-                : "bg-white/[0.04] text-gray-200 border-white/[0.1] hover:bg-white/[0.08]"
+                : "bg-line text-gray-200 border-line-strong hover:bg-line"
             }`}>
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3" />}
             {waitPos !== null ? `Warteliste · Platz ${waitPos}` : "Voll · auf die Warteliste"}
@@ -171,11 +171,11 @@ export default function RegisterButton({
       );
     }
     return waitlistHref ? (
-      <Link href={waitlistHref} className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:text-white">
+      <Link href={waitlistHref} className="text-xs px-3 py-1.5 rounded-lg bg-line text-gray-400 border border-line hover:text-white">
         Voll · Warteliste
       </Link>
     ) : (
-      <span className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] text-gray-500 border border-white/[0.06]">
+      <span className="text-xs px-3 py-1.5 rounded-lg bg-line text-gray-500 border border-line">
         Voll
       </span>
     );

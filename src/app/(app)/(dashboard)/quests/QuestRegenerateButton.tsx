@@ -41,7 +41,7 @@ export default function QuestRegenerateButton() {
       onClick={regenerate}
       disabled={loading}
       title="Quests neu generieren"
-      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white glass border border-white/[0.08] hover:border-white/[0.15] px-3 py-2 rounded-lg transition-all disabled:opacity-50"
+      className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white glass border border-line hover:border-line-strong px-3 py-2 rounded-card transition-all disabled:opacity-50"
     >
       <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
       Neu generieren

@@ -45,14 +45,14 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
-                  hidden ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-white/[0.08] hover:border-white/20"
+                  hidden ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-line hover:border-line-strong"
                 }`}>
                 {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 {hidden ? "Ausgeblendet · einblenden" : "Sichtbar · ausblenden"}
               </button>
               <button type="button" onClick={toggleRegistrationLocked} disabled={registrationLockedBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
-                  registrationLocked ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-white/[0.08] hover:border-white/20"
+                  registrationLocked ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-line hover:border-line-strong"
                 }`}>
                 {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                 {registrationLocked ? "Anmeldung gesperrt · freigeben" : "Selbst-Anmeldung offen · sperren"}
@@ -121,7 +121,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                 {GENRES.map(g => (
                   <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? "" : g.value)}
                     className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                     }`}>
                     <AppIcon kind="genre" name={g.value} size={32} />
                     <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
@@ -137,7 +137,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                     <button key={p.value} type="button"
                       onClick={() => setPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
                       className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
-                        active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                        active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
                       }`}>
                       <span>{p.icon}</span> {p.label}
                     </button>

@@ -1,14 +1,16 @@
 "use client";
-import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
-import MobileTopBar from "@/components/MobileTopBar";
-import BottomNav from "@/components/BottomNav";
 import { BackToTop } from "@/components/BackToTop";
 import { CommunityHub } from "@/components/CommunityHub";
-import AuroraBackground from "@/components/AuroraBackground";
 import { GuestGateProvider, GuestBanner } from "@/components/GuestGate";
+import { Sidebar } from "@/components/shell/Sidebar";
+import { TopBar } from "@/components/shell/TopBar";
+import { BottomNav } from "@/components/shell/BottomNav";
 
 /**
+ * App-Rahmen nach dem Designentwurf (OMA 2.0, Richtung G): Desktop = Seitenleiste links +
+ * Kopfzeile, Handy = Kopfzeile + untere Leiste. Das News-Laufband sitzt unter der Kopfzeile.
+ *
  * `partnerFooter` kommt bewusst als bereits gerendertes ReactNode vom Server-
  * Layout rein, statt hier `<PartnerFooter />` selbst zu importieren:
  * PartnerFooter ist eine ASYNC SERVER COMPONENT, die direkt `prisma` aufruft.
@@ -30,45 +32,27 @@ export default function DashboardChrome({
 }) {
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
-    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": "2.25rem" } as React.CSSProperties}>
+      <div className="min-h-dvh bg-canvas text-fg lg:flex">
+        <Sidebar />
 
-      {/* ── Aurora Hintergrund ───────────────────────────────────── */}
-      <AuroraBackground />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar />
+          <TopNewsFeed items={newsItems} />
 
-      {/* ── News-Ticker (oben) ──────────────────────────────────── */}
-      <TopNewsFeed items={newsItems} />
+          <main className="min-w-0 flex-1 px-0 pt-3 pb-28 lg:pt-5 lg:pb-10">
+            <GuestBanner />
+            {children}
+            {partnerFooter}
+          </main>
+        </div>
 
-      {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
-      <MobileTopBar />
+        <BackToTop />
 
-      {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
-      <div className="hidden lg:block">
-        <FloatingPill />
-      </div>
+        {/* Benachrichtigungen, Event-Absprachen, Online-Leiste (Knopf unten rechts, Glocke oben) */}
+        <CommunityHub />
 
-      {/* ── Main Content ────────────────────────────────────────── */}
-      {/* Mobile:  2.25rem Ticker + 3.5rem MobileTopBar = 5.75rem (ohne Ticker: 3.5rem) */}
-      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px (ohne Ticker: 72px)      */}
-      <main
-        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
-        style={{ position: "relative", zIndex: 2 }}
-      >
-        <GuestBanner />
-        {children}
-        {partnerFooter}
-      </main>
-
-      {/* Back to top */}
-      <BackToTop />
-
-      {/* Benachrichtigungen, Event-Absprachen, Online-Leiste (Knopf unten rechts) */}
-      <CommunityHub />
-
-      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
-      <div className="lg:hidden">
         <BottomNav />
       </div>
-    </div>
     </GuestGateProvider>
   );
 }

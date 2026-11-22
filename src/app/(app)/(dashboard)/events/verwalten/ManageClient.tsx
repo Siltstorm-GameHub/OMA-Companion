@@ -41,7 +41,7 @@ function since(d: Date | string, now: Date): string {
   return `seit ${days} ${days === 1 ? "Tag" : "Tagen"}`;
 }
 
-const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-gray-200 hover:bg-white/[0.08] hover:text-white transition-colors";
+const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg border border-line-strong bg-line px-2.5 py-1 text-xs font-semibold text-gray-200 hover:bg-line hover:text-white transition-colors";
 const BTN_PRIMARY = "shrink-0 inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50";
 
 function Section({ title, count, children, tone }: { title: string; count?: number; children: ReactNode; tone?: "attention" }) {
@@ -57,7 +57,7 @@ function Section({ title, count, children, tone }: { title: string; count?: numb
 
 function Tag({ children, tone = "gray", title }: { children: ReactNode; tone?: "gray" | "amber" | "rose" | "teal"; title?: string }) {
   const cls = {
-    gray: "text-gray-400 bg-white/[0.04] border-white/[0.08]",
+    gray: "text-gray-400 bg-line border-line",
     amber: "text-amber-300 bg-amber-500/10 border-amber-500/20",
     rose: "text-rose-300 bg-rose-500/10 border-rose-500/20",
     teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
@@ -110,18 +110,18 @@ function RowMenu({ ev }: { ev: ManageEvent }) {
     else toast.error((await res.json().catch(() => null))?.error ?? "Das hat nicht geklappt");
   }
 
-  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-200 hover:bg-white/[0.06]";
+  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-200 hover:bg-line";
   return (
     <div ref={ref} className="relative shrink-0">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Weitere Aktionen" aria-expanded={open}
-        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] flex items-center justify-center text-base leading-none">
+        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-line flex items-center justify-center text-base leading-none">
         ⋯
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-white/[0.1] bg-gray-900 shadow-xl">
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl">
           <Link role="menuitem" href={`/tournament/${ev.id}`} className={item}><ExternalLink className="w-3.5 h-3.5 text-gray-500" /> Öffentliche Seite</Link>
           <Link role="menuitem" href={`/events/verwalten/neu?from=${ev.id}`} className={item}><Copy className="w-3.5 h-3.5 text-gray-500" /> Duplizieren</Link>
-          <button role="menuitem" type="button" onClick={toggleHidden} disabled={busy} className={`${item} border-t border-white/[0.06]`}>
+          <button role="menuitem" type="button" onClick={toggleHidden} disabled={busy} className={`${item} border-t border-line`}>
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : ev.hidden ? <Eye className="w-3.5 h-3.5 text-gray-500" /> : <EyeOff className="w-3.5 h-3.5 text-gray-500" />}
             {ev.hidden ? "Wieder einblenden" : "Ausblenden"}
           </button>
@@ -155,13 +155,13 @@ function EventLine({ ev, now, right }: { ev: ManageEvent; now: Date; right?: Rea
       </Link>
       <span className="hidden sm:flex items-center gap-1"><EventTags ev={ev} status={status} /></span>
       <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
-        ev.players === 0 ? "bg-amber-500/10 text-amber-300" : "bg-white/[0.05] text-gray-300"
+        ev.players === 0 ? "bg-amber-500/10 text-amber-300" : "bg-line text-gray-300"
       }`} title="Anmeldungen als Spieler">
         {ev.maxPlayers ? `${ev.players}/${ev.maxPlayers}` : ev.players}
       </span>
       {right ?? (
         <>
-          <Link href={`/events/verwalten/${ev.id}`} aria-label="Bearbeiten" className="w-7 h-7 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] flex items-center justify-center shrink-0">
+          <Link href={`/events/verwalten/${ev.id}`} aria-label="Bearbeiten" className="w-7 h-7 rounded-lg text-gray-500 hover:text-white hover:bg-line flex items-center justify-center shrink-0">
             <Edit2 className="w-3.5 h-3.5" />
           </Link>
           <RowMenu ev={ev} />
@@ -231,7 +231,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Titel, Spiel, Reihe oder Person"
             aria-label="Events durchsuchen"
-            className="w-full rounded-lg bg-white/[0.04] border border-white/[0.08] pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-400/50" />
+            className="w-full rounded-lg bg-line border border-line pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-400/50" />
         </div>
       )}
 
@@ -245,7 +245,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
       {/* ── Braucht dich ── */}
       {attentionCount > 0 && (
         <Section title="Braucht dich" count={attentionCount} tone="attention">
-          <ul className="mt-1 divide-y divide-white/[0.05]">
+          <ul className="mt-1 divide-y divide-line">
             {approvalsShown.map((a) => (
               <li key={`a-${a.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
                 <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><UserCheck className="w-4 h-4" /></span>
@@ -318,14 +318,14 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
               <h2 className="text-sm font-semibold text-white">
                 Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
               </h2>
-              <ul className="mt-1 divide-y divide-white/[0.05]">
+              <ul className="mt-1 divide-y divide-line">
                 {seriesShown.map((s) => {
                   const color = resolveSeriesColor(s.icon);
                   const pct = s.total > 0 ? Math.round((s.played / s.total) * 100) : 0;
                   return (
                     <li key={s.id}>
                       <Link href={`/events/verwalten/reihen/${s.id}`}
-                        className="group flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-white/[0.03] transition-colors">
+                        className="group flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-surface-2 transition-colors">
                         <span className="w-1 h-9 rounded-full shrink-0" style={{ background: color }} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 min-w-0">
@@ -345,7 +345,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                               {s.hidden && !s.rejected && <Tag tone="rose">Ausgeblendet</Tag>}
                             </span>
                           )}
-                          <span className="mt-1 block h-1 w-full rounded-full bg-white/[0.06] overflow-hidden" aria-hidden>
+                          <span className="mt-1 block h-1 w-full rounded-full bg-line overflow-hidden" aria-hidden>
                             <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                           </span>
                         </span>
@@ -367,7 +367,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 <label className="ml-auto flex items-center gap-1.5 text-[11px] text-gray-500">
                   Zeigen:
                   <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}
-                    className="max-w-[12rem] rounded-md bg-white/[0.04] border border-white/[0.08] px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-teal-400/50">
+                    className="max-w-[12rem] rounded-md bg-line border border-line px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-teal-400/50">
                     <option value="">Alle Events</option>
                     {series.map((s) => <option key={s.id} value={s.id}>Nur {s.name}</option>)}
                   </select>
@@ -379,7 +379,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
             ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
               <div key={key} className="mt-2">
                 <p className="text-[11px] font-semibold text-gray-500">{label}</p>
-                <ul className="divide-y divide-white/[0.05]">
+                <ul className="divide-y divide-line">
                   {upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
                 </ul>
               </div>
@@ -399,7 +399,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
           </button>
           {(pastOpen || !!q) && (
             <>
-              <ul className="mt-1 divide-y divide-white/[0.05]">
+              <ul className="mt-1 divide-y divide-line">
                 {pastShown.map((ev) => (
                   <EventLine key={ev.id} ev={ev} now={now}
                     right={

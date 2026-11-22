@@ -163,7 +163,7 @@ export default function LiveStreamsBanner({
                   </span>
                   {/* Play-Overlay */}
                   <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                    <span className="w-8 h-8 rounded-full bg-white/0 group-hover:bg-white/90 flex items-center justify-center transition-colors">
+                    <span className="w-8 h-8 rounded-full bg-surface-2 group-hover:bg-white/90 flex items-center justify-center transition-colors">
                       <span className="w-0 h-0 border-y-[6px] border-y-transparent border-l-[9px] border-l-transparent group-hover:border-l-teal-500 ml-0.5" />
                     </span>
                   </span>

@@ -200,7 +200,7 @@ export default function AdminFixedCosts({
                       <Check className="w-3 h-3" /> Speichern
                     </button>
                     <button onClick={() => setEditingId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/[0.05]">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-line">
                       <X className="w-3 h-3" /> Abbrechen
                     </button>
                   </div>
@@ -223,7 +223,7 @@ export default function AdminFixedCosts({
                     </button>
                   )}
                   <button onClick={() => handleToggle(c)} disabled={isPending}
-                    className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-gray-500 hover:text-white hover:bg-white/[0.05]">
+                    className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-gray-500 hover:text-white hover:bg-line">
                     {c.active ? "Pausieren" : "Aktivieren"}
                   </button>
                   <button onClick={() => startEdit(c)} disabled={isPending} aria-label="Bearbeiten"

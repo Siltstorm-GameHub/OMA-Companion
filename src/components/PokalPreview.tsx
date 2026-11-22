@@ -21,7 +21,7 @@ export default function PokalPreview({ category, isSeries }: Props) {
       className={`flex items-center gap-3 rounded-xl p-3 border border-dashed ${
         isSeries
           ? "border-amber-500/25 bg-amber-500/[0.04]"
-          : "border-white/15 bg-white/[0.02]"
+          : "border-line-strong bg-surface-2"
       }`}
     >
       <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">

@@ -7,7 +7,7 @@ export default function TabSeries({ ctx }: { ctx: EventEdit }) {
   const { seriesWinnerMode, setSeriesWinnerMode, seriesWinnerStatField, setSeriesWinnerStatField } = ctx;
   return (
     <div className="space-y-4">
-          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-4">
+          <div className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-4">
             <div>
               <h3 className="text-sm font-semibold text-gray-300 mb-1">Sieger-Ermittlung für die Reihe</h3>
               <p className="text-xs text-gray-500">Wie wird der Sieger eines einzelnen Events in dieser Reihe ermittelt?</p>

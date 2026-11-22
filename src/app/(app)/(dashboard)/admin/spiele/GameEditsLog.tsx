@@ -45,7 +45,7 @@ export default function GameEditsLog({ edits }: { edits: GameEditRow[] }) {
       {edits.length === 0 ? (
         <p className="text-sm text-gray-500 py-4">Noch keine Ergänzungen.</p>
       ) : (
-        <div className="surface rounded-2xl divide-y divide-white/[0.05] overflow-hidden">
+        <div className="surface rounded-2xl divide-y divide-line overflow-hidden">
           {edits.map(e => (
             <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${e.reverted ? "opacity-50" : ""}`}>
               <div className="flex-1 min-w-0">

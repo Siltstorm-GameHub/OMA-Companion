@@ -25,7 +25,7 @@ function Block({ title, hint, empty, count, children }: { title: string; hint: s
     <section className="space-y-1.5">
       <h2 className={LABEL}>{title} ({count})</h2>
       <p className="text-[11px] text-gray-600">{hint}</p>
-      <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+      <div className="glass rounded-card overflow-hidden divide-y divide-line">
         {count === 0 ? <p className="p-3 text-xs text-gray-600">{empty}</p> : children}
       </div>
     </section>

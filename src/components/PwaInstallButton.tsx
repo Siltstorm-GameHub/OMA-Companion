@@ -77,8 +77,6 @@ function HintPortal({
         width: 272,
         background: "rgba(4,10,9,0.97)",
         border: "1px solid rgba(20,184,166,0.2)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
         borderRadius: "0.75rem",
         padding: "1rem",
         boxShadow: "0 8px 32px rgba(0,0,0,0.7)",

@@ -3,7 +3,8 @@
 // Unterseiten wie /events/series/[id] oder /tournament/[id] — die verlangen
 // weiterhin ein Login. Wird sowohl serverseitig (Layout) als auch im Client
 // (Navigation/GateLink) genutzt, damit beide dieselbe Definition teilen.
-export const GUEST_ALLOWED_PATHS = ["/dashboard", "/events", "/leaderboard", "/clip-galerie"];
+// /community ist nur die Kachel-Übersicht der unteren Leiste (Handy) — reine Links.
+export const GUEST_ALLOWED_PATHS = ["/dashboard", "/events", "/leaderboard", "/clip-galerie", "/community"];
 
 export function isGuestAllowedPath(href: string): boolean {
   const path = href.split(/[?#]/)[0].replace(/\/+$/, "") || "/";

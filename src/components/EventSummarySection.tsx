@@ -10,7 +10,7 @@ export default function EventSummarySection({ summary }: { summary: string }) {
     <div className="glass card-shine rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-surface-2 transition-colors"
       >
         <Newspaper className="w-4 h-4 text-teal-400 shrink-0" />
         <span className="text-sm font-semibold text-white flex-1 text-left">Eventbericht</span>

@@ -61,7 +61,7 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
   }
 
   return (
-    <div className="glass rounded-2xl divide-y divide-white/5">
+    <div className="glass rounded-2xl divide-y divide-line">
       {predictions.map(p => (
         <div key={p.eventId} className="flex items-center gap-3 px-4 py-3">
           <Link href={`/tournament/${p.eventId}`} className="flex-1 min-w-0 flex items-center gap-3 group">

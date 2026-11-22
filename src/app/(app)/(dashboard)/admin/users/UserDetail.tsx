@@ -15,7 +15,7 @@ import { ROLE_INFO, displayName, relativeSince, type AdminUserRow } from "@/lib/
 
 type Tx = { id: string; amount: number; reason: string; createdAt: string };
 
-const inputCls = "rounded-lg bg-white/[0.03] border border-white/[0.1] px-2.5 py-1.5 text-sm text-white focus:border-teal-500/40 focus:outline-none";
+const inputCls = "rounded-lg bg-surface-2 border border-line-strong px-2.5 py-1.5 text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
 export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
   user: AdminUserRow;
@@ -125,14 +125,14 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
           </p>
         </div>
         <Link href={`/profile/${user.id}`} title="Profil öffnen" aria-label="Profil öffnen"
-          className="w-8 h-8 shrink-0 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] flex items-center justify-center">
+          className="w-8 h-8 shrink-0 rounded-lg text-gray-400 hover:text-white hover:bg-line flex items-center justify-center">
           <ExternalLink className="w-4 h-4" />
         </Link>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
         {[["Münzen", user.points], ["Rang-Punkte", user.rankPoints], ["Events", user.eventCount]].map(([label, v]) => (
-          <div key={label as string} className="rounded-xl bg-white/[0.03] px-3 py-2">
+          <div key={label as string} className="rounded-xl bg-surface-2 px-3 py-2">
             <p className="text-[11px] text-gray-500">{label}</p>
             <p className="text-sm font-semibold text-white tabular-nums">{(v as number).toLocaleString("de-DE")}</p>
           </div>
@@ -148,7 +148,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
               <button key={key} type="button" role="radio" aria-checked={on} disabled={roleBusy || isMe}
                 onClick={() => changeRole(key)}
                 className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
-                  on ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-white/[0.08] text-gray-400 hover:text-white hover:bg-white/[0.04] disabled:opacity-50"
+                  on ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-line text-gray-400 hover:text-white hover:bg-line disabled:opacity-50"
                 }`}>
                 {roleBusy && !on ? <Loader2 className="w-3 h-3 inline animate-spin" /> : info.label}
               </button>
@@ -163,7 +163,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
       <div className="space-y-1.5">
         <p className="text-xs font-semibold text-gray-400">Münzen gutschreiben oder abziehen</p>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex rounded-lg overflow-hidden border border-white/[0.08]" role="radiogroup" aria-label="Richtung">
+          <div className="flex rounded-lg overflow-hidden border border-line" role="radiogroup" aria-label="Richtung">
             {(["add", "sub"] as const).map(k => (
               <button key={k} type="button" role="radio" aria-checked={mode === k} onClick={() => setMode(k)}
                 className={`px-2.5 py-1.5 text-xs font-bold ${mode === k ? (k === "add" ? "bg-emerald-500/20 text-emerald-300" : "bg-red-500/20 text-red-300") : "text-gray-500 hover:text-gray-300"}`}>
@@ -188,7 +188,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
         ) : txs.length === 0 ? (
           <p className="text-xs text-gray-600">Noch keine Buchungen.</p>
         ) : (
-          <ul className="divide-y divide-white/[0.04]">
+          <ul className="divide-y divide-line">
             {txs.slice(0, 5).map(t => (
               <li key={t.id} className="flex items-center gap-2 py-1.5 text-xs">
                 <span className={`w-14 shrink-0 text-right tabular-nums font-semibold ${t.amount >= 0 ? "text-emerald-300" : "text-red-300"}`}>

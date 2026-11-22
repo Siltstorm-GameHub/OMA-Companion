@@ -35,7 +35,7 @@ function ItemLink({ item, active, count, onNavigate }: { item: AdminNavItem; act
   return (
     <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined}
       className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-        active ? "bg-purple-600/20 text-purple-200 ring-1 ring-purple-500/25" : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
+        active ? "bg-purple-600/20 text-purple-200 ring-1 ring-purple-500/25" : "text-gray-400 hover:text-white hover:bg-line"
       }`}>
       <Icon name={item.icon} className={`w-4 h-4 shrink-0 ${active ? "text-purple-300" : "text-gray-500"}`} />
       <span className="truncate">{item.label}</span>
@@ -60,13 +60,13 @@ function NavList({ groups, pathname, counts, onNavigate }: { groups: AdminNavGro
                   <ItemLink item={i} active={isActive} count={itemCount(i, counts)} onNavigate={onNavigate} />
                   {/* Unterseiten (z.B. Community-Jobs) klappen auf, sobald der Punkt aktiv ist */}
                   {isActive && i.children && (
-                    <ul className="mt-0.5 mb-1 ml-[1.15rem] border-l border-white/[0.08] pl-2 space-y-0.5">
+                    <ul className="mt-0.5 mb-1 ml-[1.15rem] border-l border-line pl-2 space-y-0.5">
                       {i.children.map((c) => {
                         const on = child?.href === c.href;
                         return (
                           <li key={c.href}>
                             <Link href={c.href} onClick={onNavigate} aria-current={on ? "page" : undefined}
-                              className={`block rounded-md px-2 py-1 text-xs transition-colors ${on ? "text-white bg-white/[0.06]" : "text-gray-500 hover:text-gray-200"}`}>
+                              className={`block rounded-md px-2 py-1 text-xs transition-colors ${on ? "text-white bg-line" : "text-gray-500 hover:text-gray-200"}`}>
                               {c.label}
                             </Link>
                           </li>
@@ -101,11 +101,11 @@ function SearchBox({ groups, counts, inputRef, onNavigate }: {
             if (e.key === "Escape") { setQ(""); (e.target as HTMLInputElement).blur(); }
           }}
           placeholder="Seite suchen" aria-label="Admin-Seite suchen"
-          className="w-full rounded-lg bg-white/[0.04] border border-white/[0.08] pl-8 pr-12 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-400/50" />
+          className="w-full rounded-lg bg-line border border-line pl-8 pr-12 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-400/50" />
         <kbd className="hidden lg:block absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Strg K</kbd>
       </div>
       {q.trim() && (
-        <ul className="rounded-lg border border-white/[0.08] bg-gray-950/80 p-1 space-y-0.5">
+        <ul className="rounded-lg border border-line bg-gray-950/80 p-1 space-y-0.5">
           {hits.length === 0
             ? <li className="px-2.5 py-1.5 text-xs text-gray-500">Nichts gefunden</li>
             : hits.map((i) => (
@@ -170,14 +170,14 @@ export default function AdminNav({ role }: { role: string }) {
       {/* ── Handy/Tablet: Menü-Button mit aktuellem Seitennamen ── */}
       <div className="lg:hidden mb-4">
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-          className="w-full flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-gray-900 px-3 py-2.5 text-sm text-white">
+          className="w-full flex items-center gap-2.5 rounded-xl border border-line bg-gray-900 px-3 py-2.5 text-sm text-white">
           <Icon name={active?.icon ?? "LayoutDashboard"} className="w-4 h-4 text-purple-300" />
           <span className="flex-1 text-left truncate">{active?.label ?? "Admin"}</span>
           {total > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{total}</span>}
           {open ? <X className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </button>
         {open && (
-          <div className="mt-2 rounded-xl border border-white/[0.08] bg-gray-900 p-2 space-y-3">
+          <div className="mt-2 rounded-xl border border-line bg-gray-900 p-2 space-y-3">
             <SearchBox groups={groups} counts={counts} inputRef={mobileSearch} onNavigate={() => setOpen(false)} />
             <NavList groups={groups} pathname={pathname} counts={counts} onNavigate={() => setOpen(false)} />
           </div>

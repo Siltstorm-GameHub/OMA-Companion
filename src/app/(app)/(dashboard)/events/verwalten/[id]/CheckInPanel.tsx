@@ -48,7 +48,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
               {notReady.length} von {registeredIds.size} noch nicht bereit. Sie werden bei der Auslosung nicht berücksichtigt.
             </p>
             <button type="button" onClick={() => checkIn(notReady.map(u => u.id))} disabled={!!busy}
-              className="text-[11px] px-2 py-1 rounded-md border border-white/[0.1] text-gray-300 hover:bg-white/[0.06] disabled:opacity-50 shrink-0">
+              className="text-[11px] px-2 py-1 rounded-md border border-line-strong text-gray-300 hover:bg-line disabled:opacity-50 shrink-0">
               {busy === "all" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Alle einchecken"}
             </button>
           </div>
@@ -57,7 +57,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
               <li key={u.id}>
                 <button type="button" onClick={() => checkIn([u.id])} disabled={!!busy}
                   title="Von Hand einchecken"
-                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-gray-200 hover:border-teal-500/40 hover:text-teal-200 disabled:opacity-50">
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-line border border-line text-gray-200 hover:border-teal-500/40 hover:text-teal-200 disabled:opacity-50">
                   {busy === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                   {userName(u)}
                 </button>

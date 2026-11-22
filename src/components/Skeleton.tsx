@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={cn("animate-pulse rounded-xl bg-white/[0.05]", className)} style={style} />
+    <div className={cn("animate-pulse rounded-xl bg-line", className)} style={style} />
   );
 }
 
@@ -21,7 +21,7 @@ export function SkeletonHero() {
         </div>
         <Skeleton className="w-20 h-16 rounded-2xl hidden sm:block shrink-0" />
       </div>
-      <div className="flex gap-8 mt-5 pt-4 border-t border-white/[0.05]">
+      <div className="flex gap-8 mt-5 pt-4 border-t border-line">
         <Skeleton className="h-5 w-20" />
         <Skeleton className="h-5 w-16" />
         <Skeleton className="h-5 w-28" />
@@ -46,7 +46,7 @@ export function SkeletonStatCards({ count = 4 }: { count?: number }) {
 
 export function SkeletonList({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+    <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3.5 px-4 py-3.5">
           <Skeleton className="w-10 h-12 rounded-xl shrink-0" />

@@ -149,7 +149,7 @@ function SeasonBadge({ label }: { label: string }) {
   return (
     <span title={champion ? "Gesamtsieger der Vorsaison" : `${label.replace("Vorsaison ", "Platz ")} der Vorsaison`}
       className={`ml-1.5 shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${
-        champion ? "text-amber-300 bg-amber-500/10 border-amber-500/30" : "text-gray-400 bg-white/5 border-white/10"
+        champion ? "text-amber-300 bg-amber-500/10 border-amber-500/30" : "text-gray-400 bg-line border-line-strong"
       }`}>
       {champion && <Crown className="w-2.5 h-2.5" />}{label}
     </span>
@@ -224,7 +224,7 @@ export default function SeriesStandingsTable({
       }}>
         {/* Legend */}
         {hasDelta && lastEventTitle && (
-          <div className="px-4 py-2 border-b border-white/[0.04] flex items-center gap-1.5">
+          <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3 text-emerald-500/60" />
             <span className="text-[10px] text-gray-600">
               Veränderung nach: <span className="text-gray-500">{lastEventTitle}</span>
@@ -232,7 +232,7 @@ export default function SeriesStandingsTable({
           </div>
         )}
         {/* Header */}
-        <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
+        <div className="grid items-center px-4 py-2.5 border-b border-line"
           style={{ gridTemplateColumns: fullGridCols }}>
           {headers.map((col, i) => (
             <span key={i} className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest truncate ${col.cls}`}>
@@ -250,7 +250,7 @@ export default function SeriesStandingsTable({
           return (
             <Link key={row.userId}
               href={isMe ? "/profile" : `/profile/${row.userId}`}
-              className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
+              className="grid items-center px-4 py-3 border-b border-line last:border-0 hover:bg-surface-2 transition-colors"
               style={{
                 gridTemplateColumns: fullGridCols,
                 background: isMe ? "rgba(20,184,166,0.05)" : "",
@@ -271,7 +271,7 @@ export default function SeriesStandingsTable({
                   {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
                   {row.disqualifiedEventCount > 0 && (
                     <span
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
                       title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Tabellenpunkte`}
                     >
                       <Ban className="w-2.5 h-2.5" /> {row.disqualifiedEventCount}
@@ -355,14 +355,14 @@ export default function SeriesStandingsTable({
     return (
       <div>
         {hasDelta && lastEventTitle && (
-          <div className="px-4 py-2 border-b border-white/[0.04] flex items-center gap-1.5">
+          <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3 text-emerald-500/60" />
             <span className="text-[10px] text-gray-600 truncate">
               nach: <span className="text-gray-500">{lastEventTitle}</span>
             </span>
           </div>
         )}
-        <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
+        <div className="grid items-center px-4 py-2.5 border-b border-line"
           style={{ gridTemplateColumns: compactCols }}>
           <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">#</span>
           {deltaColPresent && <span />}
@@ -380,7 +380,7 @@ export default function SeriesStandingsTable({
           return (
             <Link key={row.userId}
               href={isMe ? "/profile" : `/profile/${row.userId}`}
-              className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0"
+              className="grid items-center px-4 py-3 border-b border-line last:border-0"
               style={{
                 gridTemplateColumns: compactCols,
                 background: isMe ? "rgba(20,184,166,0.05)" : "",
@@ -461,7 +461,7 @@ export default function SeriesStandingsTable({
         {hasExtraData && (
           <button
             onClick={() => setExpanded(e => !e)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 border-t border-white/[0.06] transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 border-t border-line transition-colors"
           >
             {expanded
               ? <><ChevronUp className="w-3.5 h-3.5" /> Einfache Ansicht</>

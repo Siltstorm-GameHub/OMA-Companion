@@ -93,7 +93,7 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
           {campaigns.map(c => {
             const now = Date.now();
             return (
-              <div key={c.id} className="rounded-lg bg-white/[0.03] p-2.5 space-y-1.5">
+              <div key={c.id} className="rounded-lg bg-surface-2 p-2.5 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-gray-200 truncate">{c.event.title} <span className="text-gray-600">· {formatBerlinDate(c.event.startAt)}</span></p>
                   <button onClick={() => remove(c.id)} title="Kampagne löschen" aria-label="Kampagne löschen" className="p-1 text-gray-500 hover:text-red-400 transition-colors shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>

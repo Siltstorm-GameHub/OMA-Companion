@@ -19,7 +19,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
             {FORMATS.map(f => (
               <button key={f.value} type="button" onClick={() => setSeriesFormat(f.value)}
                 className={`flex flex-col items-start gap-1 rounded-xl p-3 border-2 transition-all text-left ${
-                  seriesFormat === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  seriesFormat === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
                 <span className="text-xs text-gray-500">{f.desc}</span>
@@ -70,7 +70,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
               className={`flex flex-col items-start gap-0.5 rounded-xl p-3 border-2 transition-all text-left ${
                 recurrenceType === r.value
                   ? "border-teal-500/60 bg-teal-500/10"
-                  : "border-white/8 bg-white/3 hover:border-white/15"
+                  : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <span className={`text-sm font-semibold ${recurrenceType === r.value ? "text-teal-300" : "text-gray-300"}`}>{r.label}</span>
               <span className="text-[10px] text-gray-500">{r.desc}</span>
@@ -98,7 +98,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
       )}
 
       {previewDates.length > 0 && (
-        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+        <div className="rounded-xl p-4 border border-line bg-surface-2">
           <div className="flex items-center gap-2 mb-3">
             <CalendarDays className="w-4 h-4 text-teal-400" />
             <p className="text-sm font-medium text-gray-200">

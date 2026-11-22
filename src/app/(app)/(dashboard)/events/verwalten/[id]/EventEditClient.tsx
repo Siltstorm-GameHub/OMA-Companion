@@ -39,7 +39,7 @@ export default function EventEditClient(props: EventEditProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link href={`/tournament/${event.id}`}
-              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-white/[0.1] hover:border-white/20 rounded-lg px-3 py-1.5 transition-colors">
+              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-line-strong hover:border-line-strong rounded-lg px-3 py-1.5 transition-colors">
               <ExternalLink className="w-3.5 h-3.5" /> Öffentliche Seite
             </Link>
             <HeaderMenu
@@ -56,7 +56,7 @@ export default function EventEditClient(props: EventEditProps) {
         <ol className="grid grid-cols-4 gap-1.5">
           {LIFECYCLE_STEPS.map((label, i) => (
             <li key={label} className={`border-t-[3px] pt-1.5 text-center text-[11px] ${
-              i < step ? "border-teal-500/60 text-gray-400" : i === step ? "border-teal-400 text-white font-semibold" : "border-white/[0.08] text-gray-600"
+              i < step ? "border-teal-500/60 text-gray-400" : i === step ? "border-teal-400 text-white font-semibold" : "border-line text-gray-600"
             }`} aria-current={i === step ? "step" : undefined}>
               {label}
             </li>
@@ -70,7 +70,7 @@ export default function EventEditClient(props: EventEditProps) {
             </Link>
           ) : (
             <button type="button" onClick={() => setActiveTab(nextStep.tab!)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-gray-200 transition-colors">
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-line hover:bg-line px-3 py-1.5 text-xs font-semibold text-gray-200 transition-colors">
               <Trophy className="w-3.5 h-3.5" /> {nextStep.label}
             </button>
           ))}
@@ -78,7 +78,7 @@ export default function EventEditClient(props: EventEditProps) {
       </section>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 border-b border-line overflow-x-auto scrollbar-none">
         {tabs.map(tab => (
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
@@ -123,13 +123,13 @@ export default function EventEditClient(props: EventEditProps) {
       {/* ── Speicherleiste: erscheint bei ungespeicherten Änderungen (alle Einstellungen, siehe formSnapshot) ── */}
       {dirty && (
         <div className="sticky bottom-20 lg:bottom-4 z-30">
-          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-card">
             <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
             <span className="flex-1 min-w-0 truncate text-sm text-gray-200">
               {changedCount === 1 ? "1 ungespeicherte Änderung" : `${changedCount} ungespeicherte Änderungen`}
             </span>
             <button type="button" onClick={discardChanges} disabled={loading}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-50">
+              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-line disabled:opacity-50">
               Verwerfen
             </button>
             <button type="button" onClick={handleSave} disabled={loading}

@@ -22,7 +22,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
 
         {/* Gewinner-Stat: bewusst prominent — ein falscher Stat hat schon zu falschen Platzierungen geführt */}
         {(tournamentStatFields.length > 0 || isAvgFormat) && (
-          <div className={`rounded-xl border p-4 space-y-3 ${winnerLocked ? "border-white/[0.08] bg-white/[0.02]" : "border-amber-500/30 bg-amber-500/[0.04]"}`}>
+          <div className={`rounded-xl border p-4 space-y-3 ${winnerLocked ? "border-line bg-surface-2" : "border-amber-500/30 bg-amber-500/[0.04]"}`}>
             <div className="flex items-center gap-2 flex-wrap">
               <Trophy className="w-4 h-4 text-amber-400" />
               <span className="text-sm font-semibold text-white">Gewinner-Stat</span>
@@ -214,8 +214,8 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                         className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors select-none ${
                           isExcluded
                             ? "border-red-900/40 bg-red-950/20"
-                            : isAbsent ? "border-white/[0.04] bg-transparent opacity-60"
-                            : isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05] bg-white/[0.03]"
+                            : isAbsent ? "border-line bg-transparent opacity-60"
+                            : isTied ? "border-blue-500/20 bg-blue-500/5" : "border-line bg-surface-2"
                         } cursor-grab active:cursor-grabbing`}
                       >
                         <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />

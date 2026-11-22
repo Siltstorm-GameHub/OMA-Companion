@@ -30,7 +30,7 @@ export default function StepCategory({ w }: { w: EventWizard }) {
             return (
               <button key={k.value} type="button" onClick={() => setEventType(k.value)} aria-pressed={on}
                 className={`text-left rounded-2xl p-4 border-2 transition-all ${
-                  on ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  on ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <span className={`flex items-center gap-2 text-sm font-semibold ${on ? "text-teal-300" : "text-gray-200"}`}>
                   <span aria-hidden className="text-xl">{k.emoji}</span> {k.label}
@@ -49,7 +49,7 @@ export default function StepCategory({ w }: { w: EventWizard }) {
           {CATEGORIES.map(cat => (
             <button key={cat.value} type="button" onClick={() => setCategory(cat.value)} aria-pressed={category === cat.value}
               className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 border-2 transition-all text-center ${
-                category === cat.value ? `${cat.border} ${cat.bg}` : "border-white/8 bg-white/3 hover:border-white/15"
+                category === cat.value ? `${cat.border} ${cat.bg}` : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <AppIcon kind="category" name={cat.value} size={28} className="text-2xl" />
               <span className={`text-sm font-semibold ${category === cat.value ? cat.color : "text-gray-300"}`}>{cat.label}</span>

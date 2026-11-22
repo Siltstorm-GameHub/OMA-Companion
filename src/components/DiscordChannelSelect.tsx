@@ -48,7 +48,7 @@ export default function DiscordChannelSelect({ value, onChange, emptyLabel = "St
   useEffect(() => { loadChannels().then(setChannels); }, []);
 
   const current = value?.trim() ?? "";
-  const baseCls = `w-full rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none transition-colors ${className ?? ""}`;
+  const baseCls = `w-full rounded-lg px-3 py-1.5 text-xs text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors ${className ?? ""}`;
 
   // Fallback: Liste (noch) nicht da, leer oder bewusst manuelle Eingabe
   if (manual || (channels !== null && channels.length === 0)) {

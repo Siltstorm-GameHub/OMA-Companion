@@ -68,7 +68,7 @@ export default function ClipSubmitter({ eventId, existingClipUrl }: Props) {
           value={clipUrl}
           onChange={e => setClipUrl(e.target.value)}
           placeholder="https://www.twitch.tv/clips/..."
-          className="flex-1 rounded-xl px-3 py-2 text-sm text-white bg-white/[0.05] border border-white/[0.1] focus:border-purple-500/40 outline-none placeholder-gray-600"
+          className="flex-1 rounded-xl px-3 py-2 text-sm text-white bg-line border border-line-strong focus:border-purple-500/40 outline-none placeholder-gray-600"
         />
         <button onClick={submit} disabled={saving || !clipUrl.trim()}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-[#9146ff]/15 border border-[#9146ff]/25 text-purple-300 hover:bg-[#9146ff]/25 disabled:opacity-50 transition-colors">

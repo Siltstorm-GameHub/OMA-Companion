@@ -12,7 +12,7 @@ interface JobTexts {
   overrides: { description?: string; officeGuideMarkdown?: string };
 }
 
-const FIELD = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const FIELD = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 function JobTextEditor({ job, onSaved }: { job: JobTexts; onSaved: () => void }) {
   const [description, setDescription] = useState(job.overrides.description ?? "");
@@ -37,7 +37,7 @@ function JobTextEditor({ job, onSaved }: { job: JobTexts; onSaved: () => void })
   }
 
   return (
-    <div className="glass rounded-xl p-3 space-y-2.5">
+    <div className="glass rounded-card p-3 space-y-2.5">
       <p className="text-sm text-white font-semibold"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</p>
       <label className="block space-y-1">
         <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Beschreibung</span>
@@ -49,7 +49,7 @@ function JobTextEditor({ job, onSaved }: { job: JobTexts; onSaved: () => void })
           <button type="button" onClick={() => setPreview(v => !v)} className="text-[10px] text-gray-500 hover:text-teal-400 transition-colors">{preview ? "Bearbeiten" : "Vorschau"}</button>
         </span>
         {preview
-          ? <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3"><MarkdownLite text={guide.trim() || job.defaults.officeGuideMarkdown} className="text-xs text-gray-400" /></div>
+          ? <div className="rounded-lg border border-line-strong bg-surface-2 p-3"><MarkdownLite text={guide.trim() || job.defaults.officeGuideMarkdown} className="text-xs text-gray-400" /></div>
           : <textarea value={guide} onChange={e => setGuide(e.target.value)} rows={5} maxLength={4000} placeholder={job.defaults.officeGuideMarkdown} className={`${FIELD} resize-y`} />}
       </label>
       <div className="flex items-center justify-between gap-2">

@@ -26,7 +26,7 @@ function steamUrl(appId: number) {
 function ResultLine({ pct, count, leading, mine }: { pct: number; count: number; leading: boolean; mine: boolean }) {
   return (
     <div className="mt-1.5">
-      <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1 rounded-full bg-line overflow-hidden">
         <div className={`h-full rounded-full transition-all ${leading ? "bg-amber-400" : "bg-purple-400"}`} style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] text-gray-500 tabular-nums">
@@ -181,7 +181,6 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
-        boxShadow: "0 0 20px rgba(168,85,247,0.06)",
       }}>
       <div className="flex gap-3">
         <div className="shrink-0 mt-0.5">
@@ -265,7 +264,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
                 const { count, pct, leading, mine } = optionState(o.id);
                 return (
                   <div key={o.id} {...optionProps(o.id, mine)}
-                    className={`flex items-start gap-2.5 rounded-lg px-3 py-2 transition-colors ${canVote ? "cursor-pointer hover:bg-white/[0.06]" : "cursor-default"}`}
+                    className={`flex items-start gap-2.5 rounded-lg px-3 py-2 transition-colors ${canVote ? "cursor-pointer hover:bg-line" : "cursor-default"}`}
                     style={optionBorder(mine)}>
                     <span className={`mt-0.5 w-4 h-4 shrink-0 flex items-center justify-center border ${poll.allowMultiple ? "rounded" : "rounded-full"} ${mine ? "bg-purple-500 border-purple-400" : "border-white/25"}`}>
                       {mine && <Check className="w-2.5 h-2.5 text-white" />}
@@ -288,7 +287,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
               maxLength={500}
               rows={2}
               placeholder="Eigene Antwort …"
-              className="w-full mt-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+              className="w-full mt-2 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
             />
           )}
 
@@ -307,7 +306,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
             <div className="mt-2.5 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Eigene Antworten</p>
               {(allFreeText ? freeTextAnswers : freeTextAnswers.slice(0, FREE_TEXT_PREVIEW)).map((t, i) => (
-                <p key={i} className="text-[11px] text-gray-400 bg-white/[0.03] rounded-md px-2 py-1 [overflow-wrap:anywhere]">{t}</p>
+                <p key={i} className="text-[11px] text-gray-400 bg-surface-2 rounded-md px-2 py-1 [overflow-wrap:anywhere]">{t}</p>
               ))}
               <ShowAllToggle total={freeTextAnswers.length} shown={FREE_TEXT_PREVIEW} open={allFreeText} onToggle={() => setAllFreeText(o => !o)} />
             </div>
@@ -318,7 +317,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
             <div className="mt-2.5 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Vorschläge</p>
               {(allGames ? gameSuggestions : gameSuggestions.slice(0, GAME_SUGGESTION_PREVIEW)).map((g, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.06]">
+                <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-surface-2 border border-line">
                   {g.appId && (
                     <img src={coverUrl(g.appId)} alt="" className="w-10 h-6 rounded object-cover shrink-0" />
                   )}
@@ -348,7 +347,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
                 type="button"
                 onClick={resetVote}
                 disabled={resetting}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-50 text-gray-300 transition-colors"
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-line hover:bg-line border border-line-strong disabled:opacity-50 text-gray-300 transition-colors"
               >
                 {resetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Undo2 className="w-3 h-3" />}
                 Stimme zurückziehen
@@ -370,7 +369,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
         {/* Nur nach Ablauf wegklickbar */}
         {poll.ended && (
           <button onClick={onDismiss}
-            className="shrink-0 self-start p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors"
+            className="shrink-0 self-start p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-line transition-colors"
             aria-label="Schließen">
             <X className="w-4 h-4" />
           </button>

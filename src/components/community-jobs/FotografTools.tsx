@@ -12,7 +12,7 @@ import { loadImage, LOGO_URL, renderCollageCanvas } from "@/lib/studio-templates
 /** Fotografen-Büro: Bildwünsche, Auswertung, Alben, Sammel-Upload, Monats-Collage und Mediathek-Suche. */
 
 const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const FIELD = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const FIELD = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = await res.json().catch(() => ({}));
@@ -334,7 +334,7 @@ export function MonthCollageBuilder({ onExported }: { onExported: (url: string, 
   return (
     <div className="space-y-3">
       <p className="text-[11px] text-gray-500">Die beliebtesten Bilder der letzten 30 Tage, automatisch zu einer Collage zusammengestellt.</p>
-      <div className="rounded-xl overflow-hidden border border-white/10">
+      <div className="rounded-xl overflow-hidden border border-line-strong">
         <canvas ref={setCanvasEl} width={1280} height={720} className="w-full h-auto block" />
       </div>
       <div className="flex items-center justify-between gap-2">

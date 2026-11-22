@@ -1,24 +1,21 @@
 "use client";
 import { Toaster } from "sonner";
-import { useTheme } from "@/components/ThemeProvider";
 
 export function ThemedToaster() {
-  const { theme } = useTheme();
   return (
     <Toaster
       position="bottom-center"
-      theme={theme}
+      theme="dark"
       offset={80}
       toastOptions={{
         duration: 4000,
         style: {
-          background: "var(--bg-elevated)",
-          backdropFilter: "blur(16px)",
-          border: "1px solid var(--border-dim)",
-          borderRadius: "14px",
+          background: "var(--color-surface-2)",
+          border: "1px solid var(--color-line)",
+          borderRadius: "var(--radius-control)",
           fontSize: "13px",
-          color: theme === "dark" ? "#ededf0" : "#0d1f1c",
-          boxShadow: "var(--shadow-card)",
+          color: "var(--color-fg)",
+          boxShadow: "var(--shadow-pop)",
         },
       }}
     />

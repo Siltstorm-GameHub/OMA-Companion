@@ -39,7 +39,7 @@ function Swatch({ item }: { item: Cosmetic }) {
         </div>
       );
     case "background":
-      return <div className="w-10 h-7 rounded-md border border-white/10" style={{ background: item.css }} />;
+      return <div className="w-10 h-7 rounded-md border border-line-strong" style={{ background: item.css }} />;
     case "title":
       return <CosmeticTitle title={item.id} className="text-[9px]" />;
     case "nameColor":
@@ -88,8 +88,8 @@ function DateField({ value, onChange, label }: { value: string; onChange: (mmdd:
           if (v) onChange(v);
         }}
         onBlur={() => setText(formatMmdd(value))}
-        className={`w-20 px-2 py-1.5 rounded-lg bg-white/[0.04] border text-white text-sm text-center tabular-nums focus:outline-none ${
-          valid ? "border-white/10 focus:border-teal-500/50" : "border-rose-500/60"
+        className={`w-20 px-2 py-1.5 rounded-lg bg-line border text-white text-sm text-center tabular-nums focus:outline-none ${
+          valid ? "border-line-strong focus:border-teal-500/50" : "border-rose-500/60"
         }`}
       />
     </label>
@@ -105,7 +105,7 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "sets", label: "🎁 Sets" },
 ];
 
-const inputCls = "px-2 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm text-right tabular-nums focus:outline-none focus:border-teal-500/50";
+const inputCls = "px-2 py-1.5 rounded-lg bg-line border border-line-strong text-white text-sm text-right tabular-nums focus:outline-none focus:border-teal-500/50";
 
 export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: {
   initial: CosmeticsConfig;
@@ -253,7 +253,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           </p>
         </div>
         {unlockOnly ? (
-          <span className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full bg-white/[0.04]">Freischaltung: {unlockLabel(item)}</span>
+          <span className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full bg-line">Freischaltung: {unlockLabel(item)}</span>
         ) : (
           <>
             <label className="flex items-center gap-1.5">
@@ -291,7 +291,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
               {set.items.map(id => {
                 const c = getCosmetic(id);
                 return c ? (
-                  <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${blocked.includes(id) ? "border-rose-500/40 text-rose-300" : "border-white/10 text-gray-300"}`}>
+                  <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${blocked.includes(id) ? "border-rose-500/40 text-rose-300" : "border-line-strong text-gray-300"}`}>
                     {CATEGORY_META[c.category].label}: {c.name}
                   </span>
                 ) : null;
@@ -367,7 +367,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         {VIEWS.map(v => (
           <button key={v.key} onClick={() => setView(v.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              v.key === view ? "bg-teal-600/20 text-teal-300 ring-1 ring-teal-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+              v.key === view ? "bg-teal-600/20 text-teal-300 ring-1 ring-teal-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-line"
             }`}>
             {v.label}
           </button>
@@ -386,7 +386,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
 
       {view === "season" ? (
         <div className="space-y-4">
-          <div className="glass rounded-2xl divide-y divide-white/5">
+          <div className="glass rounded-2xl divide-y divide-line">
             <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Zeiträume</p>
             {SEASON_ORDER.map(renderSeasonRow)}
           </div>
@@ -395,7 +395,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             if (list.length === 0) return null;
             const w = seasonWindow(season, settings);
             return (
-              <div key={season} className="glass rounded-2xl divide-y divide-white/5">
+              <div key={season} className="glass rounded-2xl divide-y divide-line">
                 <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
                   {SEASONS[season].emoji} {SEASONS[season].name} · {formatMmdd(w.from)}–{formatMmdd(w.to)}
                 </p>
@@ -405,7 +405,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           })}
         </div>
       ) : (
-        <div className="glass rounded-2xl divide-y divide-white/5">
+        <div className="glass rounded-2xl divide-y divide-line">
           {view === "sets"
             ? [...COSMETIC_SETS].sort((a, b) => a.name.localeCompare(b.name, "de")).map(renderSetRow)
             : items.map(renderItemRow)}
@@ -422,7 +422,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           {saving ? "Speichert…" : dirty ? "Änderungen speichern" : "Gespeichert"}
         </button>
         {dirty && (
-          <button onClick={() => { setConfig(saved.config); setSettings(saved.settings); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white bg-white/[0.04] transition-colors">
+          <button onClick={() => { setConfig(saved.config); setSettings(saved.settings); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white bg-line transition-colors">
             <Undo2 className="w-4 h-4" /> Verwerfen
           </button>
         )}

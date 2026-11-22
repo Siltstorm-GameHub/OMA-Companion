@@ -44,7 +44,7 @@ export function RejectControl({ kind, id, compact = false, onDone }: {
       <label className="text-[11px] text-rose-200" htmlFor={`reject-${id}`}>Grund (sieht der Ersteller)</label>
       <textarea id={`reject-${id}`} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} autoFocus
         placeholder="z.B. Termin überschneidet sich mit dem Clan-Abend"
-        className="w-full rounded-lg bg-black/20 border border-white/[0.1] px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-rose-400/50" />
+        className="w-full rounded-lg bg-black/20 border border-line-strong px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-rose-400/50" />
       {error && <p className="text-xs text-rose-400">{error}</p>}
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-white px-2">Abbrechen</button>

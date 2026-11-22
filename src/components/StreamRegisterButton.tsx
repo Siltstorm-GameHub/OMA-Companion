@@ -62,7 +62,7 @@ export default function StreamRegisterButton({
       className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all disabled:opacity-50 ${
         active
           ? "bg-[#9146ff]/20 border-[#9146ff]/40 text-[#c4a3ff] hover:bg-[#9146ff]/10"
-          : "border-white/[0.08] text-gray-400 hover:text-[#c4a3ff] hover:border-[#9146ff]/30"
+          : "border-line text-gray-400 hover:text-[#c4a3ff] hover:border-[#9146ff]/30"
       }`}
     >
       {loading

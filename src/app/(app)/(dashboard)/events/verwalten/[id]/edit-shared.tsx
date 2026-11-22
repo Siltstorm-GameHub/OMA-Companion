@@ -164,7 +164,7 @@ export const STATUS_STYLES: Record<string, string> = {
   open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
   active:   "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
   umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  finished: "text-gray-500 bg-white/[0.03] border-white/[0.06]",
+  finished: "text-gray-500 bg-surface-2 border-line",
 };
 export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -212,7 +212,7 @@ export const STATUS_LABELS_DE: Record<string, string> = { open: "Anmeldung offen
 /** Karte einer Formular-Gruppe (Grunddaten, Zeit und Teilnahme, …) */
 export function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-2xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+    <section aria-label={title} className="rounded-2xl border border-line bg-gray-900/50 p-4 space-y-3">
       <h2 className="text-sm font-semibold text-white">{title}</h2>
       {children}
     </section>
@@ -243,16 +243,16 @@ export function HeaderMenu({ duplicateHref, deleteLabel, onDelete }: { duplicate
     document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
   }, [open]);
-  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-white/[0.06]";
+  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-line";
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(o => !o)} aria-label="Weitere Aktionen" aria-expanded={open}
-        className="h-[30px] w-8 rounded-lg border border-white/[0.1] text-gray-300 hover:text-white hover:border-white/20 flex items-center justify-center">⋯</button>
+        className="h-[30px] w-8 rounded-lg border border-line-strong text-gray-300 hover:text-white hover:border-line-strong flex items-center justify-center">⋯</button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-white/[0.1] bg-gray-900 shadow-xl">
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl">
           <Link role="menuitem" href={duplicateHref} className={`${item} text-gray-200`}><Copy className="w-3.5 h-3.5 text-gray-500" /> Duplizieren</Link>
           {deleteLabel && (
-            <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className={`${item} border-t border-white/[0.06] text-red-300`}>
+            <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className={`${item} border-t border-line text-red-300`}>
               <Trash2 className="w-3.5 h-3.5" /> {deleteLabel}
             </button>
           )}

@@ -20,7 +20,7 @@ interface Week {
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : formatFixed(n, 1));
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
 const TAB_ON = "border-teal-500/50 text-teal-300 bg-teal-500/10";
-const TAB_OFF = "border-white/10 text-gray-400 hover:text-white";
+const TAB_OFF = "border-line-strong text-gray-400 hover:text-white";
 
 export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   const [weeks, setWeeks] = useState<Week[] | null>(null);
@@ -38,7 +38,7 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   const trimmed = b.trimmedByVoter + b.trimmedByItems;
 
   return (
-    <div className="p-4 border-b border-white/[0.04] space-y-2.5">
+    <div className="p-4 border-b border-line space-y-2.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
         <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
           <Scale className="w-3.5 h-3.5 text-teal-400" /> Wie setzt sich dein Score zusammen?
@@ -75,7 +75,7 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
                 <span className="tabular-nums text-emerald-400">{signed(x.points)}</span>
               </li>
             ))}
-            <li className="flex items-center justify-between gap-3 text-xs border-t border-white/[0.06] pt-1.5">
+            <li className="flex items-center justify-between gap-3 text-xs border-t border-line pt-1.5">
               <span className="text-white font-semibold">Summe</span>
               <span className="tabular-nums text-white font-semibold">{fmt(b.total)} Punkte{week.tierLabel ? ` → ${week.tierLabel}` : ""}</span>
             </li>

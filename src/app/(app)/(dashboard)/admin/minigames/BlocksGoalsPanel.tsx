@@ -86,7 +86,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
         min={0}
         value={value}
         onChange={(e) => onChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
-        className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-teal-500/50"
+        className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-teal-500/50"
       />
     </label>
   );

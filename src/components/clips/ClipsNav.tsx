@@ -34,7 +34,7 @@ export default async function ClipsNav({ active }: { active: ClipsTab }) {
         {TABS.map(t => (
           <Link key={t.key} href={t.href} aria-current={active === t.key ? "page" : undefined}
             className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              active === t.key ? "border-violet-400 bg-violet-500 text-white" : "border-white/[0.1] text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04]"
+              active === t.key ? "border-violet-400 bg-violet-500 text-white" : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
             }`}>
             {t.label}
             {voting[t.key] && (

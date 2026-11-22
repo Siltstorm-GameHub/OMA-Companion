@@ -89,7 +89,7 @@ export default function GameReactionPanel({
           {distribution.map(d => (
             <div key={d.stars} className="flex items-center gap-2 text-[10px] text-gray-500">
               <span className="w-2 text-right">{d.stars}</span>
-              <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden">
                 <div className="h-full rounded-full bg-amber-400/80 transition-all duration-300" style={{ width: `${(d.count / maxCount) * 100}%` }} />
               </div>
               <span className="w-4 tabular-nums">{d.count}</span>
@@ -100,7 +100,7 @@ export default function GameReactionPanel({
       </div>
 
       {/* Eigene Reaktion */}
-      <div className="space-y-3 sm:border-l sm:border-white/[0.06] sm:pl-5">
+      <div className="space-y-3 sm:border-l sm:border-line sm:pl-5">
         {canReact ? (
           <>
             <div>

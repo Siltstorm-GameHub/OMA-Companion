@@ -99,7 +99,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                     <label className={labelCls}>Statistiken der Reihe</label>
                     <div className="flex flex-wrap gap-1.5">
                       {seriesStatRows.map(r => (
-                        <span key={r.field} className="text-xs px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-gray-300">
+                        <span key={r.field} className="text-xs px-2 py-1 rounded-lg bg-line border border-line text-gray-300">
                           {r.field} <span className="text-gray-500">· {r.points} Pkt.</span>
                         </span>
                       ))}
@@ -169,7 +169,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
               </div>
               )}
 
-              <div className="pt-2 border-t border-white/[0.06] space-y-3">
+              <div className="pt-2 border-t border-line space-y-3">
                 <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
                   <input type="checkbox" checked={tmtStatConfig.placementEnabled}
                     onChange={e => setTmtStatConfig(c => ({ ...c, placementEnabled: e.target.checked }))}
@@ -254,7 +254,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
 
           {/* Turnierbaum — im selben Reiter wie die Turnier-Einstellungen */}
           {bracketTournament && (
-            <div className="pt-4 border-t border-white/[0.06]">
+            <div className="pt-4 border-t border-line">
               <TournamentManager
                 event={{ id: event.id, startAt: event.startAt, endAt: event.endAt ?? null }}
                 tournament={bracketTournament}

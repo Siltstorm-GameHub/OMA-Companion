@@ -29,7 +29,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
                   const isAbsent = absentPlayers.has(u.id);
                   return (
                     <div key={u.id} className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors ${
-                      isExcluded ? "border-red-900/40 bg-red-950/20" : "border-white/[0.05] bg-white/[0.03]"
+                      isExcluded ? "border-red-900/40 bg-red-950/20" : "border-line bg-surface-2"
                     }`}>
                       <input type="checkbox" checked={!isAbsent} onChange={() => toggleAbsent(u.id)}
                         aria-label={`${userName(u)} war da`} title={isAbsent ? "Nicht da: keine Belohnung" : "War da"}

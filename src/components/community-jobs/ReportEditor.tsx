@@ -71,8 +71,8 @@ interface Revision { id: string; title: string; bodyMarkdown: string; note: stri
 interface FoundUser { id: string; username: string | null; name: string | null }
 interface InterviewOption { id: string; status: string; interviewee: { username: string | null; name: string | null }; markdown: string | null }
 
-const INPUT = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
-const SMALL_INPUT = "bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const INPUT = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL_INPUT = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 function appendLink(text: string, link?: string): string {
   if (!link || text.includes(link)) return text;
@@ -571,10 +571,10 @@ export default function ReportEditor({
         </div>
       )}
       {trainingSessionId && (
-        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
+        <p className="text-xs text-gray-300 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
       )}
       {photoRequestId && (
-        <p className="text-xs text-gray-300 rounded-lg bg-white/[0.03] border border-white/10 px-3 py-2">📸 Du erfüllst einen Bildwunsch{prefill?.title ? `: „${prefill.title}“` : ""} — füge mindestens ein Bild hinzu.</p>
+        <p className="text-xs text-gray-300 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">📸 Du erfüllst einen Bildwunsch{prefill?.title ? `: „${prefill.title}“` : ""} — füge mindestens ein Bild hinzu.</p>
       )}
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={REPORT_TITLE_MAX} placeholder="Titel (optional)" className={INPUT} />
 
@@ -632,7 +632,7 @@ export default function ReportEditor({
           </button>
         </div>
         {photoOpen && (
-          <div className="rounded-lg bg-white/[0.03] p-2 space-y-1.5">
+          <div className="rounded-lg bg-surface-2 p-2 space-y-1.5">
             <textarea value={photoText} onChange={e => setPhotoText(e.target.value)} rows={2} maxLength={300}
               placeholder={selectedEventTitle ? `Welches Bild brauchst du zu „${selectedEventTitle}“?` : "Welches Bild brauchst du?"} className={`w-full resize-none ${SMALL_INPUT}`} />
             <div className="flex justify-end gap-1.5">
@@ -647,12 +647,12 @@ export default function ReportEditor({
         ) : (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button onClick={() => setCoverAssetId("")} aria-pressed={coverAssetId === ""}
-              className={`shrink-0 w-16 h-12 rounded-lg border text-[10px] ${coverAssetId === "" ? "border-teal-400 text-teal-300" : "border-white/10 text-gray-500 hover:text-white"}`}>
+              className={`shrink-0 w-16 h-12 rounded-lg border text-[10px] ${coverAssetId === "" ? "border-teal-400 text-teal-300" : "border-line-strong text-gray-500 hover:text-white"}`}>
               Keins
             </button>
             {assets.map(a => (
               <button key={a.id} onClick={() => setCoverAssetId(a.id)} aria-pressed={coverAssetId === a.id} title={a.caption ?? a.type}
-                className={`shrink-0 rounded-lg overflow-hidden border-2 ${coverAssetId === a.id ? "border-teal-400" : "border-transparent hover:border-white/20"}`}>
+                className={`shrink-0 rounded-lg overflow-hidden border-2 ${coverAssetId === a.id ? "border-teal-400" : "border-transparent hover:border-line-strong"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau, beliebiger Blob-Host */}
                 <img src={a.url} alt="" className="w-16 h-12 object-cover" />
               </button>
@@ -673,43 +673,43 @@ export default function ReportEditor({
           <div className="flex items-center gap-0.5" role="toolbar" aria-label="Formatierung">
             {toolbar.map(t => (
               <button key={t.label} onClick={t.run} disabled={preview} title={t.label} aria-label={t.label}
-                className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-colors">
+                className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors">
                 <t.icon className="w-3.5 h-3.5" />
               </button>
             ))}
             {panelButtons.map(b => (
               <button key={b.key} onClick={() => togglePanel(b.key)} disabled={preview} title={b.label} aria-label={b.label} aria-expanded={panel === b.key}
-                className={`p-1.5 rounded hover:text-white hover:bg-white/[0.06] disabled:opacity-30 transition-colors ${panel === b.key ? "text-teal-300" : "text-gray-400"}`}>
+                className={`p-1.5 rounded hover:text-white hover:bg-line disabled:opacity-30 transition-colors ${panel === b.key ? "text-teal-300" : "text-gray-400"}`}>
                 <b.icon className="w-3.5 h-3.5" />
               </button>
             ))}
           </div>
-          <div className="flex rounded-lg border border-white/10 overflow-hidden text-[11px] font-semibold" role="tablist">
+          <div className="flex rounded-lg border border-line-strong overflow-hidden text-[11px] font-semibold" role="tablist">
             <button role="tab" aria-selected={!preview} onClick={() => setPreview(false)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}><Pencil className="w-3 h-3" /> Schreiben</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}><Pencil className="w-3 h-3" /> Schreiben</button>
             <button role="tab" aria-selected={preview} onClick={() => setPreview(true)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}><Eye className="w-3 h-3" /> Vorschau</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}><Eye className="w-3 h-3" /> Vorschau</button>
           </div>
         </div>
 
         {panel === "emoji" && !preview && <EmojiPanel onPick={insertText} onClose={() => setPanel(null)} />}
 
         {panel === "mention" && !preview && (
-          <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
+          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <input value={mentionQuery} onChange={e => setMentionQuery(e.target.value)} autoFocus placeholder="Spieler suchen (mind. 2 Zeichen)…" aria-label="Spieler suchen" className={`flex-1 ${SMALL_INPUT}`} />
               <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
             </div>
             {mentionResults.map(u => (
               <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
-                className="w-full text-left text-xs text-gray-300 hover:bg-white/[0.06] rounded px-2 py-1">@{u.username ?? u.name}</button>
+                className="w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">@{u.username ?? u.name}</button>
             ))}
             <p className="text-[10px] text-gray-600">Genannte Spieler bekommen beim Veröffentlichen eine Benachrichtigung.</p>
           </div>
         )}
 
         {panel === "blocks" && !preview && (
-          <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-2">
+          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold text-gray-300">Bausteine einfügen</p>
               <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
@@ -727,14 +727,14 @@ export default function ReportEditor({
               {interviews !== null && interviews.length === 0 && <p className="text-[10px] text-gray-600">Keine beantworteten Interviews vorhanden.</p>}
               {interviews?.map(i => (
                 <button key={i.id} onClick={() => { insertBlock(i.markdown!); setPanel(null); }}
-                  className="block w-full text-left text-xs text-gray-300 hover:bg-white/[0.06] rounded px-2 py-1">Interview mit {i.interviewee.username ?? i.interviewee.name}</button>
+                  className="block w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">Interview mit {i.interviewee.username ?? i.interviewee.name}</button>
               ))}
             </div>
           </div>
         )}
 
         {preview ? (
-          <div className="rounded-lg bg-white/[0.03] border border-white/10 p-3 min-h-[12rem] space-y-3">
+          <div className="rounded-lg bg-surface-2 border border-line-strong p-3 min-h-[12rem] space-y-3">
             {title.trim() && <h3 className="text-base font-bold text-white">{title}</h3>}
             {body.trim() ? <MarkdownLite text={body} /> : <p className="text-xs text-gray-600">Noch kein Text.</p>}
           </div>
@@ -765,7 +765,7 @@ export default function ReportEditor({
       <PostPollEditor value={poll} onChange={setPoll} eventId={eventId} open={pollOpen} onToggle={() => setPollOpen(v => !v)} />
 
       {/* Werbung */}
-      <div className="rounded-lg border border-white/10 bg-white/[0.02]">
+      <div className="rounded-lg border border-line-strong bg-surface-2">
         <button type="button" onClick={() => setMarketingOpen(v => !v)} aria-expanded={marketingOpen}
           className="w-full px-3 py-2 flex items-center justify-between text-left text-[11px] text-gray-400 hover:text-white">
           <span className="inline-flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Werbung für ein Event oder Training</span>
@@ -805,7 +805,7 @@ export default function ReportEditor({
             <History className="w-3 h-3" /> Frühere Versionen {revisions ? `(${revisions.length})` : ""}
           </button>
           {showRevisions && (
-            <div className="rounded-lg bg-white/[0.03] p-2 space-y-1 max-h-40 overflow-y-auto">
+            <div className="rounded-lg bg-surface-2 p-2 space-y-1 max-h-40 overflow-y-auto">
               {revisions === null && <p className="text-[11px] text-gray-600">Lädt…</p>}
               {revisions !== null && revisions.length === 0 && <p className="text-[11px] text-gray-600">Noch keine früheren Versionen.</p>}
               {revisions?.map(r => (
@@ -823,7 +823,7 @@ export default function ReportEditor({
       )}
 
       {(!reportId || isDraftEdit) && (
-        <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 flex flex-wrap items-center gap-2">
+        <div className="rounded-lg border border-line-strong bg-surface-2 px-3 py-2 flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
             <input type="checkbox" checked={scheduleOn} onChange={e => setScheduleOn(e.target.checked)} />
             <CalendarClock className="w-3.5 h-3.5" /> Zeitgesteuert veröffentlichen

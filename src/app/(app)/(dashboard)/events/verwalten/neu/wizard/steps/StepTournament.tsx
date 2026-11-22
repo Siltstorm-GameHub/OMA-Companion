@@ -32,7 +32,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           {FORMATS.map(f => (
             <button key={f.value} type="button" onClick={() => setFormat(f.value)}
               className={`flex flex-col items-start gap-1 rounded-xl p-3 border-2 transition-all text-left ${
-                format === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                format === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <span className={`text-sm font-semibold ${format === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
               <span className="text-xs text-gray-500">{f.desc}</span>
@@ -66,7 +66,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
             </div>
           )}
           {supportsCommunityGoal(format) && (
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+            <div className="mt-4 pt-4 border-t border-line">
               <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={statFields} inSeries={!!selectedSeries}
                 rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} hasEnd={!!w.endAt} />
             </div>
@@ -101,7 +101,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
               {([["placement", "Nein — nur Platzierungen"], ["matchResult", "Ja — Sieg/Unentschieden-Münzen"]] as const).map(([value, label]) => (
                 <button key={value} type="button" onClick={() => setPointsMode(value)}
                   className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
-                    pointsMode === value ? "border-amber-500 bg-amber-900/25 text-white" : "border-white/10 text-gray-400 hover:border-white/20"
+                    pointsMode === value ? "border-amber-500 bg-amber-900/25 text-white" : "border-line-strong text-gray-400 hover:border-line-strong"
                   }`}>
                   {label}
                 </button>

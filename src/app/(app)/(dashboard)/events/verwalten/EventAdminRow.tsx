@@ -105,7 +105,7 @@ function ScopeModal({
   }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div ref={ref} className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -904,7 +904,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           </div>
 
                           {/* MVP + Gewinner-Defaults */}
-                          <div className="border-t border-white/[0.05] pt-3 space-y-2">
+                          <div className="border-t border-line pt-3 space-y-2">
                             <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Event-Abschluss Defaults</p>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-400 w-40 shrink-0">MVP-Stat-Feld</span>
@@ -954,7 +954,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                 const u = allUsers.find(u => u.id === row.userId);
                                 const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
                                 return (
-                                  <div key={row.userId} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 space-y-1.5">
+                                  <div key={row.userId} className="rounded-lg border border-line bg-surface-2 p-2.5 space-y-1.5">
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="text-xs font-medium text-white truncate">{name}</span>
                                       <button
@@ -1038,7 +1038,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                         setLegacyRows(prev => [...prev, { userId: u.id, points: 0, participations: 0, stats: {} }]);
                                         setLegacySearch("");
                                       }}
-                                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.06] flex items-center gap-2 transition-colors"
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-line flex items-center gap-2 transition-colors"
                                     >
                                       {u.image
                                         ? <img src={u.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />

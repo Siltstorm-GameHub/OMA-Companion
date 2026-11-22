@@ -43,9 +43,9 @@ export default function GameCoverPicker({ value, onChange }: { value: PickedGame
   return (
     <div className="space-y-2">
       <GameNameInput value={name} onChange={setName}
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       {value ? (
-        <div className="rounded-lg overflow-hidden border border-white/10 bg-black/30">
+        <div className="rounded-lg overflow-hidden border border-line-strong bg-black/30">
           {/* eslint-disable-next-line @next/next/no-img-element -- Cover von Steam/Xbox/… (bekannte Hosts) */}
           <img src={value.url} alt={`Cover: ${value.name}`} className="w-full max-h-52 object-cover" />
         </div>

@@ -147,7 +147,7 @@ export default async function QuestsPage() {
               <span className="text-gray-600"> · </span>
               neue Quests {daysLeft === 0 ? "morgen" : `in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`}
             </p>
-            <div className="mt-2.5 h-2 max-w-sm rounded-full bg-white/[0.06] overflow-hidden">
+            <div className="mt-2.5 h-2 max-w-sm rounded-full bg-line overflow-hidden">
               <div className={`h-full rounded-full ${allDone ? "bg-emerald-400" : "bg-teal-400"}`} style={{ width: `${rows.length ? (done.length / rows.length) * 100 : 0}%` }} />
             </div>
           </div>
@@ -177,7 +177,7 @@ export default async function QuestsPage() {
 
       {/* ── Offen: am nächsten am Ziel zuerst, mit Los-Button ── */}
       {open.length > 0 && (
-        <section aria-label="Offene Quests" className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+        <section aria-label="Offene Quests" className="glass rounded-2xl overflow-hidden divide-y divide-line">
           {open.map(q => {
             const type = q.type as QuestType;
             const meta = QUEST_TYPE_META[type];
@@ -195,7 +195,7 @@ export default async function QuestsPage() {
                     {rate !== null && <> · <span className="text-gray-200">~{rate} {paced!.unit} pro Tag</span> bis Monatsende</>}
                     {action?.hint && <> · <span className="text-teal-300">{action.hint}</span></>}
                   </p>
-                  <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className="mt-2 h-1.5 rounded-full bg-line overflow-hidden">
                     <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
                   </div>
                   {QUEST_ACTIONS[type] && <p className="text-[11px] text-gray-600 mt-1.5">{QUEST_ACTIONS[type]!.counts}</p>}
@@ -203,7 +203,7 @@ export default async function QuestsPage() {
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <span className="flex items-center gap-0.5 text-xs font-bold text-amber-400 tabular-nums">+{q.reward}<CoinIcon size={12} /></span>
                   {action && (action.external
-                    ? <a href={action.href} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-white/[0.1] bg-white/[0.05] text-gray-200 hover:bg-white/[0.1]`}>{action.label} ↗</a>
+                    ? <a href={action.href} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-line-strong bg-line text-gray-200 hover:bg-line`}>{action.label} ↗</a>
                     : <Link href={action.href} className={`${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`}>{action.label} <ChevronRight className="w-3.5 h-3.5" /></Link>)}
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default async function QuestsPage() {
             <span className="text-xs text-gray-500">· +{coins.earned.toLocaleString("de-DE")} Münzen gutgeschrieben</span>
             <ChevronDown className="w-4 h-4 text-gray-500 ml-auto transition-transform group-open:rotate-180" />
           </summary>
-          <ul className="divide-y divide-white/[0.05] border-t border-white/[0.05]">
+          <ul className="divide-y divide-line border-t border-line">
             {done.map(q => (
               <li key={q.id} className="flex items-center gap-3 px-4 py-2.5">
                 <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
@@ -233,7 +233,7 @@ export default async function QuestsPage() {
         </details>
       )}
       {allDone && (
-        <section aria-label="Erledigte Quests" className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+        <section aria-label="Erledigte Quests" className="glass rounded-2xl overflow-hidden divide-y divide-line">
           {done.map(q => (
             <div key={q.id} className="flex items-center gap-3 px-4 py-2.5">
               <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
@@ -248,14 +248,14 @@ export default async function QuestsPage() {
       {historyByMonth.size > 0 && (
         <section aria-label="Vergangene Monate" className="space-y-2">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Vergangene Monate</h2>
-          <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+          <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
             {Array.from(historyByMonth.entries()).map(([key, quests]) => {
               const [y, m] = key.split("-").map(Number);
               const monthDone = quests.filter(q => q.completed).length;
               const monthCoins = questCoins(quests).earned;
               return (
                 <details key={key} className="group">
-                  <summary className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-white/[0.02]">
+                  <summary className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-surface-2">
                     <span className="text-sm font-medium text-white w-28">{MONTH_NAMES[m - 1]} {y}</span>
                     <span className="text-xs text-gray-500 tabular-nums">{monthDone}/{quests.length} erledigt</span>
                     {monthCoins > 0 && <span className="text-xs font-semibold text-amber-400 tabular-nums">+{monthCoins.toLocaleString("de-DE")}</span>}

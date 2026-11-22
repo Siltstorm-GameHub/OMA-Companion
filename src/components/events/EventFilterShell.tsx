@@ -60,7 +60,7 @@ export default function EventFilterShell({
             className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               isActive(c.f)
                 ? "border-teal-400 bg-teal-500 text-teal-950"
-                : "border-white/[0.1] text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04]"
+                : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
             }`}>
             {c.label}
           </button>
@@ -70,7 +70,7 @@ export default function EventFilterShell({
         {children}
       </div>
       {visibleCount === 0 && (
-        <div className="rounded-lg border border-dashed border-white/[0.1] px-4 py-6 text-center text-sm text-gray-500">
+        <div className="rounded-lg border border-dashed border-line-strong px-4 py-6 text-center text-sm text-gray-500">
           {filter.kind === "registered"
             ? "Du bist gerade für kein Event angemeldet."
             : filter.kind === "mine"

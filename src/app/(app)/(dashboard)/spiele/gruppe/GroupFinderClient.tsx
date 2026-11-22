@@ -19,7 +19,7 @@ function MatchRow({ match, names }: { match: GroupMatch; names: Map<string, stri
   const g = match.game;
   const facts = [g.modes.map(m => GAME_MODES[m]).join(" · ") || null, formatPlayers(g.minPlayers, g.maxPlayers)].filter(Boolean);
   return (
-    <Link href={`/spiele/${g.slug}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group">
+    <Link href={`/spiele/${g.slug}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-line transition-colors group">
       <GameCover game={g.name} coverUrl={g.coverUrl} className="w-24 h-11 sm:w-28 sm:h-13" rounded="rounded-md" fallbackVariant="plain" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white truncate group-hover:text-teal-200 transition-colors">{g.name}</p>
@@ -117,7 +117,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
                 <RankedAvatar userId={id} look={null} src={m?.image} alt={m?.name ?? ""} size={22} />
                 {names.get(id) ?? "?"}
                 {id !== meId && (
-                  <button type="button" onClick={() => remove(id)} aria-label={`${m?.name ?? "Mitglied"} entfernen`} className="p-0.5 rounded-full hover:bg-white/10">
+                  <button type="button" onClick={() => remove(id)} aria-label={`${m?.name ?? "Mitglied"} entfernen`} className="p-0.5 rounded-full hover:bg-line">
                     <X className="w-3 h-3" />
                   </button>
                 )}
@@ -134,13 +134,13 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
             placeholder={selected.length >= MAX_MEMBERS ? `Maximal ${MAX_MEMBERS} Leute` : "Mitglied hinzufügen …"}
             disabled={selected.length >= MAX_MEMBERS}
             aria-label="Mitglied suchen"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 disabled:opacity-50"
+            className="w-full bg-line border border-line-strong rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 disabled:opacity-50"
           />
           {suggestions.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 rounded-xl glass-heavy border border-white/10 overflow-hidden">
+            <div className="absolute z-20 left-0 right-0 mt-1 rounded-card glass-heavy border border-line-strong overflow-hidden">
               {suggestions.map(m => (
                 <button key={m.id} type="button" onClick={() => add(m.id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/[0.06] text-left">
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-line text-left">
                   <RankedAvatar userId={m.id} look={null} src={m.image} alt={m.name} size={24} />
                   <span className="flex-1 truncate">{m.name}</span>
                   <Plus className="w-3.5 h-3.5 text-teal-400" />
@@ -183,7 +183,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
                 Noch kein Spiel, das alle haben. Tipp: Markiert auf den Spiel-Seiten „Hab ich“ — oder tragt eure Lieblingsspiele im Profil ein.
               </p>
             ) : (
-              <div className="divide-y divide-white/[0.04]">
+              <div className="divide-y divide-line">
                 {result.ready.map(m => <MatchRow key={m.game.id} match={m} names={names} />)}
               </div>
             )}
@@ -194,7 +194,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5 px-2 pt-1 pb-2">
                 <Users className="w-3.5 h-3.5 text-amber-400" /> Fehlt nur wenigen ({result.almost.length})
               </h2>
-              <div className="divide-y divide-white/[0.04]">
+              <div className="divide-y divide-line">
                 {result.almost.map(m => <MatchRow key={m.game.id} match={m} names={names} />)}
               </div>
             </section>

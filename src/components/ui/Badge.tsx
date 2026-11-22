@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 export type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info";
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
-  neutral: "bg-white/[0.04] text-gray-600 border-white/[0.06]",
+  neutral: "bg-line text-gray-600 border-line",
   success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   warning: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   danger:  "bg-red-500/10 text-red-400 border-red-500/20",

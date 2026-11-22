@@ -76,7 +76,7 @@ function CapacityBar({ occupied, maxSlots, light, isOffline }: { occupied: numbe
         <span className="text-xs font-semibold text-white tabular-nums">{occupied}</span>
         <span className="text-[10px] text-gray-500 tabular-nums">/ {maxSlots} Plätze</span>
       </div>
-      <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div className="w-full h-1.5 rounded-full bg-line overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
           style={{ width: `${percent}%`, background: isOffline ? "#71717a" : LIGHT_COLOR[light] }}
@@ -97,7 +97,7 @@ export default function ServerCard({ server }: { server: Server }) {
     <motion.div
       layout
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className="rounded-xl glass p-4 space-y-3 transition-[opacity,filter,box-shadow] duration-300 hover:shadow-[var(--shadow-card-hover)]"
+      className="rounded-card glass p-4 space-y-3 transition-[opacity,filter,box-shadow] duration-300 hover:shadow-[var(--shadow-card-hover)]"
       style={{
         border: "1px solid rgba(255,255,255,0.06)",
         opacity: isOffline ? 0.55 : 1,
@@ -126,7 +126,7 @@ export default function ServerCard({ server }: { server: Server }) {
         )}
       </div>
 
-      <div className="flex items-center justify-end pt-1 border-t border-white/[0.05]">
+      <div className="flex items-center justify-end pt-1 border-t border-line">
         {!showCredentials && (
           <ApplyButton serverId={server.id} status={server.myStatus} isFull={server.available <= 0} waitlistPosition={server.waitlistPosition} />
         )}

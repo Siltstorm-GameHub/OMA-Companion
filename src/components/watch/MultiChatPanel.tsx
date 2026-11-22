@@ -23,8 +23,8 @@ export default function MultiChatPanel({ channels, activeChannel = null }: { cha
   const failed = status === "failed";
 
   return (
-    <div className="flex flex-col h-full min-h-0 rounded-2xl border border-white/[0.08] bg-black/40 overflow-hidden">
-      <div className="flex gap-1 p-1.5 border-b border-white/[0.06] overflow-x-auto shrink-0">
+    <div className="flex flex-col h-full min-h-0 rounded-2xl border border-line bg-black/40 overflow-hidden">
+      <div className="flex gap-1 p-1.5 border-b border-line overflow-x-auto shrink-0">
         <TabButton active={tab === "all"} onClick={() => setTab("all")}>
           <MessageCircle className="w-3.5 h-3.5" /> Gemeinsam
         </TabButton>
@@ -59,7 +59,7 @@ export default function MultiChatPanel({ channels, activeChannel = null }: { cha
         </div>
       )}
       {tab !== "all" && (
-        <p className="px-3 py-1.5 text-[11px] text-gray-500 border-t border-white/[0.06] shrink-0">
+        <p className="px-3 py-1.5 text-[11px] text-gray-500 border-t border-line shrink-0">
           Zum Schreiben im Browser bei Twitch angemeldet sein.
         </p>
       )}

@@ -43,7 +43,7 @@ export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTas
     <section aria-label="Heute für dich" className="space-y-2.5">
       <DailyPollBanner initialPolls={polls} loggedIn={loggedIn} />
       {tasks.length > 0 && (
-        <div className="glass rounded-2xl border border-white/[0.08] p-3 sm:p-4">
+        <div className="glass rounded-2xl border border-line p-3 sm:p-4">
           <div className="mb-3 flex items-baseline justify-between gap-2">
             <h2 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-white">
               <span className="relative flex h-2 w-2" aria-hidden>
@@ -66,14 +66,14 @@ export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTas
               const liClass = wide ? "col-span-2 lg:col-span-1" : "";
               const tile = (
                 <Link href={t.href}
-                  className={`group flex h-full flex-col gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 sm:p-3 transition-colors hover:bg-white/[0.06] ${tone.hover}`}>
+                  className={`group flex h-full flex-col gap-1.5 rounded-xl border border-line bg-surface-2 p-2.5 sm:p-3 transition-colors hover:bg-line ${tone.hover}`}>
                   <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone.icon}`}>
                     <Icon className="w-4 h-4" />
                   </span>
                   <span className="text-[13px] font-semibold leading-tight text-white">{t.label}</span>
                   <span className="line-clamp-2 text-[11px] leading-snug text-gray-400">{t.sub}</span>
                   {t.progress != null && (
-                    <span className="mt-auto h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
+                    <span className="mt-auto h-1 w-full overflow-hidden rounded-full bg-line">
                       <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(t.progress * 100)}%` }} />
                     </span>
                   )}

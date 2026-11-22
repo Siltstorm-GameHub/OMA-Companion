@@ -32,7 +32,7 @@ const fmtDate = (d: Date) =>
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+    <div className="rounded-xl bg-surface-2 border border-line px-3 py-2">
       <p className="text-[10px] uppercase tracking-wider text-gray-500">{label}</p>
       <p className="text-sm text-white mt-0.5">{children}</p>
     </div>
@@ -119,7 +119,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               {game.priceCents !== null && steamUrl && (
                 <a href={steamUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-colors">
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-line border border-line hover:border-line-strong transition-colors">
                   {game.discountPercent > 0 && (
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-amber-400 text-gray-950">−{game.discountPercent} %</span>
                   )}
@@ -147,7 +147,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
           {chips.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {chips.map(c => (
-                <span key={c} className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-300">{c}</span>
+                <span key={c} className="text-[11px] px-2 py-0.5 rounded-full bg-line border border-line text-gray-300">{c}</span>
               ))}
             </div>
           )}
@@ -206,7 +206,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         ) : (
           <div className="flex flex-wrap gap-2">
             {detail.inPeople.slice(0, 24).map(p => (
-              <Link key={p.id} href={`/profile/${p.id}`} title={p.name} className="flex items-center gap-1.5 rounded-full pr-2.5 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+              <Link key={p.id} href={`/profile/${p.id}`} title={p.name} className="flex items-center gap-1.5 rounded-full pr-2.5 bg-line hover:bg-line transition-colors">
                 <RankedAvatar userId={p.id} src={p.image} alt={p.name} size={26} />
                 <span className="text-xs text-gray-200 max-w-[7rem] truncate">{p.name}</span>
               </Link>
@@ -229,7 +229,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
           ) : (
             <div className="flex flex-wrap gap-2">
               {detail.players.slice(0, 18).map(p => (
-                <Link key={p.id} href={`/profile/${p.id}`} title={p.name} className="flex items-center gap-1.5 rounded-full pr-2.5 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+                <Link key={p.id} href={`/profile/${p.id}`} title={p.name} className="flex items-center gap-1.5 rounded-full pr-2.5 bg-line hover:bg-line transition-colors">
                   <RankedAvatar userId={p.id} src={p.image} alt={p.name} size={26} />
                   <span className="text-xs text-gray-200 max-w-[7rem] truncate">{p.name}</span>
                 </Link>
@@ -257,7 +257,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             <ul className="space-y-1">
               {detail.servers.map(s => (
                 <li key={s.id}>
-                  <Link href="/servers" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.04] text-sm text-gray-200">
+                  <Link href="/servers" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-line text-sm text-gray-200">
                     <Server className="w-3.5 h-3.5 text-teal-400 shrink-0" />
                     <span className="flex-1 truncate">{s.name}</span>
                     <span className={`text-[10px] ${s.isOnline ? "text-teal-300" : "text-gray-600"}`}>{s.isOnline ? "Online" : "Offline"}</span>
@@ -269,7 +269,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 return (
                 <li key={e.id}>
                   <Link href={`/tournament/${e.id}`}
-                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/15" : "hover:bg-white/[0.04]"}`}>
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/15" : "hover:bg-line"}`}>
                     <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isNext ? "text-teal-300" : "text-gray-500"}`} />
                     <span className="flex-1 truncate">
                       {isNext && <span className="text-[10px] font-semibold text-teal-300 mr-1.5">NÄCHSTES</span>}

@@ -108,9 +108,9 @@ export default function BracketView({
                     <div style={{ height: LABEL_H }} />
                     {Array.from({ length: Math.ceil(roundMatches.length / 2) }, (_, k) => (
                       <div key={k} className="relative" style={{ height: slotH * 2 }}>
-                        <div className="absolute left-0 border-y border-r border-white/15 rounded-r"
+                        <div className="absolute left-0 border-y border-r border-line-strong rounded-r"
                           style={{ top: slotH / 2, height: slotH, width: CONNECTOR_W / 2 }} />
-                        <div className="absolute border-t border-white/15"
+                        <div className="absolute border-t border-line-strong"
                           style={{ top: slotH, left: CONNECTOR_W / 2, width: CONNECTOR_W / 2 }} />
                       </div>
                     ))}
@@ -178,7 +178,7 @@ function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }
         </p>
       )}
       {feeders.length > 0 && (
-        <div className="border-t border-white/[0.05] pt-2 space-y-0.5">
+        <div className="border-t border-line pt-2 space-y-0.5">
           <p className="text-[11px] text-gray-500">Weg hierher</p>
           {feeders.map(f => {
             const a = findUser(f.player1Id), b = findUser(f.player2Id);
@@ -243,11 +243,11 @@ function MatchCard({
       className={`w-52 rounded-xl border overflow-hidden flex flex-col text-left transition-[filter] hover:brightness-125 ${
         selected ? "ring-2 ring-teal-400/60" : ""
       } ${
-        isLive    ? "border-red-500/60 shadow-[0_0_12px_rgba(239,68,68,0.2)]" :
-        isMyMatch ? "border-rose-700/60 shadow-[0_0_12px_rgba(190,18,60,0.15)]" :
-        isBye     ? "border-white/5 opacity-60" :
-        match.winnerId ? "border-white/5 opacity-70" :
-        "border-white/10"
+        isLive    ? "border-red-500/60" :
+        isMyMatch ? "border-rose-700/60" :
+        isBye     ? "border-line opacity-60" :
+        match.winnerId ? "border-line opacity-70" :
+        "border-line-strong"
       }`}
       style={{ height: CARD_H }}
     >
@@ -299,7 +299,7 @@ function MatchCard({
           </>
         );
         const rowCls = `flex-1 flex items-center justify-between px-2.5 ${
-          idx === 0 ? "border-b border-white/5" : ""
+          idx === 0 ? "border-b border-line" : ""
         } ${isWinner ? "bg-emerald-900/20" : "glass"}`;
         // Profil-Links stehen in den Details — die ganze Karte öffnet die Paarung
         return (
@@ -309,7 +309,7 @@ function MatchCard({
         );
       })}
       {(footer || isLive || isBye || provisional) && (
-        <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-white/5 text-[10px] text-gray-500 bg-white/[0.02]">
+        <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-line text-[10px] text-gray-500 bg-surface-2">
           {isLive && <span className="font-bold text-red-400 animate-pulse">● LIVE</span>}
           {provisional && <span className="text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>}
           {isBye && <span>kampflos weiter</span>}

@@ -21,7 +21,7 @@ interface Stats {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-white/[0.03] px-2.5 py-2">
+    <div className="rounded-lg bg-surface-2 px-2.5 py-2">
       <p className="text-[10px] text-gray-500">{label}</p>
       <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
       {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
@@ -55,7 +55,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
       </div>
 
       {open && (
-        <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
+        <div className="space-y-3 rounded-lg bg-surface-2 p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Ideen" value={String(stats.total)} />
             <Tile label="Bewertungen" value={String(stats.votes)} />
@@ -65,10 +65,10 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
           {(lifecycle.review + lifecycle.planned + lifecycle.done + lifecycle.rejected) > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {lifecycle.review > 0 && <span className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
-              {lifecycle.planned > 0 && <span className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
-              {lifecycle.done > 0 && <span className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
-              {lifecycle.rejected > 0 && <span className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
+              {lifecycle.review > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
+              {lifecycle.planned > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
+              {lifecycle.done > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
+              {lifecycle.rejected > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
             </div>
           )}
 
@@ -85,7 +85,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
               {stats.distribution.map((n, i) => (
                 <div key={i} className="flex items-center gap-1.5 text-[10px] text-gray-500">
                   <span className="w-3 flex items-center gap-0.5 tabular-nums">{5 - i}<Star className="w-2 h-2 text-amber-400 fill-amber-400" /></span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden"><div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / maxDist) * 100}%` }} /></div>
+                  <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / maxDist) * 100}%` }} /></div>
                   <span className="w-5 text-right tabular-nums">{n}</span>
                 </div>
               ))}

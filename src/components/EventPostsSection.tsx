@@ -52,7 +52,7 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
                     // eslint-disable-next-line @next/next/no-img-element -- Blob-Bilder/Spiel-Cover beliebiger Größe
                     <img src={thumb} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover shrink-0 bg-black/30" />
                   ) : (
-                    <span className="w-12 h-12 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+                    <span className="w-12 h-12 rounded-lg bg-line flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4 text-teal-400" />
                     </span>
                   )}

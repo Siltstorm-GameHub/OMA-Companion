@@ -168,12 +168,12 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
             value={twitchInput}
             onChange={(e) => { setTwitchInput(e.target.value); setPreview(null); }}
             onKeyDown={(e) => e.key === "Enter" && fetchPreview()}
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20"
+            className="flex-1 bg-line border border-line-strong rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
           />
           <button
             onClick={fetchPreview}
             disabled={previewing || !twitchInput.trim()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-white/8 border border-white/10 text-white hover:bg-white/12 disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-line border border-line-strong text-white hover:bg-white/12 disabled:opacity-40 transition-colors"
           >
             {previewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Suchen
@@ -181,7 +181,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
         </div>
 
         {preview && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/8">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-line border border-line">
             <Image
               src={preview.profile_image_url}
               alt={preview.display_name}
@@ -199,7 +199,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                 placeholder="Anzeigename"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20"
+                className="bg-line border border-line-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
               />
               <button
                 onClick={addPartner}
@@ -224,7 +224,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
       ) : (
         <div className="space-y-2">
           {partners.map((p) => (
-            <div key={p.id} className="rounded-xl glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: p.isActive ? 1 : 0.5 }}>
+            <div key={p.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: p.isActive ? 1 : 0.5 }}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <Image src={p.logoUrl} alt={p.name} width={36} height={36} className="rounded-full flex-shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -239,7 +239,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <a href={`https://twitch.tv/${p.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors">
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors">
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
                   <button
@@ -262,7 +262,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                       <Unlink className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title={p.isActive ? "Deaktivieren" : "Aktivieren"}>
+                  <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors" title={p.isActive ? "Deaktivieren" : "Aktivieren"}>
                     {p.isActive ? <ToggleRight className="w-4 h-4 text-emerald-400" /> : <ToggleLeft className="w-4 h-4" />}
                   </button>
                   <button onClick={() => deletePartner(p)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/8 transition-colors">
@@ -273,7 +273,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
 
               {/* User-link panel */}
               {linkingPartnerId === p.id && (
-                <div className="px-4 pb-4 border-t border-white/[0.05] pt-3 space-y-2">
+                <div className="px-4 pb-4 border-t border-line pt-3 space-y-2">
                   <p className="text-xs text-gray-400 font-medium">Community-Mitglied verknüpfen</p>
                   <div className="flex gap-2">
                     <input
@@ -281,7 +281,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                       placeholder="Nutzername suchen…"
                       value={userSearchInput}
                       onChange={(e) => { setUserSearchInput(e.target.value); searchUsers(e.target.value); }}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20"
+                      className="flex-1 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
                     />
                     {userSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
                   </div>
@@ -292,7 +292,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                           key={u.id}
                           onClick={() => linkUser(p, u.id, u.twitchLogin)}
                           disabled={linkSaving}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors text-left disabled:opacity-50"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-line transition-colors text-left disabled:opacity-50"
                         >
                           {u.image
                             ? <Image src={u.image} alt="" width={28} height={28} className="rounded-full shrink-0" />

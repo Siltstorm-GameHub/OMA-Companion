@@ -90,7 +90,7 @@ export default function WatchTogetherView({
         {!mobile && n > 1 && (
           <button
             onClick={() => setFocus(f => (f ? null : audioLogin ?? live[0]?.twitchLogin ?? null))}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-gray-300 hover:border-teal-500/40"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-300 hover:border-teal-500/40"
           >
             {focusLogin ? <><LayoutGrid className="w-3.5 h-3.5" /> Raster</> : <><Maximize2 className="w-3.5 h-3.5" /> Fokus</>}
           </button>
@@ -119,7 +119,7 @@ export default function WatchTogetherView({
                     key={m.twitchLogin}
                     onClick={() => setAudio(m.twitchLogin)}
                     className={`shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${
-                      m.twitchLogin === mobileLogin ? "border-teal-400/60 bg-teal-500/15 text-teal-100" : "border-white/[0.08] text-gray-300"
+                      m.twitchLogin === mobileLogin ? "border-teal-400/60 bg-teal-500/15 text-teal-100" : "border-line text-gray-300"
                     }`}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: colorOf(m.twitchLogin) }} /> {m.name}
@@ -147,7 +147,7 @@ export default function WatchTogetherView({
                       {!hasAudio && (
                         <button
                           onClick={() => setAudio(m.twitchLogin)}
-                          className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-white/[0.08] text-gray-300 hover:border-teal-500/40 hover:text-teal-200"
+                          className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-line text-gray-300 hover:border-teal-500/40 hover:text-teal-200"
                         >
                           <Volume2 className="w-3.5 h-3.5" /> Ton
                         </button>
@@ -156,7 +156,7 @@ export default function WatchTogetherView({
                         <button
                           onClick={() => setFocus(m.twitchLogin)}
                           title="Groß anzeigen"
-                          className="shrink-0 p-1 rounded-md border border-white/[0.08] text-gray-400 hover:text-teal-200"
+                          className="shrink-0 p-1 rounded-md border border-line text-gray-400 hover:text-teal-200"
                         >
                           <Maximize2 className="w-3.5 h-3.5" />
                         </button>

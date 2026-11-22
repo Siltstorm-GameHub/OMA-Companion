@@ -53,7 +53,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const inputCls =
-  "w-full px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.1] text-sm text-white focus:border-teal-500/40 focus:outline-none";
+  "w-full px-3 py-2 rounded-xl bg-surface-2 border border-line-strong text-sm text-white focus:border-teal-500/40 focus:outline-none";
 
 export function MatchForm({
   eventId, m, subject, s, statFields, locked, beforeSubmit, bare = false,
@@ -139,7 +139,7 @@ export function MatchForm({
   }
 
   return (
-    <div className={bare ? "space-y-3" : "rounded-xl border border-white/[0.08] p-3 space-y-3"}>
+    <div className={bare ? "space-y-3" : "rounded-xl border border-line p-3 space-y-3"}>
       {bare ? (
         s && (
           <p className="flex items-center gap-2 text-xs text-gray-400">
@@ -362,7 +362,7 @@ function MultiForm({
   if (locked) return <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>;
 
   return (
-    <div className="rounded-xl border border-white/[0.08] p-3 space-y-3">
+    <div className="rounded-xl border border-line p-3 space-y-3">
       <p className="text-sm font-medium text-white">{m.label} · Sammelmeldung</p>
       <p className="text-[11px] text-gray-500">
         Ein Screenshot zeigt die Ergebnisse mehrerer Spieler? Trag hier die Werte aller sichtbaren Spieler ein —

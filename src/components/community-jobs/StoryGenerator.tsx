@@ -184,15 +184,15 @@ export default function StoryGenerator({ facts, mediaUrls, onExported, upload }:
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-2 space-y-2">
+    <div className="rounded-lg border border-line-strong bg-surface-2 p-2 space-y-2">
       <p className="text-[11px] text-gray-400 inline-flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5" /> Story 9:16 für Instagram/Discord — mit Countdown und QR-Code zur Anmeldung</p>
       <div className="flex flex-col sm:flex-row gap-3">
-        <canvas ref={canvasRef} width={W} height={H} className="w-40 sm:w-48 h-auto rounded-lg border border-white/10 self-center sm:self-start" />
+        <canvas ref={canvasRef} width={W} height={H} className="w-40 sm:w-48 h-auto rounded-lg border border-line-strong self-center sm:self-start" />
         <div className="space-y-2 flex-1 min-w-0">
           <label className="block space-y-1 text-[11px] text-gray-500">
             Überschrift
             <input value={headline} maxLength={30} onChange={e => setHeadline(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40" />
+              className="w-full bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40" />
           </label>
           <label className="block space-y-1 text-[11px] text-gray-500">
             Hintergrund

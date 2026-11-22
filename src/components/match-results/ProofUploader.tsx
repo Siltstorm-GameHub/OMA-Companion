@@ -46,7 +46,7 @@ export default function ProofUploader({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {value.map((url) => (
-          <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-white/10">
+          <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-line-strong">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="Screenshot" className="w-full h-full object-cover" />
             <button
@@ -64,7 +64,7 @@ export default function ProofUploader({
             type="button"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
-            className="w-20 h-20 rounded-lg border border-dashed border-white/20 text-gray-400 hover:text-teal-300 hover:border-teal-500/40 flex flex-col items-center justify-center gap-1 text-[10px] disabled:opacity-50"
+            className="w-20 h-20 rounded-lg border border-dashed border-line-strong text-gray-400 hover:text-teal-300 hover:border-teal-500/40 flex flex-col items-center justify-center gap-1 text-[10px] disabled:opacity-50"
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
             Screenshot

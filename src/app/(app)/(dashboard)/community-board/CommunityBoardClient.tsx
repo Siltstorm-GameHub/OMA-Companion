@@ -87,7 +87,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const CHIP_ON = "bg-teal-500 text-black border-teal-500";
-const CHIP_OFF = "bg-white/[0.04] text-gray-300 border-white/10 hover:text-white";
+const CHIP_OFF = "bg-line text-gray-300 border-line-strong hover:text-white";
 
 function authorLabel(a: Author): string {
   return a.username ?? a.name ?? "Unbekannt";
@@ -255,7 +255,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
       </div>
 
       {entry.seriesParts && entry.seriesParts.length > 1 && (
-        <div className="rounded-lg bg-white/[0.03] p-2.5 space-y-1">
+        <div className="rounded-lg bg-surface-2 p-2.5 space-y-1">
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Reihe: {entry.series?.title}</p>
           <ol className="list-decimal pl-5 text-xs space-y-0.5">
             {entry.seriesParts.map(part => (
@@ -277,7 +277,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
       </div>
 
       {entry.contributions && entry.contributions.length > 0 && (
-        <div className="pl-3 border-l-2 border-white/10 space-y-3">
+        <div className="pl-3 border-l-2 border-line-strong space-y-3">
           {entry.contributions.map(c => (
             <ContributionItem key={c.id} reportId={entry.id} contribution={c} currentUserId={currentUserId} onChanged={onChanged} />
           ))}
@@ -324,7 +324,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
       {editing ? (
         <div className="space-y-1.5">
           <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={5000}
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40 resize-y" />
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40 resize-y" />
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setDraft(c.bodyMarkdown); }}>Abbrechen</Button>
             <Button size="sm" loading={busy} disabled={!draft.trim()} onClick={save}>Speichern</Button>
@@ -394,11 +394,11 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
     <div className="space-y-1.5">
       <textarea ref={areaRef} value={text} onChange={e => setText(e.target.value)} rows={4} maxLength={5000} autoFocus
         placeholder="Deine Ergänzung (Markdown möglich: **fett**, - Liste, [Link](https://…))"
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
       {emojiOpen && <EmojiPanel onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
       <div className="flex items-center justify-between gap-1.5">
         <button onClick={() => setEmojiOpen(v => !v)} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={emojiOpen}
-          className={`p-1.5 rounded hover:text-white hover:bg-white/[0.06] transition-colors ${emojiOpen ? "text-teal-300" : "text-gray-400"}`}>
+          className={`p-1.5 rounded hover:text-white hover:bg-line transition-colors ${emojiOpen ? "text-teal-300" : "text-gray-400"}`}>
           <Smile className="w-4 h-4" />
         </button>
         <div className="flex gap-1.5">
@@ -505,7 +505,7 @@ function CommentSection({
   }
 
   return (
-    <div className="pt-2 border-t border-white/10">
+    <div className="pt-2 border-t border-line-strong">
       <button onClick={() => setOpen(o => !o)}
         className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white transition-colors">
         <MessageCircle className="w-3.5 h-3.5" />
@@ -518,7 +518,7 @@ function CommentSection({
             <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>
           ) : (
             comments.map(c => (
-              <div key={c.id} className="bg-white/[0.03] rounded-lg p-2 space-y-1">
+              <div key={c.id} className="bg-surface-2 rounded-lg p-2 space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                     <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={16} />
@@ -548,7 +548,7 @@ function CommentSection({
           <div className="flex items-center gap-2">
             <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Kommentar schreiben…"
               onKeyDown={e => { if (e.key === "Enter") submit(); }}
-              className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+              className="flex-1 min-w-0 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
             <Button size="sm" loading={busy} disabled={!draft.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Senden</Button>
           </div>
         </div>
@@ -602,7 +602,7 @@ function DisputeTrigger({ kind, fetchUrl, listKey }: { kind: DisputeKind; fetchU
 }
 
 // Daumen-hoch: deutlich als Knopf erkennbar (Teal-Rand + Teal-Text), nach dem Klick gefüllt.
-const THUMB_ON = "bg-teal-500 border-teal-500 text-black shadow-[0_0_12px_rgba(20,184,166,0.35)]";
+const THUMB_ON = "bg-teal-500 border-teal-500 text-black";
 const THUMB_OFF = "bg-teal-500/10 border-teal-500/40 text-teal-300 hover:bg-teal-500/20 hover:border-teal-400";
 
 function UpvoteButton({
@@ -660,7 +660,7 @@ function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { i
     return <Button size="sm" variant="outline" icon={<Star className="w-3.5 h-3.5" />} onClick={() => setOpen(true)}>{canRevote ? "Neu bewerten (überarbeitet)" : `Bewerten (${voteCount})`}</Button>;
   }
   return (
-    <div className="space-y-2 bg-white/[0.03] rounded-lg p-3">
+    <div className="space-y-2 bg-surface-2 rounded-lg p-3">
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map(n => (
           <button key={n} onClick={() => setStars(n)}>
@@ -669,7 +669,7 @@ function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { i
         ))}
       </div>
       <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Begründung (privat, nur Autor + Admin sehen sie)" rows={2}
-        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Abbrechen</Button>
         <Button size="sm" loading={busy} disabled={!reason.trim()} onClick={submit}>Absenden</Button>

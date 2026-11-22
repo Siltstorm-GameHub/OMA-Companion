@@ -45,7 +45,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
                 // eslint-disable-next-line @next/next/no-img-element -- Blob-Bilder beliebiger Größe
                 <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover shrink-0 bg-black/30" />
               ) : (
-                <span className="w-10 h-10 rounded-lg bg-white/[0.04] flex items-center justify-center shrink-0">
+                <span className="w-10 h-10 rounded-lg bg-line flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4 text-teal-400" />
                 </span>
               )}
@@ -68,7 +68,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
       </ul>
       {hidden > 0 && (
         <button type="button" onClick={() => setShowAll(v => !v)} aria-expanded={showAll}
-          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-teal-300 border border-white/10 rounded-lg py-1.5 transition-colors">
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-teal-300 border border-line-strong rounded-lg py-1.5 transition-colors">
           {showAll ? "Nur die Top 3 anzeigen" : `Alle ${total} Beiträge anzeigen`}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAll ? "rotate-180" : ""}`} />
         </button>

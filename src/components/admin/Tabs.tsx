@@ -21,7 +21,7 @@ interface TabsProps {
 
 export function Tabs({ tabs, active, onChange, variant = "underline", className = "" }: TabsProps) {
   return (
-    <div role="tablist" className={`flex gap-1 ${variant === "underline" ? "border-b border-white/[0.06]" : ""} ${className}`}>
+    <div role="tablist" className={`flex gap-1 ${variant === "underline" ? "border-b border-line" : ""} ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.key === active;
         const Icon = tab.icon;
@@ -42,7 +42,7 @@ export function Tabs({ tabs, active, onChange, variant = "underline", className 
                 : `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
                       ? tab.activeClassName ?? "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                      : "text-gray-500 hover:text-gray-300 hover:bg-line"
                   }`
             }
           >

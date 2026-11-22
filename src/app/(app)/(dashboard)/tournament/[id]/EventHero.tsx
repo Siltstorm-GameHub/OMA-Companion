@@ -57,7 +57,7 @@ export default function EventHero({
           <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
 
           {/* Kalenderblock */}
-          <div className="absolute top-3 left-3 rounded-lg bg-[#0b0d12]/90 px-2.5 py-1.5 text-center leading-tight shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
+          <div className="absolute top-3 left-3 rounded-lg bg-canvas px-2.5 py-1.5 text-center leading-tight shadow-card">
             <div className={`text-[11px] font-semibold ${heroDate.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{heroDate.top}</div>
             <div className="text-2xl font-bold !text-white tabular-nums">{heroDate.day}</div>
             <div className="text-[11px] text-gray-400 tabular-nums"><ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /></div>
@@ -81,7 +81,7 @@ export default function EventHero({
                 </span>
               )}
               {myStatus && (
-                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ${myStatus.tone === "teal" ? "bg-teal-400/15 text-teal-300" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-white/[0.08] text-gray-300"}`} style={{ textShadow: "none" }}>
+                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ${myStatus.tone === "teal" ? "bg-teal-400/15 text-teal-300" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> {myStatus.label}
                 </span>
               )}

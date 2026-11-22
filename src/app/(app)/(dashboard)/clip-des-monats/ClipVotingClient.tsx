@@ -128,7 +128,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
     <div className="space-y-4">
       {/* Status: hast du schon abgestimmt? */}
       <div className={`rounded-xl border px-3.5 py-2.5 text-sm ${
-        !isLoggedIn ? "border-white/[0.08] bg-white/[0.03] text-gray-400"
+        !isLoggedIn ? "border-line bg-surface-2 text-gray-400"
           : hasVoted ? "border-[#9146ff]/30 bg-[#9146ff]/[0.07] text-purple-200"
             : "border-violet-400/40 bg-violet-500/10 text-violet-100"
       }`}>
@@ -151,7 +151,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
             className={`glass rounded-2xl overflow-hidden border transition-all ${
               isMyVote
                 ? "border-[#9146ff]/50 bg-[#9146ff]/5"
-                : "border-white/[0.06] hover:border-white/[0.12]"
+                : "border-line hover:border-line-strong"
             }`}
           >
             <TwitchClipEmbed
@@ -168,7 +168,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                   )}
                   {/* Vote bar overlay (only after voting) */}
                   {hasVoted && pct !== null && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-line">
                       <div
                         className={`h-full transition-all duration-500 ${isMyVote ? "bg-[#9146ff]" : "bg-white/30"}`}
                         style={{ width: `${pct}%` }}
@@ -190,14 +190,14 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                       maxLength={100}
                       autoFocus
                       placeholder="Titel für die Community (leer = Original)"
-                      className="flex-1 min-w-0 bg-white/[0.05] border border-white/[0.12] rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-[#9146ff]/60"
+                      className="flex-1 min-w-0 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-[#9146ff]/60"
                     />
                     <button onClick={() => saveTitle(nom)} disabled={savingTitle} title="Speichern"
                       className="w-7 h-7 rounded-lg bg-[#9146ff]/20 text-purple-300 hover:bg-[#9146ff]/30 flex items-center justify-center disabled:opacity-50 shrink-0">
                       {savingTitle ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                     </button>
                     <button onClick={() => setEditingId(null)} title="Abbrechen"
-                      className="w-7 h-7 rounded-lg bg-white/[0.05] text-gray-400 hover:text-white flex items-center justify-center shrink-0">
+                      className="w-7 h-7 rounded-lg bg-line text-gray-400 hover:text-white flex items-center justify-center shrink-0">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -247,7 +247,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                 className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                   isMyVote
                     ? "bg-[#9146ff]/20 border border-[#9146ff]/40 text-purple-300"
-                    : "bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white"
+                    : "bg-line border border-line text-gray-400 hover:bg-line hover:text-white"
                 } disabled:opacity-50`}
               >
                 {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : hasVoted ? "Stimme ändern" : "Wählen"}

@@ -28,7 +28,7 @@ const PRESENT_OFF = "text-gray-600 hover:text-emerald-300";
 const ABSENT_ON = "bg-red-500/20 text-red-300";
 const ABSENT_OFF = "text-gray-600 hover:text-red-300";
 const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const INPUT = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const INPUT = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 function nameOf(u: { username: string | null; name: string | null }): string {
   return u.username ?? u.name ?? "?";
@@ -67,7 +67,7 @@ export function CoachAvailability({ initialUntil }: { initialUntil?: string | nu
   }
 
   return (
-    <div className={`rounded-lg p-2.5 space-y-2 border ${active ? "bg-emerald-500/[0.06] border-emerald-500/25" : "bg-white/[0.03] border-white/[0.05]"}`}>
+    <div className={`rounded-lg p-2.5 space-y-2 border ${active ? "bg-emerald-500/[0.06] border-emerald-500/25" : "bg-surface-2 border-line"}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-300 flex items-center gap-1.5">
           <span className={`w-2 h-2 rounded-full ${active ? "bg-emerald-400 motion-safe:animate-pulse" : "bg-gray-600"}`} />
@@ -130,7 +130,7 @@ export function CoachStatsBlock() {
       </div>
 
       {open && (
-        <div className="space-y-3 rounded-lg bg-white/[0.03] p-2.5">
+        <div className="space-y-3 rounded-lg bg-surface-2 p-2.5">
           <div className="space-y-1.5">
             <p className={LABEL}>Ø Bewertung pro Woche</p>
             {stats.weekly.length === 0 ? (
@@ -227,7 +227,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
       {withParticipants.map(s => {
         const unmarked = s.participants.filter(p => p.attended === null).length;
         return (
-          <div key={s.id} className="rounded-lg bg-white/[0.03]">
+          <div key={s.id} className="rounded-lg bg-surface-2">
             <button onClick={() => setOpenId(openId === s.id ? null : s.id)} aria-expanded={openId === s.id}
               className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs text-left">
               <span className="text-gray-300 truncate">{s.title} <span className="text-gray-600">· {formatBerlinDateTime(s.startAt)}</span></span>
@@ -344,7 +344,7 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
       <p className={LABEL}>Meine Mentees ({items.length})</p>
       {items.length === 0 && <p className="text-[11px] text-gray-600">Noch niemand — füge Spieler hinzu, die du persönlich begleitest. Die Liste ist nur für dich sichtbar.</p>}
       {items.map(m => (
-        <div key={m.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2 space-y-1.5">
+        <div key={m.id} className="rounded-lg bg-surface-2 px-2.5 py-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="text-gray-200 truncate">{nameOf(m.mentee)}</span>
             <span className="flex items-center gap-2 shrink-0 text-gray-500">
@@ -366,9 +366,9 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
         {searching && <Loader2 className="w-3.5 h-3.5 text-gray-500 animate-spin absolute right-2 top-1/2 -translate-y-1/2" />}
       </div>
       {found.filter(u => !known.has(u.id)).length > 0 && (
-        <div className="rounded-lg bg-white/[0.04] divide-y divide-white/[0.04]">
+        <div className="rounded-lg bg-line divide-y divide-line">
           {found.filter(u => !known.has(u.id)).map(u => (
-            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-white/[0.04] text-left">
+            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-line text-left">
               <span className="truncate">{nameOf(u)}</span> <UserPlus className="w-3.5 h-3.5 text-teal-400" />
             </button>
           ))}
@@ -538,7 +538,7 @@ export function CoachNewcomers({ onMenteeAdded }: { onMenteeAdded?: () => void }
       <p className={LABEL}>Neue Spieler ohne Training ({data.newcomers.length})</p>
       <input value={message} onChange={e => setMessage(e.target.value)} maxLength={300} placeholder="Eigener Willkommens-Text (optional, sonst Standardtext)" className={`w-full ${INPUT}`} />
       {data.newcomers.map(n => (
-        <div key={n.id} className="rounded-lg bg-white/[0.03] px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div key={n.id} className="rounded-lg bg-surface-2 px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-xs text-gray-200 truncate">{nameOf(n)}</p>
             <p className="text-[10px] text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
@@ -604,7 +604,7 @@ export function CoachGuideList() {
       <p className={LABEL}>Meine Anleitungen ({items.length})</p>
       {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
       {items.map(g => editing === g.id ? (
-        <div key={g.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+        <div key={g.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" maxLength={120} className={`w-full ${INPUT}`} />
           <input value={form.game} onChange={e => setForm(f => ({ ...f, game: e.target.value }))} placeholder="Spiel (optional)" maxLength={40} className={`w-full ${INPUT}`} />
           <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={5} maxLength={6000} className={`w-full resize-none ${INPUT}`} />

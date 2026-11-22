@@ -20,7 +20,7 @@ export default function AdminInboxRow({ href, title, hint, action, icon, since, 
         {since && (
           <span className={`hidden sm:block shrink-0 text-[11px] tabular-nums ${late ? "font-semibold text-red-300" : "text-gray-500"}`}>{since}</span>
         )}
-        <span className="shrink-0 rounded-lg border border-white/[0.1] bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-gray-200 group-hover:bg-white/[0.08] group-hover:text-white">
+        <span className="shrink-0 rounded-lg border border-line-strong bg-line px-2.5 py-1 text-xs font-semibold text-gray-200 group-hover:bg-line group-hover:text-white">
           {action}
         </span>
       </Link>

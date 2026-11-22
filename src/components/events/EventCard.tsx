@@ -80,7 +80,7 @@ export default function EventCard({
         ? "border-red-400/30"
         : ev.phase.phase === "poll" || ev.phase.phase === "gamevote"
           ? "border-violet-400/30"
-          : "border-white/[0.07]";
+          : "border-line";
   const othersCount = Math.max(0, ev.playerCount - ev.friendNames.length);
 
   const liveBadge = (
@@ -91,7 +91,7 @@ export default function EventCard({
 
   return (
     <article
-      className={`surface group relative flex flex-row ${tile("sm:flex-col")} h-full overflow-hidden rounded-lg border ${border} shadow-[0_4px_20px_rgba(0,0,0,0.35)] transition-transform duration-200 ${tile("sm:hover:-translate-y-0.5")} hover:border-white/[0.14] focus-within:ring-2 focus-within:ring-teal-400/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
+      className={`surface group relative flex flex-row ${tile("sm:flex-col")} h-full overflow-hidden rounded-lg border ${border} shadow-card transition-transform duration-200 ${tile("sm:hover:-translate-y-0.5")} hover:border-line-strong focus-within:ring-2 focus-within:ring-teal-400/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
     >
       {/* Zeile: Datumsspalte */}
       <div className={`${tile("sm:hidden")} flex flex-col items-center justify-center w-12 shrink-0 leading-tight py-2`}>
@@ -114,7 +114,7 @@ export default function EventCard({
           <GameCover game={ev.game} coverUrl={ev.coverUrl} className="w-full h-full" rounded="rounded-none" brandBadge omaOriginal={ev.omaOriginal}
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
           {/* Kalenderblock */}
-          <div className="absolute top-2 left-2 rounded-md bg-[#0b0d12]/90 px-2 py-1 text-center leading-tight shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+          <div className="absolute top-2 left-2 rounded-md bg-canvas px-2 py-1 text-center leading-tight shadow-card">
             {ev.phase.phase === "live" ? liveBadge : (
               <>
                 <div className={`text-[10px] font-semibold ${ev.date.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{ev.date.top}</div>
@@ -124,7 +124,7 @@ export default function EventCard({
             )}
           </div>
           {ev.isRegistered && !past && (
-            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-[#0b0d12]/90 px-2 py-0.5 text-[11px] font-semibold text-teal-300 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-canvas px-2 py-0.5 text-[11px] font-semibold text-teal-300 shadow-card">
               <Check className="w-3 h-3" /> Dabei
             </span>
           )}
@@ -183,7 +183,7 @@ export default function EventCard({
 
         {/* Belegung (nur Kachel) + Mitspieler */}
         {fillPct != null && !row && !past && (
-          <div className="hidden sm:block h-1 rounded-full bg-white/[0.07] overflow-hidden mt-0.5">
+          <div className="hidden sm:block h-1 rounded-full bg-line overflow-hidden mt-0.5">
             <div className={`h-full rounded-full ${ev.urgency?.startsWith("Noch") ? "bg-amber-400" : dimmed ? "bg-gray-500" : "bg-teal-400"}`} style={{ width: `${fillPct}%` }} />
           </div>
         )}

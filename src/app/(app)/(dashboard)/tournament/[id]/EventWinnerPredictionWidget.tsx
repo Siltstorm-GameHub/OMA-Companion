@@ -118,7 +118,7 @@ export default function EventWinnerPredictionWidget({
   // Erstattet (kein Sieger, ungültiger Tipp): ausgewertet, aber weder richtig noch falsch
   if (prediction?.resolved && prediction.correct === null) {
     return (
-      <div className="glass rounded-2xl p-4 flex items-center gap-3 border border-white/5">
+      <div className="glass rounded-2xl p-4 flex items-center gap-3 border border-line">
         <Target className="w-4 h-4 text-gray-500 shrink-0" />
         <p className="flex-1 min-w-0 text-sm text-gray-300">
           Einsatz zurück: Dein Tipp auf {uname(prediction.predictedUser)} wurde nicht gewertet (kein Sieger oder der Spieler hat nicht mitgespielt).
@@ -135,10 +135,10 @@ export default function EventWinnerPredictionWidget({
     }
     return (
       <div className={`glass rounded-2xl p-4 flex items-center gap-3 ${
-        prediction.correct ? "border border-emerald-500/20" : "border border-white/5"
+        prediction.correct ? "border border-emerald-500/20" : "border border-line"
       }`}>
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-          prediction.correct ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-white/[0.04] border border-white/10"
+          prediction.correct ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-line border border-line-strong"
         }`}>
           <Target className={`w-4 h-4 ${prediction.correct ? "text-emerald-400" : "text-gray-500"}`} />
         </div>
@@ -227,7 +227,7 @@ export default function EventWinnerPredictionWidget({
               max={maxWager}
               value={wager}
               onChange={e => setWager(Math.max(minWager, Math.min(maxWager, parseInt(e.target.value, 10) || minWager)))}
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-violet-500/50"
             />
           </label>
 
@@ -248,7 +248,7 @@ export default function EventWinnerPredictionWidget({
           <div className="flex flex-wrap gap-1.5">
             {players.map(u => (
               <button key={u.id} type="button" onClick={() => setSelected(u)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10">
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10">
                 <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={18} className="w-[18px] h-[18px]" />
                 {uname(u)}
               </button>
@@ -261,13 +261,13 @@ export default function EventWinnerPredictionWidget({
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={players.length > 0 ? "Oder anderes Mitglied suchen…" : "Mitglied suchen…"}
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-violet-500/50"
           />
           {results.length > 0 && (
-            <div className="absolute z-10 mt-1 w-full glass-heavy rounded-xl overflow-hidden border border-white/10">
+            <div className="absolute z-10 mt-1 w-full glass-heavy rounded-card overflow-hidden border border-line-strong">
               {results.map(u => (
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
+                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-line text-left">
                   <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
                   <span className="text-sm text-white">{uname(u)}</span>
                 </button>

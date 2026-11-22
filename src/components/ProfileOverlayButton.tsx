@@ -17,7 +17,7 @@ export default function ProfileOverlayButton({ hasTwitch }: { hasTwitch: boolean
     );
   }
 
-  const linkClass = "flex items-center gap-2 text-sm px-4 py-3 rounded-2xl border border-white/[0.08] text-gray-300 hover:text-teal-300 hover:border-teal-500/30 transition-all";
+  const linkClass = "flex items-center gap-2 text-sm px-4 py-3 rounded-2xl border border-line text-gray-300 hover:text-teal-300 hover:border-teal-500/30 transition-all";
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <Link href={STREAMER_OVERLAY_SETTINGS_PATH} className={linkClass}>

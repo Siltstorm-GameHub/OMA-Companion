@@ -64,7 +64,7 @@ export default function AutoContestSettings({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && dirty && save()}
-            className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+            className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
           />
         </div>
         <button

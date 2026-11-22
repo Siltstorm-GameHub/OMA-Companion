@@ -61,10 +61,10 @@ export default function NextMatches({
       )}
       {others.length > 0 && (
         <div className="glass rounded-2xl overflow-hidden">
-          <p className="px-4 py-2.5 border-b border-white/5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+          <p className="px-4 py-2.5 border-b border-line text-[10px] font-semibold uppercase tracking-widest text-gray-500">
             Nächste Spiele
           </p>
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-line">
             {others.map(m => (
               <div key={m.id} className={`flex items-center gap-3 px-4 py-2 ${m.live ? "bg-red-950/20" : ""}`}>
                 <div className="flex -space-x-1.5 shrink-0">

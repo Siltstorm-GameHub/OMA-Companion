@@ -23,7 +23,7 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
   if (!isOwn) {
     return (
       <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
-        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 8px ${color}` }} />
+        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
         <p className="text-sm text-gray-300">
           Ansehen: <span className="font-semibold" style={{ color }}>{title}</span>
           <span className="text-gray-500"> · Stufe {lvl}/{BADGE_MAX_LEVEL}</span>
@@ -48,11 +48,11 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
           {nextMin == null ? "Höchste Stufe erreicht 🎉" : <>Noch <span className="text-white font-medium">{nextMin - points}</span> Punkte bis {levelTitle(lvl + 1)}</>}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-white/10 overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+      <div className="h-2 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
       {/* Community-Job-Titel: freigeschaltete zum Ausrüsten, die nächste als Ziel, der Rest gesperrt */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/5 p-2.5 space-y-2">
+      <div className="rounded-xl bg-surface-2 border border-line p-2.5 space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Deine Community-Job-Titel</p>
         <div className="flex flex-wrap items-center gap-2">
           {JOB_TITLES.map(t => {

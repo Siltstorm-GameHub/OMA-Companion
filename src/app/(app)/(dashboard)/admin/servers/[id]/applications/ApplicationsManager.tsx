@@ -71,7 +71,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Keine offenen Bewerbungen.</p>
         ) : (
           pending.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">
@@ -101,7 +101,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Niemand auf der Warteliste.</p>
         ) : (
           waitlisted.map((app, i) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               <span className="text-xs font-semibold text-violet-300 w-5 shrink-0 text-center">{i + 1}</span>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
@@ -126,7 +126,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Noch niemand freigeschaltet.</p>
         ) : (
           approved.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">
@@ -149,7 +149,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-white">Verlauf</h2>
           {others.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3 opacity-60" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3 opacity-60" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={28} height={28} className="rounded-full shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">

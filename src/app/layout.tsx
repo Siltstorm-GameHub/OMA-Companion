@@ -12,6 +12,16 @@ const spaceGrotesk = localFont({
   display: "swap",
 });
 
+// Plus Jakarta Sans – App-Schrift laut Designentwurf (OMA 2.0, docs/specs/00-design.md). Variable Schrift
+// 200–800, Zeichensatz Latein, SIL Open Font License, Quelle: @fontsource-variable/plus-jakarta-sans.
+// Space Grotesk bleibt nur für die OBS-Overlays (die lesen --font-display).
+const plusJakarta = localFont({
+  src: "./fonts/PlusJakartaSans.woff2",
+  variable: "--font-jakarta",
+  weight: "200 800",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   // Ohne metadataBase kann Next die von opengraph-image.tsx erzeugte URL nicht
   // absolut auflösen — Discord/Twitter zeigen dann gar kein Vorschaubild.
@@ -41,7 +51,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#0a0a10",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -55,7 +65,7 @@ export const viewport: Viewport = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" data-theme="dark" suppressHydrationWarning className={spaceGrotesk.variable}>
+    <html lang="de" data-theme="dark" suppressHydrationWarning className={`${spaceGrotesk.variable} ${plusJakarta.variable}`}>
       <body className="antialiased">{children}</body>
     </html>
   );

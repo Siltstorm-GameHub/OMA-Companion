@@ -72,7 +72,7 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
         ihm passt. Ziele, die nicht passen (z. B. fehlendes Stat-Feld), bleiben stehen. Ist keins passend, gilt das Ziel der Reihe.
       </p>
       {plan.length > 0 && (
-        <ol className="rounded-xl overflow-hidden border border-white/[0.06] divide-y divide-white/[0.05]">
+        <ol className="rounded-xl overflow-hidden border border-line divide-y divide-line">
           {plan.map((g, i) => (
             <li key={i} className="flex items-center gap-2 px-3 py-2">
               <span className="text-[11px] text-gray-500 w-24 shrink-0">{i === 0 ? "Als Nächstes" : `${i + 1}. in der Liste`}</span>

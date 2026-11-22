@@ -91,7 +91,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
         {isOwn && <div className="shrink-0"><ProfileEditButton /></div>}
       </div>
 
-      <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6 border-t border-white/[0.06] pt-4">
+      <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6 border-t border-line pt-4">
         <Stat value={`#${data.leaderboardRank}`} label={`Rang von ${data.totalUsers}`} href="/leaderboard" />
         <Stat value={data.rankPoints.toLocaleString("de-DE")} label="Punkte" cls={isOwn ? "text-teal-300" : "text-rose-300"} />
         <Stat value={data.eventCount} label="Events" />
@@ -193,7 +193,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
       <div className="space-y-5 min-w-0">
         <section>
           <h2 className={H2}><Clock className="w-3.5 h-3.5 text-teal-500/70" /> Auf dem Server</h2>
-          <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.05]">
+          <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
             {[
               { icon: <Clock className="w-3.5 h-3.5 text-teal-400" />,          label: "Voice-Stunden",     value: `${data.voiceHours} h` },
               { icon: <MessageSquare className="w-3.5 h-3.5 text-blue-400" />,  label: "Nachrichten",       value: data.messageCount.toLocaleString("de-DE") },

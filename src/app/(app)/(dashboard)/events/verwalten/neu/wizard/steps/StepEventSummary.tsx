@@ -57,7 +57,7 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
           {eventSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === eventSquadId)?.name}</p>}
         </div>
       </div>
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
+      <div className="rounded-xl p-4 border border-line bg-surface-2 text-sm space-y-1.5 text-gray-400">
         <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Belohnungen</p>
         <p>✅ Teilnahme: {belongsToSeries ? "Münzen laut Eventreihe" : `${participationCoins} Münzen`}{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
         {placements.map(p => (

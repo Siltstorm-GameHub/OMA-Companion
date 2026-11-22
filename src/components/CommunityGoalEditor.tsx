@@ -99,7 +99,7 @@ export default function CommunityGoalEditor({
         <div className="space-y-3">
           {/* ── 1. Was wird gezählt ── */}
           {resultMode ? (
-            <p className="text-[11px] text-gray-400 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+            <p className="text-[11px] text-gray-400 rounded-lg border border-line bg-surface-2 px-3 py-2">
               ⚽ Gezählt werden die Tore laut Ergebnis jedes gewerteten Spiels (bei 3:1 bekommt Spieler 1 drei, Spieler 2 ein Tor).
             </p>
           ) : (
@@ -172,7 +172,7 @@ export default function CommunityGoalEditor({
           )}
 
           {/* ── 3. Mehr Optionen ── */}
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <div className="rounded-lg border border-line bg-surface-2">
             <button type="button" onClick={() => setMoreOpen(o => !o)} aria-expanded={moreOpen}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-300 hover:text-white">
               Mehr Optionen
@@ -182,14 +182,14 @@ export default function CommunityGoalEditor({
               <ChevronDown className={`ml-auto w-4 h-4 shrink-0 text-gray-500 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
             </button>
             {moreOpen && (
-              <div className="space-y-3 border-t border-white/[0.06] p-3">
+              <div className="space-y-3 border-t border-line p-3">
                 <div>
                   <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Wer spielt aufs Ziel?</p>
                   <div className={`grid grid-cols-1 gap-2 ${scopes.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                     {scopes.map(s => (
                       <button key={s.value} type="button" onClick={() => set({ scope: s.value })} aria-pressed={value.scope === s.value}
                         className={`flex flex-col items-start gap-0.5 rounded-lg p-2.5 border text-left transition-all ${
-                          value.scope === s.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                          value.scope === s.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                         }`}>
                         <span className={`text-sm font-semibold ${value.scope === s.value ? "text-amber-300" : "text-gray-300"}`}>{s.label}</span>
                         <span className="text-[11px] text-gray-500">{s.desc}</span>
@@ -209,7 +209,7 @@ export default function CommunityGoalEditor({
                     {COMMUNITY_GOAL_MODES.map(m => (
                       <button key={m.value} type="button" onClick={() => set({ mode: m.value })} aria-pressed={value.mode === m.value}
                         className={`flex flex-col items-start gap-0.5 rounded-lg p-2.5 border text-left transition-all ${
-                          value.mode === m.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                          value.mode === m.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                         }`}>
                         <span className={`text-sm font-semibold ${value.mode === m.value ? "text-amber-300" : "text-gray-300"}`}>{m.label}</span>
                         <span className="text-[11px] text-gray-500">{m.desc}</span>

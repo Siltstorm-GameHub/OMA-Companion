@@ -45,14 +45,14 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
   const filteredServer = (server ?? []).filter(e => !q || e.name.toLowerCase().includes(q));
 
   return (
-    <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-2" role="dialog" aria-label="Emoji auswählen">
+    <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2" role="dialog" aria-label="Emoji auswählen">
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-1 text-[11px] font-semibold" role="tablist">
           <button role="tab" aria-selected={tab === "standard"} onClick={() => setTab("standard")}
-            className={`px-2.5 py-1 rounded-md ${tab === "standard" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>Standard</button>
+            className={`px-2.5 py-1 rounded-md ${tab === "standard" ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}>Standard</button>
           {hasServer && (
             <button role="tab" aria-selected={tab === "server"} onClick={() => setTab("server")}
-              className={`px-2.5 py-1 rounded-md ${tab === "server" ? "bg-white/10 text-white" : "text-gray-500 hover:text-gray-300"}`}>Server ({server!.length})</button>
+              className={`px-2.5 py-1 rounded-md ${tab === "server" ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}>Server ({server!.length})</button>
           )}
         </div>
         <button onClick={onClose} aria-label="Emoji-Auswahl schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
@@ -66,7 +66,7 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
               <div className="flex flex-wrap gap-0.5">
                 {g.emojis.map(e => (
                   <button key={e} onClick={() => onPick(e)} aria-label={e}
-                    className="w-8 h-8 flex items-center justify-center text-lg rounded-md hover:bg-white/10 transition-colors">{e}</button>
+                    className="w-8 h-8 flex items-center justify-center text-lg rounded-md hover:bg-line transition-colors">{e}</button>
                 ))}
               </div>
             </div>
@@ -75,12 +75,12 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
       ) : (
         <div className="space-y-1.5">
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Server-Emoji suchen…" aria-label="Server-Emoji suchen"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
           <div className="max-h-48 overflow-y-auto flex flex-wrap gap-0.5 pr-1">
             {filteredServer.length === 0 && <p className="text-[11px] text-gray-600 p-1">Kein Emoji gefunden.</p>}
             {filteredServer.map(e => (
               <button key={e.id} onClick={() => onPick(customEmojiToken(e))} title={`:${e.name}:`} aria-label={`:${e.name}:`}
-                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors">
+                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-line transition-colors">
                 {/* eslint-disable-next-line @next/next/no-img-element -- Discord-CDN */}
                 <img src={customEmojiUrl(e, 32)} alt="" loading="lazy" className="w-6 h-6 object-contain" />
               </button>

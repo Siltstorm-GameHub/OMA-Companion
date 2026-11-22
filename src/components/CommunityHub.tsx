@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { HUB_TOGGLE_EVENT, publishHubBadge } from "@/lib/hub-events";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Bell, Settings } from "@/components/icons";
@@ -202,6 +203,16 @@ export function CommunityHub() {
   const otherNotifUnread = Math.max(0, notifUnread - notifications.filter(n => !n.read && n.type === "event_comment").length);
   const totalBadge = otherNotifUnread + threadsUnread;
 
+  // Glocke in der Kopfzeile: Zähler melden, Öffnen/Schließen von dort annehmen
+  useEffect(() => { publishHubBadge(totalBadge); }, [totalBadge]);
+  const toggleRef = useRef(handleToggle);
+  useEffect(() => { toggleRef.current = handleToggle; });
+  useEffect(() => {
+    const onToggle = () => toggleRef.current();
+    window.addEventListener(HUB_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(HUB_TOGGLE_EVENT, onToggle);
+  }, []);
+
   return (
     <>
       {/* ── FAB ─────────────────────────────────────────────────────── */}
@@ -210,13 +221,8 @@ export function CommunityHub() {
         aria-label={open ? "Fenster schließen" : `Benachrichtigungen & Absprachen öffnen${totalBadge > 0 ? ` (${totalBadge} neu)` : ""}`}
         className={`hub-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && totalBadge > 0 ? " hub-fab-pulse" : ""}`}
         style={{
-          background: open
-            ? "rgba(20,184,166,0.22)"
-            : totalBadge > 0
-            ? "rgba(20,184,166,0.28)"
-            : "rgba(20,184,166,0.10)",
-          border: `1px solid ${open || totalBadge > 0 ? "rgba(20,184,166,0.6)" : "rgba(20,184,166,0.22)"}`,
-          backdropFilter: "blur(14px)",
+          background: open || totalBadge > 0 ? "var(--color-primary-soft)" : "var(--color-surface)",
+          border: `1px solid ${open || totalBadge > 0 ? "var(--color-primary)" : "var(--color-line)"}`,
         }}
       >
         {open ? (
@@ -227,7 +233,7 @@ export function CommunityHub() {
         {!open && totalBadge > 0 && (
           <span
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
-            style={{ background: "#14b8a6", boxShadow: "0 0 10px rgba(20,184,166,0.7)" }}
+            style={{ background: "var(--color-live)" }}
           >
             {totalBadge > 99 ? "99+" : totalBadge}
           </span>
@@ -235,7 +241,7 @@ export function CommunityHub() {
         {onlineCount > 0 && (
           <span
             className="absolute -bottom-1 -left-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
-            style={{ background: "rgba(30,30,32,0.95)", border: "1px solid rgba(20,184,166,0.5)" }}
+            style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-line-strong)" }}
             title={`${onlineCount} Spieler online`}
           >
             {onlineCount > 99 ? "99+" : onlineCount}
@@ -245,7 +251,7 @@ export function CommunityHub() {
 
       {/* ── Mobile-Backdrop ─────────────────────────────────────────── */}
       <div
-        className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+        className="lg:hidden fixed inset-0 z-40 bg-black/40"
         style={{
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
@@ -258,11 +264,10 @@ export function CommunityHub() {
       <div
         className={`hub-panel fixed left-0 right-0 max-h-[70vh] rounded-t-2xl z-50 flex flex-col overflow-hidden ${activeTab === "threads" && selectedThread ? "h-[70vh] lg:h-auto" : ""}`}
         style={{
-          background: "rgba(13,13,15,0.97)",
-          backdropFilter: "blur(24px)",
-          borderTop: "1px solid rgba(255,255,255,0.07)",
-          borderLeft: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: open ? "-4px 0 48px rgba(0,0,0,0.6)" : "none",
+          background: "var(--color-sidebar)",
+          borderTop: "1px solid var(--color-line)",
+          borderLeft: "1px solid var(--color-line)",
+          boxShadow: open ? "var(--shadow-pop)" : "none",
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
           transform: open
@@ -298,7 +303,7 @@ export function CommunityHub() {
           />
           <button
             onClick={() => setOpen(false)}
-            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-line transition-colors"
             aria-label="Fenster schließen"
           >
             <X className="w-4 h-4" />
@@ -333,7 +338,7 @@ export function CommunityHub() {
                 {notifications.slice(0, NOTIF_DISPLAY_LIMIT).map((n) => (
                   <div
                     key={n.id}
-                    className="group flex gap-2.5 items-start px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+                    className="group flex gap-2.5 items-start px-4 py-2.5 hover:bg-surface-2 transition-colors"
                     style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
                   >
                     <button
@@ -411,7 +416,7 @@ export function CommunityHub() {
                       <RankedAvatar userId={u.id} src={u.image} alt={displayName(u)} size={24} />
                       <span
                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                        style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
+                        style={{ background: "#14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
                       />
                     </Link>
                   ))}

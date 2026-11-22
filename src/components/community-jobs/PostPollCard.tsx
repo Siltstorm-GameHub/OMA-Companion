@@ -39,7 +39,7 @@ export default function PostPollCard({ poll: initial, isAuthor, canVote }: { pol
 
   const kindLabel = poll.kind === "quiz" ? "Quiz" : poll.kind === "event_winner" ? "Wer gewinnt?" : "Umfrage";
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+    <div className="rounded-lg border border-line-strong bg-surface-2 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-white flex items-start gap-1.5"><Vote className="w-4 h-4 mt-0.5 text-teal-300 shrink-0" />{poll.question}</p>
         <span className="text-[10px] uppercase tracking-wider text-gray-500 shrink-0">{kindLabel}</span>
@@ -59,14 +59,14 @@ export default function PostPollCard({ poll: initial, isAuthor, canVote }: { pol
           if (!showResults) {
             return (
               <button key={o.id} type="button" disabled={busy !== null} onClick={() => vote(o.id)}
-                className="w-full text-left text-xs rounded-lg border border-white/10 px-3 py-2 text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/5 transition-colors disabled:opacity-60 inline-flex items-center gap-2">
+                className="w-full text-left text-xs rounded-lg border border-line-strong px-3 py-2 text-gray-200 hover:border-teal-500/40 hover:bg-teal-500/5 transition-colors disabled:opacity-60 inline-flex items-center gap-2">
                 {busy === o.id && <Loader2 className="w-3 h-3 animate-spin" />}{o.label}
               </button>
             );
           }
           return (
-            <div key={o.id} className={`relative overflow-hidden rounded-lg border px-3 py-2 text-xs ${correct ? "border-emerald-500/50" : mine ? "border-teal-500/40" : "border-white/10"}`}>
-              <div className={`absolute inset-y-0 left-0 ${correct ? "bg-emerald-500/20" : mine ? "bg-teal-500/15" : "bg-white/[0.05]"}`} style={{ width: `${pct}%` }} />
+            <div key={o.id} className={`relative overflow-hidden rounded-lg border px-3 py-2 text-xs ${correct ? "border-emerald-500/50" : mine ? "border-teal-500/40" : "border-line-strong"}`}>
+              <div className={`absolute inset-y-0 left-0 ${correct ? "bg-emerald-500/20" : mine ? "bg-teal-500/15" : "bg-line"}`} style={{ width: `${pct}%` }} />
               <div className="relative flex items-center justify-between gap-2">
                 <span className="text-gray-200 inline-flex items-center gap-1.5">
                   {correct && <Check className="w-3.5 h-3.5 text-emerald-400" />}{o.label}{mine && <span className="text-[10px] text-teal-300">(deine Stimme)</span>}

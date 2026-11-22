@@ -85,7 +85,7 @@ export default function LigaView({
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[360px]">
             <thead>
-              <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
+              <tr className="border-b border-line text-[10px] text-gray-500 uppercase tracking-wider">
                 <th className="text-left px-3 py-2.5 font-medium">#</th>
                 <th className="text-left px-3 py-2.5 font-medium">Spieler</th>
                 <th className="text-center px-2 py-2.5 font-medium" title="Spiele">Sp</th>
@@ -96,12 +96,12 @@ export default function LigaView({
                 <th className="text-right px-3 py-2.5 font-medium">Pkt</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-line">
               {standings.map((s, i) => {
                 const isMe = s.userId === userId;
                 const diff = s.scored - s.conceded;
                 return (
-                  <tr key={s.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
+                  <tr key={s.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-surface-2"}`}>
                     <td className="px-4 py-3 text-center">
                       {i < 3
                         ? <span className="text-base">{MEDAL[i]}</span>
@@ -116,7 +116,7 @@ export default function LigaView({
                         </span>
                       </Link>
                       {excludedSet.has(s.userId) && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-2">
                           Ungewertet
                         </span>
                       )}
@@ -201,7 +201,7 @@ export default function LigaView({
                     return (
                       <div key={match.id}
                         className={`glass border rounded-xl px-4 py-3 flex items-center gap-3 ${
-                          isMyMatch ? "border-rose-800/40" : "border-white/5"
+                          isMyMatch ? "border-rose-800/40" : "border-line"
                         } ${played ? "opacity-80" : ""}`}
                       >
                         {match.scheduledAt && !played && (

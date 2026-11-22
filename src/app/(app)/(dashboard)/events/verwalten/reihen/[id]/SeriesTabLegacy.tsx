@@ -20,7 +20,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                   const u = allUsers.find(u => u.id === row.userId);
                   const displayName = u?.username ?? u?.name ?? row.userId.slice(0, 8);
                   return (
-                    <div key={row.userId} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 space-y-1.5">
+                    <div key={row.userId} className="rounded-lg border border-line bg-surface-2 p-2.5 space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-medium text-white truncate">{displayName}</span>
                         <button type="button" onClick={() => setLegacyRows(prev => prev.filter((_, j) => j !== i))}
@@ -60,7 +60,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                       </div>
                       {/* Poll-Felder */}
                       {polls.filter(p => p.label.trim()).length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-white/[0.04] mt-1">
+                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-line mt-1">
                           {polls.filter(p => p.label.trim()).map(p => (
                             <label key={p.label} className="flex items-center gap-1.5 text-[11px] text-violet-400">
                               {p.label} Siege
@@ -77,7 +77,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                       )}
                       {/* Dominion Bonus */}
                       {dominionEnabled && (
-                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-white/[0.04] mt-1">
+                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-line mt-1">
                           <label className="flex items-center gap-1.5 text-[11px] text-amber-400">
                             <Flame className="w-3 h-3" /> Dominion Bonus (Anzahl)
                             <NumberInput min={0} value={row.stats["Dominion Bonus"] ?? 0}
@@ -110,7 +110,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                     {filtered.map(u => (
                       <button key={u.id} type="button"
                         onClick={() => { setLegacyRows(prev => [...prev, { userId: u.id, points: 0, participations: 0, stats: {} }]); setLegacySearch(""); }}
-                        className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.06] flex items-center gap-2 transition-colors">
+                        className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-line flex items-center gap-2 transition-colors">
                         {u.image ? <img src={u.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" /> : <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0" />}
                         {u.username ?? u.name}
                       </button>

@@ -245,7 +245,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <select
                       value={periodMonthInput}
                       onChange={(e) => setPeriodMonthInput(e.target.value)}
-                      className="rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                      className="rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
                     >
                       {MONTH_NAMES.map((name, i) => (
                         <option key={name} value={i + 1} className="bg-gray-900">{name}</option>
@@ -254,7 +254,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <NumberInput
                       value={periodYearInput}
                       onChange={(e) => setPeriodYearInput(e.target.value)}
-                      className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                      className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
                     />
                     <button
                       onClick={() => savePeriod(contest.id)}
@@ -267,7 +267,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <button
                       onClick={cancelEditingPeriod}
                       disabled={periodSaving === contest.id}
-                      className="p-1.5 rounded-lg text-gray-400 bg-white/[0.05] border border-white/[0.1] hover:bg-white/[0.1] transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 bg-line border border-line-strong hover:bg-line transition-colors"
                       title="Abbrechen"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -280,7 +280,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     </h2>
                     <button
                       onClick={() => startEditingPeriod(contest)}
-                      className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors"
+                      className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors"
                       title="Monat/Jahr korrigieren"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -290,7 +290,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   contest.status === "voting"
                     ? "bg-blue-500/15 text-blue-300 border border-blue-500/20"
-                    : "bg-gray-500/15 text-gray-400 border border-white/[0.06]"
+                    : "bg-gray-500/15 text-gray-400 border border-line"
                 }`}>
                   {contest.status === "voting" ? "Abstimmung läuft" : "Abgeschlossen"}
                 </span>
@@ -317,24 +317,24 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
             </div>
 
             {/* Reward-Kachel: Teilnahme + Sieger */}
-            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 flex items-center gap-4 flex-wrap">
+            <div className="rounded-xl bg-surface-2 border border-line p-3 flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-500">Münzen fürs Abstimmen</label>
                 <NumberInput
                   min={0}
                   value={participationInputs[contest.id] ?? contest.participationCoins}
                   onChange={(e) => setParticipationInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
-                  className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                  className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
                 />
               </div>
-              <div className="w-px h-6 bg-white/[0.08]" />
+              <div className="w-px h-6 bg-line" />
               <div className="flex items-center gap-2">
                 <label className="text-xs text-gray-500">Münzen für Sieger</label>
                 <NumberInput
                   min={0}
                   value={rewardInputs[contest.id] ?? contest.rewardCoins}
                   onChange={(e) => setRewardInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
-                  className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                  className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
                 />
               </div>
               <button
@@ -398,7 +398,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                       </div>
 
                       {linkingNominationId === winner.id && (
-                        <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+                        <div className="mt-3 pt-3 border-t border-line space-y-2">
                           <p className="text-xs text-gray-400 font-medium">
                             Community-Mitglied für „{winner.twitchCreatorLogin}" suchen
                           </p>
@@ -408,7 +408,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                               placeholder="Nutzername suchen…"
                               value={userSearchInput}
                               onChange={(e) => { setUserSearchInput(e.target.value); searchUsers(e.target.value); }}
-                              className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                              className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
                             />
                             {userSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
                           </div>
@@ -419,7 +419,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                                   key={u.id}
                                   onClick={() => linkWinner(contest.id, winner.id, u)}
                                   disabled={linkSaving}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/[0.06] transition-colors text-left disabled:opacity-50"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-line transition-colors text-left disabled:opacity-50"
                                 >
                                   {u.image
                                     ? <Image src={u.image} alt="" width={28} height={28} className="rounded-full shrink-0" />
@@ -448,7 +448,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                 const name = nom.submittedBy?.name ?? nom.submittedBy?.username ?? nom.twitchCreatorLogin ?? "Unbekannt";
                 const isWinner = contest.winnerNominationIds.includes(nom.id);
                 return (
-                  <div key={nom.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${isWinner ? "bg-amber-500/5" : "bg-white/[0.02]"}`}>
+                  <div key={nom.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${isWinner ? "bg-amber-500/5" : "bg-surface-2"}`}>
                     <span className="text-gray-600 w-4 text-right">{i + 1}.</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-white truncate">{nom.customTitle ?? nom.clipTitle ?? nom.clipUrl}</p>

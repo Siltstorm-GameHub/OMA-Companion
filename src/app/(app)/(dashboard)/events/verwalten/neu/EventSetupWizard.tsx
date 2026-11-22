@@ -109,7 +109,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
             Zurück zur Auswahl
           </button>
         )}
-        <div className="h-3 w-px bg-white/10" />
+        <div className="h-3 w-px bg-line" />
         <div className="flex items-center gap-2">
           {isSeriesMode
             ? <Repeat className="w-4 h-4 text-violet-400" />
@@ -156,7 +156,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
       <div className="flex gap-3">
         {step > 0 && (
           <button type="button" onClick={() => setStep(s => s - 1)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-gray-400 border border-white/10 hover:border-white/20 transition-colors">
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-gray-400 border border-line-strong hover:border-line-strong transition-colors">
             <ChevronLeft className="w-4 h-4" /> Zurück
           </button>
         )}

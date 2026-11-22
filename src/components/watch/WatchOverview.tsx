@@ -50,7 +50,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
                     aria-pressed={on}
                     disabled={!on && picked.length >= MAX}
                     className={`text-left rounded-xl border px-3 py-2.5 transition-all disabled:opacity-40 ${
-                      on ? "border-teal-400/60 bg-teal-500/15" : "border-white/[0.08] hover:border-white/25"
+                      on ? "border-teal-400/60 bg-teal-500/15" : "border-line hover:border-white/25"
                     }`}
                   >
                     <MemberLine m={m} />
@@ -64,7 +64,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
                 href={picked.length ? `/zusammen?c=${picked.join(",")}` : "#"}
                 aria-disabled={picked.length === 0}
                 className={`text-sm px-4 py-2 rounded-xl border font-medium ${
-                  picked.length ? "bg-teal-500/20 border-teal-400/50 text-teal-100 hover:bg-teal-500/30" : "pointer-events-none border-white/[0.08] text-gray-500"
+                  picked.length ? "bg-teal-500/20 border-teal-400/50 text-teal-100 hover:bg-teal-500/30" : "pointer-events-none border-line text-gray-500"
                 }`}
               >
                 {picked.length ? `${picked.length} ${picked.length === 1 ? "Stream" : "Streams"} ansehen` : "Streams auswählen"}
@@ -88,7 +88,7 @@ function GroupList({ icon: Icon, title, groups }: { icon: typeof Users; title: s
           <Link
             key={g.key}
             href={watchGroupHref(g)}
-            className="glass rounded-2xl p-4 hover:border-teal-500/40 border border-white/[0.06] transition-all"
+            className="glass rounded-2xl p-4 hover:border-teal-500/40 border border-line transition-all"
           >
             <span className="block text-sm font-semibold text-white truncate">{g.label}</span>
             <span className="block text-xs text-gray-500 mb-2">{g.members.length} Streams · Zusammen ansehen →</span>
@@ -108,7 +108,7 @@ function MemberLine({ m }: { m: WatchMember }) {
       {m.image
         // eslint-disable-next-line @next/next/no-img-element -- Profilbild (Discord-CDN)
         ? <img src={m.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
-        : <span className="w-5 h-5 rounded-full bg-white/10 shrink-0" />}
+        : <span className="w-5 h-5 rounded-full bg-line shrink-0" />}
       <span className="text-sm text-gray-100 truncate">{m.name}</span>
       {m.game && <span className="text-xs text-gray-500 truncate">· {m.game}</span>}
       <span className="ml-auto flex items-center gap-1 text-xs text-gray-500 shrink-0"><Eye className="w-3 h-3" />{m.viewers}</span>

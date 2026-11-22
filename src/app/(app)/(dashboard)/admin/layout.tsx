@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="p-3 sm:p-6 max-w-7xl mx-auto w-full min-w-0">
       <div className="flex items-center gap-3 mb-4 sm:mb-5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-950 flex items-center justify-center shadow-lg shadow-purple-900/40">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-700 to-purple-950 flex items-center justify-center shadow-lg">
           <Shield className="w-4 h-4 text-white" strokeWidth={2.5} />
         </div>
         <p className="text-lg font-bold text-white tracking-tight leading-tight">Admin-Bereich</p>

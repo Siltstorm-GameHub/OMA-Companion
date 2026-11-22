@@ -41,7 +41,7 @@ function eur(n: number) {
 function Bar({ value, max, tone = "teal", className = "h-2" }: { value: number; max: number; tone?: "teal" | "sky"; className?: string }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
-    <div className={`${className} rounded-full bg-white/[0.06] overflow-hidden`} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+    <div className={`${className} rounded-full bg-line overflow-hidden`} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
       <div className={`h-full rounded-full ${tone === "sky" ? "bg-sky-400" : "bg-teal-400"}`} style={{ width: `${pct}%` }} />
     </div>
   );
@@ -135,7 +135,7 @@ function NextTargetHero({ data }: { data: DonationPoolData }) {
           </p>
         )}
       </div>
-      <div className="lg:border-l lg:border-white/[0.08] lg:pl-6">
+      <div className="lg:border-l lg:border-line lg:pl-6">
         <PayPalButton />
         <p className="mt-2 flex gap-1.5 text-xs text-gray-400 leading-relaxed">
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-300" />
@@ -203,7 +203,7 @@ function FixedCostsCard({ data }: { data: DonationPoolData }) {
         hint={<>ca. {eur(pool.monthlyRunRate)} im Monat · Spenden zuletzt im Schnitt {eur(data.avgDonations)} im Monat</>}>
         Laufende Kosten · werden zuerst gedeckt
       </SectionTitle>
-      <ul className="divide-y divide-white/[0.05]">
+      <ul className="divide-y divide-line">
         {pool.fixed.map((f) => {
           const done = f.covered >= f.target;
           return (
@@ -236,14 +236,14 @@ function GoalsCard({ data }: { data: DonationPoolData }) {
         hint={pool.fixedComplete ? "Was nach den laufenden Kosten übrig ist, füllt die Ziele der Reihe nach." : "Sobald die laufenden Kosten gedeckt sind, geht es hier weiter."}>
         Wofür wir sparen
       </SectionTitle>
-      <ol className="divide-y divide-white/[0.05]">
+      <ol className="divide-y divide-line">
         {pool.goals.map((g, i) => {
           const cost = g.estimatedCost;
           const done = cost != null && cost > 0 && g.covered >= cost;
           const active = pool.next.kind === "goal" && pool.next.goal.id === g.id;
           return (
             <li key={g.id} className="flex items-center gap-3 py-2.5">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tabular-nums ${active ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-500"}`}>{i + 1}</span>
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tabular-nums ${active ? "bg-teal-500/20 text-teal-300" : "bg-line text-gray-500"}`}>{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <p className={`truncate text-sm ${active || done ? "text-white" : "text-gray-300"}`}>{g.title}</p>
                 {g.description && <p className="truncate text-[11px] text-gray-500">{g.description}</p>}
@@ -291,13 +291,13 @@ function LedgerCard({ data }: { data: DonationPoolData }) {
   return (
     <Card>
       <SectionTitle icon={<Wallet className="w-4 h-4 text-gray-400" />} hint="Alle Einnahmen und Ausgaben, neueste zuerst.">Kassenbuch</SectionTitle>
-      <ul className="divide-y divide-white/[0.05]">{visible.map((e) => <LedgerRow key={e.key} e={e} />)}</ul>
+      <ul className="divide-y divide-line">{visible.map((e) => <LedgerRow key={e.key} e={e} />)}</ul>
       {rest.length > 0 && (
         <details className="group">
           <summary className="mt-1 flex cursor-pointer list-none items-center gap-1 text-xs font-semibold text-teal-300 hover:text-teal-200 [&::-webkit-details-marker]:hidden">
             Ältere Einträge ({rest.length}) <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
           </summary>
-          <ul className="mt-1 divide-y divide-white/[0.05]">{rest.map((e) => <LedgerRow key={e.key} e={e} />)}</ul>
+          <ul className="mt-1 divide-y divide-line">{rest.map((e) => <LedgerRow key={e.key} e={e} />)}</ul>
         </details>
       )}
     </Card>
@@ -322,7 +322,7 @@ function DonorWall({ data }: { data: DonationPoolData }) {
           const tip = `${name}${isMe ? " (Du)" : ""} · ${d.totalMonths} ${d.totalMonths === 1 ? "Monat" : "Monate"} dabei${d.streak >= 2 ? `, ${d.streak} in Folge` : ""}`;
           return (
             <li key={d.id} title={tip} className="flex w-14 flex-col items-center gap-1">
-              <span className={`rounded-full p-[2px] ${d.thisMonth ? "bg-teal-400" : "bg-white/[0.06]"}`}>
+              <span className={`rounded-full p-[2px] ${d.thisMonth ? "bg-teal-400" : "bg-line"}`}>
                 <RankedAvatar userId={d.id} src={d.image} alt={name} size={40} />
               </span>
               <span className={`w-full truncate text-center text-[10px] ${isMe ? "text-teal-300" : "text-gray-500"}`}>{isMe ? "Du" : name}</span>

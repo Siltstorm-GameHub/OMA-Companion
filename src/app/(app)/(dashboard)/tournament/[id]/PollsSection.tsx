@@ -126,14 +126,14 @@ function PollCard({
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Läuft · <EndsCountdown endAt={poll.endAt} />
       </span>
     : isPast
-    ? <span className="text-xs text-gray-500 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full">Beendet</span>
+    ? <span className="text-xs text-gray-500 bg-line border border-line px-2 py-0.5 rounded-full">Beendet</span>
     : <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock className="w-3 h-3" />Bald</span>;
 
   return (
     <div className="glass rounded-2xl overflow-hidden" style={{ border: isActive ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)" }}>
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-2 transition-colors text-left"
         onClick={() => setCollapsed(v => !v)}
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -194,7 +194,7 @@ function PollCard({
           )}
 
           {isActive && userId && !allowed && (
-            <p className="text-xs text-gray-400 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+            <p className="text-xs text-gray-400 rounded-lg border border-line bg-surface-2 px-3 py-2">
               {ELIGIBILITY_TEXT[poll.voterEligibility] ?? "Du darfst hier nicht abstimmen"}.
             </p>
           )}

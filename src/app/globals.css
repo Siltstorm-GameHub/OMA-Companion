@@ -18,57 +18,116 @@ html {
   font-size: clamp(13px, calc(11.5px + 0.5vw), 18px);
 }
 
-/* ── Direction B: Gaming Identity ──────────────────────────────── */
-/* Primary:  Teal   #14b8a6  (TV-Screen im Logo)                    */
-/* Secondary: Red   #8b2020  (K-Letter / OM-Badge im Logo)          */
-/* Currency: Amber  #f59e0b  (Münzen, Punkte)                       */
+/*
+ * ── Design-Tokens: Richtung G "Dashboard" ───────────────────────────
+ * Übernommen aus OMA 2.0 (docs/specs/00-design.md): dunkles Dashboard mit
+ * festen Flächen, kein Glas, keine Unschärfe, keine Leucht-Flecken.
+ * Als Tailwind-Klassen nutzbar: bg-canvas, bg-surface, border-line,
+ * text-muted, bg-primary, rounded-card, rounded-control, shadow-card …
+ */
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
+  /* Flächen */
+  --color-canvas: #0a0a10;
+  --color-sidebar: #0e0e16;
+  --color-surface: #14141f;
+  --color-surface-2: #191927;
+  --color-surface-3: #1d1d2e;
+  --color-line: #23233a;
+  --color-line-strong: #33334d;
+
+  /* Text */
+  --color-fg: #ededf5;
+  --color-muted: #a6a6bd;
+  --color-subtle: #8a8aa3;
+
+  /* Marke */
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-soft: #16302d;
+  --color-primary-fg: #5eead4;
+  --color-primary-ink: #062a26;
+
+  /* Akzente */
+  --color-live: #f43f5e;
+  --color-live-soft: #3a1420;
+  --color-coin: #fbbf24;
+  --color-coin-soft: #2a2410;
+
+  /* Status (Klassen: text-success, bg-danger-soft …) */
+  --color-success: #34d399;
+  --color-success-soft: #10291f;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #2a2410;
+  --color-danger: #fb7185;
+  --color-danger-soft: #3a1420;
+
+  /*
+   * Graustufen an die neue Palette angleichen: Die App nutzt text-gray-… und bg-gray-…
+   * rund 3700-mal. Statt neutralem Grau jetzt der kühle Ton des Entwurfs —
+   * gray-400 = muted, gray-500 = subtle, gray-800 = line, gray-900 = surface.
+   * Nebenbei hebt das die blassen Stufen (500/600) auf lesbaren Kontrast.
+   */
+  --color-gray-50: #f7f7fb;
+  --color-gray-100: #ededf5;
+  --color-gray-200: #dcdcea;
+  --color-gray-300: #c8c8da;
+  --color-gray-400: #a6a6bd;
+  --color-gray-500: #8a8aa3;
+  --color-gray-600: #74748e;
+  --color-gray-700: #3a3a56;
+  --color-gray-800: #23233a;
+  --color-gray-900: #14141f;
+  --color-gray-950: #0a0a10;
+
+  /* Form */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  /* Bestehende Karten nutzen fast alle rounded-2xl — auf den Karten-Radius des Entwurfs (20 px) anheben */
+  --radius-2xl: 1.25rem;
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 16px 48px rgb(0 0 0 / 0.6);
+}
+
+/*
+ * Alte Variablen bleiben als Aliase bestehen (werden in ~50 Komponenten per var(--…)
+ * gelesen), zeigen aber auf die neuen Tokens.
+ */
 :root {
-  --bg-base:          #0d0d0f;   /* Schwarzviolett-Dunkel            */
-  --bg-surface:       #13131a;   /* Karten-Hintergrund               */
-  --bg-elevated:      #1a1a24;   /* Erhöhte Elemente                 */
-  --border-dim:       rgba(255,255,255,0.07);
-  --border-glow:      rgba(139,92,246,0.35);
-  --violet-glow:      rgba(139,92,246,0.15);
-  --teal-glow:        rgba(20,184,166,0.12);
-  --crimson-glow:     rgba(153,27,27,0.10);
-  --aurora-vignette:  radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(5,5,8,0.80) 100%);
-  --shadow-card:
-    0 1px 0 rgba(255,255,255,0.04) inset,
-    0 2px 4px  rgba(0,0,0,0.70),
-    0 8px 24px rgba(0,0,0,0.50),
-    0 0 0 1px  rgba(255,255,255,0.06);
-  --shadow-card-hover:
-    0 1px 0 rgba(255,255,255,0.06) inset,
-    0 4px 8px  rgba(0,0,0,0.70),
-    0 20px 48px rgba(0,0,0,0.60),
-    0 0 0 1px  rgba(139,92,246,0.25),
-    0 0 40px   rgba(139,92,246,0.08);
+  color-scheme: dark;
+  --bg-base:          var(--color-canvas);
+  --bg-surface:       var(--color-surface);
+  --bg-elevated:      var(--color-surface-2);
+  --border-dim:       var(--color-line);
+  --border-glow:      var(--color-line-strong);
+  --violet-glow:      transparent;
+  --teal-glow:        transparent;
+  --crimson-glow:     transparent;
+  --aurora-vignette:  none;
+  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 10px 28px rgb(0 0 0 / 0.45);
 
-  /* ── Nav chrome (FloatingPill / BottomNav): themable so the "bump" navbar
-     adapts to light mode instead of staying a dark island on a light page ── */
-  --nav-glass-bg:        rgba(13,13,15,0.94);
-  --nav-glass-border:    rgba(20,184,166,0.13);
-  --nav-shadow:          0 8px 32px rgba(0,0,0,0.60), 0 0 0 1px rgba(20,184,166,0.06);
-  --nav-divider:         rgba(255,255,255,0.07);
-  --nav-hover-bg:        rgba(255,255,255,0.05);
-  --nav-icon-inactive:   #6b7280;
-  --nav-glyph:           #ffffff;
-  --nav-text-hover:      #d1d5db;
-  --nav-text-primary:    #ffffff;
-  --nav-text-secondary:  #d1d5db;
-  --nav-text-tertiary:   #9ca3af;
-  --nav-dropdown-bg:     rgba(13,13,15,0.97);
-  --nav-dropdown-border: rgba(20,184,166,0.12);
-  --nav-dropdown-shadow: 0 16px 48px rgba(0,0,0,0.7);
+  /* Navigation (Seitenleiste / untere Leiste / Menüs) */
+  --nav-glass-bg:        var(--color-sidebar);
+  --nav-glass-border:    var(--color-line);
+  --nav-shadow:          none;
+  --nav-divider:         var(--color-line);
+  --nav-hover-bg:        var(--color-surface-2);
+  --nav-icon-inactive:   var(--color-subtle);
+  --nav-glyph:           var(--color-fg);
+  --nav-text-hover:      var(--color-fg);
+  --nav-text-primary:    var(--color-fg);
+  --nav-text-secondary:  var(--color-muted);
+  --nav-text-tertiary:   var(--color-subtle);
+  --nav-dropdown-bg:     var(--color-surface-2);
+  --nav-dropdown-border: var(--color-line);
+  --nav-dropdown-shadow: var(--shadow-pop);
 
-  /* ── Semantic status colors (destructive/success/warning actions) ── */
-  --color-danger:         #ef4444;
-  --color-danger-subtle:  rgba(239,68,68,0.1);
-  --color-success:        #10b981;
-  --color-success-subtle: rgba(16,185,129,0.1);
-  --color-warning:        #f59e0b;
-  --color-warning-subtle: rgba(245,158,11,0.1);
+  /* Status (alte Namen) */
+  --color-danger-subtle:  var(--color-danger-soft);
+  --color-success-subtle: var(--color-success-soft);
+  --color-warning-subtle: var(--color-warning-soft);
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
@@ -129,57 +188,13 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
 body {
-  background-color: var(--bg-base);
-  color: #e8e8f0;
-  background-attachment: fixed;
+  background-color: var(--color-canvas);
+  color: var(--color-fg);
 }
 
-/* ── Animated mesh gradient blobs ──────────────────────────────── */
-body::before,
-body::after {
-  content: '';
-  position: fixed;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(130px);
-  opacity: 0.55;
-}
+/* Früher: animierte Farb-Flecken (body::before/after) – entfernt, der Entwurf sieht feste Flächen vor. */
 
-/* Violet blob — oben links (Gaming-Energie) */
-body::before {
-  width: 900px;
-  height: 650px;
-  top: -250px;
-  left: -200px;
-  background: radial-gradient(ellipse, rgba(109,40,217,0.30) 0%, transparent 70%);
-  animation: blob-drift-a 22s ease-in-out infinite alternate;
-}
-
-/* Teal blob — unten rechts (Brand-Farbe) */
-body::after {
-  width: 750px;
-  height: 750px;
-  bottom: -220px;
-  right: -150px;
-  background: radial-gradient(ellipse, rgba(20,184,166,0.20) 0%, transparent 70%);
-  animation: blob-drift-b 28s ease-in-out infinite alternate;
-}
-
-@keyframes blob-drift-a {
-  0%   { transform: translate(0, 0)    scale(1);    }
-  33%  { transform: translate(80px, 40px) scale(1.12); }
-  66%  { transform: translate(-40px, 80px) scale(0.95); }
-  100% { transform: translate(60px, -30px) scale(1.08); }
-}
-@keyframes blob-drift-b {
-  0%   { transform: translate(0, 0)     scale(1);    }
-  33%  { transform: translate(-60px, -50px) scale(1.1); }
-  66%  { transform: translate(50px, -80px) scale(0.92); }
-  100% { transform: translate(-30px, 60px) scale(1.12); }
-}
-
-/* Content above blobs */
+/* Inhalt über eventuellen Hintergrund-Ebenen */
 /* In @layer base, damit Tailwind-Utilities (fixed, sticky, z-*, …) in @layer
    utilities weiterhin Vorrang haben — unlayered CSS würde sie sonst trotz
    geringerer Spezifität überstimmen (z.B. position:fixed am Mobile-Header). */
@@ -188,35 +203,27 @@ body::after {
 }
 
 
-/* ── 3D Card System ─────────────────────────────────────────────── */
-/* Mehrschichtige Shadows: nahe + ferne Schatten + Teal-Glühen + Inset-Highlight */
+/* ── Karten (Richtung G) ────────────────────────────────────────── */
+/* Klickbare Karten: kein Anheben, kein Leuchten – beim Überfahren nur hellerer Rand. */
 .card-hover {
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+  transition: background-color 150ms ease, border-color 150ms ease !important;
   box-shadow: var(--shadow-card);
 }
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover) !important;
+  border-color: var(--color-line-strong) !important;
 }
 
-/* Teal-Glow Variante */
 .card-hover-glow {
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+  transition: background-color 150ms ease, border-color 150ms ease !important;
 }
 .card-hover-glow:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover) !important;
-  border-color: rgba(139,92,246,0.25) !important;
+  border-color: var(--color-line-strong) !important;
 }
 
-/* Legacy compat */
-.card-glow-rose:hover {
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 32px rgba(20,184,166,0.18) !important;
-  border-color: rgba(20,184,166,0.3) !important;
-}
+/* Alte Namen */
+.card-glow-rose:hover,
 .card-glow-violet:hover {
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 32px rgba(153,27,27,0.18) !important;
-  border-color: rgba(153,27,27,0.3) !important;
+  border-color: var(--color-line-strong) !important;
 }
 
 /* Standalone 3D shadow utility */
@@ -235,66 +242,60 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 
 /* ── Focus ─────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid rgba(20,184,166,0.7);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────── */
-::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.20); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.40); }
+::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-line-strong); }
 
-/* ── Glassmorphism — Teal-getönt ────────────────────────────────── */
+/* ── Eingabefelder ─────────────────────────────────────────────── */
 .input-glass {
   width: 100%;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 0.625rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
   padding: 0.375rem 0.625rem;
-  color: #fff;
+  color: var(--color-fg);
   font-size: 0.8125rem;
   outline: none;
   transition: border-color 0.15s;
 }
-.input-glass::placeholder { color: rgba(255,255,255,0.25); }
-.input-glass:focus { border-color: rgba(99,102,241,0.4); }
-select.input-glass option { background: #0f1117; }
+.input-glass::placeholder { color: var(--color-subtle); }
+.input-glass:focus { border-color: var(--color-primary); }
+select.input-glass option { background: var(--color-surface-2); }
 
+/*
+ * ── Flächen ───────────────────────────────────────────────────────
+ * Die Glas-Klassen heißen weiter so (zahlreiche Komponenten nutzen sie),
+ * sind jetzt aber feste Flächen ohne Unschärfe – wie im Entwurf.
+ */
 .glass {
-  background: rgba(13,13,20,0.70);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid var(--border-dim);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    inset 0 -1px 0 rgba(0,0,0,0.3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-card);
 }
 .glass-heavy {
-  background: rgba(10,10,16,0.88);
-  backdrop-filter: blur(28px) saturate(1.6);
-  -webkit-backdrop-filter: blur(28px) saturate(1.6);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    inset 0 -1px 0 rgba(0,0,0,0.4);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-pop);
 }
 .glass-nav {
-  background: rgba(10,10,15,0.94);
-  backdrop-filter: blur(32px) saturate(1.6);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6);
-  border: 1px solid rgba(255,255,255,0.07);
+  background: var(--color-sidebar);
+  border: 1px solid var(--color-line);
 }
 
-/* ── Solid surfaces (no blur) — Direction B ────────────────────── */
 .surface {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
 }
 .surface-elevated {
-  background: var(--bg-elevated);
-  border: 1px solid rgba(255,255,255,0.09);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
 }
 
 /* ── Cut-corner cards — Gaming aesthetic ───────────────────────── */
@@ -314,18 +315,16 @@ select.input-glass option { background: #0f1117; }
 .accent-amber  { border-left: 2px solid #f59e0b !important; }
 
 /* ── Display font ──────────────────────────────────────────────── */
+/* Überschriften: gleiche Schrift wie der Fließtext (Plus Jakarta Sans), nur kräftiger gesetzt */
 .font-display {
-  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
-  letter-spacing: -0.03em;
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
 }
 
-/* ── Brand gradient text ────────────────────────────────────────── */
-/* Violet → Teal (Gaming Identity) */
+/* ── Marken-Text ────────────────────────────────────────────────── */
+/* Früher Verlauf Violett → Teal; jetzt einfarbig in der Markenfarbe */
 .text-gradient-gaming {
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 45%, #14b8a6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-primary-fg);
 }
 .text-gradient-gold {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
@@ -340,13 +339,8 @@ select.input-glass option { background: #0f1117; }
   background-clip: text;
 }
 
-/* ── Neon glow utilities ─────────────────────────────────────────── */
-.neon-teal    { text-shadow: 0 0 12px rgba(20,184,166,0.9),   0 0 28px rgba(20,184,166,0.5);   }
-.neon-violet  { text-shadow: 0 0 12px rgba(139,92,246,0.95),  0 0 28px rgba(139,92,246,0.55);  }
-.neon-amber   { text-shadow: 0 0 12px rgba(251,191,36,0.8),   0 0 24px rgba(251,191,36,0.4);   }
-.neon-crimson { text-shadow: 0 0 12px rgba(220,38,38,0.8),    0 0 28px rgba(220,38,38,0.4);    }
-/* Legacy */
-.neon-rose    { text-shadow: 0 0 12px rgba(139,92,246,0.8),   0 0 24px rgba(139,92,246,0.4);   }
+/* ── Neon-Klassen: Leuchten entfernt (Entwurf: kein Glow), Klassen bleiben als No-op ── */
+.neon-teal, .neon-violet, .neon-amber, .neon-crimson, .neon-rose { text-shadow: none; }
 
 /* ── Safe area ──────────────────────────────────────────────────── */
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -384,8 +378,9 @@ select.input-glass option { background: #0f1117; }
 .hub-panel {
   bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }
+/* Desktop: rechts unter der Kopfzeile (4.5rem hoch) */
 @media (min-width: 1024px) {
-  .hub-panel { bottom: 0; top: 100px; left: auto; right: 0; width: 360px; max-height: none; border-radius: 0; border-top-left-radius: 1rem; }
+  .hub-panel { bottom: 0; top: 4.5rem; left: auto; right: 0; width: 360px; max-height: none; border-radius: 0; border-top-left-radius: 1rem; }
 }
 
 /* ── Touch device optimizations ─────────────────────────────────── */
@@ -572,26 +567,8 @@ select.input-glass option { background: #0f1117; }
   animation: shimmer 2.2s linear infinite;
 }
 
-/* ── Card shine sweep ───────────────────────────────────────────── */
-@keyframes shine-sweep {
-  0%   { left: -60%; opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { left: 110%; opacity: 0; }
-}
+/* Glanz-Streifen beim Überfahren entfernt (Entwurf: kein Leuchten) – Klasse bleibt als No-op */
 .card-shine { overflow: hidden; }
-.card-shine::after {
-  content: '';
-  position: absolute;
-  top: 0; bottom: 0;
-  left: -60%;
-  width: 40%;
-  background: linear-gradient(90deg, transparent, rgba(20,184,166,0.06), rgba(255,255,255,0.04), transparent);
-  transform: skewX(-15deg);
-  opacity: 0;
-  pointer-events: none;
-}
-.card-shine:hover::after { animation: shine-sweep 0.65s ease forwards; }
 
 /* ── Glow pulse (active status dot) ────────────────────────────── */
 @keyframes glow-ring {
@@ -607,92 +584,12 @@ select.input-glass option { background: #0f1117; }
 }
 .pulse-glow-rose { animation: pulse-glow-teal 2.5s ease-in-out infinite; }
 
-/* ── Aurora Background — Blob-Animationen ───────────────────────── */
-
-/* Teal-Blob: startet oben, wandert nach ganz unten */
-@keyframes aurora-teal {
-  0%, 100% { transform: translateY(0vh);  }
-  50%       { transform: translateY(80vh); }
-}
-
-/* Burgund-Blob: startet unten, wandert nach ganz oben — exakt entgegengesetzt */
-@keyframes aurora-crimson {
-  0%, 100% { transform: translateY(0vh);   }
-  50%       { transform: translateY(-80vh); }
-}
-
-/* Kleiner Akzent-Blob: leicht kreisend */
-@keyframes aurora-accent {
-  0%   { transform: translate(0%,  0%)  scale(1.00); }
-  33%  { transform: translate(8%,  -6%) scale(1.12); }
-  66%  { transform: translate(-6%, 8%)  scale(0.92); }
-  100% { transform: translate(0%,  0%)  scale(1.00); }
-}
-
-.aurora-blob--teal    { animation: aurora-teal    12s ease-in-out infinite; }
-.aurora-blob--crimson { animation: aurora-crimson 12s ease-in-out infinite; }
-.aurora-blob--accent  { animation: aurora-accent  14s ease-in-out infinite; }
-
-/* ── Particle Field — Animationen ───────────────────────────────── */
-
-/* Normale Sterne: starkes Twinkle — fast komplett aus, dann hell auf */
-@keyframes particle-twinkle {
-  0%, 100% { opacity: 1;    }
-  40%, 60% { opacity: 0.03; }
-}
-.particle-twinkle              { animation: particle-twinkle 3.0s ease-in-out infinite; }
-.particle-twinkle:nth-child(3n)   { animation-duration: 2.2s; }
-.particle-twinkle:nth-child(3n+1) { animation-duration: 4.1s; }
-.particle-twinkle:nth-child(3n+2) { animation-duration: 2.8s; }
-
-/* Teal-Glow-Sterne: kräftiges Pulsieren */
-@keyframes particle-pulse {
-  0%, 100% {
-    opacity: 0.4;
-    box-shadow: 0 0 4px 1px rgba(20,184,166,0.30), 0 0 10px rgba(20,184,166,0.12);
-  }
-  50% {
-    opacity: 1;
-    box-shadow: 0 0 20px 8px rgba(20,184,166,1.00), 0 0 50px rgba(20,184,166,0.60), 0 0 80px rgba(20,184,166,0.25);
-  }
-}
-.particle-glow {
-  animation: particle-pulse 2.8s ease-in-out infinite;
-}
+/* Aurora- und Partikel-Hintergründe entfernt */
 
 /* ── Dot grid background — Teal-getönt ─────────────────────────── */
 .bg-grid {
   background-image: radial-gradient(circle, rgba(20,184,166,0.07) 1px, transparent 1px);
   background-size: 24px 24px;
-}
-
-/* ── Depth background — Dark ────────────────────────────────────── */
-.depth-bg__blob {
-  background: radial-gradient(ellipse, rgba(20,184,166,0.06) 0%, transparent 70%);
-}
-.depth-bg__vignette {
-  background: radial-gradient(ellipse 110% 110% at 55% 45%, transparent 25%, rgba(2,6,5,0.60) 100%);
-}
-.depth-bg__line-top {
-  background: linear-gradient(90deg, transparent 5%, rgba(20,184,166,0.12) 30%, rgba(20,184,166,0.22) 50%, rgba(20,184,166,0.12) 70%, transparent 95%);
-}
-.depth-bg__line-mid {
-  background: linear-gradient(90deg, transparent 15%, rgba(20,184,166,0.04) 40%, rgba(20,184,166,0.07) 50%, rgba(20,184,166,0.04) 60%, transparent 85%);
-}
-
-
-/* ── Depth background — Light ───────────────────────────────────── */
-[data-theme="light"] .depth-bg__blob {
-  background: radial-gradient(ellipse, rgba(20,184,166,0.04) 0%, transparent 70%);
-}
-[data-theme="light"] .depth-bg__vignette {
-  background: radial-gradient(ellipse 110% 110% at 55% 45%, transparent 30%, rgba(220,235,232,0.50) 100%);
-}
-[data-theme="light"] .depth-bg__line-top {
-  background: linear-gradient(90deg, transparent 5%, rgba(20,184,166,0.10) 30%, rgba(20,184,166,0.18) 50%, rgba(20,184,166,0.10) 70%, transparent 95%);
-}
-[data-theme="light"] .depth-bg__line-mid {
-  background: linear-gradient(90deg, transparent 15%, rgba(20,184,166,0.04) 40%, rgba(20,184,166,0.06) 50%, rgba(20,184,166,0.04) 60%, transparent 85%);
 }
 
 /* ── Line grid — feiner Raster für Tiefe ───────────────────────── */
@@ -727,101 +624,7 @@ select.input-glass option { background: #0f1117; }
   border-radius: inherit;
 }
 
-/* ── Light Mode ─────────────────────────────────────────────────── */
-[data-theme="light"] {
-  color-scheme: light;
-  --nav-glass-bg:        rgba(240,248,246,0.97);
-  --nav-glass-border:    rgba(20,184,166,0.14);
-  --nav-shadow:          0 8px 28px rgba(20,60,50,0.10), 0 0 0 1px rgba(20,184,166,0.08);
-  --nav-divider:         rgba(13,31,28,0.10);
-  --nav-hover-bg:        rgba(13,31,28,0.05);
-  --nav-icon-inactive:   #5b6b68;
-  --nav-glyph:           #0d1f1c;
-  --nav-text-hover:      #0d1f1c;
-  --nav-text-primary:    #0d1f1c;
-  --nav-text-secondary:  #33413e;
-  --nav-text-tertiary:   #5b6b68;
-  --nav-dropdown-bg:     rgba(255,255,255,0.98);
-  --nav-dropdown-border: rgba(20,184,166,0.14);
-  --nav-dropdown-shadow: 0 16px 40px rgba(20,60,50,0.14);
-  --bg-base:        #f0f4f3;
-  --bg-surface:     #ffffff;
-  --bg-elevated:    #e4efed;
-  --border-dim:     rgba(20,184,166,0.12);
-  --border-glow:    rgba(20,184,166,0.3);
-  --teal-glow:      rgba(20,184,166,0.08);
-  --crimson-glow:   rgba(153,27,27,0.06);
-  --aurora-vignette: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(200,220,216,0.55) 100%);
-  --shadow-card:    0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.05);
-  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 16px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(20,184,166,0.15);
-}
-[data-theme="light"] body { background-color: var(--bg-base); color: #0d1f1c; }
-[data-theme="light"] .text-white { color: #0d1f1c !important; }
-[data-theme="light"] .glass {
-  background: rgba(255,255,255,0.84);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
-  border: 1px solid rgba(20,184,166,0.10);
-}
-[data-theme="light"] .glass-heavy {
-  background: rgba(232,242,240,0.96) !important;
-  backdrop-filter: blur(28px) saturate(1.8);
-  -webkit-backdrop-filter: blur(28px) saturate(1.8);
-  border: 1px solid rgba(20,184,166,0.10) !important;
-}
-[data-theme="light"] .glass-nav {
-  background: rgba(240,248,246,0.97) !important;
-  border-color: rgba(20,184,166,0.09) !important;
-}
-[data-theme="light"] aside {
-  background: rgba(240,248,246,0.96) !important;
-  border-color: rgba(20,184,166,0.10) !important;
-}
-[data-theme="light"] body::before {
-  background: radial-gradient(ellipse, rgba(20,184,166,0.10) 0%, transparent 70%);
-  opacity: 0.7;
-}
-[data-theme="light"] body::after {
-  background: radial-gradient(ellipse, rgba(153,27,27,0.06) 0%, transparent 70%);
-  opacity: 0.5;
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb       { background: rgba(20,184,166,0.15); }
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(20,184,166,0.28); }
-[data-theme="light"] .card-hover:hover {
-  box-shadow: var(--shadow-card-hover) !important;
-}
-[data-theme="light"] .text-gradient-gaming {
-  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 40%, #991b1b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-[data-theme="light"] .bg-grid {
-  background-image: radial-gradient(circle, rgba(20,184,166,0.08) 1px, transparent 1px);
-}
-[data-theme="light"] .bg-grid-lines {
-  background-image:
-    linear-gradient(rgba(20,184,166,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,184,166,0.04) 1px, transparent 1px);
-}
-[data-theme="light"] .progress-shimmer { box-shadow: 0 0 8px rgba(20,184,166,0.3) !important; }
-[data-theme="light"] .neon-teal    { text-shadow: 0 0 8px rgba(13,148,136,0.5) !important; }
-[data-theme="light"] .neon-crimson { text-shadow: 0 0 8px rgba(153,27,27,0.5) !important;  }
-[data-theme="light"] .neon-rose    { text-shadow: 0 0 8px rgba(13,148,136,0.5) !important; }
-
-/* Animationen im Light Mode anpassen */
-[data-theme="light"] .animate-glow-pulse {
-  animation: glow-pulse-light 3s ease-in-out infinite;
-}
-@keyframes glow-pulse-light {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(20,184,166,0.12), 0 0 20px rgba(20,184,166,0.06); }
-  50%       { box-shadow: 0 0 0 1px rgba(20,184,166,0.28), 0 0 32px rgba(20,184,166,0.12); }
-}
-[data-theme="light"] .scan-on-load::before {
-  background: linear-gradient(90deg, transparent, rgba(20,184,166,0.05), rgba(255,255,255,0.08), transparent);
-}
-/* Hex-Grid im Light Mode ausblenden */
-[data-theme="light"] [data-animated-bg] { opacity: 0.15; }
+/* Hellmodus entfernt: Der Entwurf sieht nur das dunkle Dashboard vor. */
 
 /* ── Float — sanftes Schweben ───────────────────────────────────── */
 @keyframes float {

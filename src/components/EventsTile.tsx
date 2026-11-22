@@ -29,7 +29,7 @@ interface Props {
 const BTN = "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
 const BTN_PRIMARY = `${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`;
 const BTN_VIOLET = `${BTN} bg-violet-500 text-white hover:bg-violet-400`;
-const BTN_SECONDARY = `${BTN} border border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]`;
+const BTN_SECONDARY = `${BTN} border border-line bg-line text-gray-300 hover:bg-line`;
 
 function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; children: ReactNode }) {
   const cls = {
@@ -39,7 +39,7 @@ function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; 
     yellow: "text-yellow-300",
   }[tone];
   return (
-    <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-[#0b0d12]/90 px-2 py-1 text-[11px] font-semibold shadow-[0_1px_6px_rgba(0,0,0,0.4)] ${cls}`}>
+    <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-canvas px-2 py-1 text-[11px] font-semibold shadow-card ${cls}`}>
       {children}
     </span>
   );
@@ -102,8 +102,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       <>
         <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
-          <span className="text-4xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]" aria-hidden>🤝</span>
-          <span className="text-lg font-black text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">Du warst dabei!</span>
+          <span className="text-4xl drop-shadow-card" aria-hidden>🤝</span>
+          <span className="text-lg font-black text-white drop-shadow-card">Du warst dabei!</span>
           {r.reward && (r.reward.coins > 0 || r.reward.rankPoints > 0) && (
             <span className="flex items-center gap-2 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold tabular-nums">
               {r.reward.coins > 0 && <span className="flex items-center gap-0.5 text-amber-300">+{r.reward.coins} <CoinIcon size={12} /></span>}
@@ -141,10 +141,10 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       <>
         <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-black text-yellow-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] tabular-nums">{r.place}.</span>
+          <span className="text-5xl font-black text-yellow-300 drop-shadow-card tabular-nums">{r.place}.</span>
           <span className="text-xs font-semibold text-gray-200">von {r.total}</span>
           {r.pollWins.length > 0 && (
-            <span className="mt-2 flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-[11px] font-semibold text-violet-200 shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
+            <span className="mt-2 flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-[11px] font-semibold text-violet-200 shadow-card">
               <Trophy className="w-3.5 h-3.5 shrink-0 text-violet-300" />
               <span className="truncate">Umfrage gewonnen: {r.pollWins.join(", ")}</span>
             </span>
@@ -265,7 +265,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     const first = periodEvents[0];
     const left = first.endAt ? remainingLabel(first.endAt.getTime() - now.getTime()) : null;
     const multi = periodEvents.length > 1;
-    const chipCls = "truncate rounded-md border border-white/[0.08] bg-white/[0.05] px-1.5 py-0.5";
+    const chipCls = "truncate rounded-md border border-line bg-line px-1.5 py-0.5";
     return {
       key: "period",
       // Ein Event: ganze Zeile führt hin. Mehrere: jeder Chip ist ein eigener Link zu seinem Event

@@ -182,7 +182,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     return (
       <GateLink key={e.id} href={isMe ? "/profile" : `/profile/${e.id}`}
         className={`grid items-center gap-x-3 px-3 sm:px-4 py-2.5 transition-colors [grid-template-columns:2rem_1.75rem_2.25rem_1fr_auto] ${
-          isMe || opts.highlight ? "bg-teal-500/[0.07] hover:bg-teal-500/[0.1]" : "hover:bg-white/[0.025]"
+          isMe || opts.highlight ? "bg-teal-500/[0.07] hover:bg-teal-500/[0.1]" : "hover:bg-surface-2"
         }`}>
         <span className={`text-center text-xs font-bold tabular-nums ${isMe ? "text-teal-300" : "text-gray-500"}`}>{e.rank}</span>
         <span className="flex justify-center">{view === "gesamt" ? <RankDeltaBadge delta={rankDelta(e)} /> : <span />}</span>
@@ -279,7 +279,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
         {([["gesamt", "Gesamt"], ["monat", `Diesen Monat`]] as const).map(([key, label]) => (
           <Link key={key} href={key === "gesamt" ? "/leaderboard" : "/leaderboard?zeitraum=monat"} aria-current={view === key ? "page" : undefined}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              view === key ? "border-teal-400 bg-teal-500 text-teal-950" : "border-white/[0.1] text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04]"
+              view === key ? "border-teal-400 bg-teal-500 text-teal-950" : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
             }`}>
             {label}
           </Link>
@@ -323,19 +323,19 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
 
       {/* ── Liste ab Platz 4 + dein Ausschnitt ── */}
       {(rest.length > 0 || myWindow.length > 0) && (
-        <div className="surface rounded-2xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-          <div className="grid items-center gap-x-3 px-3 sm:px-4 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest border-b border-white/[0.05] [grid-template-columns:2rem_1.75rem_2.25rem_1fr_auto]">
+        <div className="surface rounded-2xl overflow-hidden shadow-card">
+          <div className="grid items-center gap-x-3 px-3 sm:px-4 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest border-b border-line [grid-template-columns:2rem_1.75rem_2.25rem_1fr_auto]">
             <span className="text-center">#</span><span /><span /><span>Mitglied</span><span className="text-right">{pointsLabel}</span>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-line">
             {rest.map(e => row(e))}
           </div>
           {myWindow.length > 0 && (
             <>
-              <div className="px-4 py-1.5 text-center text-[11px] text-gray-600 border-y border-dashed border-white/[0.08]">
+              <div className="px-4 py-1.5 text-center text-[11px] text-gray-600 border-y border-dashed border-line">
                 ⋯ dein Ausschnitt ⋯
               </div>
-              <div className="divide-y divide-white/[0.04]">
+              <div className="divide-y divide-line">
                 {myWindow.map(e => row(e))}
               </div>
             </>

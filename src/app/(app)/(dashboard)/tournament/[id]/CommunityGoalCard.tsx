@@ -10,7 +10,7 @@ function Bar({ percent, reached, color = "teal" }: { percent: number; reached: b
     ? "bg-gradient-to-r from-amber-400 to-amber-300"
     : color === "sky" ? "bg-sky-400" : color === "rose" ? "bg-rose-400" : "bg-gradient-to-r from-teal-500 to-emerald-400";
   return (
-    <div className="h-2.5 w-full rounded-full bg-white/[0.06] overflow-hidden"
+    <div className="h-2.5 w-full rounded-full bg-line overflow-hidden"
       role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percent)}>
       <div className={`h-full rounded-full transition-all ${fill}`} style={{ width: `${percent}%` }} />
     </div>
@@ -97,7 +97,7 @@ export default function CommunityGoalCard({
             🏆 {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
           </span>
         ) : settled ? (
-          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-white/5 border border-white/10">
+          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-line border border-line-strong">
             Ziel verfehlt
           </span>
         ) : null}

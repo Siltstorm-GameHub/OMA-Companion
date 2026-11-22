@@ -14,8 +14,8 @@ export type CoinSourceRow = { key: string; icon: ReactNode; title: string; hint:
 export function SourceRow({ s }: { s: CoinSourceRow }) {
   return (
     <li>
-      <Link href={s.href} className="group flex items-center gap-3 py-2.5 -mx-2 px-2 rounded-xl hover:bg-white/[0.03] transition-colors">
-        <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center border ${s.done ? "bg-white/[0.03] border-white/[0.06] text-gray-500" : "bg-amber-500/10 border-amber-500/15 text-amber-300"}`}>
+      <Link href={s.href} className="group flex items-center gap-3 py-2.5 -mx-2 px-2 rounded-xl hover:bg-surface-2 transition-colors">
+        <span className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center border ${s.done ? "bg-surface-2 border-line text-gray-500" : "bg-amber-500/10 border-amber-500/15 text-amber-300"}`}>
           {s.icon}
         </span>
         <span className="min-w-0 flex-1">
@@ -42,7 +42,7 @@ export function DayBlock({ day }: { day: LedgerDay }) {
         <span>{day.label}</span>
         <span className="flex gap-2 tabular-nums">{sums}</span>
       </p>
-      <ul className="divide-y divide-white/[0.04]">
+      <ul className="divide-y divide-line">
         {day.items.map((i) => (
           <li key={i.id} className="flex items-center gap-3 py-2">
             <span className="min-w-0 flex-1">

@@ -41,10 +41,10 @@ function SlotBox({ slot, nameOf, selected, onSelect }: { slot: BracketSlot; name
   ].join(" ");
   return (
     <button type="button" onClick={() => onSelect(slot.key)} aria-pressed={selected} aria-label={label}
-      className={`relative w-full overflow-hidden rounded-lg border text-left transition-colors divide-y divide-white/[0.05] ${
+      className={`relative w-full overflow-hidden rounded-lg border text-left transition-colors divide-y divide-line ${
         selected ? "border-teal-400/60 bg-teal-500/[0.08] ring-1 ring-teal-400/40"
           : slot.live ? "border-amber-400/50 bg-amber-500/[0.06]"
-          : "border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06]"
+          : "border-line bg-surface-2 hover:bg-line"
       } ${slot.bye ? "opacity-60" : ""}`}>
       {slot.live && (
         <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" aria-hidden />
@@ -83,15 +83,15 @@ export default function BracketTree({ columns, thirdPlace, nameOf, selectedKey, 
                       {pair.map(slot => (
                         <div key={slot.key} className="relative flex flex-1 items-center py-1.5">
                           {/* Linie von links (aus der Vorrunde) */}
-                          {ci > 0 && <span aria-hidden className="absolute -left-3 top-1/2 w-3 border-t border-white/15" />}
+                          {ci > 0 && <span aria-hidden className="absolute -left-3 top-1/2 w-3 border-t border-line-strong" />}
                           <SlotBox slot={slot} nameOf={nameOf} selected={selectedKey === slot.key} onSelect={onSelect} />
                           {/* Einzelne Paarung ohne Partner: gerade weiter nach rechts */}
-                          {!last && pair.length === 1 && <span aria-hidden className="absolute -right-3 top-1/2 w-3 border-t border-white/15" />}
+                          {!last && pair.length === 1 && <span aria-hidden className="absolute -right-3 top-1/2 w-3 border-t border-line-strong" />}
                         </div>
                       ))}
                       {/* Klammer: verbindet die Mitte beider Paarungen nach rechts */}
                       {!last && pair.length === 2 && (
-                        <span aria-hidden className="pointer-events-none absolute -right-3 top-1/4 bottom-1/4 w-3 rounded-r border-y border-r border-white/15" />
+                        <span aria-hidden className="pointer-events-none absolute -right-3 top-1/4 bottom-1/4 w-3 rounded-r border-y border-r border-line-strong" />
                       )}
                     </div>
                   ))}

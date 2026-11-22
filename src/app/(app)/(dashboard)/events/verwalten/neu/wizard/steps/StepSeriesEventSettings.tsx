@@ -148,7 +148,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                             checked ? prev.filter(s => s !== f) : [...prev, f]
                           )}
                           className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
-                            checked ? "border-yellow-500/60 bg-yellow-500/10 text-yellow-300" : "border-white/10 bg-white/5 text-gray-400"
+                            checked ? "border-yellow-500/60 bg-yellow-500/10 text-yellow-300" : "border-line-strong bg-line text-gray-400"
                           }`}>
                           <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-yellow-400 bg-yellow-500" : "border-gray-600"}`}>
                             {checked && <Check className="w-2.5 h-2.5 text-white" />}

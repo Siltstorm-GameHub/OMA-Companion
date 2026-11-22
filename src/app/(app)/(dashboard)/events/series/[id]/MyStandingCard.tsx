@@ -43,7 +43,7 @@ export default function MyStandingCard({ me, pointsLabel = "Punkte", loggedIn }:
           </p>
           <p className="text-xs text-gray-500">{plural(me.participations, "Teilnahme", "Teilnahmen")}</p>
           {me.lastEvent && (
-            <p className="flex items-center gap-1.5 text-xs text-gray-400 pt-1 border-t border-white/[0.05]">
+            <p className="flex items-center gap-1.5 text-xs text-gray-400 pt-1 border-t border-line">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span className="truncate">
                 {me.lastEvent.participated

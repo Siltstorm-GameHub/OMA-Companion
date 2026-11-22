@@ -13,7 +13,7 @@ import { timelineWindow, type SeriesContext } from "@/lib/series-context";
 export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; currentId: string }) {
   const index = ctx.position - 1;
   const win = timelineWindow(ctx.events, index, 9);
-  const NAV = "inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] transition-colors max-w-[11rem]";
+  const NAV = "inline-flex items-center gap-1 rounded-lg border border-line bg-line px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:bg-line transition-colors max-w-[11rem]";
 
   return (
     <section aria-label={`Eventreihe ${ctx.name}`} className="glass rounded-2xl px-3 sm:px-4 py-3 mb-3 border-l-4 flex flex-wrap items-center gap-x-4 gap-y-3"
@@ -31,7 +31,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
           {win.items.map((e, i) => {
             const current = e.id === currentId;
             const dot = current
-              ? <span className="block h-3.5 w-3.5 rounded-full border-2 bg-white/10" style={{ borderColor: ctx.color }} />
+              ? <span className="block h-3.5 w-3.5 rounded-full border-2 bg-line" style={{ borderColor: ctx.color }} />
               : e.state === "done"
                 ? <span className="block h-2.5 w-2.5 rounded-full bg-teal-500" />
                 : e.state === "live"
@@ -39,7 +39,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
                   : <span className="block h-2.5 w-2.5 rounded-full bg-white/20" />;
             return (
               <li key={e.id} className="flex items-center">
-                {i > 0 && <span className={`h-0.5 w-2.5 sm:w-3.5 ${e.state === "done" ? "bg-teal-500/60" : "bg-white/[0.1]"}`} />}
+                {i > 0 && <span className={`h-0.5 w-2.5 sm:w-3.5 ${e.state === "done" ? "bg-teal-500/60" : "bg-line"}`} />}
                 {current ? dot : (
                   <Link href={`/tournament/${e.id}`} className="p-0.5 hover:opacity-80" title={`${e.title} · ${formatBerlinDate(e.startAt, { day: "2-digit", month: "2-digit" })}`}>
                     {dot}

@@ -166,7 +166,7 @@ export default function SeriesAdminRow({
     <div className="rounded-xl overflow-hidden border border-teal-500/20 bg-teal-500/[0.02]">
       {/* ── Series header ── */}
       <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-2 transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
         <Repeat className="w-4 h-4 text-teal-400 shrink-0" />
@@ -178,7 +178,7 @@ export default function SeriesAdminRow({
             </span>
             {statusCounts["active"]  > 0 && <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{statusCounts["active"]} aktiv</span>}
             {statusCounts["open"]    > 0 && <span className="text-[10px] text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">{statusCounts["open"]} offen</span>}
-            {statusCounts["finished"]> 0 && <span className="text-[10px] text-gray-600 bg-white/[0.03] border border-white/[0.06] px-2 py-0.5 rounded-full">{statusCounts["finished"]} beendet</span>}
+            {statusCounts["finished"]> 0 && <span className="text-[10px] text-gray-600 bg-surface-2 border border-line px-2 py-0.5 rounded-full">{statusCounts["finished"]} beendet</span>}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -200,7 +200,7 @@ export default function SeriesAdminRow({
         <div className="border-t border-teal-500/10">
 
           {/* ── Reihen-Einstellungen (collapsible) ── */}
-          <div className="border-b border-white/[0.05]">
+          <div className="border-b border-line">
             <button
               type="button"
               onClick={() => setSettingsOpen(v => !v)}
@@ -314,7 +314,7 @@ export default function SeriesAdminRow({
                         const u = allUsers.find(u => u.id === row.userId);
                         const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
                         return (
-                          <div key={row.userId} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 space-y-1.5">
+                          <div key={row.userId} className="rounded-lg border border-line bg-surface-2 p-2.5 space-y-1.5">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-xs font-medium text-white truncate">{name}</span>
                               <button type="button" onClick={() => setLegacyRows(prev => prev.filter((_, j) => j !== i))}
@@ -377,7 +377,7 @@ export default function SeriesAdminRow({
                           {filtered.map(u => (
                             <button key={u.id} type="button"
                               onClick={() => { setLegacyRows(prev => [...prev, { userId: u.id, points: 0, participations: 0, stats: {} }]); setLegacySearch(""); }}
-                              className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.06] flex items-center gap-2 transition-colors">
+                              className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-line flex items-center gap-2 transition-colors">
                               {u.image ? <img src={u.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" /> : <div className="w-5 h-5 rounded-full bg-gray-700 shrink-0" />}
                               {u.username ?? u.name}
                             </button>
@@ -407,7 +407,7 @@ export default function SeriesAdminRow({
           </div>
 
           {/* ── Events der Reihe ── */}
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-line">
             {events.map((ev: SeriesEvent) => (
               <div key={ev.id} className="pl-4 border-l-2 border-teal-500/20">
                 <EventAdminRow event={ev} allUsers={allUsers} hideSeries />

@@ -93,7 +93,7 @@ export default function SeriesCompleteClient(props: Props) {
               <button
                 onClick={() => setConfirmPollOnly(true)}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-gray-400 border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:text-gray-200 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-gray-400 border border-line bg-surface-2 hover:border-line-strong hover:text-gray-200 transition-colors disabled:opacity-50"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Abschließen – Abstimmungsergebnis später nachtragen
@@ -110,7 +110,7 @@ export default function SeriesCompleteClient(props: Props) {
             const nameOf = (uid: string) => { const u = participants.find(p => p.id === uid); return u ? userName(u) : uid.slice(0, 8); };
             return (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => !loading && setConfirmPollOnly(null)}>
-                <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-gray-900 border border-white/10 p-5 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-gray-900 border border-line-strong p-5 space-y-4" onClick={e => e.stopPropagation()}>
                   <h2 className="text-base font-bold text-white">
                     {isReEdit ? "Änderungen speichern?" : "Saison abschließen?"}
                   </h2>
@@ -138,7 +138,7 @@ export default function SeriesCompleteClient(props: Props) {
                             {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">+{r.rankPoints} <RankPointsIcon size={11} /></span>}
                           </div>
                         ))}
-                        <div className="flex items-center gap-2 text-xs border-t border-white/10 pt-1.5">
+                        <div className="flex items-center gap-2 text-xs border-t border-line-strong pt-1.5">
                           <span className="flex-1 text-gray-400">Summe</span>
                           <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">{totalCoins} <CoinIcon size={11} /></span>
                           <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">{totalRank} <RankPointsIcon size={11} /></span>
@@ -174,7 +174,7 @@ export default function SeriesCompleteClient(props: Props) {
 
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setConfirmPollOnly(null)} disabled={loading}
-                      className="flex-1 rounded-xl py-2.5 text-xs font-medium text-gray-300 border border-white/10 hover:bg-white/5 disabled:opacity-50">
+                      className="flex-1 rounded-xl py-2.5 text-xs font-medium text-gray-300 border border-line-strong hover:bg-line disabled:opacity-50">
                       Zurück
                     </button>
                     <button type="button" onClick={() => handleConfirm(confirmPollOnly)} disabled={loading}
@@ -189,7 +189,7 @@ export default function SeriesCompleteClient(props: Props) {
 
           {/* Hinweis neue Saison */}
           {!isReEdit && startNewSeason && (
-            <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.05]">
+            <div className="rounded-lg px-3 py-2 bg-surface-2 border border-line">
               <p className="text-[10px] text-gray-500 flex items-start gap-1.5">
                 <Plus className="w-3 h-3 shrink-0 mt-0.5 text-teal-500" />
                 Nach dem Abschluss wirst du zum Saison-Assistenten weitergeleitet, um die neue Saison einzurichten.

@@ -48,7 +48,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
               className={`flex-1 rounded-xl px-3 py-2 text-xs font-medium border transition-all ${
                 variousGames === v
                   ? "border-teal-500/60 bg-teal-500/10 text-teal-300"
-                  : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                  : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
               }`}>
               {v ? "🎲 Verschiedene Spiele" : "🎮 Festes Spiel"}
             </button>
@@ -72,7 +72,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             {GENRES.map(g => (
               <button key={g.value} type="button" onClick={() => setFixedGenre(fixedGenre === g.value ? null : g.value)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                  fixedGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  fixedGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
                 <span className={`text-[10px] font-medium leading-tight text-center ${fixedGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
@@ -91,7 +91,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
               <button key={p.value} type="button"
                 onClick={() => setFixedPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
-                  active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                  active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
                 }`}>
                 <span>{p.icon}</span> {p.label}
               </button>
@@ -112,7 +112,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
           blocksGame={!w.variousGames && isBlocksGame(w.fixedGame)} />
       )}
 
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={seriesHidden} onChange={e => setSeriesHidden(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
@@ -125,7 +125,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
         </label>
       </div>
 
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={seriesRegistrationLocked} onChange={e => setSeriesRegistrationLocked(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
@@ -141,7 +141,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
       </div>
 
       {squads.length > 0 && (
-        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+        <div className="rounded-xl p-4 border border-line bg-surface-2">
           <label className={labelCls}>{forceSquad ? "Squad" : "Nur für Squad (optional)"}</label>
           <select value={seriesSquadId} onChange={e => setSeriesSquadId(e.target.value)}
             className={inputCls} style={inputStyle}>

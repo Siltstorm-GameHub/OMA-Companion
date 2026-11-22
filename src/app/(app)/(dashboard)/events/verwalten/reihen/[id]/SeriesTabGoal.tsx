@@ -56,13 +56,13 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
           Alle kommenden übernehmen das neue. Gespeichert wird mit „Speichern“ oben.
         </p>
         {!isArchived && upcomingTermineCount > 0 && (
-          <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-white/[0.06]">
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-line">
             <p className="text-[11px] text-gray-500 flex-1 min-w-[200px]">
               Einzelne kommende Termine haben ein eigenes Ziel oder keins? Hier setzt du alle {upcomingTermineCount}
               {" "}kommenden Termine auf das Ziel der Reihe zurück. Wirkt sofort.
             </p>
             <button type="button" onClick={applyGoalNow} disabled={applyingGoal}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 transition-colors disabled:opacity-50">
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-line hover:bg-line border border-line-strong text-gray-200 transition-colors disabled:opacity-50">
               {applyingGoal ? "Setzt zurück…" : "Abweichungen zurücksetzen"}
             </button>
           </div>

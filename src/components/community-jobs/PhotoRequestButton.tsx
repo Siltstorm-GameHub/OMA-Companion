@@ -40,9 +40,9 @@ export default function PhotoRequestButton({ eventId, defaultText = "", label = 
     );
   }
   return (
-    <div className="rounded-lg bg-white/[0.03] border border-white/10 p-2 space-y-1.5">
+    <div className="rounded-lg bg-surface-2 border border-line-strong p-2 space-y-1.5">
       <textarea value={text} onChange={e => setText(e.target.value)} rows={2} maxLength={300} placeholder="Welches Bild brauchst du?"
-        className="w-full resize-none bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full resize-none bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <div className="flex justify-end gap-1.5">
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Abbrechen</Button>
         <Button size="sm" loading={busy} disabled={!text.trim()} onClick={send}>Anfragen</Button>

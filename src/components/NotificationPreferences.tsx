@@ -74,7 +74,7 @@ export default function NotificationPreferences() {
     <button
       key={cat.key}
       onClick={() => toggle(cat.key)}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors text-left"
     >
       <span className="text-base shrink-0">{cat.icon}</span>
       <div className="flex-1 min-w-0">

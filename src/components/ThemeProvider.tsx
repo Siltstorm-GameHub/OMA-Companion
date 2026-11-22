@@ -1,46 +1,25 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect } from "react";
 
-type Theme = "dark" | "light";
+/**
+ * Der Designentwurf (OMA 2.0, Richtung G) kennt nur das dunkle Dashboard — der Hellmodus ist
+ * entfernt. Der Context bleibt bestehen, damit Lesestellen (z. B. ThemedToaster) unverändert
+ * funktionieren; er liefert immer "dark".
+ */
+type Theme = "dark";
 
-const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
-  theme: "dark",
-  toggle: () => {},
-});
+const ThemeContext = createContext<{ theme: Theme }>({ theme: "dark" });
 
 export function useTheme() {
   return useContext(ThemeContext);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
   useEffect(() => {
-    // Reads localStorage (unavailable during SSR) after mount, matching the
-    // inline anti-FOUC script in layout.tsx <head> which already set the DOM
-    // attribute pre-paint. A lazy useState initializer would run during
-    // hydration itself and could mismatch the server-rendered ("dark") output.
-    const saved = localStorage.getItem("theme") as Theme | null;
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(saved);
-      document.documentElement.setAttribute("data-theme", saved);
-    }
+    // Alte Auswahl aus dem Hellmodus aufräumen
+    try { localStorage.removeItem("theme"); } catch { /* Speicher gesperrt */ }
+    document.documentElement.setAttribute("data-theme", "dark");
   }, []);
 
-  function toggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    const apply = () => {
-      setTheme(next);
-      localStorage.setItem("theme", next);
-      document.documentElement.setAttribute("data-theme", next);
-    };
-    if (typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === "function") {
-      (document as Document & { startViewTransition: (fn: () => void) => void }).startViewTransition(apply);
-    } else {
-      apply();
-    }
-  }
-
-  return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme: "dark" }}>{children}</ThemeContext.Provider>;
 }

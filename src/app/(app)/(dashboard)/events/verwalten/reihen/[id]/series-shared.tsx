@@ -93,7 +93,7 @@ export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   closed:   { label: "Voll",            cls: "text-blue-300 bg-blue-500/10 border-blue-500/20" },
   active:   { label: "Läuft",           cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
   umfrage:  { label: "Umfragephase",    cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-  finished: { label: "Beendet",         cls: "text-gray-500 bg-white/[0.03] border-white/[0.06]" },
+  finished: { label: "Beendet",         cls: "text-gray-500 bg-surface-2 border-line" },
 };
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
@@ -149,7 +149,7 @@ export function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean 
       className={`shrink-0 p-1.5 rounded transition-colors disabled:opacity-40 ${
         hidden
           ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-          : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.05]"
+          : "text-gray-600 hover:text-gray-400 hover:bg-line"
       }`}
     >
       {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -160,8 +160,8 @@ export type SquadOption = { id: string; name: string };
 /* ── Small helper components ── */
 export function Section({ title, children, overflowVisible }: { title: string; children: React.ReactNode; overflowVisible?: boolean }) {
   return (
-    <div className={`rounded-xl border border-white/[0.06] bg-gray-900/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
-      <div className="px-4 py-2.5 border-b border-white/[0.05]">
+    <div className={`rounded-xl border border-line bg-gray-900/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
+      <div className="px-4 py-2.5 border-b border-line">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
       </div>
       <div className="px-4 py-3 space-y-3">{children}</div>

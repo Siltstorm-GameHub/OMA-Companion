@@ -77,7 +77,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
 
       <div className="flex flex-wrap gap-2">
         {feeds.map(f => (
-          <span key={f.label} className="text-[11px] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-300">
+          <span key={f.label} className="text-[11px] px-2.5 py-1 rounded-full bg-line border border-line text-gray-300">
             {f.label}: <span className="text-white font-semibold">{f.count}</span>
           </span>
         ))}
@@ -112,7 +112,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
         </p>
         {tips.length === 0 && <p className="text-xs text-gray-500">Noch keine Empfehlungen.</p>}
         {[...pending, ...queued, ...used].map(t => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2">
+          <div key={t.id} className="flex items-center gap-3 rounded-xl bg-surface-2 border border-line px-3 py-2">
             <GameCover game={t.game.name} coverUrl={t.game.coverUrl} className="w-16 aspect-[16/9] shrink-0" rounded="rounded-md" fallbackVariant="plain" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white truncate">
@@ -129,7 +129,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
                 <button type="button" title="Freigeben" disabled={busy !== null} onClick={() => review(t, "approve")}
                   className="p-1.5 rounded-lg text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40"><Check className="w-4 h-4" /></button>
                 <button type="button" title="Ablehnen" disabled={busy !== null} onClick={() => review(t, "reject")}
-                  className="p-1.5 rounded-lg text-gray-400 hover:bg-white/[0.08] disabled:opacity-40"><X className="w-4 h-4" /></button>
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-line disabled:opacity-40"><X className="w-4 h-4" /></button>
               </>
             )}
             {t.status === "approved" && (

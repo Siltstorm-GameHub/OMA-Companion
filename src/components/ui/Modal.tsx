@@ -59,7 +59,7 @@ export function Modal({ open, onClose, title, size = "md", children, panelClassN
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-300"
         style={{ opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none" }}
         onClick={onClose}
         aria-hidden="true"
@@ -78,14 +78,14 @@ export function Modal({ open, onClose, title, size = "md", children, panelClassN
           onClick={(e) => e.stopPropagation()}
           className={
             isDrawer
-              ? `w-full sm:w-[500px] h-full bg-gray-950 border-l border-white/[0.06] shadow-2xl flex flex-col transition-transform duration-300 ease-out outline-none ${open ? "translate-x-0" : "translate-x-full"}`
+              ? `w-full sm:w-[500px] h-full bg-gray-950 border-l border-line shadow-2xl flex flex-col transition-transform duration-300 ease-out outline-none ${open ? "translate-x-0" : "translate-x-full"}`
               : `${panelClassName ?? "glass-heavy rounded-2xl"} w-full ${PANEL_WIDTH[size as "sm" | "md" | "lg"]} max-h-[90vh] flex flex-col outline-none`
           }
         >
           {title && (
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06] shrink-0">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-line shrink-0">
               <h2 id={titleId} className="font-semibold text-white flex-1 truncate">{title}</h2>
-              <button onClick={onClose} aria-label="Schließen" className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+              <button onClick={onClose} aria-label="Schließen" className="p-2 rounded-lg hover:bg-line text-gray-500 hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>

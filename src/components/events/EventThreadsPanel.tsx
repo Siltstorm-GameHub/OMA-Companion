@@ -27,9 +27,9 @@ export default function EventThreadsPanel({
   if (selectedId) {
     return (
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="shrink-0 flex items-center gap-2 px-2 py-2 border-b border-white/[0.06]">
+        <div className="shrink-0 flex items-center gap-2 px-2 py-2 border-b border-line">
           <button type="button" onClick={() => { onSelect(null); onRefresh(); }} aria-label="Zurück zur Übersicht"
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06]">
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-line">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex-1 min-w-0">
@@ -103,7 +103,7 @@ function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
   return (
     <div className="m-2 rounded-xl border border-teal-400/20 bg-teal-500/[0.06] overflow-hidden">
       <button type="button" onClick={() => onSelect(t.eventId)}
-        className="w-full text-left px-3 pt-2.5 pb-2 hover:bg-white/[0.03] transition-colors">
+        className="w-full text-left px-3 pt-2.5 pb-2 hover:bg-surface-2 transition-colors">
         <div className="flex items-center gap-2">
           <p className="flex-1 min-w-0 text-[10px] uppercase tracking-wider text-teal-300/80 font-semibold">Dein nächstes Event</p>
           <UnreadCount n={t.unread} />
@@ -153,7 +153,7 @@ function ThreadList({ threads, onSelect }: { threads: EventThreadDTO[]; onSelect
         return (
           <li key={t.eventId}>
             <button type="button" onClick={() => onSelect(t.eventId)}
-              className={`relative w-full text-left px-4 py-2 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${unread ? "bg-teal-500/[0.05]" : ""}`}>
+              className={`relative w-full text-left px-4 py-2 border-b border-line hover:bg-surface-2 transition-colors ${unread ? "bg-teal-500/[0.05]" : ""}`}>
               {unread && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-teal-400" />}
               <span className="flex items-center gap-2 min-w-0">
                 <PhaseBadge t={t} />

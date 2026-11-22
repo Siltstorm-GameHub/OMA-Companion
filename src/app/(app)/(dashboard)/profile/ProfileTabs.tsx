@@ -47,14 +47,14 @@ export default function ProfileTabs({ panels, initialTab }: {
     <div className="space-y-5">
       {keys.length > 1 && (
         <div role="tablist" aria-label="Profilbereiche"
-          className="flex gap-1 overflow-x-auto scrollbar-none bg-gray-900 border border-white/5 rounded-xl p-1 sm:w-fit">
+          className="flex gap-1 overflow-x-auto scrollbar-none bg-gray-900 border border-line rounded-xl p-1 sm:w-fit">
           {keys.map(key => {
             const active = tab === key;
             const { label, icon: Icon } = TAB_META[key];
             return (
               <button key={key} role="tab" aria-selected={active} onClick={() => select(key)}
                 className={`shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
+                  active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
                 }`}>
                 <Icon className={`w-4 h-4 ${active ? "text-teal-400" : "text-gray-600"}`} />
                 {label}

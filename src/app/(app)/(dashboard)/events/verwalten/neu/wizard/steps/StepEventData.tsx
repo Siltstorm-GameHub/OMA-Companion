@@ -78,7 +78,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             {GENRES.map(g => (
               <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                  genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
                 <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
@@ -123,7 +123,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         />
       )}
 
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2 space-y-2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2 space-y-2">
         <p className="text-sm text-gray-200">Veröffentlichung</p>
         {(w.isCommunity ? [
           // Mitglieder: angekündigt wird erst nach der Mod-Freigabe (lib/community-events.ts)
@@ -150,7 +150,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         )}
       </div>
 
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+      <div className="rounded-xl p-4 border border-line bg-surface-2">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={eventRegistrationLocked} onChange={e => setEventRegistrationLocked(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
@@ -165,7 +165,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
       </div>
 
       {squads.length > 0 && (
-        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+        <div className="rounded-xl p-4 border border-line bg-surface-2">
           <label className={labelCls}>{forceSquad ? "Squad" : "Nur für Squad (optional)"}</label>
           <select value={eventSquadId} onChange={e => setEventSquadId(e.target.value)}
             className={inputCls} style={inputStyle}>

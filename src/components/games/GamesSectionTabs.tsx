@@ -17,7 +17,7 @@ export default async function GamesSectionTabs({ active, userId }: { active: Gam
   const coins = userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0 : null;
 
   return (
-    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-2xl p-1 bg-white/[0.03] border border-white/[0.06]">
+    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-2xl p-1 bg-surface-2 border border-line">
       {TABS.map((t) => {
         const on = t.key === active;
         const Icon = t.icon;
@@ -27,7 +27,7 @@ export default async function GamesSectionTabs({ active, userId }: { active: Gam
             href={t.href}
             aria-current={on ? "page" : undefined}
             className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs sm:text-sm font-semibold transition-colors min-w-0 ${
-              on ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white hover:bg-white/[0.04]"
+              on ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white hover:bg-line"
             }`}
           >
             <Icon className={`w-4 h-4 shrink-0 ${on ? "text-teal-300" : ""}`} />

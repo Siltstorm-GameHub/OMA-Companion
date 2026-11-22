@@ -855,7 +855,7 @@ export default async function TournamentDetailPage({
     : [new Map<string, never>(), new Map<string, { total: number; unread: number }>()];
 
   const participantList = (
-    <div className="glass rounded-2xl divide-y divide-white/5">
+    <div className="glass rounded-2xl divide-y divide-line">
       {sortedRegistrations.map(({ user, role }, i) => {
         const isMe = user.id === userId;
         const wins = event.matches.filter(m => m.winnerId === user.id).length;
@@ -868,7 +868,7 @@ export default async function TournamentDetailPage({
         return (
           <div key={user.id}>
             {showDivider && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2">
                 <Eye className="w-3 h-3 text-gray-500" />
                 <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
               </div>
@@ -881,7 +881,7 @@ export default async function TournamentDetailPage({
                   <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
                   {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
                   {excludedUserIds.has(user.id) && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
                       Ungewertet
                     </span>
                   )}
@@ -919,7 +919,7 @@ export default async function TournamentDetailPage({
       })}
       {externalVoters.length > 0 && (
         <div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2">
             <Vote className="w-3 h-3" style={{ color: "#14b8a6" }} />
             <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
           </div>
@@ -1013,7 +1013,7 @@ export default async function TournamentDetailPage({
   );
 
   // ── Aktionsleiste: genau eine Hauptaktion je Phase, daneben Kalender/Discord/Zuschauer/Stream ──
-  const BTN_SECONDARY = "inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-white/[0.08] transition-colors";
+  const BTN_SECONDARY = "inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line transition-colors";
   // Nach der Auslosung: eigener Einstieg direkt in der Aktionsleiste (nächstes Match, Freilos, nicht ausgelost)
   const myDrawInfo = (() => {
     if (!isDrawn || !userId || !isRegistered || pagePhase === "after") return null;
@@ -1074,7 +1074,7 @@ export default async function TournamentDetailPage({
       {myDrawInfo && (
         <a href="#turnier" className={`text-xs rounded-lg px-3 py-1.5 border ${myDrawInfo.tone === "info"
           ? "bg-sky-500/10 border-sky-500/25 text-sky-200 hover:bg-sky-500/15"
-          : "bg-white/[0.03] border-white/[0.08] text-gray-400"}`}>
+          : "bg-surface-2 border-line text-gray-400"}`}>
           {myDrawInfo.text}
         </a>
       )}
@@ -1127,7 +1127,7 @@ export default async function TournamentDetailPage({
   );
 
   // ── Fakten in einer Zeile ──
-  const FACT = "inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] px-2.5 py-1 text-xs text-gray-300";
+  const FACT = "inline-flex items-center gap-1.5 rounded-lg bg-line border border-line px-2.5 py-1 text-xs text-gray-300";
   const factsRow = (
     <div className="flex flex-wrap items-center gap-1.5 mb-5">
       {!event.game && gameVote && (
@@ -1148,7 +1148,7 @@ export default async function TournamentDetailPage({
         <Users className="w-3.5 h-3.5 text-gray-500" />
         <span className="tabular-nums">{playerCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}</span> {event.maxPlayers ? "Plätze" : "dabei"}
         {event.maxPlayers && (
-          <span className="ml-1 h-1 w-12 rounded-full bg-white/[0.08] overflow-hidden">
+          <span className="ml-1 h-1 w-12 rounded-full bg-line overflow-hidden">
             <span className={`block h-full rounded-full ${isFullEvent ? "bg-gray-500" : "bg-teal-400"}`} style={{ width: `${Math.min(100, Math.round(playerCount / event.maxPlayers * 100))}%` }} />
           </span>
         )}
@@ -1172,7 +1172,7 @@ export default async function TournamentDetailPage({
       )}
       {/* Reihen-Termin: Preise der Endwertung — erst zum Abschluss der Reihe */}
       {event.series && seriesFinalFirst && (
-        <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-white/[0.15]`}
+        <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-line-strong`}
           title="Platzierungs-Belohnungen der Reihe: gibt es zum Abschluss der Reihe">
           Endwertung der Reihe: <PlaceMedal place={1} className="text-xs" />
           {seriesFinalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{seriesFinalFirst.coins}</span>}
@@ -1195,10 +1195,10 @@ export default async function TournamentDetailPage({
     { href: "#regeln", label: "Regeln", show: !!event.rules },
   ].filter(l => l.show);
   const jumpBar = (
-    <nav aria-label="Abschnitte" className="sticky top-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-2 mb-4 bg-[#0b0d12]/90 backdrop-blur flex gap-1.5 overflow-x-auto scrollbar-none">
+    <nav aria-label="Abschnitte" className="sticky top-0 z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-2 mb-4 bg-canvas flex gap-1.5 overflow-x-auto scrollbar-none">
       {jumpLinks.map(l => (
         <SectionJumpLink key={l.href} target={l.href.slice(1)}
-          className="shrink-0 rounded-full border border-white/[0.1] px-3 py-1 text-xs font-medium text-gray-300 hover:border-white/[0.2] hover:bg-white/[0.04] transition-colors">
+          className="shrink-0 rounded-full border border-line-strong px-3 py-1 text-xs font-medium text-gray-300 hover:border-line-strong hover:bg-line transition-colors">
           {l.label}
         </SectionJumpLink>
       ))}
@@ -1256,7 +1256,7 @@ export default async function TournamentDetailPage({
                       <StyledUserName userId={u.id} name={userName(u)} />{isMe && <span className="text-gray-500 ml-1">(du)</span>}
                     </span>
                     {spectator && (
-                      <span title="War als Zuschauer dabei" className="flex shrink-0 items-center gap-0.5 rounded bg-white/[0.06] px-1 py-px text-[10px] font-medium text-gray-400">
+                      <span title="War als Zuschauer dabei" className="flex shrink-0 items-center gap-0.5 rounded bg-line px-1 py-px text-[10px] font-medium text-gray-400">
                         <Eye className="w-3 h-3" /> Zuschauer
                       </span>
                     )}
@@ -1561,7 +1561,7 @@ export default async function TournamentDetailPage({
         )}
         {/* K.O.: kein offenes Match mehr — kurz sagen, wo man steht */}
         {!myOpenMatch && (myKo.kind === "eliminated" || myKo.kind === "champion") && (
-          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-white/[0.08] bg-white/[0.02] text-gray-300"}`}>
+          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-line bg-surface-2 text-gray-300"}`}>
             {myKo.kind === "champion"
               ? "Du hast das Turnier gewonnen — Glückwunsch!"
               : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-white">{koNameOf(myKo.byUserId)}</span></>}.</>}
@@ -1595,7 +1595,7 @@ export default async function TournamentDetailPage({
                 {event.status === "finished" ? " · beendet" : standStage ? ` · ${standStage}` : ""}
                 <span className="text-gray-500"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
               </p>
-              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
               </div>
             </section>
@@ -1795,7 +1795,7 @@ export default async function TournamentDetailPage({
         {canManage && (
           <Link
             href={`/events/verwalten/${event.id}`}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition-colors font-medium"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-line border border-line-strong text-gray-300 hover:text-white hover:bg-line transition-colors font-medium"
           >
             <Settings className="w-3.5 h-3.5" /> Verwalten
           </Link>

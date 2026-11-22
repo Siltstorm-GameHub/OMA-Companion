@@ -69,7 +69,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                           className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
                             dominionTriggerStats.includes(r.field)
                               ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
-                              : "text-gray-500 border-white/[0.08] hover:border-white/20"
+                              : "text-gray-500 border-line hover:border-line-strong"
                           }`}
                         >{r.field}</button>
                       ))}
@@ -82,7 +82,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                           className={`text-xs px-2 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
                             dominionTriggerStats.includes(p.label)
                               ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
-                              : "text-gray-500 border-white/[0.08] hover:border-white/20"
+                              : "text-gray-500 border-line hover:border-line-strong"
                           }`}
                         ><Vote className="w-3 h-3" />{p.label}</button>
                       ))}

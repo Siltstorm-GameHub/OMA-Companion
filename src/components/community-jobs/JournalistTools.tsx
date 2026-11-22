@@ -24,7 +24,7 @@ interface Stats {
 
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-white/[0.03] px-2.5 py-2">
+    <div className="rounded-lg bg-surface-2 px-2.5 py-2">
       <p className="text-[10px] text-gray-500">{label}</p>
       <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
       {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
@@ -56,7 +56,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
       </div>
 
       {open && (
-        <div className="space-y-3 rounded-lg bg-white/[0.02] p-2.5">
+        <div className="space-y-3 rounded-lg bg-surface-2 p-2.5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
             <Tile label="Veröffentlicht" value={String(stats.published)}
               sub={[stats.drafts > 0 ? `${stats.drafts} Entwürfe` : "", stats.scheduled > 0 ? `${stats.scheduled} geplant` : ""].filter(Boolean).join(" · ") || undefined} />
@@ -99,7 +99,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {stats.categories.map(c => (
-                <span key={c.category} className="text-[10px] text-gray-400 bg-white/[0.05] rounded-full px-2 py-0.5">
+                <span key={c.category} className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">
                   {c.category === "ohne" ? "Ohne Kategorie" : reportCategoryLabel(c.category) ?? c.category}: {c.count}
                 </span>
               ))}
@@ -114,7 +114,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
 // ── Rückblick, Bildwünsche, Interviews ───────────────────────────────────────
 
 const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const FIELD = "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const FIELD = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -237,7 +237,7 @@ function InterviewsBlock() {
       {!composing ? (
         <Button size="sm" variant="outline" onClick={() => setComposing(true)}>Neues Interview anfragen</Button>
       ) : (
-        <div className="rounded-lg bg-white/[0.03] p-2.5 space-y-2">
+        <div className="rounded-lg bg-surface-2 p-2.5 space-y-2">
           {person ? (
             <p className="text-xs text-gray-200 flex items-center justify-between">
               Interview mit {person.username ?? person.name}
@@ -247,7 +247,7 @@ function InterviewsBlock() {
             <div className="space-y-1">
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Wen möchtest du interviewen?" aria-label="Person suchen" className={`w-full ${FIELD}`} />
               {found.map(u => (
-                <button key={u.id} onClick={() => setPerson(u)} className="w-full text-left text-xs text-gray-300 hover:bg-white/[0.06] rounded px-2 py-1">{u.username ?? u.name}</button>
+                <button key={u.id} onClick={() => setPerson(u)} className="w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">{u.username ?? u.name}</button>
               ))}
             </div>
           )}

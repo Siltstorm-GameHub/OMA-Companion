@@ -48,7 +48,7 @@ export default function CorrectFieldsForm({
   return (
     <div className="space-y-4">
       <GameFieldsForm value={value} onChange={setValue} only={[...OVERWRITABLE_FIELDS]} />
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
         <p className="text-[11px] text-gray-500">Das Team sieht, wer was geändert hat, und kann es zurücksetzen.</p>
         <div className="flex gap-2 shrink-0">
           <Button variant="ghost" size="sm" onClick={() => onDone(null)}>Abbrechen</Button>

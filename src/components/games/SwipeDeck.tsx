@@ -281,7 +281,7 @@ export default function SwipeDeck({
       {/* Stapel */}
       <div className="relative h-[520px] max-w-sm mx-auto select-none">
         {!top && (
-          <div className="absolute inset-0 rounded-3xl border border-white/[0.08] bg-white/[0.02] flex flex-col items-center justify-center text-center p-6 gap-3">
+          <div className="absolute inset-0 rounded-3xl border border-line bg-surface-2 flex flex-col items-center justify-center text-center p-6 gap-3">
             <span className="text-4xl" aria-hidden>🎉</span>
             <p className="font-display text-lg font-bold text-white">Alles durch!</p>
             <p className="text-xs text-gray-400">Neue Karten kommen täglich dazu, jeden Montag gibt es den Drop der Woche. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
@@ -298,7 +298,7 @@ export default function SwipeDeck({
           return (
             <div
               key={keyOf(c)}
-              className="absolute inset-0 rounded-3xl overflow-hidden border border-white/10 bg-[#141418] shadow-2xl"
+              className="absolute inset-0 rounded-3xl overflow-hidden border border-line-strong bg-[#141418] shadow-2xl"
               style={{
                 transform: isTop ? transform : `translateY(${depth * 10}px) scale(${1 - depth * 0.04})`,
                 transition: isTop && !dragging ? `transform ${FLY_MS}ms ease-out` : undefined,
@@ -343,7 +343,7 @@ export default function SwipeDeck({
 
       {/* Match */}
       {match && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setMatch(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setMatch(null)}>
           <div className="w-full max-w-sm rounded-3xl border border-emerald-400/40 p-6 text-center space-y-4"
             style={{ background: "linear-gradient(160deg, rgba(16,185,129,0.25), #121216 65%)" }}
             onClick={e => e.stopPropagation()}>
@@ -380,8 +380,8 @@ function RoundButton({
     : tone === "wish"
       ? "text-rose-300 border-rose-400/40 hover:bg-rose-500/15"
       : tone === "out"
-        ? "text-gray-300 border-white/20 hover:bg-white/[0.08]"
-        : "text-gray-400 border-white/10 hover:bg-white/[0.06]";
+        ? "text-gray-300 border-line-strong hover:bg-line"
+        : "text-gray-400 border-line-strong hover:bg-line";
   return (
     <button
       type="button"
@@ -389,7 +389,7 @@ function RoundButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`rounded-full border flex items-center justify-center transition-colors disabled:opacity-30 bg-white/[0.03] ${color} ${small ? "w-10 h-10" : "w-14 h-14"}`}
+      className={`rounded-full border flex items-center justify-center transition-colors disabled:opacity-30 bg-surface-2 ${color} ${small ? "w-10 h-10" : "w-14 h-14"}`}
     >
       {children}
     </button>
@@ -418,7 +418,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
               <Flame className="w-3 h-3" /> Drop der Woche
             </span>
           )}
-          <span className="rounded-full bg-black/70 border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-white">
+          <span className="rounded-full bg-black/70 border border-line-strong px-2.5 py-1 text-[11px] font-semibold text-white">
             {reasonLabel(card)}
           </span>
         </span>
@@ -435,7 +435,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         <p className="font-display text-xl font-black text-white leading-tight line-clamp-2">{card.name}</p>
         <div className="flex flex-wrap gap-1.5">
           {f.genres.slice(0, 3).map(g => (
-            <span key={g} className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-300">{GAME_GENRES[g]}</span>
+            <span key={g} className="text-[11px] px-2 py-0.5 rounded-full bg-line text-gray-300">{GAME_GENRES[g]}</span>
           ))}
           {f.modes.map(m => (
             <span key={m} className="text-[11px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-200">{GAME_MODES[m]}</span>
@@ -455,7 +455,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         {link && (card.kind === "game" || card.source === "free") && (
           <a href={link.href} target="_blank" rel="noreferrer"
             onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
-            className="self-start inline-flex items-center gap-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] px-2.5 py-1 text-[11px] font-semibold text-teal-200">
+            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-[11px] font-semibold text-teal-200">
             {link.label} <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -489,7 +489,7 @@ function PersonAvatar({ name, image }: { name: string; image: string | null }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={image} alt={name} title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] object-cover" />
   ) : (
-    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-white/10 flex items-center justify-center text-[10px] text-gray-300">
+    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-line flex items-center justify-center text-[10px] text-gray-300">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -537,7 +537,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
 
   return (
     <div className="h-full flex flex-col cursor-pointer" onClick={onBackClick}>
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line">
         <p className="font-display text-base font-bold text-white truncate">{card.name}</p>
         <button type="button" onClick={onClose} className="text-xs font-semibold text-teal-300 hover:text-teal-200 shrink-0">Zurück zur Karte</button>
       </div>
@@ -570,7 +570,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
                 <p className="text-gray-500">Am Start ({card.inCount})</p>
                 <div className="flex flex-wrap gap-1.5">
                   {card.inPeople.map(p => (
-                    <span key={p.id} className="flex items-center gap-1.5 rounded-full bg-white/[0.04] pr-2.5">
+                    <span key={p.id} className="flex items-center gap-1.5 rounded-full bg-line pr-2.5">
                       <PersonAvatar name={p.name} image={p.image} />
                       <span className="text-gray-200">{p.name}</span>
                     </span>
@@ -598,7 +598,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
               <>
                 {store && (
                   <a href={store.href} target="_blank" rel="noreferrer"
-                    className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-sky-900/40 ring-1 ring-sky-300/40 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 active:scale-[0.98] transition">
+                    className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg ring-1 ring-sky-300/40 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 active:scale-[0.98] transition">
                     <ExternalLink className="w-4 h-4" /> {store.label}
                   </a>
                 )}
@@ -618,7 +618,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+    <div className="rounded-xl bg-surface-2 border border-line px-3 py-2">
       <dt className="text-[10px] uppercase tracking-wider text-gray-500">{label}</dt>
       <dd className="text-white mt-0.5">{children}</dd>
     </div>

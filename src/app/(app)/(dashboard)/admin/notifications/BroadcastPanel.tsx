@@ -170,7 +170,7 @@ export default function BroadcastPanel() {
               type="text" value={query} onChange={handleQueryChange}
               onFocus={() => { if (query) setShowSuggestions(true); }}
               placeholder="Username eingeben…"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors"
+              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors"
             />
             {showSuggestions && (query || suggestions.length > 0) && (
               <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl"
@@ -181,7 +181,7 @@ export default function BroadcastPanel() {
                 )}
                 {suggestions.map(u => (
                   <button key={u.id} type="button" onClick={() => addUser(u)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/5 transition-colors">
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-line transition-colors">
                     {u.image ? (
                       <Image src={u.image} alt="" width={24} height={24} className="rounded-full shrink-0" />
                     ) : (
@@ -209,7 +209,7 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Titel</label>
         <input type="text" value={title} onChange={e => setTitle(e.target.value)}
           placeholder="📢 Wichtige Info…"
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors" />
+          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors" />
       </div>
 
       {/* Text */}
@@ -217,7 +217,7 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Text</label>
         <textarea value={body} onChange={e => setBody(e.target.value)}
           placeholder="Inhalt der Benachrichtigung…" rows={3}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors resize-none" />
+          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors resize-none" />
       </div>
 
       {/* Link-Dropdown */}
@@ -225,7 +225,7 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Seite verlinken (optional)</label>
         <div ref={linkDropRef} className="relative">
           <button type="button" onClick={() => setShowLinkDrop(v => !v)}
-            className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm transition-colors hover:border-teal-500/30"
+            className="w-full flex items-center justify-between bg-line border border-line-strong rounded-lg px-3 py-2 text-sm transition-colors hover:border-teal-500/30"
             style={{ color: selectedLink ? "#e2e8f0" : "#4b5563" }}>
             <span>{selectedLink ? `${selectedLink.label} (${selectedLink.url})` : "Keine Verlinkung"}</span>
             <ChevronDown style={{ width: 14, height: 14, flexShrink: 0 }} />
@@ -234,13 +234,13 @@ export default function BroadcastPanel() {
             <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl"
               style={{ background: "rgba(10,18,16,0.98)", border: "1px solid rgba(20,184,166,0.15)" }}>
               <button type="button" onClick={() => selectLink("")}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-white/5 transition-colors">
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-line transition-colors">
                 <span>Keine Verlinkung</span>
                 {!url && <Check style={{ width: 13, height: 13, color: "#2dd4bf" }} />}
               </button>
               {PAGE_LINKS.map(p => (
                 <button key={p.url} type="button" onClick={() => selectLink(p.url)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-line transition-colors"
                   style={{ color: url === p.url ? "#2dd4bf" : "#d1d5db" }}>
                   <span>{p.label}</span>
                   <span className="text-xs text-gray-600">{p.url}</span>

@@ -114,7 +114,7 @@ export default function CreateContestForm({
             type="date"
             value={periodStart}
             onChange={(e) => setPeriodStart(e.target.value)}
-            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
           />
         </div>
         <div>
@@ -123,7 +123,7 @@ export default function CreateContestForm({
             type="date"
             value={periodEnd}
             onChange={(e) => setPeriodEnd(e.target.value)}
-            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
           />
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function CreateContestForm({
           min={1}
           value={votingDurationDays}
           onChange={(e) => setVotingDurationDays(e.target.value)}
-          className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+          className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
         />
       </div>
 
@@ -158,11 +158,11 @@ export default function CreateContestForm({
             onChange={(e) => setChannelInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChannel(); } }}
             placeholder="Twitch-Login hinzufügen…"
-            className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+            className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
           />
           <button
             onClick={addChannel}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.05] border border-white/[0.1] text-gray-300 hover:bg-white/[0.1] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-line border border-line-strong text-gray-300 hover:bg-line transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> Hinzufügen
           </button>

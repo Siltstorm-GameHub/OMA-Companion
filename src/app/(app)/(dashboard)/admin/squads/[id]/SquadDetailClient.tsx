@@ -99,7 +99,7 @@ export default function SquadDetailClient({
 
       {/* Stammdaten (nur Admin) */}
       {isAdmin && (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+        <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Stammdaten</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -144,7 +144,7 @@ export default function SquadDetailClient({
       )}
 
       {/* Roster */}
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+      <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
         <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest">
           Roster ({squad.memberships.length})
         </p>

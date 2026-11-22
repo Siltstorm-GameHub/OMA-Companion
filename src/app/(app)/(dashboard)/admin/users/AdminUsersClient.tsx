@@ -42,17 +42,17 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <span className="sr-only">Mitglieder suchen</span>
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, Discord-ID oder E-Mail"
-            className="w-full rounded-xl bg-white/[0.03] border border-white/[0.1] pl-8 pr-8 py-2 text-sm text-white focus:border-teal-500/40 focus:outline-none" />
+            className="w-full rounded-xl bg-surface-2 border border-line-strong pl-8 pr-8 py-2 text-sm text-white focus:border-teal-500/40 focus:outline-none" />
           {query && (
             <button type="button" onClick={() => setQuery("")} aria-label="Suche leeren"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
           )}
         </label>
         <details className="relative">
-          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden rounded-xl border border-white/[0.1] px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-white/[0.04]">
+          <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden rounded-xl border border-line-strong px-3 py-2 text-xs font-semibold text-gray-300 hover:bg-line">
             Discord abgleichen
           </summary>
-          <div className="absolute right-0 top-full z-30 mt-1 w-max max-w-[90vw] space-y-2 rounded-xl border border-white/[0.1] bg-gray-900 p-3 shadow-xl">
+          <div className="absolute right-0 top-full z-30 mt-1 w-max max-w-[90vw] space-y-2 rounded-xl border border-line-strong bg-gray-900 p-3 shadow-xl">
             {syncTools}
           </div>
         </details>
@@ -62,7 +62,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
         {USER_FILTERS.map(f => (
           <button key={f.key} type="button" onClick={() => setFilter(f.key)} aria-pressed={filter === f.key}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f.key ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-white/[0.08] text-gray-400 hover:text-white"
+              filter === f.key ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-line text-gray-400 hover:text-white"
             }`}>
             {f.label} <span className="tabular-nums text-gray-500">{counts[f.key]}</span>
           </button>
@@ -70,7 +70,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
         <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
           Sortieren
           <select value={sort} onChange={e => setSort(e.target.value as UserSort)}
-            className="rounded-lg bg-white/[0.03] border border-white/[0.1] px-2 py-1 text-xs text-white">
+            className="rounded-lg bg-surface-2 border border-line-strong px-2 py-1 text-xs text-white">
             {USER_SORTS.map(s => <option key={s.key} value={s.key} className="bg-gray-900">{s.label}</option>)}
           </select>
         </label>
@@ -81,7 +81,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
           {shown.length === 0 ? (
             <p className="p-6 text-center text-sm text-gray-500">Niemand gefunden.</p>
           ) : (
-            <ul className="divide-y divide-white/[0.04]">
+            <ul className="divide-y divide-line">
               {shown.map(u => {
                 const name = displayName(u);
                 const on = u.id === selectedId;
@@ -92,7 +92,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
                 return (
                   <li key={u.id}>
                     <button type="button" onClick={() => setSelectedId(on ? null : u.id)} aria-pressed={on}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-teal-500/[0.08]" : "hover:bg-white/[0.03]"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-teal-500/[0.08]" : "hover:bg-surface-2"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
                       {u.image
                         ? <img src={u.image} alt="" loading="lazy" width={28} height={28} className="w-7 h-7 rounded-full ring-1 ring-white/10 shrink-0" />
                         : <span className="w-7 h-7 shrink-0 rounded-full bg-rose-600/40 flex items-center justify-center text-[11px] font-semibold text-rose-300">{name[0]?.toUpperCase()}</span>}

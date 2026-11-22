@@ -127,7 +127,6 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
     <div className="px-4 pb-8 pt-0 sm:p-6 max-w-6xl mx-auto space-y-4 animate-fade-in">
       {/* ── Kontostand ── */}
       <section aria-label="Kontostand" className="glass rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/[0.07] to-transparent pointer-events-none" />
         <div className="relative grid grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto] gap-4 items-center">
           <div>
             <h1 className="text-[11px] font-semibold text-gray-500">Deine Münzen</h1>
@@ -160,7 +159,7 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
           <h2 className="text-sm font-semibold text-white">So verdienst du Münzen</h2>
           <p className="text-[11px] text-gray-500">Mit deinem Stand für heute und diesen Monat.</p>
           <ul className="mt-2">{sources.map((s) => <SourceRow key={s.key} s={s} />)}</ul>
-          <p className="mt-3 flex gap-1.5 border-t border-white/[0.05] pt-3 text-[11px] text-gray-500 leading-relaxed">
+          <p className="mt-3 flex gap-1.5 border-t border-line pt-3 text-[11px] text-gray-500 leading-relaxed">
             <Users className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
               Außerdem: Spielwahl, Umfragen und Sieger-Tipps bei Events, Community-Ziele, {fmt(POINT_RULES.INVITE_MEMBER.amount)} fürs Einladen
@@ -178,7 +177,7 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
                 <Link key={f.key} href={f.key === "alle" ? "/points" : `/points?waehrung=${f.key}`} scroll={false}
                   aria-current={f.key === filter.key ? "true" : undefined}
                   className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                    f.key === filter.key ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                    f.key === filter.key ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                   }`}>
                   {f.label}
                 </Link>

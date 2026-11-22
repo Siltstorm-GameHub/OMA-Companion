@@ -63,11 +63,11 @@ export default function IdeasBoardClient() {
             <div key={col.id}
               onDragOver={e => { e.preventDefault(); setOverCol(col.id); }} onDragLeave={() => setOverCol(cur => (cur === col.id ? null : cur))}
               onDrop={() => { if (dragId) move(dragId, col.id); setDragId(null); setOverCol(null); }}
-              className={`rounded-xl border p-2 space-y-2 min-h-32 transition-colors ${overCol === col.id ? "border-teal-500/50 bg-teal-500/[0.05]" : "border-white/10 bg-white/[0.02]"}`}>
+              className={`rounded-xl border p-2 space-y-2 min-h-32 transition-colors ${overCol === col.id ? "border-teal-500/50 bg-teal-500/[0.05]" : "border-line-strong bg-surface-2"}`}>
               <p className="text-[11px] font-semibold text-gray-300 px-1">{col.label} <span className="text-gray-600">({items.length})</span></p>
               {items.map(i => (
                 <div key={i.id} draggable onDragStart={() => setDragId(i.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                  className="rounded-lg bg-white/[0.04] border border-white/10 p-2 space-y-1 cursor-grab active:cursor-grabbing">
+                  className="rounded-lg bg-line border border-line-strong p-2 space-y-1 cursor-grab active:cursor-grabbing">
                   <Link href={`/community-board/idea/${i.id}`} className="block text-xs text-gray-100 hover:text-teal-300 transition-colors line-clamp-2">{i.title}</Link>
                   <p className="text-[10px] text-gray-500 truncate">
                     {i.author}{ideaCategoryLabel(i.category) ? ` · ${ideaCategoryLabel(i.category)}` : ""}{i.game ? ` · ${i.game}` : ""}

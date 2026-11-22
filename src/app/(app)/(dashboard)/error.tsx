@@ -18,8 +18,6 @@ export default function Error({
     <div className="flex items-center justify-center min-h-[60vh] p-6">
       <div className="glass card-shine rounded-2xl p-10 max-w-md w-full text-center relative overflow-hidden">
         {/* Glow */}
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/6 to-transparent pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/25 to-transparent pointer-events-none" />
 
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto mb-5">
@@ -37,7 +35,7 @@ export default function Error({
           <div className="flex items-center justify-center gap-3 mt-6">
             <button
               onClick={reset}
-              className="inline-flex items-center gap-2 glass hover:bg-white/[0.06] border border-white/[0.1] hover:border-white/[0.2] text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all"
+              className="inline-flex items-center gap-2 glass hover:bg-line border border-line-strong hover:border-line-strong text-white text-sm font-medium px-4 py-2.5 rounded-card transition-all"
             >
               <RefreshCw className="w-4 h-4" />
               Erneut versuchen

@@ -33,7 +33,7 @@ function Avatar({ u, size, ring }: { u: PodiumUser; size: number; ring: string }
   return u.image ? (
     <Image src={u.image} alt={label} title={label} width={size} height={size} className={`rounded-full ring-2 ${ring} object-cover`} style={{ width: size, height: size }} />
   ) : (
-    <span title={label} className={`rounded-full ring-2 ${ring} bg-white/10 text-[10px] font-bold text-gray-300 flex items-center justify-center`} style={{ width: size, height: size }}>
+    <span title={label} className={`rounded-full ring-2 ${ring} bg-line text-[10px] font-bold text-gray-300 flex items-center justify-center`} style={{ width: size, height: size }}>
       {label.charAt(0).toUpperCase()}
     </span>
   );
@@ -78,8 +78,8 @@ export default function RecentResultCard({ r }: { r: RecentResultData }) {
     </>
   );
 
-  const cls = `flex items-center gap-3 px-3 py-2 rounded-lg border ${r.myPlace ? "border-teal-400/25" : "border-white/[0.06]"} bg-white/[0.02] transition-colors`;
+  const cls = `flex items-center gap-3 px-3 py-2 rounded-lg border ${r.myPlace ? "border-teal-400/25" : "border-line"} bg-surface-2 transition-colors`;
   return r.hasResults
-    ? <GateLink href={r.href} className={`${cls} hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-teal-400/60 outline-none`}>{body}</GateLink>
+    ? <GateLink href={r.href} className={`${cls} hover:bg-line focus-visible:ring-2 focus-visible:ring-teal-400/60 outline-none`}>{body}</GateLink>
     : <div className={cls}>{body}</div>;
 }

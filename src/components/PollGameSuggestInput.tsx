@@ -100,7 +100,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
             value={query}
             placeholder="Spieltitel suchen und hinzufügen …"
             autoComplete="off"
-            className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+            className="w-full bg-line border border-line-strong rounded-lg pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
             onChange={e => { setQuery(e.target.value); onDraftChange?.(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => {
@@ -123,7 +123,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
 
       {open && results.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg shadow-2xl"
-          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(16px)" }}>
+          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid rgba(255,255,255,0.1)",}}>
           {results.map(g => (
             <li key={g.appId}>
               <button type="button"

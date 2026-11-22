@@ -58,7 +58,7 @@ function Result({ entry }: { entry: IdeaEntry }) {
         {dist.map((n, i) => (
           <div key={i} className="flex items-center gap-1.5 text-[10px] text-gray-500">
             <span className="w-2 tabular-nums">{5 - i}</span>
-            <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden">
               <div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / max) * 100}%` }} />
             </div>
             <span className="w-4 text-right tabular-nums">{n}</span>
@@ -89,7 +89,7 @@ function Reasons({ ideaId }: { ideaId: string }) {
       {open && (items === null ? <p className="text-[11px] text-gray-600">Lädt…</p> : items.length === 0 ? <p className="text-[11px] text-gray-600">Noch keine Begründungen.</p> : (
         <ul className="space-y-1.5">
           {items.map(v => (
-            <li key={v.id} className="rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-xs">
+            <li key={v.id} className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
               <p className="flex items-center gap-1.5 text-gray-400"><StarRow value={v.stars} /> <span>{v.voter.username ?? v.voter.name ?? "?"}</span></p>
               <p className="text-gray-300 whitespace-pre-line break-words">{v.reason}</p>
             </li>
@@ -124,7 +124,7 @@ function GameCard({ appId, fallbackName }: { appId: number; fallbackName?: strin
 
   const url = `https://store.steampowered.com/app/${appId}`;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-white/[0.03] border border-white/10 p-2 hover:border-teal-500/30 transition-colors">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2 hover:border-teal-500/30 transition-colors">
       {info?.image && (
         // eslint-disable-next-line @next/next/no-img-element -- Steam-Header-Bild
         <img src={info.image} alt="" className="w-24 h-11 rounded object-cover shrink-0" />
@@ -194,7 +194,7 @@ function Versions({ entry }: { entry: IdeaEntry }) {
       {open && (items === null ? <p className="text-[11px] text-gray-600">Lädt…</p> : (
         <ul className="space-y-1.5">
           {items.map(r => (
-            <li key={r.id} className="rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-xs">
+            <li key={r.id} className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
               <p className="text-gray-400">Version {r.version} · {formatBerlinDate(r.savedAt)}{r.note ? ` · ${r.note}` : ""}</p>
               <p className="text-gray-300 font-medium">{r.title}</p>
               <MarkdownLite text={r.description} className="text-xs text-gray-400" />
@@ -233,14 +233,14 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
   }
 
   return (
-    <div className="rounded-lg bg-white/[0.03] border border-white/10 p-2.5 space-y-1.5">
+    <div className="rounded-lg bg-surface-2 border border-line-strong p-2.5 space-y-1.5">
       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Team: Status setzen</p>
       <div className="flex flex-wrap items-center gap-1.5">
         <Select size="sm" value={lifecycle} onChange={e => setLifecycle(e.target.value)} aria-label="Status">
           {IDEA_LIFECYCLES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
         </Select>
         <input value={note} onChange={e => setNote(e.target.value)} maxLength={300} placeholder="Kurze Begründung (geht an den Autor)"
-          className="flex-1 min-w-[10rem] bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="flex-1 min-w-[10rem] bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
         <Button size="sm" variant="outline" loading={busy} onClick={save}>Speichern</Button>
       </div>
       <div className="flex flex-wrap items-center gap-2">

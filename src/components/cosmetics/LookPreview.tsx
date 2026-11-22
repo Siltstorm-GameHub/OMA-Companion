@@ -45,7 +45,7 @@ export default function LookPreview({ look, image, name, size = 44, className = 
 }) {
   const bg = getCosmeticOf(look.background, "background");
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] ${className}`}>
+    <div className={`relative overflow-hidden rounded-xl border border-line-strong bg-surface-2 ${className}`}>
       {bg && <div className="absolute inset-0 pointer-events-none" style={{ background: bg.css }} />}
       <div className="relative flex items-center gap-3 px-3 py-3">
         <div className="p-1.5 shrink-0">

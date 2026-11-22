@@ -72,7 +72,7 @@ export default function GroupKnockoutView({
             const groupComplete = gMatches.length > 0 && played === gMatches.length;
             return (
               <div key={gi} className="glass rounded-2xl overflow-hidden">
-                <div className="px-4 py-2.5 border-b border-white/5 flex items-center justify-between">
+                <div className="px-4 py-2.5 border-b border-line flex items-center justify-between">
                   <span className="text-sm font-semibold text-white">{groupLabel(gi)}</span>
                   <span className="text-[10px] text-gray-600">{played}/{gMatches.length} gespielt</span>
                 </div>
@@ -86,7 +86,7 @@ export default function GroupKnockoutView({
                       <th className="text-right px-3 py-2 font-medium">Pkt</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-line">
                     {table.map((s, i) => {
                       const u = findUser(s.userId);
                       const isMe = s.userId === userId;
@@ -126,7 +126,7 @@ export default function GroupKnockoutView({
                     })}
                   </tbody>
                 </table>
-                <div className="border-t border-white/5 divide-y divide-white/5">
+                <div className="border-t border-line divide-y divide-line">
                   {gMatches.map(m => {
                     const p1 = findUser(m.player1Id);
                     const p2 = findUser(m.player2Id);
@@ -168,7 +168,7 @@ export default function GroupKnockoutView({
           {thirdPlace && (
             <div>
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Spiel um Platz 3</h2>
-              <div className="glass rounded-xl border border-white/10 divide-y divide-white/5 max-w-xs">
+              <div className="glass rounded-card border border-line-strong divide-y divide-line max-w-xs">
                 {([[thirdPlace.player1Id, thirdPlace.score1], [thirdPlace.player2Id, thirdPlace.score2]] as const).map(([id, score], i) => {
                   const u = findUser(id);
                   const won = !!thirdPlace.winnerId && thirdPlace.winnerId === id;

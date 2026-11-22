@@ -181,7 +181,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             maxLength={80}
             placeholder="z.B. Willkommen zum Sommer-Event!"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
           />
         </div>
 
@@ -195,7 +195,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
             maxLength={500}
             rows={3}
             placeholder="Die Mitteilung, die alle User sehen sollen …"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
           />
           <p className="text-[11px] text-gray-700 text-right mt-0.5">{form.content.length}/500</p>
         </div>
@@ -208,7 +208,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
               required type="datetime-local"
               value={form.startDate}
               onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
             />
           </div>
           <div>
@@ -217,7 +217,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
               required type="datetime-local"
               value={form.endDate}
               onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
             />
           </div>
         </div>
@@ -285,12 +285,12 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Aktiv-Toggle */}
                     <button onClick={() => toggleActive(m)} title={m.isActive ? "Deaktivieren" : "Aktivieren"}
-                      className={`p-1.5 rounded-md transition-colors ${m.isActive ? "text-purple-400 hover:bg-purple-500/10" : "text-gray-600 hover:bg-white/5"}`}>
+                      className={`p-1.5 rounded-md transition-colors ${m.isActive ? "text-purple-400 hover:bg-purple-500/10" : "text-gray-600 hover:bg-line"}`}>
                       {m.isActive ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                     </button>
                     {/* Bearbeiten */}
                     <button onClick={() => startEdit(m)}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
+                      className="p-1.5 rounded-md text-gray-500 hover:text-white hover:bg-line transition-colors">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
                     {/* Löschen */}

@@ -27,7 +27,7 @@ export default async function SquadsList() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {squads.map(s => (
             <Link key={s.id} href={`/squads/${s.id}`}
-              className="group rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.02] hover:border-white/20 transition-colors">
+              className="group rounded-xl overflow-hidden border border-line bg-surface-2 hover:border-line-strong transition-colors">
               {s.coverImageUrl ? (
                 <div className="relative h-20 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}

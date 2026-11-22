@@ -22,10 +22,10 @@ export default function MediaPickerPanel({ onPick, onClose }: { onPick: (asset: 
   }, [q]);
 
   return (
-    <div className="rounded-lg border border-white/10 bg-gray-900/95 p-2 space-y-1.5">
+    <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Mediathek durchsuchen…" aria-label="Mediathek durchsuchen"
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="flex-1 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
         <button onClick={onClose} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-40 overflow-y-auto">

@@ -12,7 +12,7 @@ function Meter({ label, used, max, unit }: { label: string; used: number; max: n
           <b className="text-white">{used}</b><span className="text-gray-500"> von {max}</span>
         </span>
       </div>
-      <div className="mt-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="mt-1 h-1.5 rounded-full bg-line overflow-hidden">
         <div className={`h-full rounded-full ${full ? "bg-amber-400" : "bg-teal-400"}`} style={{ width: `${pct}%` }} />
       </div>
       <p className={`mt-1 text-[11px] ${full ? "text-amber-300" : "text-gray-500"}`}>

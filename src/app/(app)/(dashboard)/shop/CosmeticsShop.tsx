@@ -48,7 +48,7 @@ function ItemPreview({ item, image, name }: { item: Cosmetic; image: string | nu
       return <PreviewAvatar look={{ aura: item.id }} image={image} name={name} size={44} />;
     case "background":
       return (
-        <div className="w-full h-14 rounded-xl border border-white/10 relative overflow-hidden bg-white/[0.02]">
+        <div className="w-full h-14 rounded-xl border border-line-strong relative overflow-hidden bg-surface-2">
           <div className="absolute inset-0" style={{ background: item.css }} />
         </div>
       );
@@ -241,7 +241,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             {isBusy ? "…" : "Kaufen!"}
           </button>
           <button onClick={() => setConfirmBuy(null)} disabled={!!busy} aria-label="Abbrechen"
-            className="px-2 py-1.5 rounded-lg text-gray-400 bg-white/[0.05] hover:bg-white/[0.1] transition-colors">✕</button>
+            className="px-2 py-1.5 rounded-lg text-gray-400 bg-line hover:bg-line transition-colors">✕</button>
         </div>
       );
     } else if (!affordable && a.price !== null) {
@@ -267,7 +267,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         onClick={() => showItem(item.id)}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showItem(item.id); } }}
         className={`glass relative rounded-2xl p-2.5 flex flex-col gap-2 cursor-pointer transition-all border ${
-          isEquipped ? "border-teal-500/50" : isPreviewed ? "border-white/30" : "border-transparent hover:border-white/10"
+          isEquipped ? "border-teal-500/50" : isPreviewed ? "border-white/30" : "border-transparent hover:border-line-strong"
         }`}
         title={isUnlockItem && !isOwned && requirement ? requirement : undefined}
       >
@@ -297,7 +297,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         role="button" tabIndex={0}
         onClick={() => showSet(s.id)}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showSet(s.id); } }}
-        className={`glass rounded-2xl p-3 flex flex-col gap-3 cursor-pointer border transition-all ${isPreviewed ? "border-white/30" : "border-transparent hover:border-white/10"}`}
+        className={`glass rounded-2xl p-3 flex flex-col gap-3 cursor-pointer border transition-all ${isPreviewed ? "border-white/30" : "border-transparent hover:border-line-strong"}`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -315,7 +315,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             if (!c) return null;
             const have = owned.has(id);
             return (
-              <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${have ? "border-teal-500/40 text-teal-300 bg-teal-500/10" : "border-white/10 text-gray-400"}`}>
+              <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${have ? "border-teal-500/40 text-teal-300 bg-teal-500/10" : "border-line-strong text-gray-400"}`}>
                 {have && "✓ "}{c.name}
               </span>
             );
@@ -332,7 +332,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                 {busy === s.id ? "…" : `${s.missing.length} Artikel kaufen!`}
               </button>
               <button onClick={() => setConfirmBuy(null)} disabled={!!busy} aria-label="Abbrechen"
-                className="px-2 py-1.5 rounded-lg text-gray-400 bg-white/[0.05] hover:bg-white/[0.1] transition-colors">✕</button>
+                className="px-2 py-1.5 rounded-lg text-gray-400 bg-line hover:bg-line transition-colors">✕</button>
             </div>
           ) : !affordable ? (
             <Shortfall price={s.price} balance={state.balance} basePrice={s.price < s.fullPrice ? s.fullPrice : null} />
@@ -366,7 +366,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)", boxShadow: "0 0 20px rgba(245,158,11,0.10)" }}>
+            style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
             <ShoppingBag className="w-4.5 h-4.5 text-amber-400" />
           </div>
           <div>
@@ -375,10 +375,10 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
           </div>
         </div>
         <Link href="/points" title="Woher kommen Münzen?"
-          className="group glass rounded-xl px-4 py-2 flex items-center gap-2 hover:bg-white/[0.05] transition-colors">
+          className="group glass rounded-card px-4 py-2 flex items-center gap-2 hover:bg-line transition-colors">
           <CoinIcon size={18} />
           <span className="text-lg font-black text-amber-300 tabular-nums">{fmt(state.balance)}</span>
-          <span className="flex items-center gap-0.5 border-l border-white/10 pl-2 text-[11px] font-semibold text-amber-200/80 group-hover:text-amber-200">
+          <span className="flex items-center gap-0.5 border-l border-line-strong pl-2 text-[11px] font-semibold text-amber-200/80 group-hover:text-amber-200">
             Münzen verdienen <ChevronRight className="w-3.5 h-3.5" />
           </span>
         </Link>
@@ -387,15 +387,15 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
       <div className="grid grid-cols-1 lg:grid-cols-[17rem_1fr] gap-5 items-start">
         {/* ── Vorschau (Desktop: bleibt beim Scrollen stehen) ── */}
         <aside className="lg:sticky lg:top-4 space-y-3">
-          <div className={`relative rounded-2xl border transition-colors ${hasPreview ? "border-amber-400/40" : "border-white/10"}`}>
+          <div className={`relative rounded-2xl border transition-colors ${hasPreview ? "border-amber-400/40" : "border-line-strong"}`}>
             <LookPreview look={previewLook} image={image} name={displayName} size={72} className="!rounded-2xl !border-0 min-h-[7rem]" />
-            <span className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${hasPreview ? "bg-amber-400 text-black" : "bg-white/10 text-gray-300"}`}>
+            <span className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${hasPreview ? "bg-amber-400 text-black" : "bg-line text-gray-300"}`}>
               {hasPreview ? "Vorschau" : "Aktuell"}
             </span>
           </div>
           {hasPreview ? (
             <button onClick={() => { setPreview(null); setPreviewSet(null); }}
-              className="w-full flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-white py-1.5 rounded-lg bg-white/[0.04] transition-colors">
+              className="w-full flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-white py-1.5 rounded-lg bg-line transition-colors">
               <Undo2 className="w-3 h-3" /> Vorschau zurücksetzen
             </button>
           ) : (
@@ -403,7 +403,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
           )}
 
           {/* Aktuell angelegt — schnell ablegen */}
-          <div className="glass rounded-2xl divide-y divide-white/5 hidden lg:block">
+          <div className="glass rounded-2xl divide-y divide-line hidden lg:block">
             {CATEGORY_ORDER.map(cat => {
               const item = getCosmetic(currentLook[cat]);
               return (
@@ -471,7 +471,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
 
               {sets.length > 0 && (
                 <button onClick={() => setTab("sets")}
-                  className="w-full glass rounded-2xl px-4 py-3 flex items-center justify-between text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors">
+                  className="w-full glass rounded-2xl px-4 py-3 flex items-center justify-between text-sm text-gray-300 hover:text-white hover:bg-line transition-colors">
                   <span>🎁 {sets.length} Sets — zusammen günstiger</span>
                   <span className="text-xs text-amber-300">Ansehen →</span>
                 </button>
@@ -491,7 +491,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                 {CATEGORY_ORDER.map(c => (
                   <button key={c} onClick={() => { setCategory(c); setConfirmBuy(null); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      c === category ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                      c === category ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                     }`}>
                     {CATEGORY_META[c].plural}
                   </button>

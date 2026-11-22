@@ -6,7 +6,7 @@ import { SWIPE_LABELS, type SwipeStatus } from "@/lib/games/swipe";
 const STYLE: Record<SwipeStatus, { icon: typeof Check; on: string; off: string; iconOn: string }> = {
   in:   { icon: Check, on: "bg-emerald-500/15 border-emerald-400/50 text-emerald-100", off: "hover:border-emerald-400/40 hover:bg-emerald-500/10", iconOn: "text-emerald-300" },
   wish: { icon: Heart, on: "bg-rose-500/15 border-rose-400/50 text-rose-100", off: "hover:border-rose-400/40 hover:bg-rose-500/10", iconOn: "text-rose-300" },
-  out:  { icon: X, on: "bg-white/[0.08] border-white/25 text-gray-200", off: "hover:border-white/20 hover:bg-white/[0.05]", iconOn: "text-gray-300" },
+  out:  { icon: X, on: "bg-line border-white/25 text-gray-200", off: "hover:border-line-strong hover:bg-line", iconOn: "text-gray-300" },
 };
 
 /** Die drei Entscheidungen als Knöpfe (Detailseite) — gleiche Bedeutung wie die Swipe-Richtungen.
@@ -35,7 +35,7 @@ export default function SwipeStatusButtons({
             aria-pressed={on}
             title={s === "in" ? "Hab ich und würde spielen — für alle sichtbar" : s === "wish" ? "Hab ich noch nicht, würde ich holen — du bekommst Angebots-Hinweise" : "Nur für dich sichtbar"}
             className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium border transition-colors disabled:opacity-60 ${
-              on ? st.on : `border-white/10 text-gray-300 ${st.off}`
+              on ? st.on : `border-line-strong text-gray-300 ${st.off}`
             }`}
           >
             <Icon className={`w-4 h-4 ${on ? st.iconOn : "text-gray-500"}`} />

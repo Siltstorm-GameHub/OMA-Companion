@@ -112,7 +112,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
         <p className="text-sm text-gray-400 leading-relaxed">{squad.description}</p>
       )}
 
-      <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+      <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
         <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest flex items-center gap-1.5">
           <Users className="w-3.5 h-3.5" /> Roster ({squad.memberships.length})
         </p>
@@ -122,7 +122,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
         ) : (
           <div className="space-y-1.5">
             {squad.memberships.map(m => (
-              <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+              <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-2 border border-line">
                 <Avatar u={m.user} />
                 <span className="text-sm text-white flex-1 truncate">{userName(m.user)}</span>
                 {m.role === "captain" && (
@@ -140,7 +140,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
       </div>
 
       {(squadEvents.length > 0 || canManage) && (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+        <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest flex items-center gap-1.5">
               <CalendarDays className="w-3.5 h-3.5" /> Events
@@ -155,14 +155,14 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
           <div className="space-y-1.5">
             {[...upcomingEvents, ...finishedEvents].map(e => (
               <div key={e.id}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.05] hover:border-white/20 transition-colors">
+                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-2 border border-line hover:border-line-strong transition-colors">
                 <Link href={`/tournament/${e.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="text-sm text-white flex-1 truncate">{e.title}</span>
                   {e.game && <span className="text-xs text-gray-500 shrink-0">{e.game}</span>}
                   <span className="text-xs text-gray-600 shrink-0 tabular-nums">
                     {formatBerlinDate(e.startAt, { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-gray-400 shrink-0">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-line text-gray-400 shrink-0">
                     {e.hidden ? "Ausgeblendet" : EVENT_STATUS_LABEL[e.status] ?? e.status}
                   </span>
                 </Link>

@@ -14,11 +14,8 @@ export default function GlobalNotFound() {
         style={{
           background: "rgba(15,15,23,0.75)",
           border: "1px solid rgba(255,255,255,0.055)",
-          backdropFilter: "blur(16px)",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/8 to-transparent pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/30 to-transparent pointer-events-none" />
 
         <div className="relative">
           <div

@@ -64,7 +64,7 @@ export default function ClipTrimmer({
   }
 
   return (
-    <div className="rounded-lg border border-teal-500/20 bg-white/[0.03] p-2 space-y-2">
+    <div className="rounded-lg border border-teal-500/20 bg-surface-2 p-2 space-y-2">
       <video ref={ref} src={url} crossOrigin="anonymous" controls playsInline preload="metadata" className="w-full max-h-72 rounded bg-black"
         onLoadedMetadata={e => setDuration(e.currentTarget.duration || 0)}
         onTimeUpdate={e => { if (end != null && e.currentTarget.currentTime > end) e.currentTarget.pause(); }} />
@@ -72,7 +72,7 @@ export default function ClipTrimmer({
       {duration > 0 && (
         <div className="space-y-1.5">
           {/* Schnitt-Bereich als Balken */}
-          <div className="relative h-2 rounded-full bg-white/10">
+          <div className="relative h-2 rounded-full bg-line">
             <div className="absolute inset-y-0 rounded-full bg-teal-400/60"
               style={{ left: `${(start / duration) * 100}%`, width: `${(Math.max(0, effectiveEnd - start) / duration) * 100}%` }} />
           </div>

@@ -291,7 +291,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
             : [];
 
           return (
-            <div key={poll.id} className="rounded-lg border border-white/[0.06] bg-black/10 p-3 space-y-3">
+            <div key={poll.id} className="rounded-lg border border-line bg-black/10 p-3 space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-white truncate">{poll.label}</p>
@@ -302,7 +302,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                     <Clock className="w-3 h-3" /> Läuft noch
                   </span>
                 ) : (
-                  <span className="text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full shrink-0">Beendet</span>
+                  <span className="text-[10px] text-gray-500 bg-line border border-line px-2 py-0.5 rounded-full shrink-0">Beendet</span>
                 )}
               </div>
 
@@ -355,7 +355,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                           className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border transition-colors disabled:opacity-50 ${
                             isExcluded
                               ? "border-red-700/60 bg-red-950/30 text-red-400/80 line-through"
-                              : "border-white/[0.12] bg-white/[0.05] text-gray-200 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
+                              : "border-line-strong bg-line text-gray-200 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
                           }`}
                         >
                           {isExcluded && <UserX className="w-3 h-3 shrink-0" />}
@@ -391,7 +391,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
 
               {/* Admin: Stimmen einsehen/ändern + neue Stimmen (auch für Nicht-Teilnehmer bei "all") nachtragen */}
               {canManage && admin && (
-                <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
+                <div className="pt-2 border-t border-line space-y-2.5">
                   <div className="space-y-1">
                     <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Bereits abgestimmt ({votedRows.length})</p>
                     {votedRows.map(({ vote, user }) => {

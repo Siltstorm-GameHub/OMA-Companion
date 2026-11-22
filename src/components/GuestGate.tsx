@@ -81,7 +81,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center px-4"
-      style={{ background: "rgba(4,8,8,0.72)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(4,8,8,0.72)",}}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -96,7 +96,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
           type="button"
           onClick={onClose}
           aria-label="Schließen"
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-line transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -149,8 +149,7 @@ export function GuestBanner() {
 
   return (
     <div
-      className="sticky z-30 mx-3 sm:mx-6 top-[5.75rem] lg:top-[100px] mb-3 lg:mb-4 rounded-xl backdrop-blur-xl"
-      style={{ background: "rgba(6,20,18,0.88)", border: "1px solid rgba(20,184,166,0.28)", boxShadow: "0 6px 24px rgba(0,0,0,0.35)" }}
+      className="sticky z-30 mx-3 sm:mx-6 top-[4.25rem] lg:top-[5.25rem] mb-3 lg:mb-4 rounded-card border border-primary/40 bg-surface shadow-pop"
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3.5 py-2.5">
         <div className="flex-1 min-w-0">

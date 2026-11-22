@@ -28,8 +28,8 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
             <Link
               key={g.slug}
               href={`/spiele/${g.slug}`}
-              className={`group snap-start shrink-0 w-40 rounded-xl overflow-hidden border bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${
-                g.onMyList ? "border-rose-400/40" : "border-white/[0.08] hover:border-white/20"
+              className={`group snap-start shrink-0 w-40 rounded-xl overflow-hidden border bg-surface-2 hover:bg-line transition-colors ${
+                g.onMyList ? "border-rose-400/40" : "border-line hover:border-line-strong"
               }`}
             >
               <div className="relative">

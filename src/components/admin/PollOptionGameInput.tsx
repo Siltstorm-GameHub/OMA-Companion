@@ -53,7 +53,7 @@ export default function PollOptionGameInput({ value, onSelect }: PollOptionGameI
           value={query}
           placeholder="Spieltitel suchen (Steam) — optional"
           autoComplete="off"
-          className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+          className="w-full bg-line border border-line-strong rounded-lg pl-8 pr-8 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
           onChange={e => { setQuery(e.target.value); setOpen(true); onSelect(null); }}
           onFocus={() => setOpen(true)}
         />
@@ -62,7 +62,7 @@ export default function PollOptionGameInput({ value, onSelect }: PollOptionGameI
 
       {open && results.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg shadow-2xl"
-          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(16px)" }}>
+          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid rgba(255,255,255,0.1)",}}>
           {results.map(g => (
             <li key={g.appId}>
               <button type="button"

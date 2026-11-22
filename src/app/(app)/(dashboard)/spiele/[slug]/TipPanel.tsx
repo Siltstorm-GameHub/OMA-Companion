@@ -58,7 +58,7 @@ export default function TipPanel({ slug, initial, isModerator }: {
             value={note}
             onChange={e => setNote(e.target.value.slice(0, NOTE_MAX))}
             placeholder="Warum? (optional, steht auf der Karte)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-400/40"
+            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-400/40"
           />
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-gray-600">

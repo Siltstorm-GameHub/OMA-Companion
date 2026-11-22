@@ -37,13 +37,13 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                 )
               ) : (
                 <div className="space-y-1 max-h-48 overflow-y-auto">
-                  <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-colors">
+                  <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-2 cursor-pointer transition-colors">
                     <input type="radio" name="mvp" value="" checked={mvpUserId === ""} onChange={() => setMvpUserId("")} className="accent-teal-500" />
                     <span className="text-sm text-gray-500 italic">Kein MVP</span>
                   </label>
                   {registeredUsers.map(u => (
                     <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-white/[0.03]"
+                      mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-surface-2"
                     }`}>
                       <input type="radio" name="mvp" value={u.id} checked={mvpUserId === u.id} onChange={() => setMvpUserId(u.id)} className="accent-teal-500 shrink-0" />
                       <Avatar u={u} size={6} />
@@ -146,7 +146,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                   </div>
                   {spectatorUsers.map(u => (
                     <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
+                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-surface-2 border border-transparent hover:border-line"
                     }`}>
                       <input type="checkbox" checked={spectatorAttended.has(u.id)}
                         onChange={e => setSpectatorAttended(prev => {

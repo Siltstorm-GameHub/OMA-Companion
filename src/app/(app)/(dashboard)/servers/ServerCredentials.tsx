@@ -17,7 +17,7 @@ function CopyField({ label, value, onCopy }: { label: string; value: string; onC
   return (
     <button
       onClick={copy}
-      className="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/8 transition-colors text-left"
+      className="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg bg-line border border-line-strong hover:bg-line transition-colors text-left"
     >
       <div className="min-w-0">
         <p className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</p>

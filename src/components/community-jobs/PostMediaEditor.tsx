@@ -20,7 +20,7 @@ export interface EditorMedia {
   clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null;
 }
 
-const SMALL_INPUT = "bg-white/[0.04] border border-white/10 rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL_INPUT = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 export async function uploadBlob(blob: Blob, name: string): Promise<string> {
   const body = new FormData();
@@ -65,11 +65,11 @@ export function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => v
   }
 
   return (
-    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-6 cursor-pointer hover:border-teal-500/30 transition-colors">
+    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-6 cursor-pointer hover:border-teal-500/30 transition-colors">
       {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
       <span className="text-xs text-gray-500">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
       {uploading && (
-        <div className="w-40 h-1 rounded-full bg-white/10 overflow-hidden">
+        <div className="w-40 h-1 rounded-full bg-line overflow-hidden">
           <div className="h-full bg-teal-400 transition-all" style={{ width: `${progress}%` }} />
         </div>
       )}
@@ -144,7 +144,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
       {media.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {media.map((m, i) => (
-            <div key={m.id ?? m.url} className="rounded-lg bg-white/[0.03] border border-white/10 p-1.5 space-y-1">
+            <div key={m.id ?? m.url} className="rounded-lg bg-surface-2 border border-line-strong p-1.5 space-y-1">
               <div className="relative">
                 {isVideoUrl(m.url)
                   ? <TrimmedVideo url={m.url} clipStart={m.clipStart} clipEnd={m.clipEnd} posterUrl={m.posterUrl} controls={false} muted className="w-full aspect-video object-cover rounded" />
@@ -182,7 +182,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
 
       {free > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-white/10 px-3 py-1.5 cursor-pointer hover:border-teal-500/30 ${progress ? "opacity-50 pointer-events-none" : "text-gray-300"}`}>
+          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-teal-500/30 ${progress ? "opacity-50 pointer-events-none" : "text-gray-300"}`}>
             {progress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {progress ? `Lädt ${progress.done}/${progress.total}…` : "Bilder hochladen"}
             <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden"

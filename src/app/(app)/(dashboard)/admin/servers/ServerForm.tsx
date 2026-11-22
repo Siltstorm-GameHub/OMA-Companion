@@ -88,7 +88,7 @@ export default function ServerForm({
   const [showPassword, setShowPassword] = useState(false);
 
   const compact = variant === "edit";
-  const input = `bg-white/5 border border-white/10 ${compact ? "rounded-lg py-1.5" : "rounded-xl py-2"} text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20`;
+  const input = `bg-line border border-line-strong ${compact ? "rounded-lg py-1.5" : "rounded-xl py-2"} text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong`;
   const field = `${input} px-3`;
 
   const set = <K extends keyof ServerFormState>(key: K, v: ServerFormState[K]) => setForm((f) => ({ ...f, [key]: v }));

@@ -34,7 +34,7 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
         </div>
       </div>
 
-      <div className="divide-y divide-white/[0.05]">
+      <div className="divide-y divide-line">
         {tipps.map((t, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
             <Link href={`/profile/${t.user.id}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">

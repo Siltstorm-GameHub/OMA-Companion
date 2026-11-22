@@ -5,7 +5,7 @@ export default function DashboardLoading() {
   return (
     <div className="animate-fade-in">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden border-b border-white/[0.05] px-5 pt-8 pb-6">
+      <div className="relative overflow-hidden border-b border-line px-5 pt-8 pb-6">
         <SkeletonHero />
       </div>
 
@@ -31,7 +31,7 @@ export default function DashboardLoading() {
           </div>
           <div className="lg:col-span-2 space-y-3">
             <Skeleton className="h-4 w-24" />
-            <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+            <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
                   <Skeleton className="w-6 h-4 rounded" />

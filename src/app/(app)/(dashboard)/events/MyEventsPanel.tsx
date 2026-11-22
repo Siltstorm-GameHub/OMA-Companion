@@ -60,7 +60,7 @@ export default async function MyEventsPanel({ userId }: { userId: string; isMode
 
       {/* ── Hinweis: eigene Events verwalten ── */}
       <Link href="/events/verwalten"
-        className="group glass rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-white/[0.03] transition-colors">
+        className="group glass rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-surface-2 transition-colors">
         <Settings className="w-4 h-4 text-teal-400 shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-medium text-white">Eigene Events veranstalten</span>

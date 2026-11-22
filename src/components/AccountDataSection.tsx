@@ -41,12 +41,12 @@ export default function AccountDataSection() {
             <p className="text-sm font-semibold text-white">Meine Daten herunterladen</p>
             <p className="text-xs text-gray-500">Alle zu deinem Konto gespeicherten Daten als JSON-Datei.</p>
           </div>
-          <a href="/api/profile/export" className="shrink-0 text-xs font-semibold px-3 py-2 rounded-xl border border-white/10 hover:border-white/25 text-gray-200">
+          <a href="/api/profile/export" className="shrink-0 text-xs font-semibold px-3 py-2 rounded-xl border border-line-strong hover:border-white/25 text-gray-200">
             Download
           </a>
         </div>
 
-        <div className="border-t border-white/[0.06] pt-4">
+        <div className="border-t border-line pt-4">
           {!open ? (
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -76,7 +76,7 @@ export default function AccountDataSection() {
                 <input
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2 text-sm text-white outline-none focus:border-red-500/50"
+                  className="mt-1.5 w-full rounded-xl bg-black/30 border border-line-strong px-3 py-2 text-sm text-white outline-none focus:border-red-500/50"
                   autoComplete="off"
                 />
               </label>

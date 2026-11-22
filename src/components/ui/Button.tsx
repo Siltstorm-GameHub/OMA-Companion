@@ -16,8 +16,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-teal-600 hover:bg-teal-500 text-white font-semibold",
   danger:  "bg-red-600 hover:bg-red-500 text-white font-semibold",
   accent:  "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/15 font-medium",
-  outline: "border border-white/10 hover:border-white/20 text-gray-500 hover:text-white font-medium",
-  ghost:   "text-gray-400 hover:text-white hover:bg-white/[0.06] font-medium",
+  outline: "border border-line-strong hover:border-line-strong text-gray-500 hover:text-white font-medium",
+  ghost:   "text-gray-400 hover:text-white hover:bg-line font-medium",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

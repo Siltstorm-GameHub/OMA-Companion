@@ -7,7 +7,7 @@ export default function Shortfall({ price, balance, basePrice }: { price: number
   const pct = price > 0 ? Math.min(100, Math.round((Math.max(0, balance) / price) * 100)) : 0;
   return (
     <div className="space-y-1" title={`Noch ${fmt(price - balance)} Münzen bis zum Kauf`}>
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-line overflow-hidden">
         <div className="h-full rounded-full bg-amber-400/70" style={{ width: `${pct}%` }} />
       </div>
       <p className="flex items-center justify-between gap-1 text-[11px]">

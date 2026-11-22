@@ -108,7 +108,7 @@ export default function AdminContentSection() {
     <section className="space-y-2">
       <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Beiträge verwalten</h2>
       <p className="text-[11px] text-gray-600">Bearbeiten (inkl. Zuschnitt) und Herunterladen für Social-Media-Vorbereitung — vor allem für Marketing-Manager- und Fotograf-Beiträge gedacht.</p>
-      <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
+      <div className="glass rounded-card overflow-hidden divide-y divide-line">
         {entries.length === 0 && <p className="p-4 text-xs text-gray-600">Keine Beiträge vorhanden.</p>}
         {entries.map(entry => {
           const Icon = KIND_ICON[entry.kind];
@@ -204,11 +204,11 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
     <div className="space-y-3">
       {entry.kind === "report" && (
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titel"
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       )}
       {entry.kind !== "report" && (
         <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Text" rows={4}
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       )}
       {entry.kind === "report" && (
         <p className="text-[11px] text-gray-600">Der Fließtext des Berichts lässt sich hier bewusst nicht ändern (nur Titel + Bild) — größere inhaltliche Korrekturen bitte mit dem Autor klären oder den Beitrag ausblenden (Button „Ausblenden“ in der Liste bzw. unter Moderation).</p>

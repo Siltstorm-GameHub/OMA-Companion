@@ -76,7 +76,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             href={`/events/series/${series.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-line hover:border-line-strong rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
@@ -106,7 +106,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="space-y-4">
 
           {/* Settings-Tabs */}
-          <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
+          <div className="flex gap-1 border-b border-line overflow-x-auto">
             {/* Legacy (Altpunkte für beliebige Mitglieder) pflegen nur Mods */}
             {SETTINGS_TABS.filter(tab => isModerator || tab.key !== "legacy").map(tab => (
               <button key={tab.key} type="button" onClick={() => setActiveSettingsTab(tab.key)}
@@ -159,11 +159,11 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           </div>
 
           {series.events.length === 0 ? (
-            <div className="text-center py-8 text-gray-600 text-sm border border-white/[0.05] rounded-xl">
+            <div className="text-center py-8 text-gray-600 text-sm border border-line rounded-xl">
               Noch keine Events in dieser Reihe
             </div>
           ) : (
-            <div className="rounded-xl overflow-hidden border border-white/[0.06]">
+            <div className="rounded-xl overflow-hidden border border-line">
               {sortedSeriesEvents.map((ev, i) => {
                 const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-gray-500" };
                 const isFinished = ev.status === "finished";
@@ -175,9 +175,9 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 return (
                   <div
                     key={ev.id}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors ${
-                      i > 0 ? "border-t border-white/[0.05]" : ""
-                    } ${isFirstFinished ? "border-t-2 border-t-white/[0.08]" : ""} ${
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-surface-2 transition-colors ${
+                      i > 0 ? "border-t border-line" : ""
+                    } ${isFirstFinished ? "border-t-2 border-t-line" : ""} ${
                       isFinished ? "opacity-60 hover:opacity-90" : ""
                     } ${ev.hidden ? "opacity-60" : ""}`}
                   >
@@ -252,7 +252,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 </p>
                 <div className="flex items-center justify-end gap-2">
                   <button onClick={() => setUndoConfirm(false)} disabled={undoing}
-                    className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors">
+                    className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors">
                     Abbrechen
                   </button>
                   <button onClick={undoCompletion} disabled={undoing}
@@ -287,7 +287,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               alle <span className="font-semibold text-white">{series.events.length} zugehörigen Events</span> (inkl.
               Anmeldungen, Turniere &amp; Matches) werden unwiderruflich gelöscht.
             </p>
-            {isModerator && <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3">
+            {isModerator && <div className="space-y-2 rounded-lg border border-line bg-black/20 p-3">
               <p className="text-[11px] text-gray-500">
                 Bereits vergebene Belohnungen aus abgeschlossenen Events dieser Reihe:
               </p>
@@ -318,7 +318,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(false)}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors"
+                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors"
               >
                 Abbrechen
               </button>
@@ -336,8 +336,8 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
       )}
 
       {showGenerateModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm rounded-xl border border-white/[0.08] bg-gray-900 p-4 space-y-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-xl border border-line bg-gray-900 p-4 space-y-3">
             <p className="text-sm font-semibold text-white flex items-center gap-1.5">
               <CalendarPlus className="w-4 h-4 text-teal-300" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
             </p>
@@ -356,7 +356,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <button
                 onClick={() => setShowGenerateModal(false)}
                 disabled={generatingNext}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors disabled:opacity-50"
+                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors disabled:opacity-50"
               >
                 Abbrechen
               </button>
@@ -374,11 +374,11 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
       {/* ── Speicherleiste: erscheint bei ungespeicherten Änderungen ── */}
       {settingsDirty && (
         <div className="sticky bottom-20 lg:bottom-4 z-30">
-          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-card">
             <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
             <span className="flex-1 min-w-0 truncate text-sm text-gray-200">Ungespeicherte Änderungen an der Reihe</span>
             <button type="button" onClick={discardSettings} disabled={saving}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-50">
+              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-line disabled:opacity-50">
               Verwerfen
             </button>
             <button type="button" onClick={saveSettings} disabled={saving}

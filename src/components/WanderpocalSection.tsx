@@ -89,7 +89,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
 
       {/* Win statistics table */}
       {userStats.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] overflow-hidden">
+        <div className="rounded-2xl border border-line bg-surface-2 overflow-hidden">
           {[
             { label: "Kategorien", rows: categoryStats },
             { label: "Genres", rows: genreStats },
@@ -97,7 +97,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
             .filter((g) => g.rows.length > 0)
             .map((group) => (
               <div key={group.label}>
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-600 uppercase tracking-wider border-b border-white/[0.04]">
+                <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-600 uppercase tracking-wider border-b border-line">
                   {group.label}
                 </div>
                 {group.rows
@@ -113,7 +113,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
                       <div
                         key={stat.id}
                         className={`flex items-center gap-3 px-3 py-2.5 text-sm ${
-                          i < group.rows.length - 1 ? "border-b border-white/[0.04]" : ""
+                          i < group.rows.length - 1 ? "border-b border-line" : ""
                         }`}
                       >
                         <div className="w-5 h-5 flex items-center justify-center shrink-0">

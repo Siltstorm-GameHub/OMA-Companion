@@ -68,7 +68,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
       {shown.length === 0 && (
         <p className="text-xs text-gray-600">Keine laufenden oder kommenden Zyklen — lege unten den nächsten Termin an.</p>
       )}
-      <div className="rounded-xl overflow-hidden border border-white/[0.06] divide-y divide-white/[0.05]">
+      <div className="rounded-xl overflow-hidden border border-line divide-y divide-line">
         {shown.map(ev => {
           const resolved = resolveEventGoal({ format: ev.format, statConfigJson: ev.statConfigJson, series: { tournamentTemplateJson } });
           const state = parseGoalState(ev.goalStateJson);
@@ -128,7 +128,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
       )}
     </div>
 
-    <div className="space-y-2 pt-4 border-t border-white/[0.06]">
+    <div className="space-y-2 pt-4 border-t border-line">
       <p className="text-sm font-semibold text-gray-200">🗓️ Ziele im Voraus planen</p>
       <GoalPlanEditor goalLimits={goalLimits} key={JSON.stringify(goalPlan)} seriesId={seriesId} initialPlan={goalPlan} goalFields={planFields} disabled={disabled} />
     </div>

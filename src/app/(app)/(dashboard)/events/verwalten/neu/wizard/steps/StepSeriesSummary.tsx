@@ -24,7 +24,7 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
   return (
     <div className="space-y-4">
       {seasonPrefill && (
-        <div className={`rounded-xl p-4 border text-sm space-y-1.5 ${changes.length > 0 ? "border-amber-500/30 bg-amber-500/[0.05]" : "border-white/8 bg-white/2"}`}>
+        <div className={`rounded-xl p-4 border text-sm space-y-1.5 ${changes.length > 0 ? "border-amber-500/30 bg-amber-500/[0.05]" : "border-line bg-surface-2"}`}>
           <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-amber-300">
             Gegenüber „{seasonPrefill.oldSeriesName}“ {changes.length > 0 ? `geändert (${changes.length})` : "unverändert"}
           </p>
@@ -63,7 +63,7 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
           {seriesSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === seriesSquadId)?.name}</p>}
         </div>
       </div>
-      <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
+      <div className="rounded-xl p-4 border border-line bg-surface-2 text-sm space-y-1.5 text-gray-400">
         <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Standard-Belohnungen</p>
         <p>✅ Teilnahme: {participationCoins} Münzen{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
         {placements.map(p => (
