@@ -15,7 +15,7 @@ import { prisma } from "@/lib/prisma";
 import { publishEvent } from "@/lib/event-publish";
 import { getCommunityLimits, type CommunityLimitsConfig } from "@/lib/community-event-limits";
 import { createNotification } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { sendPushForType } from "@/lib/push";
 import { checkCommunityGoal } from "@/lib/community-goal-milestones";
 
 export const APPROVAL_PENDING = "pending";
@@ -120,7 +120,7 @@ async function notifyCreator(userId: string | null, title: string, body: string,
   if (!userId) return;
   await Promise.allSettled([
     createNotification(userId, { type: "admin", title, body, url }),
-    sendPushToUsers([userId], { title, body, url }),
+    sendPushForType([userId], "admin", { title, body, url }),
   ]);
 }
 

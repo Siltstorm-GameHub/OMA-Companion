@@ -94,7 +94,8 @@ export async function rollbackResolvedPredictions(eventId: string) {
   for (const prediction of alreadyResolved) {
     const txns = [];
 
-    if (prediction.correct && prediction.coinsAwarded > 0) {
+    // Ausgezahlt (richtig) oder erstattet (correct null) — beides zurücknehmen
+    if (prediction.coinsAwarded > 0) {
       txns.push(
         prisma.user.update({
           where: { id: prediction.userId },
@@ -104,7 +105,7 @@ export async function rollbackResolvedPredictions(eventId: string) {
           data: {
             userId: prediction.userId,
             amount: -prediction.coinsAwarded,
-            reason: "🎯 Korrektur: Sieger wurde neu ermittelt — Auszahlung zurückgebucht",
+            reason: prediction.correct ? "🎯 Korrektur: Sieger wurde neu ermittelt — Auszahlung zurückgebucht" : "🎯 Korrektur: Erstattung zurückgebucht (wird neu ausgewertet)",
           },
         })
       );
@@ -153,26 +154,98 @@ function planResolution(
   return { winnerIds, payouts };
 }
 
-export async function resolveEventPredictions(eventId: string, winnerUserIds: string[] | string | null) {
+type PredictionRow = { id: string; userId: string; wager: number; predictedUserId: string };
+
+/** Meldung zum Tipp (Regel "prediction_settled"): mit Eventname und Link zur Eventseite. */
+function notifySettled(userId: string, eventId: string, eventTitle: string, headline: string, detail: string) {
+  dispatchNotification("prediction_settled", {
+    users: [userId],
+    placeholders: { "{eventName}": eventTitle, "{headline}": headline, "{detail}": detail },
+    urlOverride: `/tournament/${eventId}`, skipDiscordChannel: true,
+  }).catch(() => {});
+}
+
+/** Einsatz zurückbuchen und den Tipp als erstattet markieren (resolved, correct = null, coinsAwarded = Einsatz). */
+async function refundPrediction(p: PredictionRow, reason: string) {
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: p.userId }, data: { points: { increment: p.wager } } }),
+    prisma.pointTransaction.create({ data: { userId: p.userId, amount: p.wager, reason: `🎯 Einsatz zurück: ${reason}` } }),
+    prisma.eventWinnerPrediction.update({
+      where: { id: p.id },
+      data: { resolved: true, correct: null, coinsAwarded: p.wager, streakSnapshotJson: null },
+    }),
+  ]);
+}
+
+/**
+ * Event wird gelöscht/abgesagt: offene Einsätze zurückbuchen, bevor die Tipps mit dem Event verschwinden.
+ * revert = true (Belohnungen werden mit zurückgebucht): auch schon ausgewertete Tipps zurückdrehen und erstatten.
+ */
+export async function refundPredictionsBeforeDelete(eventId: string, revert: boolean): Promise<number> {
+  if (revert) await rollbackResolvedPredictions(eventId);
+  const [open, event] = await Promise.all([
+    prisma.eventWinnerPrediction.findMany({ where: { eventId, resolved: false } }),
+    prisma.event.findUnique({ where: { id: eventId }, select: { title: true } }),
+  ]);
+  for (const p of open) {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: p.userId }, data: { points: { increment: p.wager } } }),
+      prisma.pointTransaction.create({ data: { userId: p.userId, amount: p.wager, reason: "🎯 Einsatz zurück: Event abgesagt" } }),
+    ]);
+    notifySettled(p.userId, eventId, event?.title ?? "Event", "Einsatz zurück", `Das Event wurde abgesagt. Deine ${p.wager} Münzen sind wieder auf deinem Konto.`);
+  }
+  return open.length;
+}
+
+/**
+ * Wertet alle Gesamtsieger-Vorhersagen aus (siehe Kommentar oben). Zusätzlich:
+ *  - kein Sieger (leer/null): niemand lag falsch — alle bekommen ihren Einsatz zurück
+ *  - playedUserIds: wer tatsächlich mitgespielt hat. Tipps auf andere (nie angemeldet, abgemeldet,
+ *    nicht ausgelost, "nicht da") sind ungültig: Einsatz zurück, sie zählen nicht zum Pott.
+ */
+export async function resolveEventPredictions(
+  eventId: string, winnerUserIds: string[] | string | null, opts: { playedUserIds?: Set<string> } = {},
+) {
   const winnerUserSet = toWinnerSet(winnerUserIds);
   const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
   if (allPredictions.length === 0) return;
 
   const event = await prisma.event.findUnique({
     where:  { id: eventId },
-    select: { hidden: true, series: { select: { hidden: true } } },
+    select: { title: true, hidden: true, series: { select: { hidden: true } } },
   });
   const notifyParticipants = !!event && !isEventHidden(event);
+  const title = event?.title ?? "Event";
 
   // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
   await rollbackResolvedPredictions(eventId);
+  const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
+
+  // ── Kein Sieger: alle Einsätze zurück ───────────────────────────────────────
+  if (winnerUserSet.size === 0) {
+    for (const p of predictions) {
+      await refundPrediction(p, "kein Sieger ermittelt");
+      if (notifyParticipants) notifySettled(p.userId, eventId, title, "Einsatz zurück", `Es gibt keinen Sieger. Deine ${p.wager} Münzen sind wieder auf deinem Konto.`);
+    }
+    return;
+  }
+
+  // ── Ungültige Tipps (auf jemanden, der nicht mitgespielt hat): Einsatz zurück ─
+  const played = opts.playedUserIds;
+  const invalid = played ? predictions.filter(p => !played.has(p.predictedUserId) && !winnerUserSet.has(p.predictedUserId)) : [];
+  const valid = predictions.filter(p => !invalid.includes(p));
+  for (const p of invalid) {
+    await refundPrediction(p, "getippter Spieler hat nicht mitgespielt");
+    if (notifyParticipants) notifySettled(p.userId, eventId, title, "Einsatz zurück", `Dein Tipp war ungültig, weil der Spieler nicht mitgespielt hat. Deine ${p.wager} Münzen sind zurück.`);
+  }
 
   // ── Schritt 2: frische Auflösung mit dem (neuen) Sieger ─────────────────────
-  const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
   // Richtig ist jeder Tipp auf einen der (ggf. gleichauf liegenden) Erstplatzierten
-  const { winnerIds, payouts } = planResolution(predictions, winnerUserSet);
+  const { winnerIds, payouts } = planResolution(valid, winnerUserSet);
+  const winnerNames = (await prisma.user.findMany({ where: { id: { in: [...winnerUserSet] } }, select: { username: true, name: true } }))
+    .map(u => u.username ?? u.name ?? "?").join(", ");
 
-  for (const prediction of predictions) {
+  for (const prediction of valid) {
     const correct = winnerIds.has(prediction.id);
     const streakSnapshot = await snapshotStreak(prediction.userId);
 
@@ -194,10 +267,7 @@ export async function resolveEventPredictions(eventId: string, winnerUserIds: st
         }),
       ]);
       if (notifyParticipants) {
-        dispatchNotification("prediction_result", {
-          users: [prediction.userId],
-          placeholders: { "{result}": `falsch — dein Einsatz von ${prediction.wager} Münzen ist verloren`, "{reward}": "0" },
-        }).catch(() => {});
+        notifySettled(prediction.userId, eventId, title, "leider falsch", `Gewonnen hat ${winnerNames}. Dein Einsatz von ${prediction.wager} Münzen ist verloren.`);
       }
       continue;
     }
@@ -237,10 +307,7 @@ export async function resolveEventPredictions(eventId: string, winnerUserIds: st
     ]);
 
     if (notifyParticipants) {
-      dispatchNotification("prediction_result", {
-        users: [prediction.userId],
-        placeholders: { "{result}": "richtig", "{reward}": String(payout) },
-      }).catch(() => {});
+      notifySettled(prediction.userId, eventId, title, "richtig!", payout > 0 ? `+${payout} Münzen aus dem Pott (Einsatz ${prediction.wager}).` : "Richtig getippt.");
     }
   }
 }

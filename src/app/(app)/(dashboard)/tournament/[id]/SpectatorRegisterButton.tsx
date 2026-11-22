@@ -1,16 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Eye, Check, Loader2 } from "@/components/icons";
 
 interface Props {
   eventId: string;
   isSpectator: boolean;
+  /** Belohnung fürs Zuschauen (wenn man beim Abschluss als anwesend markiert ist) */
+  reward?: { coins: number; rankPoints: number } | null;
 }
 
-export default function SpectatorRegisterButton({ eventId, isSpectator }: Props) {
+/** Als Zuschauer an-/abmelden — geht bis zum Abschluss der Spielphase (auch während das Event läuft). */
+export default function SpectatorRegisterButton({ eventId, isSpectator, reward }: Props) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(isSpectator);
+  const rewardText = reward && (reward.coins > 0 || reward.rankPoints > 0)
+    ? [reward.coins > 0 ? `+${reward.coins} Münzen` : null, reward.rankPoints > 0 ? `+${reward.rankPoints} Rangpunkte` : null].filter(Boolean).join(" · ")
+    : null;
 
   async function toggle() {
     setLoading(true);
@@ -22,7 +31,18 @@ export default function SpectatorRegisterButton({ eventId, isSpectator }: Props)
         headers: body ? { "Content-Type": "application/json" } : {},
         body,
       });
-      if (res.ok) setRegistered(r => !r);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        toast.error((e as { error?: string }).error ?? "Das hat nicht geklappt");
+        return;
+      }
+      setRegistered(r => !r);
+      toast.success(registered ? "Als Zuschauer abgemeldet" : "Du schaust zu", {
+        description: registered ? undefined : rewardText ? `${rewardText} fürs Zuschauen, wenn du dabei bist.` : undefined,
+      });
+      router.refresh();
+    } catch {
+      toast.error("Keine Verbindung", { description: "Versuch es gleich noch mal." });
     } finally {
       setLoading(false);
     }
@@ -33,6 +53,7 @@ export default function SpectatorRegisterButton({ eventId, isSpectator }: Props)
       <button
         onClick={toggle}
         disabled={loading}
+        title="Abmelden als Zuschauer"
         className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-400 transition-colors border border-white/[0.08] hover:border-red-500/30 px-3 py-1.5 rounded-xl"
       >
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-400" />}
@@ -49,6 +70,7 @@ export default function SpectatorRegisterButton({ eventId, isSpectator }: Props)
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
       Als Zuschauer anmelden
+      {rewardText && <span className="text-[11px] text-amber-300">{rewardText}</span>}
     </button>
   );
 }

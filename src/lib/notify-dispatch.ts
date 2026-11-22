@@ -12,6 +12,7 @@ import { sendDiscordMessage, sendDiscordDM, resolveChannelId, type DiscordEmbed 
 import { isEventHidden } from "@/lib/event-visibility";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
+import { EVENT_PERSONAL_RULES, defaultRule } from "@/lib/notification-rule-defaults";
 
 export interface DispatchOptions {
   /** Betroffene User (Empfänger für Push/In-App/Discord-DM). Leer = reine Kanal-Broadcast-Nachricht. */
@@ -31,23 +32,29 @@ export interface DispatchOptions {
   discordThumbnail?: string;
   /** Discord-Kanal-Post überspringen, z.B. wenn der Aufrufer bereits selbst eine (reichhaltigere) Ankündigung gepostet hat. */
   skipDiscordChannel?: boolean;
+  /** Ungelesene In-App-Meldung mit gleichem Titel und Link ersetzen statt eine weitere anzulegen
+   *  (z.B. "Dein Match ist bereit" je Turnierrunde) */
+  replaceUnread?: boolean;
 }
 
 // Ordnet jeden Regel-Key einem der bestehenden Präferenz-Typen zu
 // (steuert sowohl Push- als auch In-App-Filterung nach User-Opt-out).
+// "event_start" = Schalter "Neue Events" (Ankündigungen an alle), "event_personal" = Schalter
+// "Meine Events" (geht nur an Teilnehmer bzw. Verwalter des Events).
 const RULE_TYPE: Record<string, NotificationType> = {
   event_new:          "event_start",
-  event_reminder:     "event_start",
-  event_started:      "event_start",
-  event_poll_started: "event_start",
-  event_goal_milestone: "event_start",
-  event_goal_result:  "event_start",
-  event_ending_soon:  "event_start",
+  event_reminder:     "event_personal",
+  event_started:      "event_personal",
+  event_tournament_started: "event_personal",
+  event_poll_started: "event_personal",
+  event_goal_milestone: "event_personal",
+  event_goal_result:  "event_personal",
+  event_ending_soon:  "event_personal",
+  ...Object.fromEntries(EVENT_PERSONAL_RULES.map(r => [r.key, "event_personal" as NotificationType])),
   event_ended:        "event_result",
   quest_completed:    "quest",
   quest_new:          "quest",
-  prediction_result:  "coins",
-  match_ready:        "event_start",
+  match_ready:        "event_personal",
   battle_challenge:   "coins",
   battle_result:      "coins",
   clip_started:       "clip",
@@ -59,9 +66,10 @@ const RULE_TYPE: Record<string, NotificationType> = {
   server_revoked:     "server",
   birthday:           "admin",
   game_drop:          "game",
-  game_vote_open:     "event_start",
-  game_vote_result:   "event_start",
-  game_vote_rules:    "admin",
+  // Spielwahl: geht an Stammspieler, Angemeldete bzw. Verwalter → "Meine Events"
+  game_vote_open:     "event_personal",
+  game_vote_result:   "event_personal",
+  game_vote_rules:    "event_personal",
   game_new_cards:     "game",
 };
 
@@ -75,17 +83,38 @@ let _cache: Record<string, NotificationRule> | null = null;
 let _cacheTs = 0;
 const CACHE_TTL = 60_000;
 
+/** Alle Regeln, auch im Admin gelöschte (deleted = true) — die bleiben bewusst aus. */
 async function loadRules(): Promise<Record<string, NotificationRule>> {
   if (_cache && Date.now() - _cacheTs < CACHE_TTL) return _cache;
-  const rows = await prisma.notificationRule.findMany({ where: { deleted: false } });
+  const rows = await prisma.notificationRule.findMany();
   _cache = Object.fromEntries(rows.map((r) => [r.key, r]));
   _cacheTs = Date.now();
   return _cache;
 }
 
+/**
+ * Regel zu einem Schlüssel. Im Admin gelöscht → null (bewusst aus). Fehlt die Zeile ganz (z.B. neue
+ * Regel vor dem nächsten Seed-Lauf), gilt der eingebaute Standard (lib/notification-rule-defaults.ts) —
+ * statt stillschweigend gar nichts zu verschicken.
+ */
 export async function getNotificationRule(key: string): Promise<NotificationRule | null> {
   const rules = await loadRules();
-  return rules[key] ?? null;
+  const row = rules[key];
+  if (row) return row.deleted ? null : row;
+  const d = defaultRule(key);
+  if (!d) {
+    console.warn(`[notify] Regel "${key}" fehlt — nichts verschickt. Seed ausführen: npx tsx scripts/seed-notification-rules.ts`);
+    return null;
+  }
+  const now = new Date();
+  return {
+    key: d.key, label: d.label, description: d.description, category: d.category,
+    pushEnabled: d.pushEnabled, inAppEnabled: d.inAppEnabled, discordDmEnabled: d.discordDmEnabled,
+    discordChanEnabled: d.discordChanEnabled, discordChannelId: null, discordColor: null,
+    titleTemplate: d.titleTemplate, bodyTemplate: d.bodyTemplate, urlTemplate: d.urlTemplate ?? null,
+    reminderHoursBefore: d.reminderHoursBefore ?? null, isEventNotification: d.isEventNotification ?? false,
+    eventAudience: d.eventAudience ?? "all", deleted: false, createdAt: now, updatedAt: now,
+  } as NotificationRule;
 }
 
 export function invalidateNotificationRuleCache() {
@@ -106,7 +135,7 @@ async function dispatchPush(userIds: string[], type: NotificationType, payload: 
   if (eligible.length) await sendPushToUsers(eligible, payload);
 }
 
-async function dispatchDiscordDm(userIds: string[], embed: DiscordEmbed) {
+async function dispatchDiscordDm(userIds: string[], embed: DiscordEmbed, type?: NotificationType) {
   const users = await prisma.user.findMany({
     where:  { id: { in: userIds }, discordId: { not: null } },
     select: { discordId: true, notificationPrefs: true },
@@ -114,6 +143,8 @@ async function dispatchDiscordDm(userIds: string[], embed: DiscordEmbed) {
   await Promise.allSettled(
     users
       .filter((u) => JSON.parse(u.notificationPrefs || "{}").discordDm !== false)
+      // Ist die Art der Meldung abgeschaltet (z.B. "Meine Events"), auch keine Discord-DM
+      .filter((u) => !type || JSON.parse(u.notificationPrefs || "{}")[PREF_KEY[type]] !== false)
       .map((u) => sendDiscordDM(u.discordId!, embed)),
   );
 }
@@ -149,13 +180,18 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
       tasks.push(dispatchPush(opts.users, notifType, { title, body, url }));
     }
     if (rule.inAppEnabled) {
-      tasks.push(createNotificationForUsers(opts.users, { type: notifType, title, body, url }));
+      tasks.push((async () => {
+        if (opts.replaceUnread) {
+          await prisma.inAppNotification.deleteMany({ where: { userId: { in: opts.users }, read: false, title, url: url ?? null } });
+        }
+        await createNotificationForUsers(opts.users, { type: notifType, title, body, url });
+      })());
     }
     if (rule.discordDmEnabled) {
       tasks.push(dispatchDiscordDm(opts.users, {
         title, description: body, url, color: rule.discordColor ?? opts.discordColor ?? DISCORD_COLORS.default,
         ...(opts.discordThumbnail && { thumbnail: { url: opts.discordThumbnail } }),
-      }));
+      }, notifType));
     }
   }
 

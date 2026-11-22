@@ -100,3 +100,20 @@ export async function getEventPollWinners(
       names: p.answerType === "custom" ? p.ids : p.ids.map((id) => nameById.get(id) ?? "?"),
     }));
 }
+
+/**
+ * Umfragen eines Events (neu) starten — zum Ende der Spielphase bzw. per Widget-Knopf, Anker = jetzt.
+ * Noch unbenutzte Umfragen (keine Stimme, nicht ausgewertet) werden vorher verworfen und nach der
+ * aktuellen Einstellung neu angelegt: So gelten Änderungen an Frage, Belohnung oder Dauer, die nach dem
+ * Anlegen des Events gemacht wurden. Umfragen mit Stimmen bleiben unangetastet.
+ */
+export async function startPollsForEvent(eventId: string, pollsConfigJson: PollConfig[], anchor = new Date()) {
+  await discardUnusedPolls(eventId);
+  await createPollsForEvent(eventId, anchor, pollsConfigJson);
+}
+
+/** Unbenutzte Umfragen (keine Stimme, nicht ausgewertet) eines Events löschen — sie entstehen neu, wenn die Abstimmung startet. */
+export async function discardUnusedPolls(eventId: string): Promise<number> {
+  const r = await prisma.eventPoll.deleteMany({ where: { eventId, rewardsPaid: false, votes: { none: {} } } });
+  return r.count;
+}

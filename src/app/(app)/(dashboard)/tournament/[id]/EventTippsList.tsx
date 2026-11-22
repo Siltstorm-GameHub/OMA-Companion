@@ -46,7 +46,9 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
               <Avatar u={t.predictedUser} />
               <span className="text-xs text-white font-medium truncate">{uname(t.predictedUser)}</span>
             </Link>
-            {t.resolved && (
+            {/* Erstattet (kein Sieger / Spieler hat nicht mitgespielt) */}
+            {t.resolved && t.correct === null && <span className="text-[10px] text-gray-500 shrink-0">zurück</span>}
+            {t.resolved && t.correct !== null && (
               t.correct ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               ) : (

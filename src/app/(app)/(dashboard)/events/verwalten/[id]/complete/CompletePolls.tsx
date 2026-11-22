@@ -54,9 +54,10 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                 {isPollOnly && <span className="text-[10px] text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
               <p className="text-[10px] text-gray-600 -mt-1">
-                Diese Einzelumfrage stammt aus der alten, seriesweiten Umfrage-Konfiguration (nur noch bei Events/Reihen
-                vorhanden, die vor der Einführung der Mehrfach-Umfragen erstellt wurden). Neue Events nutzen ausschließlich
-                das Umfragen-Panel oben.
+                Diese Einzelumfrage stammt aus der alten Umfrage-Einstellung (Sieger wird hier von Hand gewählt). Sie läuft aus:
+                Speichere das Event bzw. die Reihe einmal im Reiter „Belohnungen“, dann wird sie zu einer normalen Abstimmung
+                nach dem Event (mit Stimmen in der App und automatischer Auswertung). Alternativ alle auf einmal umwandeln:
+                npx tsx scripts/convert-legacy-polls.ts --apply
               </p>
 
               {!isFinishedSummary && (

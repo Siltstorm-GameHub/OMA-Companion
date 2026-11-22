@@ -9,7 +9,7 @@ import { getEventEndedAt } from "@/lib/event-completion";
 import { checkInOpensAt, checkInState } from "@/lib/checkin";
 import { formatBerlinDateTime } from "@/lib/time";
 import { createNotification, PREF_KEY } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { sendPushForType } from "@/lib/push";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { sendDiscordMessage, deleteDiscordMessage } from "@/lib/discord-rest";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
@@ -555,7 +555,7 @@ async function filterByPref(userIds: string[]): Promise<string[]> {
 async function notifyUser(userId: string, title: string, body: string, url: string) {
   await Promise.allSettled([
     createNotification(userId, { type: "event_comment", title, body, url }),
-    sendPushToUsers([userId], { title, body, url }),
+    sendPushForType([userId], "event_comment", { title, body, url }),
   ]);
 }
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createNotificationForUsers } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { sendPushForType } from "@/lib/push";
 import { createCache, getCommunityLive } from "@/lib/overlay-state";
 import { memberSelect, toMembers, type WatchGroup, type WatchMember } from "@/lib/watch-together";
 import { freeSlots, isSessionActive, makeSlug, SESSION_MAX_AGE_MS, SESSION_MAX_MEMBERS } from "@/lib/watch-session-rules";
@@ -75,8 +75,8 @@ async function notifyInvites(hostUserId: string, userIds: string[]) {
   const hostName = host?.username ?? host?.name ?? "Ein Mitglied";
   const message = { title: "Einladung: Zusammen streamen", body: `${hostName} lädt dich ein, gemeinsam zu streamen – Zuschauer sehen eure Streams nebeneinander.`, url: LIVE_CONTROL_URL };
   await Promise.all([
-    createNotificationForUsers(userIds, { type: "event_start", ...message }),
-    sendPushToUsers(userIds, message).catch(() => {}),
+    createNotificationForUsers(userIds, { type: "event_personal", ...message }),
+    sendPushForType(userIds, "event_personal", message).catch(() => {}),
   ]);
 }
 

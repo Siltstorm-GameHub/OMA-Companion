@@ -1,16 +1,16 @@
 "use client";
-
 // Spielwahl eines Reihen-Termins (lib/game-vote): Mitglieder haken alle Kandidaten an, die sie spielen würden
-// (Zustimmungswahl, jederzeit änderbar). Die erste Stimme meldet als Mitspieler an. Mods stellen die
-// Kandidaten zusammen und geben nach der Wahl Spiel, Regeln und Format frei.
-
-import { useState } from "react";
+// (Zustimmungswahl, jederzeit änderbar). Mit der ersten Stimme kann man sich gleich als Mitspieler anmelden
+// ("Nur abstimmen" geht auch). Verwalter des Events stellen die Kandidaten zusammen und geben nach der Wahl
+// Spiel, Regeln und Format frei — ergibt die Wahl kein Spiel, legen sie es hier fest.
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import GameCover from "@/components/GameCover";
 import { Button } from "@/components/ui/Button";
 import { Check, Trash2, Trophy } from "@/components/icons";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import type { GameVoteView } from "@/lib/game-vote/service";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 
@@ -27,6 +27,14 @@ const REGISTRATION_TOAST: Record<string, string | null> = {
   closed: "Stimme gespeichert — die Anmeldung ist geschlossen",
 };
 
+const COUNTS_HIDDEN_TEXT: Record<string, string> = {
+  after_vote: "Zwischenstand nach deiner Stimme",
+  after_end: "Zwischenstand nach dem Ende",
+};
+
+/** Mehrere Häkchen kurz hintereinander werden gesammelt und einmal gespeichert. */
+const SAVE_DELAY_MS = 900;
+
 async function call(url: string, init: RequestInit) {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json" } });
   const data = await res.json().catch(() => ({}));
@@ -35,45 +43,71 @@ async function call(url: string, init: RequestInit) {
 }
 
 export default function GameVoteSection({
-  eventId, view, isMod, addable, rules, format,
+  eventId, view, canManage, addable, rules, format, isRegistered, isSpectator = false,
 }: {
   eventId: string;
   view: GameVoteView;
-  isMod: boolean;
-  /** Spiele, die Mods noch hinzufügen können */
+  /** Darf das Event verwalten (Mods, Ersteller, Reihen-Ersteller, Squad-Captains) */
+  canManage: boolean;
+  /** Spiele, die Verwalter hinzufügen bzw. (ohne Sieger) festlegen können */
   addable: { id: string; name: string }[];
   /** Aktuelle Regeln/Format des Events (Vorbelegung für die Freigabe) */
   rules: string | null;
   format: string | null;
+  /** Schon als Mitspieler angemeldet? Dann entfällt die Frage "mitspielen oder nur abstimmen" */
+  isRegistered: boolean;
+  /** Als Zuschauer angemeldet: "auch als Mitspieler anmelden" ist dann nicht vorausgewählt */
+  isSpectator?: boolean;
 }) {
   const router = useRouter();
+  const { confirm, ConfirmDialogElement } = useConfirm();
   const [mine, setMine] = useState<Set<string>>(new Set(view.myCandidateIds));
   const [saving, setSaving] = useState(false);
   const [addId, setAddId] = useState("");
+  // Erste Stimme: gleich als Mitspieler anmelden? (Standard ja — wie bisher)
+  const firstVote = view.myCandidateIds.length === 0;
+  // Zuschauer werden nicht aus Versehen zu Spielern
+  const [join, setJoin] = useState(!isSpectator);
+  // Häkchen gesetzt, aber noch nicht gespeichert (gesammelt, siehe SAVE_DELAY_MS)
+  const [pending, setPending] = useState(false);
+  const savedRef = useRef<Set<string>>(new Set(view.myCandidateIds));
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winner = view.candidates.find(c => c.gameId === view.winnerGameId) ?? null;
   const open = view.status === "open";
+  const noWinner = view.status === "closed" && !view.winnerGameId;
 
-  async function toggle(candidateId: string) {
-    if (!open || !view.canVote || saving) return;
-    const next = new Set(mine);
-    if (next.has(candidateId)) next.delete(candidateId);
-    else next.add(candidateId);
-    const prev = mine;
-    setMine(next);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  async function save(next: Set<string>) {
     setSaving(true);
     try {
-      const data = await call(`/api/events/${eventId}/game-vote`, { method: "PUT", body: JSON.stringify({ candidateIds: [...next] }) });
+      const data = await call(`/api/events/${eventId}/game-vote`, {
+        method: "PUT", body: JSON.stringify({ candidateIds: [...next], join: isRegistered || join }),
+      });
+      savedRef.current = new Set(next);
       toast.success(REGISTRATION_TOAST[data.registration] ?? "Stimme gespeichert");
       router.refresh();
     } catch (err) {
-      setMine(prev);
+      setMine(new Set(savedRef.current));
       toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
     } finally {
       setSaving(false);
+      setPending(false);
     }
   }
 
-  async function modAction(fn: () => Promise<unknown>, ok: string) {
+  function toggle(candidateId: string) {
+    if (!open || !view.canVote) return;
+    const next = new Set(mine);
+    if (next.has(candidateId)) next.delete(candidateId);
+    else next.add(candidateId);
+    setMine(next);
+    setPending(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => save(next), SAVE_DELAY_MS);
+  }
+
+  async function manageAction(fn: () => Promise<unknown>, ok: string) {
     setSaving(true);
     try {
       await fn();
@@ -86,33 +120,70 @@ export default function GameVoteSection({
     }
   }
 
+  async function removeCandidate(c: GameVoteView["candidates"][number]) {
+    const votes = c.approvals;
+    if (!(await confirm({
+      title: `${c.name} entfernen?`,
+      // Bei ausgeblendetem Zwischenstand kennt die Seite die Zahl nicht — dann ohne Zahl
+      description: view.countsHidden
+        ? "Stimmen dafür fallen damit weg. Wer dafür gestimmt hat, bekommt eine Meldung."
+        : votes > 0
+          ? `${votes} ${votes === 1 ? "Stimme fällt" : "Stimmen fallen"} damit weg. Wer dafür gestimmt hat, bekommt eine Meldung.`
+          : "Das Spiel steht dann nicht mehr zur Wahl.",
+      confirmLabel: "Entfernen",
+      variant: "danger",
+    }))) return;
+    manageAction(() => call(`/api/admin/game-votes/${view.id}/candidates?candidateId=${c.id}`, { method: "DELETE" }), "Kandidat entfernt");
+  }
+
   return (
     <section id="spielwahl" className="glass rounded-2xl p-5 mb-5 space-y-4 scroll-mt-20">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-base font-bold text-white">🗳️ Spielwahl</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {view.status === "prepared" && <>Die Abstimmung startet am {fmt(view.opensAt)} und läuft bis {fmt(view.closesAt)}.</>}
-            {view.status === "open" && <>Läuft bis {fmt(view.closesAt)} · {view.voterCount} {view.voterCount === 1 ? "Stimme" : "Stimmen"} bisher</>}
+            {view.status === "prepared" && <>Die Abstimmung startet am {fmt(view.opensAt)} und läuft bis {fmt(view.closesAt)}. Stammspieler bekommen dann eine Meldung.</>}
+            {view.status === "open" && <>Läuft bis {fmt(view.closesAt)} · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>}
             {view.status === "closed" && (winner
-              ? <>Gewählt: <span className="text-white font-semibold">{winner.name}</span> · {view.voterCount} haben abgestimmt</>
-              : <>Abstimmung beendet — das Team trägt das Spiel ein.</>)}
+              ? <>Gewählt: <span className="text-white font-semibold">{winner.name}</span> · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>
+              : <>Abstimmung beendet — die Wahl hat kein Spiel ergeben. Der Veranstalter legt es fest.</>)}
           </p>
+          {view.status === "closed" && view.decidedByLabel && winner && (
+            <p className="text-[11px] text-gray-500 mt-0.5">Entschieden durch: {view.decidedByLabel}</p>
+          )}
         </div>
         {view.status === "closed" && view.rulesPending && (
-          <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-200">Regeln folgen</span>
+          <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-200">
+            {noWinner ? "Spiel folgt" : "Regeln folgen"}
+          </span>
         )}
       </div>
 
-      {open && (
-        <p className="text-xs text-gray-400">
-          {view.canVote
-            ? <>Hak <span className="text-white">alle Spiele</span> an, die du spielen würdest — du kannst deine Auswahl bis zum Ende ändern. Deine erste Stimme meldet dich als Mitspieler an.</>
-            : view.squadName
-              ? <>Abstimmen dürfen nur Mitglieder von {view.squadName}.</>
-              : <>Melde dich an, um abzustimmen.</>}
-          {view.voteCoins > 0 && view.canVote && <> Fürs Abstimmen gibt es <span className="text-amber-300">+{view.voteCoins} Münzen</span>, wenn du zum Ende noch angemeldet bist.</>}
+      {view.status === "prepared" && canManage && (
+        <p className="text-[11px] text-sky-200/90 rounded-lg border border-sky-400/20 bg-sky-500/5 px-3 py-2">
+          Noch nicht gestartet: Du kannst die Kandidaten bis dahin tauschen (unten hinzufügen bzw. 🗑 entfernen).
         </p>
+      )}
+
+      {open && (
+        <div className="text-xs text-gray-400 space-y-1.5">
+          <p>
+            {view.canVote
+              ? <>Hak <span className="text-white">alle Spiele</span> an, die du spielen würdest — du kannst deine Auswahl bis zum Ende ändern.</>
+              : view.squadName
+                ? <>Abstimmen dürfen nur Mitglieder von {view.squadName}.</>
+                : <>Melde dich an, um abzustimmen.</>}
+            {view.voteCoins > 0 && view.canVote && <> Fürs Abstimmen gibt es <span className="text-amber-300">+{view.voteCoins} Münzen</span>, wenn du zum Ende als Mitspieler angemeldet bist.</>}
+          </p>
+          {view.canVote && firstVote && !isRegistered && (
+            <label className="flex items-center gap-2 cursor-pointer select-none text-gray-300">
+              <input type="checkbox" checked={join} onChange={e => setJoin(e.target.checked)} className="rounded" />
+              Mit meiner Stimme auch als Mitspieler anmelden
+              {!join && <span className="text-gray-500">(nur abstimmen{isSpectator ? ", du bleibst Zuschauer" : ""})</span>}
+            </label>
+          )}
+          {view.countsHidden && <p className="text-gray-500">{COUNTS_HIDDEN_TEXT[view.showCounts] ?? "Zwischenstand später"}.</p>}
+        </div>
       )}
 
       {view.buyHint && winner && (
@@ -152,19 +223,18 @@ export default function GameVoteSection({
               </div>
               <div className="flex flex-col items-end justify-between gap-1 shrink-0">
                 {open && view.canVote ? (
-                  <button type="button" onClick={() => toggle(c.id)} disabled={saving} aria-pressed={picked}
-                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                  <button type="button" onClick={() => toggle(c.id)} aria-pressed={picked}
+                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                       picked ? "bg-teal-500 text-white" : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
                     }`}>
-                    <Check className="w-3.5 h-3.5" /> {picked ? "Dabei" : "Bin dabei"}
+                    {picked && <Check className="w-3.5 h-3.5" />} Würde ich spielen
                   </button>
                 ) : <span />}
-                {view.status !== "prepared" && (
+                {view.status !== "prepared" && !view.countsHidden && (
                   <span className="text-[11px] text-gray-500">{c.approvals} {c.approvals === 1 ? "Stimme" : "Stimmen"}</span>
                 )}
-                {isMod && view.status !== "closed" && (
-                  <button type="button" title="Kandidat entfernen" disabled={saving}
-                    onClick={() => modAction(() => call(`/api/admin/game-votes/${view.id}/candidates?candidateId=${c.id}`, { method: "DELETE" }), "Kandidat entfernt")}
+                {canManage && view.status !== "closed" && (
+                  <button type="button" title="Kandidat entfernen" disabled={saving} onClick={() => removeCandidate(c)}
                     className="p-1 rounded text-gray-600 hover:text-rose-300 disabled:opacity-40">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -175,34 +245,46 @@ export default function GameVoteSection({
         })}
       </div>
 
-      {isMod && view.status !== "closed" && (
+      {open && view.canVote && (pending || saving) && (
+        <p className="text-[11px] text-gray-500">Wird gespeichert …</p>
+      )}
+
+      {canManage && view.status !== "closed" && (
         <div className="flex gap-2 items-center flex-wrap border-t border-white/[0.06] pt-3">
-          <span className="text-[11px] text-gray-500">Mod:</span>
+          <span className="text-[11px] text-gray-500">Verwalten:</span>
           <select value={addId} onChange={e => setAddId(e.target.value)}
             className="flex-1 min-w-[180px] bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white">
             <option value="">Spiel aus der Spieleliste hinzufügen …</option>
             {addable.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
           <Button size="sm" variant="ghost" disabled={!addId || saving}
-            onClick={() => modAction(() => call(`/api/admin/game-votes/${view.id}/candidates`, { method: "POST", body: JSON.stringify({ gameId: addId }) }).then(() => setAddId("")), "Kandidat hinzugefügt")}>
+            onClick={() => manageAction(() => call(`/api/admin/game-votes/${view.id}/candidates`, { method: "POST", body: JSON.stringify({ gameId: addId }) }).then(() => setAddId("")), "Kandidat hinzugefügt")}>
             Hinzufügen
           </Button>
         </div>
       )}
 
-      {isMod && view.status === "closed" && view.rulesPending && (
-        <RulesForm eventId={eventId} view={view} rules={rules} format={format} />
+      {canManage && view.status === "closed" && view.rulesPending && (
+        <RulesForm eventId={eventId} view={view} rules={rules} format={format} allGames={noWinner ? addable : null} />
       )}
+      {ConfirmDialogElement}
     </section>
   );
 }
 
-function RulesForm({ eventId, view, rules, format }: { eventId: string; view: GameVoteView; rules: string | null; format: string | null }) {
+function RulesForm({ eventId, view, rules, format, allGames }: {
+  eventId: string; view: GameVoteView; rules: string | null; format: string | null;
+  /** Ohne Sieger: alle passenden Spiele der Spieleliste zur Auswahl */
+  allGames: { id: string; name: string }[] | null;
+}) {
   const router = useRouter();
   const [gameId, setGameId] = useState(view.winnerGameId ?? view.candidates.find(c => c.place === 1)?.gameId ?? "");
   const [text, setText] = useState(rules ?? "");
   const [fmtValue, setFmtValue] = useState(format ?? "");
   const [saving, setSaving] = useState(false);
+  // Knapper Ausgang: Platz 1 und 2 gleich viele Stimmen → bewusst prüfen
+  const ranked = view.candidates.filter(c => c.place !== null).sort((a, b) => (a.place ?? 99) - (b.place ?? 99));
+  const close = ranked.length > 1 && ranked[0].approvals === ranked[1].approvals;
 
   async function save() {
     setSaving(true);
@@ -210,7 +292,7 @@ function RulesForm({ eventId, view, rules, format }: { eventId: string; view: Ga
       await call(`/api/events/${eventId}/game-vote/rules`, {
         method: "POST", body: JSON.stringify({ gameId, rules: text, ...(format ? { format: fmtValue } : {}) }),
       });
-      toast.success("Spiel und Regeln freigegeben");
+      toast.success(allGames ? "Spiel festgelegt und Regeln freigegeben" : "Spiel und Regeln freigegeben");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Freigabe fehlgeschlagen");
@@ -222,15 +304,27 @@ function RulesForm({ eventId, view, rules, format }: { eventId: string; view: Ga
   const input = "w-full bg-white/[0.04] border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
   return (
     <div className="border-t border-white/[0.06] pt-3 space-y-2.5">
-      <p className="text-sm font-semibold text-white">Regeln festlegen</p>
+      <p className="text-sm font-semibold text-white">{allGames ? "Spiel festlegen" : "Regeln festlegen"}</p>
       <p className="text-[11px] text-gray-500">
-        Vorbelegt mit den Regeln, die diese Reihe zuletzt für das Spiel hatte. Erst nach der Freigabe kann ausgelost werden;
-        die Reihe merkt sich Regeln{format ? " und Format" : ""} für das nächste Mal.
+        {allGames
+          ? "Die Wahl hat kein Spiel ergeben. Such eins aus der Spieleliste aus. "
+          : "Vorbelegt mit den Regeln, die diese Reihe zuletzt für das Spiel hatte. "}
+        Erst nach der Freigabe kann ausgelost werden; die Reihe merkt sich Regeln{format ? " und Format" : ""} für das nächste Mal.
       </p>
+      {!allGames && view.decidedByLabel && (
+        <p className={`text-[11px] rounded-lg px-2.5 py-1.5 ${close || view.decidedBy === "no_votes" ? "bg-amber-500/10 text-amber-200" : "bg-white/[0.03] text-gray-400"}`}>
+          Ergebnis: {view.decidedByLabel}.{close ? " Knapp — du kannst auch ein anderes Spiel nehmen." : ""}
+        </p>
+      )}
       <label className="block text-xs text-gray-400 space-y-1">
         <span>Spiel</span>
         <select value={gameId} onChange={e => setGameId(e.target.value)} className={input}>
-          {view.candidates.filter(c => c.place !== null).map(c => (
+          {allGames ? (
+            <>
+              <option value="">Bitte wählen …</option>
+              {allGames.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </>
+          ) : ranked.map(c => (
             <option key={c.gameId} value={c.gameId}>{c.place}. {c.name} ({c.approvals} Stimmen)</option>
           ))}
         </select>
@@ -247,7 +341,7 @@ function RulesForm({ eventId, view, rules, format }: { eventId: string; view: Ga
         <span>Regelwerk</span>
         <textarea value={text} onChange={e => setText(e.target.value)} rows={5} className={input} placeholder="Regeln für dieses Spiel …" />
       </label>
-      <Button size="sm" onClick={save} disabled={saving || !gameId}>Spiel und Regeln freigeben</Button>
+      <Button size="sm" onClick={save} disabled={saving || !gameId}>{allGames ? "Spiel festlegen und freigeben" : "Spiel und Regeln freigeben"}</Button>
     </div>
   );
 }

@@ -32,6 +32,8 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
         teams: { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
         blocksTournament: { select: { groupRounds: true, finalRounds: true, advancePerGroup: true, stage: true } },
         blocksChallenge: { select: { metric: true, goal: true, minContribution: true, rewardCoins: true, rewardRankPoints: true, finalizedAt: true } },
+        // Spielwahl: Stand für Statuszeile und nächsten Schritt (useEventEdit)
+        gameVote: { select: { status: true, opensAt: true, closesAt: true, winnerGameId: true, ballots: { select: { userId: true }, distinct: ["userId"] } } },
       },
     }),
     // Nur die Angemeldeten (Spieler und Zuschauer) — weitere Mitglieder findet die Suche im Reiter

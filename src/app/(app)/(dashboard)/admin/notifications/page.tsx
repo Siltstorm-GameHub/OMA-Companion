@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import NotificationRulesPanel from "./NotificationRulesPanel";
 import BroadcastPanel from "./BroadcastPanel";
+import { ensureDefaultNotificationRules } from "@/lib/notification-rules-ensure";
 
 interface DiscordEmoji { id: string; name: string; animated: boolean }
 
@@ -22,6 +23,9 @@ async function fetchGuildEmojis(): Promise<DiscordEmoji[]> {
 
 export default async function AdminNotificationsPage() {
   await requireRole("admin");
+
+  // Fehlende Standard-Regeln (z.B. neue Event-Meldungen vor dem nächsten Seed) anlegen und anzeigen
+  const addedRules = await ensureDefaultNotificationRules().catch(() => [] as string[]);
 
   const [rows, emojis] = await Promise.all([
     prisma.notificationRule.findMany({
@@ -44,6 +48,15 @@ export default async function AdminNotificationsPage() {
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🔔 Benachrichtigungs-Regeln
         </h2>
+        {addedRules.length > 0 && (
+          <div className="mb-4 rounded-xl border border-teal-500/25 bg-teal-500/5 px-4 py-3 text-sm text-teal-100">
+            <p className="font-semibold">Neue Regeln angelegt ({addedRules.length})</p>
+            <p className="text-xs text-teal-100/80 mt-0.5">
+              Diese Meldungen gab es schon, sie liefen aber an den Regeln vorbei. Jetzt kannst du sie hier
+              abschalten, umtexten und Kanäle wählen: {addedRules.join(", ")}.
+            </p>
+          </div>
+        )}
         <NotificationRulesPanel initial={rules} newsChannelId={newsChannelId} emojis={emojis} />
       </section>
 

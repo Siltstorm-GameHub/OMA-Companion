@@ -5,8 +5,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { createNotification } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 /** Auf die Warteliste — nur sinnvoll, wenn das Event voll ist (prüft der Aufrufer über die Anmeldung). */
 export async function joinWaitlist(userId: string, eventId: string): Promise<{ position: number }> {
@@ -51,13 +50,11 @@ export async function promoteFromWaitlist(eventId: string): Promise<number> {
     await prisma.eventWaitlistEntry.deleteMany({ where: { id: entry.id } });
     if (r.result === "already") continue;
     promoted++;
-    const title = "Du bist nachgerückt";
-    const body = `Ein Platz bei „${event.title}“ ist frei geworden. Du bist jetzt angemeldet.`;
-    const url = `/tournament/${eventId}`;
-    await Promise.allSettled([
-      createNotification(entry.userId, { type: "event_start", title, body, url }),
-      sendPushToUsers([entry.userId], { title, body, url }),
-    ]);
+    // Regel "waitlist_promoted" (Admin → Benachrichtigungen)
+    await dispatchNotification("waitlist_promoted", {
+      users: [entry.userId], placeholders: { "{eventName}": event.title },
+      urlOverride: `/tournament/${eventId}`, skipDiscordChannel: true,
+    }).catch(() => {});
   }
   return promoted;
 }

@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   buyHint, costRankOf, fitLabel, fitScore, fitsSeries, parseGameVoteConfig, rankCandidates, sanitizeGameVoteConfig,
-  seriesPlatformKeys, voteWindow, DEFAULT_GAME_VOTE_CONFIG, type TallyCandidate,
+  seriesPlatformKeys, voteWindow, DEFAULT_GAME_VOTE_CONFIG, type TallyCandidate, countsVisible, decidedByOf,
 } from "./rules";
 
 const H = 3_600_000;
@@ -99,5 +99,36 @@ describe("Spielwahl: Auswertung", () => {
   test("nicht mehr wählbare Spiele bekommen keinen Platz", () => {
     const r = rankCandidates([c("weg", { approvals: 9, eligible: false }), c("a", { approvals: 1 }), c("b")]);
     assert.deepEqual(r, [{ id: "a", place: 1 }, { id: "b", place: 2 }, { id: "weg", place: null }]);
+  });
+});
+
+describe("Wie die Wahl entschieden wurde", () => {
+  const c = (id: string, approvals: number, votersIn = 0, costRank = 2, fitScore = 0): TallyCandidate =>
+    ({ id, approvals, votersIn, costRank, fitScore, eligible: true });
+  test("Stimmen, dann Gleichstand-Regeln in fester Reihenfolge", () => {
+    assert.equal(decidedByOf([c("a", 5), c("b", 3)]), "votes");
+    assert.equal(decidedByOf([c("a", 4, 3), c("b", 4, 1)]), "owned");
+    assert.equal(decidedByOf([c("a", 4, 1, 0), c("b", 4, 1, 2)]), "cost");
+    assert.equal(decidedByOf([c("a", 4, 1, 2, 9), c("b", 4, 1, 2, 5)]), "fit");
+    assert.equal(decidedByOf([c("a", 4, 1, 2, 5), c("b", 4, 1, 2, 5)]), "lot");
+  });
+  test("niemand hat abgestimmt bzw. kein Kandidat", () => {
+    assert.equal(decidedByOf([c("a", 0), c("b", 0)]), "no_votes");
+    assert.equal(decidedByOf([]), "none");
+    assert.equal(decidedByOf([c("a", 2)]), "votes");
+  });
+});
+
+describe("Zwischenstand", () => {
+  test("je nach Reihen-Einstellung", () => {
+    assert.equal(countsVisible("always", "open", false), true);
+    assert.equal(countsVisible("after_vote", "open", false), false);
+    assert.equal(countsVisible("after_vote", "open", true), true);
+    assert.equal(countsVisible("after_end", "open", true), false);
+    assert.equal(countsVisible("after_end", "closed", false), true);
+  });
+  test("Einstellung wird bereinigt", () => {
+    assert.equal(sanitizeGameVoteConfig({ showCounts: "after_end" }).showCounts, "after_end");
+    assert.equal(sanitizeGameVoteConfig({ showCounts: "quatsch" }).showCounts, "always");
   });
 });

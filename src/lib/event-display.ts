@@ -20,7 +20,7 @@ const toDate = (d: DateLike) => (d instanceof Date ? d : new Date(d));
  * Was die Kachel als EINEN Zustand zeigt. "open" ist der Normalfall und bekommt bewusst kein
  * Signal — hervorgehoben wird nur, was davon abweicht.
  */
-export type EventPhase = "live" | "period" | "poll" | "gamevote" | "full" | "open" | "finished";
+export type EventPhase = "live" | "period" | "poll" | "gamevote" | "full" | "open" | "finished" | "drawn";
 
 /** Farbrolle: live = Rot, teal = Mitmachen/Zeitraum, violet = Abstimmung, amber = Knappheit, muted = neutral */
 export type EventTone = "live" | "teal" | "violet" | "amber" | "muted";
@@ -45,10 +45,21 @@ export interface EventPhaseInfo {
   progress?: number;
 }
 
+/**
+ * Läuft das Event wirklich? status "active" allein reicht nicht: ein Turnier, das vor dem Start
+ * ausgelost wurde, steht schon auf "active" (lib/tournaments/draw.ts), hat aber noch nicht begonnen.
+ */
+export function isEventRunning(ev: { status: string; startAt: DateLike; endAt?: DateLike | null }, now: DateLike = Date.now()): boolean {
+  if (ev.status !== "active") return false;
+  return toDate(ev.startAt).getTime() <= toDate(now).getTime();
+}
+
 export function eventPhase(ev: EventPhaseInput, now: DateLike = Date.now()): EventPhaseInfo {
   if (ev.status === "finished") return { phase: "finished", label: "Beendet", tone: "muted" };
   if (ev.status === "umfrage") return { phase: "poll", label: "Abstimmung läuft", tone: "violet" };
   if (ev.status === "active") {
+    // Vor dem Start ausgelost: noch nicht "Live"
+    if (!isEventRunning(ev, now)) return { phase: "drawn", label: "Ausgelost", tone: "amber" };
     if (ev.endAt && isPeriodEvent({ startAt: ev.startAt, endAt: ev.endAt })) {
       const p = periodInfo({ startAt: ev.startAt, endAt: ev.endAt }, now);
       return { phase: "period", label: p.remainingLabel, tone: "teal", progress: p.progress };

@@ -89,6 +89,10 @@ export interface Props {
   pendingSubmissions?: number;
   /** Spiele ohne Ergebnis (open) bzw. nur vorläufig eingetragen (provisional) */
   matchCheck?: { open: number; provisional: number } | null;
+  /** Sieger-Tipps zu diesem Event: Anzahl, Pott, schon einmal ausgewertet? */
+  predictionInfo?: { count: number; pot: number; resolved: boolean } | null;
+  /** Zuschauer: Aktivität beim Event (z.B. ["Absprachen", "abgestimmt"]) — Hinweis bei der Anwesenheit */
+  spectatorActivity?: Record<string, string[]>;
   /** Protokoll der Belohnungs-Buchungen dieses Events (neueste zuerst) */
   rewardHistory?: RewardHistoryEntry[] | null;
   /** Mitglied: angezeigte Beträge sind auf die Obergrenzen gekürzt (so wird auch ausgezahlt) */

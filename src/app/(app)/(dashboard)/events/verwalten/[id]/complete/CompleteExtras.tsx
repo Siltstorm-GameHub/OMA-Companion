@@ -8,7 +8,7 @@ import type { EventComplete } from "./useEventComplete";
 
 /** Abschnitt "Extras": MVP, Dominion Bonus, Zuschauer. */
 export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
-  const { registeredUsers, spectatorUsers, userStats, seriesStatConfig, spectatorRewardJson, isFinishedSummary, winnerStatField, mvpUserId, setMvpUserId, spectatorAttended, setSpectatorAttended, dominionCfg, dominionTriggerLabel, dominionChanges, dominionAwarded, effectiveSpectatorCoins, stepNo } = ctx;
+  const { spectatorActivity, registeredUsers, spectatorUsers, userStats, seriesStatConfig, spectatorRewardJson, isFinishedSummary, winnerStatField, mvpUserId, setMvpUserId, spectatorAttended, setSpectatorAttended, dominionCfg, dominionTriggerLabel, dominionChanges, dominionAwarded, effectiveSpectatorCoins, stepNo } = ctx;
   return (
     <section id="schritt-extras" aria-label="Extras" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
@@ -135,6 +135,11 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                       className="text-[11px] text-gray-500 hover:text-white transition-colors">
                       Keiner anwesend
                     </button>
+                    <button type="button"
+                      onClick={() => setSpectatorAttended(new Set(spectatorUsers.filter(u => spectatorActivity[u.id]?.length).map(u => u.id)))}
+                      className="text-[11px] text-gray-400 hover:text-white transition-colors">
+                      Nur Aktive
+                    </button>
                     <span className="text-[10px] text-gray-600 ml-auto">
                       {spectatorAttended.size}/{spectatorUsers.length} anwesend
                     </span>
@@ -152,6 +157,10 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                         className="accent-teal-500 shrink-0" />
                       <Avatar u={u} size={5} />
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                      {/* Aktivität beim Event als Entscheidungshilfe */}
+                      <span className={`text-[10px] shrink-0 ${spectatorActivity[u.id]?.length ? "text-teal-300/80" : "text-gray-600"}`}>
+                        {spectatorActivity[u.id]?.length ? spectatorActivity[u.id].join(" · ") : "keine Aktivität"}
+                      </span>
                     </label>
                   ))}
                 </div>

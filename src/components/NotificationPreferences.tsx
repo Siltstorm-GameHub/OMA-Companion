@@ -6,6 +6,7 @@ type Prefs = {
   badge:     boolean;
   quest:     boolean;
   event:     boolean;
+  myEvent:   boolean;
   points:    boolean;
   clip:      boolean;
   admin:     boolean;
@@ -15,7 +16,8 @@ type Prefs = {
 };
 
 const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string }[] = [
-  { key: "event",  label: "Events",          desc: "Event startet & Ergebnis (nur bei Anmeldung)", icon: "📅" },
+  { key: "myEvent", label: "Meine Events",   desc: "Events, bei denen du dabei bist: Erinnerung, Check-in, Auslosung, dein nächstes Match, Nachrücken, Ergebnis. Als Veranstalter auch: Ergebnisse prüfen, kurzfristige Abmeldungen.", icon: "🎯" },
+  { key: "event",  label: "Neue Events",     desc: "Ankündigungen neuer Events für alle Mitglieder. Abschalten betrifft nicht deine eigenen Events.", icon: "📅" },
   { key: "eventComment", label: "Event-Absprachen", desc: "Neue Nachrichten, Erwähnungen & „komme später“ bei deinen Events", icon: "💬" },
   { key: "badge",  label: "Battle Cards",     desc: "Stufenaufstieg deiner Community-Karte",         icon: "🃏" },
   { key: "quest",  label: "Quests",           desc: "Quest abgeschlossen & Belohnung erhalten",      icon: "⭐" },

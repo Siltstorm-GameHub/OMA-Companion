@@ -7,7 +7,6 @@ import { isOpenSeasonEvent, parseSeriesCompletion, parseTournamentTemplate, seri
 import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
-import { createPollsForEvent } from "@/lib/event-polls";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 
@@ -214,7 +213,6 @@ export async function POST(req: NextRequest) {
               ...templateFields,
             },
           });
-          await createPollsForEvent(createdEvent.id, createdEvent.startAt, pollsConfigJson);
           eventsCreated++;
         }
       } else if (!recurrenceType || recurrenceType === "none") {
@@ -240,7 +238,6 @@ export async function POST(req: NextRequest) {
             ...templateFields,
           },
         });
-        await createPollsForEvent(createdEvent.id, createdEvent.startAt, pollsConfigJson);
         eventsCreated = 1;
       }
     }

@@ -3,7 +3,6 @@ import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { publishEvent } from "@/lib/event-publish";
-import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 import { createGameVote } from "@/lib/game-vote/service";
@@ -129,9 +128,8 @@ export async function generateNextSeriesEvent(seriesId: string, overrideDate?: s
     },
   });
 
-  // Legt die echten, abstimmbaren EventPoll-Datensätze an — ohne diesen Schritt gäbe es nur
-  // die Konfiguration, aber keine Umfrage, auf die tatsächlich abgestimmt werden könnte.
-  await createPollsForEvent(newEvent.id, newEvent.startAt, parsePollsConfigJson(pollsConfigJson));
+  // Umfragen werden erst zum Ende der Spielphase angelegt (Abschluss bzw. Widget-Knopf, lib/event-polls.ts →
+  // startPollsForEvent) — so gelten spätere Änderungen an der Einstellung und die Dauer zählt ab dann.
 
   // Geplantes Community-Ziel für diesen Zyklus übernehmen (lib/goal-plan.ts)
   await applyPlannedGoal(newEvent.id);

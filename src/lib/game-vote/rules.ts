@@ -24,10 +24,13 @@ export interface GameVoteConfig {
   excludeLastN: number;
   /** Münzen fürs Abstimmen (0 = aus) */
   voteCoins: number;
+  /** Zwischenstand während der Wahl: immer, erst nach der eigenen Stimme oder erst nach dem Ende */
+  showCounts: "always" | "after_vote" | "after_end";
 }
 
 export const DEFAULT_GAME_VOTE_CONFIG: GameVoteConfig = {
   enabled: false, opensMode: "on_create", opensDaysBefore: 5, closesHoursBefore: 24, candidateCount: 5, excludeLastN: 2, voteCoins: 0,
+  showCounts: "always",
 };
 
 export const GAME_VOTE_LIMITS = {
@@ -53,6 +56,7 @@ export function sanitizeGameVoteConfig(input: unknown): GameVoteConfig {
     candidateCount: clampInt(raw.candidateCount, GAME_VOTE_LIMITS.candidateCount, d.candidateCount),
     excludeLastN: clampInt(raw.excludeLastN, GAME_VOTE_LIMITS.excludeLastN, d.excludeLastN),
     voteCoins: clampInt(raw.voteCoins, GAME_VOTE_LIMITS.voteCoins, d.voteCoins),
+    showCounts: raw.showCounts === "after_vote" || raw.showCounts === "after_end" ? raw.showCounts : "always",
   };
 }
 
@@ -185,6 +189,42 @@ export function rankCandidates(cands: TallyCandidate[], rng: () => number = Math
     ...ok.map((c, i) => ({ id: c.id, place: i + 1 })),
     ...cands.filter(c => !c.eligible).map(c => ({ id: c.id, place: null })),
   ];
+}
+
+/** Wie die Wahl entschieden wurde — steht bei der Freigabe, damit ein knappes Ergebnis nachvollziehbar ist. */
+export type DecidedBy = "votes" | "owned" | "cost" | "fit" | "lot" | "no_votes" | "none";
+
+export const DECIDED_BY_LABEL: Record<DecidedBy, string> = {
+  votes: "die meisten Stimmen",
+  owned: "Gleichstand, entschieden: mehr Abstimmende haben es schon",
+  cost: "Gleichstand, entschieden: günstiger (kostenlos, Abo oder im Angebot)",
+  fit: "Gleichstand, entschieden: passt besser zu den Stammspielern",
+  lot: "Gleichstand, entschieden per Los",
+  no_votes: "Niemand hat abgestimmt — gewählt nach den Gleichstand-Regeln",
+  none: "Kein Kandidat war wählbar",
+};
+
+/**
+ * Wodurch Platz 1 vor Platz 2 liegt (gleiche Reihenfolge wie rankCandidates). sorted = wählbare Kandidaten
+ * in der Endreihenfolge.
+ */
+export function decidedByOf(sorted: TallyCandidate[]): DecidedBy {
+  if (sorted.length === 0) return "none";
+  if (sorted.every(c => c.approvals === 0)) return "no_votes";
+  const [a, b] = sorted;
+  if (!b || a.approvals !== b.approvals) return "votes";
+  if (a.votersIn !== b.votersIn) return "owned";
+  if (a.costRank !== b.costRank) return "cost";
+  if (a.fitScore !== b.fitScore) return "fit";
+  return "lot";
+}
+
+/** Zwischenstand zeigen? (Mitläufer-Effekt vermeiden: Reihen-Einstellung showCounts) */
+export function countsVisible(showCounts: GameVoteConfig["showCounts"], status: string, hasVoted: boolean): boolean {
+  if (status === "closed") return true;
+  if (showCounts === "after_end") return false;
+  if (showCounts === "after_vote") return hasVoted;
+  return true;
 }
 
 export function costRankOf(g: Pick<FitInput, "isFree" | "subscriptions" | "discountPercent">): number {

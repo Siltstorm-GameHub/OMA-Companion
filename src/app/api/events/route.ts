@@ -11,7 +11,6 @@ import { VALID_FORMAT_VALUES } from "@/lib/tournament-formats";
 import { EventCategory, EventGenre } from "@prisma/client";
 import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
-import { createPollsForEvent } from "@/lib/event-polls";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 import { RESULT_SCORE_FIELD, isResultGoalFormat, sanitizeCommunityGoal, supportsCommunityGoal } from "@/lib/community-goal";
 import { applyPlannedGoal } from "@/lib/goal-plan";
@@ -308,7 +307,8 @@ export async function POST(req: NextRequest) {
     return created;
   });
 
-  await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
+  // Umfragen werden erst zum Ende der Spielphase angelegt (Abschluss bzw. Widget-Knopf, lib/event-polls.ts →
+  // startPollsForEvent) — so gelten spätere Änderungen an der Einstellung und die Dauer zählt ab dann.
   // Termin einer Reihe: geplantes Community-Ziel für diesen Zyklus übernehmen (lib/goal-plan.ts)
   if (event.seriesId) await applyPlannedGoal(event.id);
 

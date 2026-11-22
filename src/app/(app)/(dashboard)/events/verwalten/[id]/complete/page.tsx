@@ -100,6 +100,32 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // Spiele ohne Ergebnis bzw. nur vorläufig (Spieler-Meldung, noch nicht bestätigt) — Hinweis oben
   const isByeMatch = (m: { winnerId: string | null; player1Id: string | null; player2Id: string | null }) =>
     !!m.winnerId && (!m.player1Id || !m.player2Id);
+  // Zuschauer: wer war beim Event aktiv (Absprachen, Abstimmung, Tipp, Spielwahl, Stream)? Hilft beim
+  // Entscheiden über die Anwesenheit (Zuschauer-Belohnung)
+  const spectatorIdList = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
+  const spectatorActivity: Record<string, string[]> = {};
+  if (spectatorIdList.length) {
+    const [comments, pollVotes, tips, ballots, streams] = await Promise.all([
+      prisma.eventComment.findMany({ where: { eventId: id, userId: { in: spectatorIdList } }, select: { userId: true }, distinct: ["userId"] }),
+      prisma.eventPollVote.findMany({ where: { poll: { eventId: id }, voterId: { in: spectatorIdList } }, select: { voterId: true }, distinct: ["voterId"] }),
+      prisma.eventWinnerPrediction.findMany({ where: { eventId: id, userId: { in: spectatorIdList } }, select: { userId: true } }),
+      prisma.gameVoteBallot.findMany({ where: { vote: { eventId: id }, userId: { in: spectatorIdList } }, select: { userId: true }, distinct: ["userId"] }),
+      prisma.eventCommunityStreamer.findMany({ where: { eventId: id, userId: { in: spectatorIdList } }, select: { userId: true } }),
+    ]);
+    const add = (uid: string, label: string) => { (spectatorActivity[uid] ??= []).push(label); };
+    comments.forEach(c => add(c.userId, "Absprachen"));
+    pollVotes.forEach(v => add(v.voterId, "abgestimmt"));
+    tips.forEach(t => add(t.userId, "getippt"));
+    ballots.forEach(b => add(b.userId, "Spielwahl"));
+    streams.forEach(s => add(s.userId, "gestreamt"));
+  }
+
+  // Sieger-Tipps: werden mit dem festgelegten Sieger ausgewertet bzw. bei Korrektur neu verteilt
+  const predictionRows = await prisma.eventWinnerPrediction.findMany({ where: { eventId: id }, select: { wager: true, resolved: true } });
+  const predictionInfo = predictionRows.length
+    ? { count: predictionRows.length, pot: predictionRows.reduce((n, p) => n + p.wager, 0), resolved: predictionRows.some(p => p.resolved) }
+    : null;
+
   const matchCheck = {
     open: event.matches.filter(m => !m.playedAt && !isByeMatch(m)
       && (m.entries.length > 0 || (!!m.player1Id && !!m.player2Id))).length,
@@ -356,6 +382,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       initialFinalRankingNote={event.finalRankingNote ?? null}
       pendingSubmissions={pendingSubmissions}
       matchCheck={matchCheck}
+      predictionInfo={predictionInfo}
+      spectatorActivity={spectatorActivity}
     />
   );
 }

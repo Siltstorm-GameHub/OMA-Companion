@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
+import { ELIGIBILITY_TEXT, voterAllowed } from "@/lib/event-polls-shared";
 import { useNow } from "@/lib/useNow";
 import { usePolling } from "@/lib/usePolling";
 import { ChevronDown, ChevronUp } from "@/components/icons";
@@ -40,6 +41,8 @@ type Props = {
   eventId: string;
   userId: string | undefined;
   initialPolls: Poll[];
+  /** Eigene Anmeldung beim Event ("player" | "spectator" | null) — wer abstimmen darf, steht vor dem Klick fest */
+  myRole?: string | null;
 };
 
 function CountdownBadge({ startAt }: { startAt: string }) {
@@ -61,12 +64,16 @@ function PollCard({
   userId,
   eventId,
   onVoted,
+  myRole,
 }: {
   poll: Poll;
   userId: string | undefined;
   eventId: string;
   onVoted: (pollId: string, targetId: string) => void;
+  myRole: string | null;
 }) {
+  // Nicht berechtigt: Knopf gesperrt und Hinweis — statt erst nach dem Klick eine Fehlermeldung
+  const allowed = voterAllowed(poll.voterEligibility, myRole);
   const now = useNow();
   const startAt = new Date(poll.startAt).getTime();
   const endAt   = new Date(poll.endAt).getTime();
@@ -186,6 +193,15 @@ function PollCard({
             </p>
           )}
 
+          {isActive && userId && !allowed && (
+            <p className="text-xs text-gray-400 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+              {ELIGIBILITY_TEXT[poll.voterEligibility] ?? "Du darfst hier nicht abstimmen"}.
+            </p>
+          )}
+          {poll.winnerIds && poll.winnerIds.length > 1 && (
+            <p className="text-xs text-amber-200/90">Gleichstand: alle Gleichplatzierten gewinnen und bekommen die volle Sieger-Belohnung.</p>
+          )}
+
           {/* Answer options */}
           <div className="space-y-2">
             {answers.map(answer => {
@@ -193,7 +209,7 @@ function PollCard({
               const pct    = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
               const isWon  = poll.winnerIds?.includes(answer.id) ?? false;
               const isMine = poll.myVote === answer.id;
-              const canVote = isActive && userId && !voting;
+              const canVote = isActive && userId && allowed && !voting;
 
               return (
                 <div
@@ -257,7 +273,7 @@ function PollCard({
   );
 }
 
-export default function PollsSection({ eventId, userId, initialPolls }: Props) {
+export default function PollsSection({ eventId, userId, initialPolls, myRole = null }: Props) {
   const [polls, setPolls] = useState<Poll[]>(initialPolls);
 
   const refresh = useCallback(async () => {
@@ -294,7 +310,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Vote className="w-4 h-4 text-amber-400" />
-        <h2 className="text-sm font-semibold text-white">Abstimmungen</h2>
+        <h2 className="text-sm font-semibold text-white">Abstimmung nach dem Event</h2>
         {activePolls.length > 0 && (
           <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
             {activePolls.length} aktiv
@@ -305,7 +321,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
       {activePolls.length > 0 && (
         <div className="space-y-2">
           {activePolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} myRole={myRole} />
           ))}
         </div>
       )}
@@ -313,7 +329,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
       {upcomingPolls.length > 0 && (
         <div className="space-y-2">
           {upcomingPolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} myRole={myRole} />
           ))}
         </div>
       )}
@@ -321,7 +337,7 @@ export default function PollsSection({ eventId, userId, initialPolls }: Props) {
       {pastPolls.length > 0 && (
         <div className="space-y-2">
           {pastPolls.map(p => (
-            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} />
+            <PollCard key={p.id} poll={p} userId={userId} eventId={eventId} onVoted={handleVoted} myRole={myRole} />
           ))}
         </div>
       )}

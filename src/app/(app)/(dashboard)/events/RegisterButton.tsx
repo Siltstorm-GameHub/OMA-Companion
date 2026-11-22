@@ -22,6 +22,7 @@ export default function RegisterButton({
   waitlist,
   waitlistHref,
   checkIn = false,
+  spectatorSwitch = false,
 }: {
   eventId: string;
   isRegistered: boolean;
@@ -39,6 +40,8 @@ export default function RegisterButton({
   waitlistHref?: string;
   /** Event hat Check-in: nach der Anmeldung an "Bin bereit" erinnern */
   checkIn?: boolean;
+  /** Zuschauer erlaubt: angemeldete Spieler können auf "Lieber zuschauen" wechseln (Platz wird frei) */
+  spectatorSwitch?: boolean;
 }) {
   const [loading, setLoading]               = useState(false);
   const [registered, setRegistered]         = useState(isRegistered);
@@ -92,6 +95,29 @@ export default function RegisterButton({
     } catch {
       setRegistered(wasRegistered);
       setJustRegistered(false);
+      toast.error("Keine Verbindung", { description: "Versuch es gleich noch mal." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /** Spieler → Zuschauer: Platz wird frei (Warteliste rückt nach), man bleibt als Zuschauer dabei */
+  async function switchToSpectator() {
+    if (!(await confirm({
+      title: "Lieber zuschauen?",
+      description: "Dein Spielerplatz wird frei und kann an die Warteliste gehen. Du bleibst als Zuschauer dabei.",
+      confirmLabel: "Zuschauer werden",
+    }))) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/register`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: "spectator" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error((data as { error?: string }).error ?? "Das hat nicht geklappt"); return; }
+      toast.success("Du schaust jetzt zu", { description: "Dein Spielerplatz ist frei." });
+      router.refresh();
+    } catch {
       toast.error("Keine Verbindung", { description: "Versuch es gleich noch mal." });
     } finally {
       setLoading(false);
@@ -182,6 +208,12 @@ export default function RegisterButton({
         )}
       </span>
 
+      {registered && spectatorSwitch && !justRegistered && (
+        <button type="button" onClick={switchToSpectator} disabled={loading}
+          className="text-[11px] text-gray-500 hover:text-gray-300 disabled:opacity-50">
+          Lieber zuschauen
+        </button>
+      )}
       {justRegistered && checkIn && (
         <span className="text-[10px] text-amber-300/90">Check-in: ab 30 Min. vor Start „Bin bereit“ drücken.</span>
       )}

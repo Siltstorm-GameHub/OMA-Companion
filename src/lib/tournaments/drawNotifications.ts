@@ -2,13 +2,13 @@
 // Einstieg — erster Gegner, Gruppe, Freilos bzw. spielfreier Spieltag. Vorher gab es nur beim K.O.-Baum
 // eine Meldung (match_ready) und nur für Spieler mit feststehendem Gegner; Liga und Gruppen blieben stumm.
 // Dazu ein kurzer Post im Discord-Kanal des Events bzw. der Reihe (nur wenn einer eingestellt ist).
+// Beides über Regeln (Admin → Benachrichtigungen): "draw_result" und "draw_posted".
 
 import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createNotification } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
-import { sendDiscordMessage } from "@/lib/discord-rest";
+import { dispatchNotification } from "@/lib/notify-dispatch";
+import { parsePublishState } from "@/lib/event-publish-state";
 import { groupLetter } from "./groupStage";
 
 type M = { round: number; groupIndex: number | null; player1Id: string | null; player2Id: string | null; winnerId: string | null; leg: number | null; isThirdPlace: boolean };
@@ -43,7 +43,7 @@ async function send(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      title: true, format: true, discordChannelId: true, series: { select: { discordChannelId: true } },
+      title: true, format: true, discordChannelId: true, series: { select: { discordChannelId: true } }, publishStateJson: true,
       participants: { select: { userId: true, groupIndex: true } },
       matches: { select: { round: true, groupIndex: true, player1Id: true, player2Id: true, winnerId: true, leg: true, isThirdPlace: true } },
     },
@@ -57,26 +57,42 @@ async function send(eventId: string) {
   const nameOf = (id: string) => users.get(id) ?? "?";
 
   const url = `/tournament/${eventId}`;
-  const title = `Ausgelost: ${event.title}`;
-  await Promise.allSettled(players.map(async (p) => {
-    const body = drawLineFor(p.userId, event.format, event.matches, p.groupIndex, nameOf);
-    await createNotification(p.userId, { type: "event_start", title, body, url });
-    await sendPushToUsers([p.userId], { title, body, url });
-  }));
+  // Schon einmal ausgelost (zurückgesetzt und neu ausgelost) → "Neu ausgelost", damit klar ist,
+  // dass die erste Meldung nicht mehr gilt
+  const state = parsePublishState(event.publishStateJson);
+  const drawLabel = state.drawNotifiedAt ? "Neu ausgelost" : "Ausgelost";
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { publishStateJson: JSON.stringify({ ...state, drawNotifiedAt: new Date().toISOString() }) },
+  });
 
-  // Discord: nur im eigenen Kanal des Events bzw. der Reihe — nicht im allgemeinen News-Kanal
+  // Regel "draw_result": je Spieler mit seinem Einstieg
+  for (const p of players) {
+    await dispatchNotification("draw_result", {
+      users: [p.userId],
+      placeholders: {
+        "{eventName}": event.title,
+        "{drawLabel}": drawLabel,
+        "{line}": drawLineFor(p.userId, event.format, event.matches, p.groupIndex, nameOf),
+      },
+      urlOverride: url,
+      skipDiscordChannel: true,
+    }).catch(err => console.error("[draw] Meldung fehlgeschlagen", eventId, p.userId, err));
+  }
+
+  // Regel "draw_posted": nur im eigenen Kanal des Events bzw. der Reihe — nicht im allgemeinen News-Kanal
   const channelId = resolveEventChannelId(event);
-  if (channelId && process.env.DISCORD_BOT_TOKEN) {
-    const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
+  if (channelId) {
     const groupCount = new Set(event.participants.map(p => p.groupIndex).filter(g => g != null)).size;
     const what = event.format === "single_elimination" ? "Der Turnierbaum steht"
       : event.format === "group_knockout" ? `Die ${groupCount} Gruppen stehen`
       : "Der Spielplan steht";
-    await sendDiscordMessage(channelId, {
-      title: `🎲 Ausgelost: ${event.title}`,
-      description: `${what}: ${players.length} Spieler sind dabei.\nJeder hat eine Meldung mit seinem ersten Gegner bekommen.`,
-      url: `${base}${url}`,
-      color: 0x14b8a6,
+    await dispatchNotification("draw_posted", {
+      users: [],
+      placeholders: { "{eventName}": event.title, "{drawLabel}": drawLabel, "{what}": what, "{players}": String(players.length) },
+      urlOverride: url,
+      discordChannelIdOverride: channelId,
+      discordColor: 0x14b8a6,
     }).catch(err => console.error("[draw] Discord-Post fehlgeschlagen", eventId, err));
   }
 }

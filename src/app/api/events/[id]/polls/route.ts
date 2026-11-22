@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { ineligibleCandidates } from "@/lib/event-polls-shared";
 
 export async function GET(
   _req: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
   const { id: eventId } = await params;
   const userId = session.user.id;
 
-  const [polls, registrations] = await Promise.all([
+  const [polls, registrations, eventRow] = await Promise.all([
     prisma.eventPoll.findMany({
       where: { eventId },
       include: { votes: { select: { voterId: true, targetId: true } } },
@@ -26,12 +27,15 @@ export async function GET(
         user: { select: { id: true, name: true, username: true, image: true } },
       },
     }),
+    prisma.event.findUnique({ where: { id: eventId }, select: { completionData: true } }),
   ]);
+  // Beim Abschluss "nicht da" bzw. ausgeschlossen: keine wählbaren Kandidaten
+  const ineligible = ineligibleCandidates(eventRow?.completionData);
 
   const result = polls.map(poll => {
     let excludedUserIds: string[] = [];
     try { excludedUserIds = poll.excludedUserIds ? JSON.parse(poll.excludedUserIds) : []; } catch { /* ignore */ }
-    const excludedSet = new Set(excludedUserIds);
+    const excludedSet = new Set([...excludedUserIds, ...ineligible]);
 
     const voteCounts: Record<string, number> = {};
     let myVote: string | null = null;

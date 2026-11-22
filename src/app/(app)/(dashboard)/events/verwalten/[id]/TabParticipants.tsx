@@ -129,7 +129,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
                       className="rounded accent-teal-500 shrink-0" />
                     <Avatar u={u} name={userName(u)} tone="bg-gray-700 text-gray-300" />
                     <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
-                    {event.spectatorMode && (
+                    {ctx.spectatorMode && (
                       <button type="button" onClick={() => toggleSelected(u, "spectator", !asSpectator)}
                         className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 border transition-colors ${asSpectator ? "border-teal-500/40 bg-teal-500/15 text-teal-300" : "border-gray-700 text-gray-500 hover:text-gray-300"}`}>
                         👁️ Zuschauer
@@ -183,7 +183,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
       </div>
 
       {/* Angemeldete Zuschauer */}
-      {event.spectatorMode && (
+      {ctx.spectatorMode && (
         <div className="pt-2 border-t border-white/[0.05]">
           <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest mb-1.5">
             👁️ Zuschauer ({spectatorIds.size})

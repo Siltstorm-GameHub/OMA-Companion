@@ -15,6 +15,8 @@ import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 import { publishDueScheduledPosts } from "@/lib/journalist-service";
 import { resolveDuePolls } from "@/lib/post-poll-service";
 import { notifyOpenCheckIns } from "@/lib/checkin-notify";
+import { notifyEventStarted } from "@/lib/event-started-notify";
+import { after } from "next/server";
 
 /**
  * Setzt alle fälligen ("open" + startAt <= jetzt) Events mit mindestens einer Spieler-
@@ -53,8 +55,13 @@ export async function syncDueEventActivations(): Promise<void> {
   });
   if (withPlayers.length === 0) return;
 
+  const activated = withPlayers.map((g) => g.eventId);
   await prisma.event.updateMany({
-    where: { id: { in: withPlayers.map((g) => g.eventId) } },
+    where: { id: { in: activated }, status: "open" },
     data: { status: "active" },
   });
+  // "Event läuft jetzt" an die Teilnehmer — einmal je Event, auch ohne Discord-Bot (lib/event-started-notify.ts).
+  // Nach der Antwort, damit der Seitenaufruf nicht auf Push/Discord wartet.
+  const run = () => Promise.allSettled(activated.map((id) => notifyEventStarted(id)));
+  try { after(run); } catch { void run(); }
 }

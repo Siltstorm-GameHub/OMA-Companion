@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isEventRunning } from "@/lib/event-display";
 import type { ReactNode } from "react";
 import GameCover from "@/components/GameCover";
 import CoinIcon from "@/components/CoinIcon";
@@ -293,7 +294,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
 
   const hubRows: HubRow[] = [...(periodRow ? [periodRow] : []), ...rows.map(e => {
     const b = dateBlock(e.startAt, now);
-    const running = e.status === "active";
+    // Vor dem Start ausgelost (status "active") zählt noch nicht als "läuft"
+    const running = isEventRunning(e, now);
     const urgent = urgencyHint(e, now);
     const full = !!e.maxPlayers && e.playerCount >= e.maxPlayers && !e.isRegistered;
     return {

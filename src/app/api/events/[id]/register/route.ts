@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isPeriodEvent } from "@/lib/event-period";
 import { addLateJoinerToCurrentRound } from "@/lib/tournaments/late-join";
-import { registerForEvent, unregisterFromEvent } from "@/lib/event-registration";
+import { registerForEvent, switchToSpectator, unregisterFromEvent } from "@/lib/event-registration";
 
 // Anmelden (POST, Body { role?: "player" | "spectator" }) und Abmelden (DELETE) für das eigene Konto.
 // Alle Regeln (gesperrt, Squad, voll, Anmeldeschluss, Start, Überbuchung, Abmelden nach Start) stehen in
@@ -45,4 +45,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const result = await unregisterFromEvent(session.user.id, eventId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ success: true });
+}
+
+/** PATCH { role: "spectator" } — "Lieber zuschauen": vom Spieler zum Zuschauer wechseln (Platz wird frei). */
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  const { id: eventId } = await params;
+  const body = await req.json().catch(() => ({}));
+  if (body.role !== "spectator") return NextResponse.json({ error: "Ungültige Rolle" }, { status: 400 });
+  const result = await switchToSpectator(session.user.id, eventId);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  return NextResponse.json({ ok: true, role: "spectator" });
 }

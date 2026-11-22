@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireEventManager } from "@/lib/roles";
-import { createNotificationForUsers } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 /**
  * Verwalter tragen Mitglieder als Spieler oder Zuschauer ein (Reiter "Teilnehmer"). Bewusst ohne die
@@ -51,15 +50,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ? addedIds.length - await prisma.squadMembership.count({ where: { squadId, userId: { in: addedIds } } })
     : 0;
 
-  // Meldung an die Eingetragenen
+  // Meldung an die Eingetragenen (Regel "registered_by_manager")
   if (addedIds.length) {
-    const title = "Du wurdest eingetragen";
-    const body = `Du bist bei „${event.title}“ ${registrationRole === "spectator" ? "als Zuschauer" : "als Spieler"} dabei.`;
-    const url = `/tournament/${eventId}`;
-    await Promise.allSettled([
-      createNotificationForUsers(addedIds, { type: "event_start", title, body, url }),
-      sendPushToUsers(addedIds, { title, body, url }),
-    ]);
+    await dispatchNotification("registered_by_manager", {
+      users: addedIds,
+      placeholders: { "{eventName}": event.title, "{roleText}": registrationRole === "spectator" ? "als Zuschauer" : "als Spieler" },
+      urlOverride: `/tournament/${eventId}`, skipDiscordChannel: true,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ success: true, added: addedIds.length, skipped, overCapacity, notInSquad });

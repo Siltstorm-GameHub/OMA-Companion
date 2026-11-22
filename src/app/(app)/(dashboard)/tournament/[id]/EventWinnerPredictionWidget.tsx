@@ -19,19 +19,53 @@ type Prediction = {
 
 const uname = (u?: UserLite | null) => u?.username ?? u?.name ?? "?";
 
+/** "Fr., 20:00 (noch 3 Std.)" — bis wann getippt werden kann */
+function deadlineLabel(iso: string): string {
+  const d = new Date(iso);
+  const ms = d.getTime() - Date.now();
+  const when = d.toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  if (ms <= 0) return when;
+  const h = Math.floor(ms / 3_600_000);
+  const rest = h >= 48 ? `noch ${Math.round(h / 24)} Tage` : h >= 1 ? `noch ${h} Std.` : `noch ${Math.max(1, Math.round(ms / 60_000))} Min.`;
+  return `${when} Uhr (${rest})`;
+}
+
+/** Pott-Regeln zum Aufklappen */
+function PotRules() {
+  return (
+    <details className="text-[11px] text-gray-500">
+      <summary className="cursor-pointer select-none hover:text-gray-300">So funktioniert der Pott</summary>
+      <ul className="mt-1.5 space-y-1 list-disc pl-4">
+        <li>Dein Einsatz wird sofort abgebucht. Ändern oder löschen geht bis zum Start, dann gibt es ihn zurück.</li>
+        <li>Alle Einsätze bilden den Pott. Wer richtig liegt, teilt ihn, gestaffelt nach Einsatz: Je Mitspieler kannst du höchstens deinen eigenen Einsatz gewinnen.</li>
+        <li>Liegst du als Einzige(r) richtig, bekommst du deinen Einsatz doppelt.</li>
+        <li>Gleichstand auf Platz 1: Jeder Tipp auf einen der Erstplatzierten ist richtig.</li>
+        <li>Kein Sieger, Event abgesagt oder dein Spieler hat nicht mitgespielt: Du bekommst deinen Einsatz zurück.</li>
+      </ul>
+    </details>
+  );
+}
+
 export default function EventWinnerPredictionWidget({
   eventId,
   locked,
   initialPrediction,
   minWager,
   maxWager,
+  players = [],
+  lockAt,
 }: {
   eventId: string;
   locked: boolean;
   initialPrediction: Prediction;
   minWager: number;
   maxWager: number;
+  /** Angemeldete Spieler — Schnellauswahl oben, statt nur Suche über alle Mitglieder */
+  players?: UserLite[];
+  /** Tipp-Schluss (= Event-Start) */
+  lockAt?: string;
 }) {
+  const isPlayer = (id: string) => players.some(p => p.id === id);
   const [prediction, setPrediction] = useState<Prediction>(initialPrediction);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
@@ -81,6 +115,19 @@ export default function EventWinnerPredictionWidget({
     }
   }
 
+  // Erstattet (kein Sieger, ungültiger Tipp): ausgewertet, aber weder richtig noch falsch
+  if (prediction?.resolved && prediction.correct === null) {
+    return (
+      <div className="glass rounded-2xl p-4 flex items-center gap-3 border border-white/5">
+        <Target className="w-4 h-4 text-gray-500 shrink-0" />
+        <p className="flex-1 min-w-0 text-sm text-gray-300">
+          Einsatz zurück: Dein Tipp auf {uname(prediction.predictedUser)} wurde nicht gewertet (kein Sieger oder der Spieler hat nicht mitgespielt).
+        </p>
+        <span className="flex items-center gap-1 text-sm font-semibold text-gray-300 shrink-0">±0 <CoinIcon size={14} /></span>
+      </div>
+    );
+  }
+
   // Bereits ausgewertet
   if (prediction?.resolved) {
     if (prediction.correct) {
@@ -125,9 +172,13 @@ export default function EventWinnerPredictionWidget({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-white">Du tippst auf <span className="font-semibold">{uname(prediction.predictedUser)}</span></p>
-          <p className="text-xs text-gray-500 flex items-center gap-1">
+          <p className="text-xs text-gray-500 flex items-center gap-1 flex-wrap">
             Einsatz: {prediction.wager} <CoinIcon size={10} />
+            {!locked && lockAt && <span>· ändern bis {deadlineLabel(lockAt)}</span>}
           </p>
+          {players.length > 0 && !isPlayer(prediction.predictedUserId) && (
+            <p className="text-[11px] text-amber-300">{uname(prediction.predictedUser)} ist nicht (mehr) angemeldet. Ohne Teilnahme bekommst du den Einsatz zurück.</p>
+          )}
         </div>
         {!locked && (
           <button onClick={startEditing} className="text-xs text-gray-500 hover:text-white transition-colors shrink-0">
@@ -151,6 +202,7 @@ export default function EventWinnerPredictionWidget({
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4 text-violet-400 shrink-0" />
         <p className="text-sm font-semibold text-white">Wer gewinnt dieses Event?</p>
+        {lockAt && !editing && <span className="ml-auto text-[11px] text-gray-500">Tippen bis {deadlineLabel(lockAt)}</span>}
         {editing && (
           <button onClick={() => { setEditing(false); setSelected(null); }} className="ml-auto text-gray-500 hover:text-white">
             <X className="w-4 h-4" />
@@ -179,6 +231,9 @@ export default function EventWinnerPredictionWidget({
             />
           </label>
 
+          {players.length > 0 && !isPlayer(selected.id) && (
+            <p className="text-[11px] text-amber-300">{uname(selected)} ist bisher nicht angemeldet. Ohne Teilnahme bekommst du den Einsatz beim Abschluss zurück.</p>
+          )}
           <button
             onClick={submit}
             disabled={submitting}
@@ -188,12 +243,24 @@ export default function EventWinnerPredictionWidget({
           </button>
         </div>
       ) : (
+        <div className="space-y-2">
+        {players.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {players.map(u => (
+              <button key={u.id} type="button" onClick={() => setSelected(u)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10">
+                <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={18} className="w-[18px] h-[18px]" />
+                {uname(u)}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="relative">
           <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Nutzer suchen — auch nicht angemeldete Mitglieder…"
+            placeholder={players.length > 0 ? "Oder anderes Mitglied suchen…" : "Mitglied suchen…"}
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
           />
           {results.length > 0 && (
@@ -208,7 +275,9 @@ export default function EventWinnerPredictionWidget({
             </div>
           )}
         </div>
+        </div>
       )}
+      <PotRules />
     </div>
   );
 }

@@ -2472,6 +2472,10 @@ model GameVote {
   status       String    @default("prepared")
   winnerGameId String?
   closedAt     DateTime?
+  // Wie die Wahl entschieden wurde: votes | owned | cost | fit | lot | no_votes | none (kein wählbarer Kandidat)
+  decidedBy    String?
+  // "Abstimmung endet bald" an Stammspieler ohne Stimme verschickt
+  reminderSentAt DateTime?
   createdAt    DateTime  @default(now())
 
   event      Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)

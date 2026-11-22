@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
+import { ineligibleCandidates } from "@/lib/event-polls-shared";
 
 export async function POST(
   req: NextRequest,
@@ -48,7 +49,9 @@ export async function POST(
   // Ausgeschlossene Kandidaten sind auch dann keine gültige Wahl, wenn sie noch registriert sind
   let excludedUserIds: string[] = [];
   try { excludedUserIds = poll.excludedUserIds ? JSON.parse(poll.excludedUserIds) : []; } catch { /* ignore */ }
-  if (excludedUserIds.includes(targetId)) {
+  // Beim Abschluss "nicht da" bzw. ausgeschlossen zählt genauso
+  const eventRow = await prisma.event.findUnique({ where: { id: eventId }, select: { completionData: true } });
+  if (excludedUserIds.includes(targetId) || ineligibleCandidates(eventRow?.completionData).has(targetId)) {
     return NextResponse.json({ error: "Dieser Kandidat wurde von der Wahl ausgeschlossen" }, { status: 400 });
   }
 

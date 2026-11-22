@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
-import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { parsePollsConfigJson, startPollsForEvent } from "@/lib/event-polls";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 
@@ -45,8 +45,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
+  // Nur Umfragen mit Stimmen oder schon ausgewertet zählen als "läuft schon" — unbenutzte werden neu angelegt
   const existingLabels = new Set(
-    (await prisma.eventPoll.findMany({ where: { eventId }, select: { label: true } })).map((p) => p.label)
+    (await prisma.eventPoll.findMany({
+      where: { eventId, OR: [{ rewardsPaid: true }, { votes: { some: {} } }] }, select: { label: true },
+    })).map((p) => p.label)
   );
   const newLabels = pollsCfg.filter((c) => !existingLabels.has(c.label));
   if (newLabels.length === 0) {
@@ -56,7 +59,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  await createPollsForEvent(eventId, new Date(), pollsCfg);
+  // Unbenutzte, früher angelegte Umfragen nach der aktuellen Einstellung neu anlegen (Anker: jetzt)
+  await startPollsForEvent(eventId, pollsCfg, new Date());
 
   if (event.status !== "umfrage" && event.status !== "finished") {
     await prisma.event.update({ where: { id: eventId }, data: { status: "umfrage" } });

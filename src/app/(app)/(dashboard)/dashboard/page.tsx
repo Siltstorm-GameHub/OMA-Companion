@@ -1,5 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import CommunityGoalsBanner from "@/components/CommunityGoalsBanner";
+import { isEventRunning } from "@/lib/event-display";
 import { participationRewardOf } from "@/lib/event-placement";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
@@ -682,7 +683,7 @@ export default async function DashboardPage() {
                       </p>
                       <p className="text-[11px] text-gray-500 truncate">
                         {nextEv
-                          ? nextEv.status === "active" ? <span className="text-red-400">läuft gerade</span> : <>nächster Termin {nextIn ?? "bald"}</>
+                          ? isEventRunning(nextEv) ? <span className="text-red-400">läuft gerade</span> : <>nächster Termin {nextIn ?? "bald"}</>
                           : "keine Termine geplant"}
                         {registered && <span className="text-teal-300"> · dabei</span>}
                         {!place && leader && <> · <Trophy className="inline w-2.5 h-2.5 text-amber-500/80" /> {leader.username ?? leader.name}</>}

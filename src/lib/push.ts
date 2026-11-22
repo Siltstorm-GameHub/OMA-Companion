@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { prefAllows, type NotificationType } from "@/lib/notifications";
 
 let vapidInitialized = false;
 function ensureVapid() {
@@ -57,6 +58,18 @@ export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
     select: { id: true, endpoint: true, p256dh: true, auth: true },
   });
   await sendToSubscriptions(subs, payload);
+}
+
+/**
+ * Push an bestimmte User — aber nur an die, die Meldungen dieses Typs nicht abgeschaltet haben
+ * (Profil → Benachrichtigungen). sendPushToUsers selbst prüft das NICHT; für Meldungen an Mitglieder
+ * immer diese Funktion (oder dispatchNotification) nehmen.
+ */
+export async function sendPushForType(userIds: string[], type: NotificationType, payload: PushPayload) {
+  if (!userIds.length) return;
+  const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, notificationPrefs: true } });
+  const allowed = users.filter(u => prefAllows(u.notificationPrefs, type)).map(u => u.id);
+  await sendPushToUsers(allowed, payload);
 }
 
 /** Benachrichtigung an alle abonnierten User senden */

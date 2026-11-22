@@ -15,7 +15,7 @@ import CompletePolls from "./CompletePolls";
  *  Zustand und Aktionen in ./useEventComplete.tsx, die Abschnitte in ./Complete*.tsx, Bausteine in ./complete-shared.tsx. */
 export default function EventCompleteClient(props: Props) {
   const ctx = useEventComplete(props);
-  const { eventId, pendingSubmissions, matchCheck, rewardHistory, rewardsCapped, absentPlayers, actionSummary, pollAutoEnd, eventTitle, seriesId, seriesIcon, registeredUsers, spectatorUsers, spectatorRewardJson, isMod, hasPlacement, ConfirmDialogElement, timingWarning, isPollOnly, isFinishedSummary, mvpUserId, spectatorAttended, rankingDirty, excludedUsers, loading, pollWinners, canDeferPoll, pollPhasePending, totals, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, steps, noRanking, mainLabel, nameOf } = ctx;
+  const { eventId, pendingSubmissions, matchCheck, predictionInfo, rewardHistory, rewardsCapped, absentPlayers, actionSummary, pollAutoEnd, eventTitle, seriesId, seriesIcon, registeredUsers, spectatorUsers, spectatorRewardJson, isMod, hasPlacement, ConfirmDialogElement, timingWarning, isPollOnly, isFinishedSummary, mvpUserId, spectatorAttended, rankingDirty, excludedUsers, loading, pollWinners, canDeferPoll, pollPhasePending, totals, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, steps, noRanking, mainLabel, nameOf } = ctx;
 
   return (
     <div className="space-y-4 pb-36">
@@ -83,15 +83,24 @@ export default function EventCompleteClient(props: Props) {
           <Link href={`/events/verwalten/${eventId}`} className="shrink-0 text-xs font-semibold text-amber-200 underline hover:text-white">Zum Spielplan</Link>
         </div>
       )}
+      {/* Sieger-Tipps: der festgelegte Sieger verteilt den Pott */}
+      {predictionInfo && !isPollOnly && (
+        <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-[11px] text-violet-200">
+          🎯 {predictionInfo.count} {predictionInfo.count === 1 ? "Tipp" : "Tipps"} auf den Sieger, Pott {predictionInfo.pot} Münzen.{" "}
+          {predictionInfo.resolved
+            ? "Änderst du den Sieger, wird der Pott automatisch neu verteilt."
+            : "Sie werden mit dem Sieger ausgewertet, den du hier festlegst. Ohne Sieger bekommen alle ihren Einsatz zurück."}
+        </p>
+      )}
       {rewardsCapped && (
         <p className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-[11px] text-gray-400">
           Die Beträge sind auf die Obergrenzen für Mitglieder-Events gekürzt. Genau so werden sie ausgezahlt.
         </p>
       )}
-      {isPollOnly && !isMod && pollAutoEnd && (
+      {isPollOnly && pollAutoEnd && (
         <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-[11px] text-violet-200">
           Die Umfrage endet automatisch am {formatBerlinDateTime(pollAutoEnd, { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} Uhr.
-          Danach wird das Event von selbst abgeschlossen und die Umfrage-Belohnungen gehen raus.
+          Danach wird das Event von selbst abgeschlossen und die Umfrage-Belohnungen gehen raus. Du kannst sie auch jetzt schon beenden.
         </p>
       )}
 

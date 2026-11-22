@@ -1,4 +1,5 @@
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
+import { refundPredictionsBeforeDelete } from "@/lib/predictions";
 import { revertGoalRewards } from "@/lib/community-goal-milestones";
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
@@ -127,6 +128,11 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
     await revertGoalRewards(eventId, "Community-Ziel zurückgebucht (Event gelöscht)").catch(err =>
       console.error("[delete-event] Ziel-Rückbuchung fehlgeschlagen", eventId, err));
   }
+
+  // Sieger-Tipps: offene Einsätze zurückbuchen (sonst verschwinden sie mit dem Event). Bei
+  // "Belohnungen zurückbuchen" hat revertEventCompletion schon ausgewertete Tipps zurückgedreht.
+  await refundPredictionsBeforeDelete(eventId, false).catch(err =>
+    console.error("[delete-event] Tipp-Erstattung fehlgeschlagen", eventId, err));
 
   await prisma.$transaction(async (tx) => {
     await tx.match.deleteMany({ where: { eventId } });

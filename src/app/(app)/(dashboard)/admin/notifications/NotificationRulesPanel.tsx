@@ -154,6 +154,86 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{format}", description: "Turnier-Format" },
     { key: "{teilnehmer}", description: "Anzahl Turnier-Teilnehmer" },
   ],
+  // Persönliche Event-Meldungen (lib/notification-rule-defaults.ts)
+  prediction_settled: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{headline}", description: "„richtig!“, „leider falsch“ oder „Einsatz zurück“" },
+    { key: "{detail}", description: "Auszahlung, Sieger bzw. Grund der Erstattung" },
+  ],
+  prediction_player_left: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{player}", description: "Name des abgemeldeten Spielers" },
+  ],
+  poll_winner: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{label}", description: "Name der Umfrage, z.B. MVP" },
+    { key: "{reward}", description: "Belohnung, z.B. „+50 Münzen“" },
+  ],
+  poll_result: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{label}", description: "Name der Umfrage" },
+    { key: "{winners}", description: "Gewinner bzw. „Gleichstand: …“" },
+  ],
+  game_vote_reminder: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{hours}", description: "Stunden bis zum Ende" },
+    { key: "{games}", description: "Kandidaten" },
+  ],
+  game_vote_candidate_removed: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{game}", description: "Entferntes Spiel" },
+  ],
+  game_vote_attention: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{reason}", description: "Was zu prüfen ist" },
+  ],
+  checkin_open: [
+    { key: "{eventName}", description: "Name des Events" },
+  ],
+  checkin_not_drawn: [
+    { key: "{eventName}", description: "Name des Events" },
+  ],
+  draw_result: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{drawLabel}", description: "„Ausgelost“ bzw. „Neu ausgelost“" },
+    { key: "{line}", description: "Einstieg des Spielers: erster Gegner, Gruppe oder Freilos" },
+  ],
+  draw_posted: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{drawLabel}", description: "„Ausgelost“ bzw. „Neu ausgelost“" },
+    { key: "{what}", description: "z.B. „Der Turnierbaum steht“" },
+    { key: "{players}", description: "Anzahl ausgeloster Spieler" },
+  ],
+  player_replaced_in: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{line}", description: "Einstieg des Nachrückers" },
+  ],
+  player_replaced_out: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{replacement}", description: "Name des Nachrückers" },
+  ],
+  results_review: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{pendingText}", description: "z.B. „3 Ergebnis-Meldungen warten auf Prüfung.“" },
+  ],
+  results_conflict: [
+    { key: "{eventName}", description: "Name des Events" },
+  ],
+  waitlist_promoted: [
+    { key: "{eventName}", description: "Name des Events" },
+  ],
+  registered_by_manager: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{roleText}", description: "„als Spieler“ bzw. „als Zuschauer“" },
+  ],
+  event_cancelled: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{date}", description: "Geplanter Termin" },
+  ],
+  unregister_short_notice: [
+    { key: "{eventName}", description: "Name des Events" },
+    { key: "{player}", description: "Name des Spielers" },
+  ],
   coach_training_posted: [
     { key: "{title}", description: "Titel des Termins" },
     { key: "{description}", description: "Beschreibung des Termins" },
@@ -196,7 +276,7 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   event_poll_started: { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
   quest_completed: { "{questTitle}": "5 Matches gewinnen", "{reward}": "50" },
   quest_new:       { "{month}": "Dezember" },
-  prediction_result: { "{result}": "richtig" },
+  prediction_settled: { "{eventName}": "CS2 Community Cup", "{headline}": "richtig!", "{detail}": "+80 Münzen aus dem Pott (Einsatz 40)." },
   clip_started:    { "{month}": "Dezember", "{year}": "2026", "{nominationCount}": "12" },
   clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
   clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },

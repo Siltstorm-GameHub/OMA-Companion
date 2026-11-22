@@ -48,3 +48,23 @@ export function rewardLabel(r: { coins: number; rankPoints: number } | null): st
   if (!r) return "";
   return [r.coins > 0 ? `+${r.coins} Münzen` : null, r.rankPoints > 0 ? `+${r.rankPoints} RP` : null].filter(Boolean).join(" · ");
 }
+
+/**
+ * Alles, was ein User für dieses Event bekommen hat: Teilnahme (bzw. Zuschauer) + Platzierung.
+ * Aus completionData.rewardLedger (vom Event-Abschluss geschrieben). null = nichts.
+ */
+export function eventRewardOf(
+  completionDataJson: string | null | undefined,
+  userId: string | null | undefined,
+): { coins: number; rankPoints: number } | null {
+  if (!completionDataJson || !userId) return null;
+  let placement: { coins?: number; rankPoints?: number } | undefined;
+  try {
+    placement = (JSON.parse(completionDataJson) as { rewardLedger?: { placementRewards?: Record<string, { coins?: number; rankPoints?: number }> } })
+      ?.rewardLedger?.placementRewards?.[userId];
+  } catch { return null; }
+  const base = participationRewardOf(completionDataJson, userId) ?? { coins: 0, rankPoints: 0 };
+  const coins = base.coins + (placement?.coins ?? 0);
+  const rankPoints = base.rankPoints + (placement?.rankPoints ?? 0);
+  return coins > 0 || rankPoints > 0 ? { coins, rankPoints } : null;
+}

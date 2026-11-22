@@ -262,19 +262,17 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                     className={`${inputCls} resize-none`} style={inputStyle} />
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelCls}>Start (Std. nach Event-Start)</label>
-                  <NumberInput min="0" value={poll.startOffsetHours}
-                    onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })}
-                    className={inputCls} style={inputStyle} />
-                </div>
-                <div>
-                  <label className={labelCls}>Ende (Std. nach Event-Start)</label>
-                  <NumberInput min="1" value={poll.endOffsetHours}
-                    onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })}
-                    className={inputCls} style={inputStyle} />
-                </div>
+              {/* Dauer ab Ende der Spielphase (startOffsetHours bleibt 0, endOffsetHours = Dauer) */}
+              <div>
+                <label className={labelCls}>Dauer der Abstimmung (Std.)</label>
+                <NumberInput min="1" value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
+                  onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })}
+                  className={inputCls} style={inputStyle} />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
+                  einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
+                  Gleichplatzierten die volle Sieger-Belohnung.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>

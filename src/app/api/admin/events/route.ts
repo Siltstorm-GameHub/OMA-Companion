@@ -10,7 +10,8 @@ import { sanitizeCheckInMinutes } from "@/lib/checkin";
 import { publishEvent } from "@/lib/event-publish";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
-import { createNotificationForUsers } from "@/lib/notifications";
+import { dispatchNotification } from "@/lib/notify-dispatch";
+import { discardUnusedPolls } from "@/lib/event-polls";
 import { formatBerlinDateTime } from "@/lib/time";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
 
@@ -222,6 +223,11 @@ export async function PATCH(req: NextRequest) {
   }
 
   const event = await prisma.event.update({ where: { id: eventId }, data });
+  // Umfrage-Einstellung geändert: früher vorab angelegte, unbenutzte Umfragen verwerfen — sie entstehen
+  // zum Ende der Spielphase neu, dann mit der neuen Einstellung (lib/event-polls.ts)
+  if (pollsConfigJson !== undefined && !["umfrage", "finished", "archived"].includes(event.status)) {
+    await discardUnusedPolls(eventId).catch(() => {});
+  }
 
   // OMA-Blocks-Einstellungen (nur bei game "OMA Blocks", siehe EventEditClient.tsx). Die Art lässt sich
   // nicht wechseln; ein Turnier ist nur vor dem Start änderbar, eine Challenge bis zur Abrechnung.
@@ -298,11 +304,11 @@ export async function DELETE(req: NextRequest) {
     const recipients = upcoming.registrations.map((r) => r.userId).filter((id) => id !== currentUser.id);
     if (recipients.length > 0) {
       const when = formatBerlinDateTime(upcoming.startAt, { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
-      await createNotificationForUsers(recipients, {
-        type: "event_start",
-        title: "Event abgesagt",
-        body: `„${upcoming.title}“ am ${when} findet nicht statt.`,
-        url: "/events",
+      // Regel "event_cancelled" (Admin → Benachrichtigungen)
+      await dispatchNotification("event_cancelled", {
+        users: recipients,
+        placeholders: { "{eventName}": upcoming.title, "{date}": when },
+        urlOverride: "/events", skipDiscordChannel: true,
       }).catch(() => {});
     }
   }

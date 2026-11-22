@@ -150,6 +150,8 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
   // EINEN Speichern-Weg — die Speicherleiste unten (früher wurden diese sofort einzeln gespeichert)
   const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
+  // Zuschauer erlauben — vorher nur beim Anlegen einstellbar
+  const [spectatorMode, setSpectatorMode] = useState<boolean>(event.spectatorMode ?? false);
   const [omaOriginal, setOmaOriginal] = useState<boolean>(event.omaOriginal ?? false);
   const [squadId, setSquadId] = useState<string>(event.squadId ?? "");
 
@@ -294,7 +296,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
   const formSnapshot = JSON.stringify({
     status, title, description, rules, game, genre, category, startAt, endAt, maxPlayers, registrationClosesAt, discordChannelId,
     eventKind, participationCoins, participationRankPts, placements, polls, spectatorCoins, spectatorRankPts, twitchClipUrl, coverImageUrl,
-    blocks: isBlocksEvent ? blocks : null, hidden, registrationLocked, squadId, omaOriginal,
+    blocks: isBlocksEvent ? blocks : null, hidden, registrationLocked, spectatorMode, squadId, omaOriginal,
     partners: [...selectedPartnerIds].sort(),
     checkInEnabled, seriesWinnerMode, seriesWinnerStatField,
     goal: goalCapable ? { mode: goalMode, form: goalMode === "override" ? goalForm : null } : null,
@@ -327,7 +329,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
     setDiscordChannelId(s.discordChannelId); setParticipationCoins(s.participationCoins); setPlacements(s.placements);
     setPolls(s.polls); setSpectatorCoins(s.spectatorCoins); setSpectatorRankPts(s.spectatorRankPts);
     setTwitchClipUrl(s.twitchClipUrl); setCoverImageUrl(s.coverImageUrl); if (s.blocks) setBlocks(s.blocks);
-    setHidden(s.hidden); setRegistrationLocked(s.registrationLocked); setSquadId(s.squadId); setOmaOriginal(s.omaOriginal);
+    setHidden(s.hidden); setRegistrationLocked(s.registrationLocked); setSpectatorMode(s.spectatorMode); setSquadId(s.squadId); setOmaOriginal(s.omaOriginal);
     setSelectedPartnerIds(s.partners); setPropagateTitleDesc(false);
     setCheckInEnabled(s.checkInEnabled); setSeriesWinnerMode(s.seriesWinnerMode); setSeriesWinnerStatField(s.seriesWinnerStatField);
     const g = s.goal as { mode: "inherit" | "override" | "off"; form: CommunityGoalForm | null } | null;
@@ -355,6 +357,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
         eventId: event.id,
         ...(hidden !== before.hidden && { hidden }),
         ...(registrationLocked !== before.registrationLocked && { registrationLocked }),
+        ...(spectatorMode !== before.spectatorMode && { spectatorMode }),
         ...(squadId !== before.squadId && { squadId: squadId || null }),
         ...(isModerator && omaOriginal !== before.omaOriginal && { omaOriginal }),
         ...(eventKind !== before.eventKind && { type: eventKind }),
@@ -380,7 +383,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
           placements: hasPlacement ? placements : [],
         }),
         pollsConfigJson: polls.length > 0 ? polls : null,
-        spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
+        spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         twitchClipUrl: twitchClipUrl.trim() || null,
         coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
@@ -747,7 +750,21 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
     const txt = h < 1 ? `${Math.max(1, Math.round(abs / 60_000))} Min` : h < 48 ? `${h} Std` : `${Math.round(h / 24)} Tagen`;
     return ms >= 0 ? `in ${txt}` : `seit ${txt}`;
   };
+  // Spielwahl (Reihen-Termin): Stand und ggf. nächster Schritt — vorher sah man davon hier nichts,
+  // erst beim Auslosen kam die Fehlermeldung
+  const gv = event.gameVote as { status: string; opensAt: string | Date; closesAt: string | Date; winnerGameId: string | null; ballots: { userId: string }[] } | null | undefined;
+  const fmtShort = (d: string | Date) => new Date(d).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  const gameVoteLine = !gv ? null
+    : gv.status === "prepared" ? `Spielwahl startet ${fmtShort(gv.opensAt)}`
+    : gv.status === "open" ? `Spielwahl läuft bis ${fmtShort(gv.closesAt)} · ${gv.ballots.length} abgestimmt`
+    : event.gameRulesPending ? (gv.winnerGameId ? "Spielwahl beendet, Regeln noch nicht freigegeben" : "Spielwahl ohne Ergebnis, Spiel noch festlegen")
+    : null;
+  const gameVoteStep = !gv ? null
+    : event.gameRulesPending && gv.status === "closed" ? { label: gv.winnerGameId ? "Spiel und Regeln freigeben" : "Spiel festlegen", href: `/tournament/${event.id}#spielwahl` }
+    : gv.status !== "closed" ? { label: "Zur Spielwahl", href: `/tournament/${event.id}#spielwahl` }
+    : null;
   const statusLine = [
+    gameVoteLine,
     step === 0 && `${playerCount}${event.maxPlayers ? ` von ${event.maxPlayers}` : ""} angemeldet`,
     step === 0 && `startet ${relTime(savedStart)}`,
     step === 1 && `läuft ${relTime(savedStart)}`,
@@ -760,7 +777,8 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
       : "noch nicht im Discord angekündigt"),
   ].filter(Boolean).join(" · ");
   const nextStep: { label: string; href?: string; tab?: TabKey } | null =
-    step === 2 ? { label: event.completionData ? "Abschluss bearbeiten" : "Event abschließen", href: completeHref }
+    step < 2 && gameVoteStep ? gameVoteStep
+    : step === 2 ? { label: event.completionData ? "Abschluss bearbeiten" : "Event abschließen", href: completeHref }
     : step === 3 && event.completionData ? { label: "Ergebnisse ansehen", href: completeHref }
     : step === 1 && event.format ? { label: "Zum Spielplan", tab: tournamentTab }
     : step === 1 ? { label: "Event abschließen", href: completeHref }
@@ -769,7 +787,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
   const backHref = event.series ? `/events/verwalten/reihen/${event.series.id}` : "/events/verwalten";
 
   return {
-    event, squads, rewardLimits, router, session, isAdmin, isModerator, loading, setLoading, activeTab, setActiveTab, confirm, ConfirmDialogElement, status, setStatus, title, setTitle, description, setDescription, rules, setRules, game, setGame, genre, setGenre, category, setCategory, startAt, setStartAt, endAt, setEndAt, maxPlayers, setMaxPlayers, discordChannelId, setDiscordChannelId, propagateTitleDesc, setPropagateTitleDesc, isBlocksEvent, blocks, setBlocks, blocksKindLocked, blocksLockedReason, titleDescChanged, initialRewards, participationCoins, setParticipationCoins, placements, setPlacements, participationRankPts, setParticipationRankPts, eventKind, setEventKind, kindLocked, hasPlacement, polls, setPolls, initialSpectatorReward, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, initialTmtFormat, tmtFormat, setTmtFormat, tmtPlayHomeAway, setTmtPlayHomeAway, tmtPointsMode, setTmtPointsMode, tmtPoints, setTmtPoints, seriesStatRows, seriesStatFieldSet, tmtStatFields, setTmtStatFields, tmtExtraStatFields, tmtStatConfig, setTmtStatConfig, resolvedGoal, tmPointsCfg, tmAvgDirection, tmtLoading, setTmtLoading, hasTournament, hasStat, isRoundRobinFamily, isLiga, usesMatchResultPoints, resolvedTmtFormat, hidden, setHidden, registrationLocked, setRegistrationLocked, omaOriginal, setOmaOriginal, squadId, setSquadId, initialSeriesCfg, seriesWinnerMode, setSeriesWinnerMode, seriesWinnerStatField, setSeriesWinnerStatField, checkInEnabled, setCheckInEnabled, checkedInIds, setCheckedInIds, setPlayerCheckIn, twitchClipUrl, setTwitchClipUrl, coverImageUrl, setCoverImageUrl, allPartners, setAllPartners, selectedPartnerIds, setSelectedPartnerIds, partnersLoaded, setPartnersLoaded, partnersOpen, setPartnersOpen, registeredUsers, knownUsers, setKnownUsers, searchResults, searching, addableUsers, searchActive, toggleSelected, search, setSearch, bulkSelected, setBulkSelected, bulkSelectedSpectators, setBulkSelectedSpectators, pasteImportOpen, setPasteImportOpen, pasteImportText, setPasteImportText, pasteImportResult, setPasteImportResult, registeredIds, spectatorIds, userName, filteredUsers, seriesGame, seriesDiscord, updatePlacement, addPoll, updatePoll, removePoll, formSnapshot, savedSnapshot, setSavedSnapshot, dirty, changedCount, savedRef, discardChanges, handleSave, formTiming, pickStatus, saveTmtSettings, startTournament, removeUser, addSingleUser, applyPasteImport, bulkAdd, bulkAddSpectators, loadedAt, isUpcoming, canDelete, deleteEvent, isSeriesEvent, bracketTab, tabs, bracketWinnerStatKeys, bracketMatchWinStatKeys, bracketPlacementPoints, bracketTournament, bracketRegisteredUsers, nowDate, savedStart, savedEnd, step, playerCount, completeHref, tournamentTab, relTime, statusLine, nextStep, selectedPartners, backHref, goalStatus, goalMode, setGoalMode, goalForm, setGoalForm, goalCapable, goalSetupLoading, createGoalTracking, reevaluating, reevaluateGoal, undoCompletion, registrationClosesAt, setRegistrationClosesAt,
+    event, squads, rewardLimits, router, session, isAdmin, isModerator, loading, setLoading, activeTab, setActiveTab, confirm, ConfirmDialogElement, status, setStatus, title, setTitle, description, setDescription, rules, setRules, game, setGame, genre, setGenre, category, setCategory, startAt, setStartAt, endAt, setEndAt, maxPlayers, setMaxPlayers, discordChannelId, setDiscordChannelId, propagateTitleDesc, setPropagateTitleDesc, isBlocksEvent, blocks, setBlocks, blocksKindLocked, blocksLockedReason, titleDescChanged, initialRewards, participationCoins, setParticipationCoins, placements, setPlacements, participationRankPts, setParticipationRankPts, eventKind, setEventKind, kindLocked, hasPlacement, polls, setPolls, initialSpectatorReward, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, initialTmtFormat, tmtFormat, setTmtFormat, tmtPlayHomeAway, setTmtPlayHomeAway, tmtPointsMode, setTmtPointsMode, tmtPoints, setTmtPoints, seriesStatRows, seriesStatFieldSet, tmtStatFields, setTmtStatFields, tmtExtraStatFields, tmtStatConfig, setTmtStatConfig, resolvedGoal, tmPointsCfg, tmAvgDirection, tmtLoading, setTmtLoading, hasTournament, hasStat, isRoundRobinFamily, isLiga, usesMatchResultPoints, resolvedTmtFormat, hidden, setHidden, registrationLocked, setRegistrationLocked, spectatorMode, setSpectatorMode, omaOriginal, setOmaOriginal, squadId, setSquadId, initialSeriesCfg, seriesWinnerMode, setSeriesWinnerMode, seriesWinnerStatField, setSeriesWinnerStatField, checkInEnabled, setCheckInEnabled, checkedInIds, setCheckedInIds, setPlayerCheckIn, twitchClipUrl, setTwitchClipUrl, coverImageUrl, setCoverImageUrl, allPartners, setAllPartners, selectedPartnerIds, setSelectedPartnerIds, partnersLoaded, setPartnersLoaded, partnersOpen, setPartnersOpen, registeredUsers, knownUsers, setKnownUsers, searchResults, searching, addableUsers, searchActive, toggleSelected, search, setSearch, bulkSelected, setBulkSelected, bulkSelectedSpectators, setBulkSelectedSpectators, pasteImportOpen, setPasteImportOpen, pasteImportText, setPasteImportText, pasteImportResult, setPasteImportResult, registeredIds, spectatorIds, userName, filteredUsers, seriesGame, seriesDiscord, updatePlacement, addPoll, updatePoll, removePoll, formSnapshot, savedSnapshot, setSavedSnapshot, dirty, changedCount, savedRef, discardChanges, handleSave, formTiming, pickStatus, saveTmtSettings, startTournament, removeUser, addSingleUser, applyPasteImport, bulkAdd, bulkAddSpectators, loadedAt, isUpcoming, canDelete, deleteEvent, isSeriesEvent, bracketTab, tabs, bracketWinnerStatKeys, bracketMatchWinStatKeys, bracketPlacementPoints, bracketTournament, bracketRegisteredUsers, nowDate, savedStart, savedEnd, step, playerCount, completeHref, tournamentTab, relTime, statusLine, nextStep, selectedPartners, backHref, goalStatus, goalMode, setGoalMode, goalForm, setGoalForm, goalCapable, goalSetupLoading, createGoalTracking, reevaluating, reevaluateGoal, undoCompletion, registrationClosesAt, setRegistrationClosesAt,
   };
 }
 

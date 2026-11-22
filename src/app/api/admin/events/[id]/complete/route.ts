@@ -1,13 +1,13 @@
 import { resolveEventChannelId } from "@/lib/event-discord-channel";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { requireEventManager, hasMinRole } from "@/lib/roles";
 import { capParticipationCoins, capPlacements, capValue } from "@/lib/captain-reward-limits";
 import { getCommunityLimits } from "@/lib/community-event-limits";
 import { eventHasPlacement } from "@/lib/event-placement";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { sendPushToUsers } from "@/lib/push";
+import { sendPushForType } from "@/lib/push";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { awardEventPokal } from "@/lib/award-pokal";
@@ -17,6 +17,7 @@ import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { notifyPollResults } from "@/lib/event-poll-notify";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 import { isPeriodEvent } from "@/lib/event-period";
 import { updateQuestProgress } from "@/lib/quests";
@@ -355,6 +356,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // Ob überhaupt eine Legacy-Einzel-Umfrage konfiguriert ist. Nötig, um zu wissen, ob ein fehlender
   // Poll-Sieger "noch offen" oder schlicht "nicht vorhanden" bedeutet.
   const legacyPollConfigured = (() => {
+    // Gibt es eine normale Umfrage-Einstellung (z.B. nach dem Umwandeln), zählt die alte Einzel-Umfrage nicht mehr
+    if (parsePollsConfigJson(event.pollsConfigJson).length > 0 || parsePollsConfigJson(event.series?.pollsConfigJson).length > 0) return false;
     const raw = event.pollConfigJson ?? event.series?.pollConfigJson;
     if (!raw) return false;
     try { return !!(JSON.parse(raw) as { enabled?: boolean } | null)?.enabled; } catch { return false; }
@@ -378,8 +381,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
   if (!isReEdit) {
     const now0 = new Date();
     const existingPolls = event.polls;
-    const staleUnusedPolls = existingPolls.length > 0 &&
-      existingPolls.every(p => new Date(p.endAt) <= now0 && p.votes.length === 0);
+    // Noch niemand hat abgestimmt (z.B. früher vorab angelegte Umfragen): nach der aktuellen
+    // Einstellung neu anlegen — Dauer ab jetzt, geänderte Fragen/Belohnungen gelten
+    const staleUnusedPolls = existingPolls.length > 0 && existingPolls.every(p => p.votes.length === 0);
 
     if (existingPolls.length === 0 || staleUnusedPolls) {
       // Bewusst nicht nur `??` (das greift nicht, falls event.pollsConfigJson ein leeres "[]" statt
@@ -872,9 +876,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     allUnpaidPolls = [...allUnpaidPolls, ...reopenedPolls];
   }
 
-  // Moderator/Admin (nicht Squad-Captains): noch offene Umfragen sofort schließen (Umfragephase
-  // manuell beenden, statt auf das natürliche Ablaufen von endAt zu warten).
-  if (body.closeOpenPolls && hasMinRole(currentUser.role, "moderator")) {
+  // Alle Verwalter (auch Squad-Captains und Ersteller): noch offene Umfragen sofort schließen
+  // (Umfragephase manuell beenden, statt auf das natürliche Ablaufen von endAt zu warten).
+  if (body.closeOpenPolls) {
     const stillOpenIds = allUnpaidPolls.filter(p => new Date(p.endAt) > now).map(p => p.id);
     if (stillOpenIds.length > 0) {
       pointOps.push(prisma.eventPoll.updateMany({ where: { id: { in: stillOpenIds } }, data: { endAt: now } }));
@@ -905,8 +909,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
     const voteCounts: Record<string, number> = {};
     const voterIds: string[] = [];
     for (const vote of poll.votes) {
-      voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
       voterIds.push(vote.voterId);
+      // Stimmen für "nicht da" markierte oder ausgeschlossene Spieler zählen nicht als Kandidat
+      if (poll.answerType !== "custom" && (absentSet.has(vote.targetId) || excludedSet.has(vote.targetId))) continue;
+      voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
     }
 
     let maxVotes = 0;
@@ -1451,10 +1457,24 @@ async function completeEvent(req: NextRequest, eventId: string) {
   const newWinnerIds = eventWinnerIds.length > 0 ? eventWinnerIds : eventWinnerId ? [eventWinnerId] : [];
   if (!isReEdit || winnerKey(oldWinnerIds) !== winnerKey(newWinnerIds)) {
     try {
-      await resolveEventPredictions(eventId, newWinnerIds);
+      // Wer tatsächlich mitgespielt hat (angemeldete Spieler ohne "nicht da"/Ausschluss, plus Platzierte) —
+      // Tipps auf andere sind ungültig, ihr Einsatz kommt zurück (lib/predictions.ts)
+      const playedUserIds = new Set([
+        ...event.registrations.filter(r => r.role !== "spectator" && !absentSet.has(r.userId) && !excludedSet.has(r.userId)).map(r => r.userId),
+        ...newWinnerIds,
+      ]);
+      await resolveEventPredictions(eventId, newWinnerIds, { playedUserIds });
     } catch (err) {
       console.error("[Predictions] Auswertung fehlgeschlagen:", err);
     }
+  }
+
+  // Umfrage-Ergebnis: Sieger ("Du bist MVP!") und alle, die abgestimmt haben, bekommen eine Meldung —
+  // nur bei der ersten Auswertung einer Umfrage, nicht bei Korrekturen (reopenedPollIds).
+  if (eventPollRewards.length > 0 && !isEventHidden(event)) {
+    const fresh = eventPollRewards.filter(r => !reopenedPollIds.includes(r.pollId));
+    const run = () => notifyPollResults(eventId, event.title, fresh, excludedSet).catch(err => console.error("[polls] Ergebnis-Meldung", err));
+    try { after(run); } catch { void run(); }
   }
 
   // Push + In-App Notification an alle Teilnehmer — Deep-Link direkt zu den Ergebnissen
@@ -1475,8 +1495,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // damit ist die Spielphase abgeschlossen und erste Ergebnisse stehen fest. Bei erneutem
   // Abschließen/Korrigieren eines Events, das schon "umfrage" oder "finished" war, keine erneute Meldung.
   if (firstCompletion && !isEventHidden(event)) {
-    sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
-    createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+    // "Meine Events": Push und In-App nur, wenn der Teilnehmer das nicht abgeschaltet hat
+    sendPushForType(participantIds, "event_personal", { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+    createNotificationForUsers(participantIds, { type: "event_personal", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
   }
 
   // Discord-Kanal-Post: nur beim tatsächlichen Übergang "aktiv" → "umfrage" (siehe Bedingung

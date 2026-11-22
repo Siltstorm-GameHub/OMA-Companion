@@ -79,7 +79,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
               )}
 
               {/* Zuschauer-Belohnung */}
-              {event.spectatorMode && (
+              {ctx.spectatorMode && (
                 <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
                   <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -176,17 +176,16 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                     </button>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className={labelCls}>Start (Std. nach Event-Start)</label>
-                    <NumberInput min={0} value={poll.startOffsetHours}
-                      onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })} className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Ende (Std. nach Event-Start)</label>
-                    <NumberInput min={1} value={poll.endOffsetHours}
-                      onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })} className={inputCls} />
-                  </div>
+                {/* Dauer ab Ende der Spielphase (startOffsetHours bleibt 0, endOffsetHours = Dauer) */}
+                <div>
+                  <label className={labelCls}>Dauer der Abstimmung (Std.)</label>
+                  <NumberInput min={1} value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
+                    onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })} className={inputCls} />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                  Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
+                  einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
+                  Gleichplatzierten die volle Sieger-Belohnung.
+                </p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>

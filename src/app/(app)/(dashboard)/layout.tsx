@@ -1,4 +1,5 @@
 import { computeCommunityGoalProgress, goalPace, GOAL_FORMATS, GOAL_MATCH_SELECT, isAvgGoal } from "@/lib/community-goal";
+import { isEventRunning } from "@/lib/event-display";
 import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -158,7 +159,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Aktives / Umfragephase / Nächstes Event
   if (nextEvent) {
-    if (nextEvent.status === "active") {
+    if (isEventRunning(nextEvent)) {
       newsItems.push({
         id: "event-next",
         icon: "event",

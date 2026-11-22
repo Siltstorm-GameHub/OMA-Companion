@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { POST as completeEventRoute } from "@/app/api/admin/events/[id]/complete/route";
 import { buildRecompleteBody } from "@/lib/event-recomplete";
+import { parsePollsConfigJson } from "@/lib/event-polls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +44,8 @@ export async function GET(req: NextRequest) {
       completionData: true,
       finalRankingNote: true,
       pollConfigJson: true,
-      series: { select: { pollConfigJson: true } },
+      pollsConfigJson: true,
+      series: { select: { pollConfigJson: true, pollsConfigJson: true } },
       polls: { where: { rewardsPaid: false }, select: { endAt: true } },
       _count: { select: { polls: true } },
     },
@@ -64,7 +66,9 @@ export async function GET(req: NextRequest) {
       catch { return {}; }
     })();
 
-    const hasLegacyPoll = legacyPollConfigured(event.pollConfigJson ?? event.series?.pollConfigJson);
+    // Alte Einzel-Umfrage zählt nur, solange es keine normale Umfrage-Einstellung gibt
+    const hasModernPolls = parsePollsConfigJson(event.pollsConfigJson).length > 0 || parsePollsConfigJson(event.series?.pollsConfigJson).length > 0;
+    const hasLegacyPoll = !hasModernPolls && legacyPollConfigured(event.pollConfigJson ?? event.series?.pollConfigJson);
     const legacyResolved = !hasLegacyPoll || ((oldCompletion.pollWinnerIds as string[] | null)?.length ?? 0) > 0;
     if (!legacyResolved) { skipped.push(event.id); continue; } // braucht noch eine manuelle Sieger-Wahl
 

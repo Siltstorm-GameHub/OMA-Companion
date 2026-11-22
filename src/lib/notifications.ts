@@ -11,7 +11,10 @@ export type NotificationType =
   | "admin"
   | "server"
   | "game"
-  | "event_comment";
+  | "event_comment"
+  // Persönliche Event-Meldungen (Check-in, Auslosung, dein Match, Ergebnis …) — eigener Schalter
+  // "Meine Events", getrennt von Ankündigungen neuer Events ("event_start" → Schalter "Neue Events")
+  | "event_personal";
 
 // Mapping von NotificationType auf den Präferenz-Key (auch von notify-dispatch.ts genutzt)
 export const PREF_KEY: Record<NotificationType, string> = {
@@ -26,7 +29,13 @@ export const PREF_KEY: Record<NotificationType, string> = {
   server:       "server",
   game:         "game", // Spieleliste: Angebote, Matches, GameSwipe-Drop und neue Karten
   event_comment: "eventComment", // Event-Absprachen: neue Nachrichten, Erwähnungen, Status-Meldungen
+  event_personal: "myEvent", // Meine Events: Check-in, Auslosung, dein Match, Ergebnisse, Warteliste
 };
+
+/** Darf dieser User Meldungen dieses Typs bekommen? (Standard: ja) — für Push und In-App gleich */
+export function prefAllows(notificationPrefs: string | null | undefined, type: NotificationType): boolean {
+  try { return isTypeEnabled(JSON.parse(notificationPrefs || "{}"), type); } catch { return true; }
+}
 
 function isTypeEnabled(prefs: Record<string, boolean>, type: NotificationType): boolean {
   const key = PREF_KEY[type];

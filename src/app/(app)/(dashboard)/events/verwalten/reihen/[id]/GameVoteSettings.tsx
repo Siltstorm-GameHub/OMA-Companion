@@ -111,6 +111,16 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
           <label className="flex items-center gap-2">{num("candidateCount")} Kandidaten je Wahl</label>
           <label className="flex items-center gap-2">Spiele der letzten {num("excludeLastN")} Termine ausschließen</label>
           <label className="flex items-center gap-2">{num("voteCoins")} Münzen fürs Abstimmen (0 = keine)</label>
+          <label className="flex flex-wrap items-center gap-2">
+            Zwischenstand zeigen:
+            <select value={cfg.showCounts} onChange={e => set("showCounts", e.target.value as GameVoteConfig["showCounts"])}
+              className="bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1 text-xs text-white">
+              <option value="always">immer</option>
+              <option value="after_vote">erst nach der eigenen Stimme</option>
+              <option value="after_end">erst nach dem Ende</option>
+            </select>
+            <span className="text-gray-500">Später sichtbar = weniger Mitläufer-Effekt.</span>
+          </label>
         </div>
       )}
       <Button size="sm" onClick={save} disabled={saving}>Speichern</Button>

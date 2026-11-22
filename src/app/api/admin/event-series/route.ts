@@ -9,7 +9,7 @@ import { requireRole, requireSeriesManager, hasMinRole, getCaptainedSquadIds } f
 import { prisma } from "@/lib/prisma";
 import { capCaptainRewardFields, capMatchResultPoints } from "@/lib/captain-reward-limits";
 import { parseStatAliases, parseTournamentTemplate, serializeTournamentTemplate } from "@/lib/series-seasons";
-import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { discardUnusedPolls } from "@/lib/event-polls";
 
 /**
  * GET /api/admin/event-series        → Liste aller Reihen (mit Event-Zähler + nächstes Event)
@@ -292,18 +292,10 @@ export async function PATCH(req: NextRequest) {
       where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
       data:  { pollsConfigJson: fields.pollsConfigJson },
     });
-    // Echte EventPoll-Datensätze nachziehen — nur für Events, die noch keine haben, damit
-    // bereits laufende Abstimmungen nicht dupliziert/überschrieben werden.
-    const pollsConfig = parsePollsConfigJson(fields.pollsConfigJson);
-    if (pollsConfig.length > 0) {
-      const eventsMissingPolls = await prisma.event.findMany({
-        where: { seriesId, status: OPEN_EVENT_STATUS_FILTER, polls: { none: {} } },
-        select: { id: true, startAt: true },
-      });
-      for (const ev of eventsMissingPolls) {
-        await createPollsForEvent(ev.id, ev.startAt, pollsConfig);
-      }
-    }
+    // Früher vorab angelegte, unbenutzte Umfragen verwerfen — sie entstehen zum Ende der Spielphase
+    // neu, dann mit der neuen Einstellung (lib/event-polls.ts → startPollsForEvent)
+    const openEvents = await prisma.event.findMany({ where: { seriesId, status: OPEN_EVENT_STATUS_FILTER }, select: { id: true } });
+    for (const ev of openEvents) await discardUnusedPolls(ev.id);
   }
 
   // 6) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)

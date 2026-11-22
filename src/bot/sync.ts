@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { notifyEventStarted } from "@/lib/event-started-notify";
 import { FORMAT_LABELS } from "@/lib/event-placeholders";
 
 // Turnier-Start-Nachricht mit Erwähnung der Teilnehmer — Regel "event_tournament_started" (Admin →
@@ -41,11 +42,8 @@ export async function updateEventStatus(discordEventId: string, status: string) 
     await prisma.event.update({ where: { id: event.id }, data: { status } });
 
     if (status === "active") {
-      await dispatchEventNotification("event_started", { id: event.id }, {
-        placeholders: { "{eventName}": event.title, "{game}": event.game ?? "–" },
-        discordChannelIdOverride: event.discordChannelId,
-        discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
-      }).catch(() => {});
+      // Einmal je Event — hat die App den Start schon gemeldet, bleibt es dabei (lib/event-started-notify.ts)
+      await notifyEventStarted(event.id).catch(() => {});
 
       const eventWithTournament = await prisma.event.findUnique({
         where:  { id: event.id },

@@ -226,7 +226,7 @@ export async function startTournament(eventId: string): Promise<string | null> {
     players.map((id) => {
       const g = groups.findIndex((list) => list.includes(id));
       return createNotification(id, {
-        type: "event_start",
+        type: "event_personal",
         title: `${event.title}: Es geht los!`,
         body: direct ? "Das Finale startet — ab in den Turnier-Raum." : `Du spielst in ${groupLabel(g)}. Ab in den Turnier-Raum!`,
         url,
@@ -260,7 +260,7 @@ export async function advanceTournament(eventId: string, force = false): Promise
       await Promise.all(
         finalists.map((id) =>
           createNotification(id, {
-            type: "event_start",
+            type: "event_personal",
             title: `${event.title}: Du bist im Finale!`,
             body: "Das Finale startet, sobald alle im Turnier-Raum sind.",
             url: `/games/blocks/turnier/${eventId}`,

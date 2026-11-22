@@ -14,7 +14,8 @@ import { isDrawFormat } from "@/lib/tournaments/draw-plan";
 import { isPeriodEvent } from "@/lib/event-period";
 import { isEventHidden } from "@/lib/event-visibility";
 import { promoteFromWaitlist } from "@/lib/event-waitlist";
-import { createNotification } from "@/lib/notifications";
+import { dispatchNotification } from "@/lib/notify-dispatch";
+import { eventManagerIds } from "@/lib/event-managers";
 
 export type RegistrationBlock = {
   status: number; error: string;
@@ -83,9 +84,11 @@ export async function playerRegistrationBlock(
 
 /** Warum sich jemand nicht als Zuschauer anmelden kann (null = geht). Die Spielerplätze (voll) und die
  *  Squad-Beschränkung gelten für Zuschauer nicht. */
-export function spectatorRegistrationBlock(event: EventForRegistration, now = new Date()): RegistrationBlock | null {
-  const common = commonBlock(event, now);
-  if (common) return common;
+export function spectatorRegistrationBlock(event: EventForRegistration): RegistrationBlock | null {
+  // Zuschauer kommen meist, wenn es läuft: Anmeldung bis zum Abschluss der Spielphase. Start, Anmeldeschluss
+  // und "Teilnehmer trägt der Veranstalter ein" gelten nur für Spieler (Zuschauer belegen keinen Platz).
+  if (["finished", "archived", "umfrage"].includes(event.status)) return { status: 400, error: "Das Event ist schon vorbei", reason: "closed" };
+  if (isEventHidden(event) || event.approvalStatus === "rejected") return { status: 404, error: "Event nicht gefunden", reason: "hidden" };
   if (!event.spectatorMode) return { status: 400, error: "Zuschauer-Anmeldung ist für dieses Event nicht aktiviert", reason: "spectators_off" };
   return null;
 }
@@ -104,7 +107,7 @@ export async function registerForEvent(userId: string, eventId: string, role: "p
   if (!event) return { result: "blocked", block: { status: 404, error: "Event nicht gefunden", reason: "hidden" } };
 
   if (role === "spectator") {
-    const block = spectatorRegistrationBlock(event, now);
+    const block = spectatorRegistrationBlock(event);
     if (block) return { result: "blocked", block };
     const existing = await prisma.eventRegistration.findUnique({ where: { userId_eventId: { userId, eventId } } });
     if (existing) return { result: "already", role: existing.role === "spectator" ? "spectator" : "player" };
@@ -158,6 +161,44 @@ export function unregisterBlock(
   return null;
 }
 
+/** Tipper informieren, deren getippter Spieler sich abgemeldet hat (Regel "prediction_player_left"). */
+async function notifyPredictionPlayerLeft(eventId: string, playerId: string, eventTitle: string) {
+  const tippers = await prisma.eventWinnerPrediction.findMany({
+    where: { eventId, predictedUserId: playerId, resolved: false, userId: { not: playerId } }, select: { userId: true },
+  });
+  if (tippers.length === 0) return;
+  const who = await prisma.user.findUnique({ where: { id: playerId }, select: { username: true, name: true } });
+  await dispatchNotification("prediction_player_left", {
+    users: tippers.map(t => t.userId),
+    placeholders: { "{eventName}": eventTitle, "{player}": who?.username ?? who?.name ?? "Der Spieler" },
+    urlOverride: `/tournament/${eventId}#tipps`, skipDiscordChannel: true,
+  });
+}
+
+/**
+ * "Lieber zuschauen": Spieler wird Zuschauer. Gleiche Regeln wie beim Abmelden (vor Start/Auslosung);
+ * der Platz wird frei und geht an die Warteliste, man bleibt aber als Zuschauer dabei.
+ */
+export async function switchToSpectator(userId: string, eventId: string, now = new Date()): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { ...REGISTRATION_SELECT, completionData: true, _count: { select: { matches: true } } },
+  });
+  if (!event) return { ok: false, status: 404, error: "Event nicht gefunden" };
+  if (!event.spectatorMode) return { ok: false, status: 400, error: "Zuschauer sind bei diesem Event nicht vorgesehen" };
+  const reg = await prisma.eventRegistration.findUnique({ where: { userId_eventId: { userId, eventId } } });
+  if (!reg || reg.role === "spectator") return { ok: false, status: 400, error: "Du bist nicht als Spieler angemeldet" };
+  const blocked = unregisterBlock(event, event._count.matches > 0, now);
+  if (blocked) return { ok: false, status: 409, error: blocked };
+  await prisma.$transaction([
+    prisma.eventRegistration.update({ where: { id: reg.id }, data: { role: "spectator", checkedInAt: null } }),
+    prisma.tournamentParticipant.deleteMany({ where: { userId, eventId } }),
+  ]);
+  await promoteFromWaitlist(eventId).catch(err => console.error("[waitlist] Nachrücken fehlgeschlagen", eventId, err));
+  await notifyPredictionPlayerLeft(eventId, userId, event.title).catch(() => {});
+  return { ok: true };
+}
+
 /** Kurzfristig = innerhalb dieser Zeit vor dem Start (oder schon eingecheckt): Ersteller bekommt eine Meldung */
 const SHORT_NOTICE_MS = 24 * 60 * 60 * 1000;
 
@@ -178,25 +219,32 @@ export async function unregisterFromEvent(userId: string, eventId: string, now =
     await prisma.eventWaitlistEntry.deleteMany({ where: { eventId, userId } });
     return { ok: true };
   }
-  const blocked = unregisterBlock(event, event._count.matches > 0, now);
+  // Zuschauer nehmen niemandem einen Platz weg: abmelden bis zum Abschluss (nicht nur bis zum Start)
+  const blocked = reg.role === "spectator"
+    ? (event.completionData || ["finished", "archived", "umfrage"].includes(event.status) ? "Das Event ist abgeschlossen, abmelden geht nicht mehr." : null)
+    : unregisterBlock(event, event._count.matches > 0, now);
   if (blocked) return { ok: false, status: 409, error: blocked };
 
   await prisma.eventRegistration.delete({ where: { id: reg.id } });
   await prisma.tournamentParticipant.deleteMany({ where: { userId, eventId } });
 
   if (reg.role !== "spectator") {
-    // Kurzfristige Abmeldung (oder schon eingecheckt): Ersteller informieren
+    // Kurzfristige Abmeldung (oder schon eingecheckt): Verwalter informieren (Regel "unregister_short_notice")
     const shortNotice = !!reg.checkedInAt || event.startAt.getTime() - now.getTime() < SHORT_NOTICE_MS;
-    if (shortNotice && event.createdById && event.createdById !== userId) {
-      const who = await prisma.user.findUnique({ where: { id: userId }, select: { username: true, name: true } });
-      await createNotification(event.createdById, {
-        type: "event_start",
-        title: "Kurzfristige Abmeldung",
-        body: `${who?.username ?? who?.name ?? "Jemand"} hat sich von „${event.title}“ abgemeldet.`,
-        url: `/events/verwalten/${eventId}`,
-      }).catch(() => {});
+    if (shortNotice) {
+      const managers = await eventManagerIds(eventId, userId);
+      if (managers.length) {
+        const who = await prisma.user.findUnique({ where: { id: userId }, select: { username: true, name: true } });
+        await dispatchNotification("unregister_short_notice", {
+          users: managers,
+          placeholders: { "{eventName}": event.title, "{player}": who?.username ?? who?.name ?? "Jemand" },
+          urlOverride: `/events/verwalten/${eventId}`, skipDiscordChannel: true,
+        }).catch(() => {});
+      }
     }
     await promoteFromWaitlist(eventId).catch(err => console.error("[waitlist] Nachrücken fehlgeschlagen", eventId, err));
+    // Wer auf diesen Spieler getippt hat, kann bis zum Start noch umtippen
+    await notifyPredictionPlayerLeft(eventId, userId, event.title).catch(() => {});
   }
   return { ok: true };
 }

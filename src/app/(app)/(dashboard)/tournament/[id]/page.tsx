@@ -1,8 +1,7 @@
 import React from "react";
-import { eventHasPlacement, participationRewardOf } from "@/lib/event-placement";
+import { eventHasPlacement, eventRewardOf, participationRewardOf } from "@/lib/event-placement";
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
-import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { genreMeta } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import type { Metadata } from "next";
@@ -15,7 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Users, ChevronDown, CalendarPlus, Lock, Gamepad2, MessageCircle } from "@/components/icons";
 import { GateButton } from "@/components/GuestGate";
-import { ArrowLeft, Clock, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings, Timer } from "@/components/icons";
+import { ArrowLeft, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { waitlistPosition } from "@/lib/event-waitlist";
 import RulesSection from "@/components/RulesSection";
@@ -25,17 +24,21 @@ import SectionJumpLink from "@/components/SectionJumpLink";
 import { getCommentCounts, getLatestCommentStatuses } from "@/lib/event-comments";
 import { statusBadge } from "@/lib/event-comments-shared";
 import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
-import GameCover from "@/components/GameCover";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import RankPointsIcon from "@/components/RankPointsIcon";
-import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
-import ClientTime from "@/components/ClientTime";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
-import { formatBerlinDate, formatBerlinDateTime, formatBerlinTime } from "@/lib/time";
+import { formatBerlinDateTime, formatBerlinTime } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { TONE_CLASSES, dateBlock, eventPhase, parseRanking, startsInLabel } from "@/lib/event-display";
+import { SECTION_ORDER, isPrePhase, pagePhaseOf, type SectionKey } from "./event-page-layout";
+import EventHowTo, { howToSteps } from "./EventHowTo";
+import MyEventResult from "./MyEventResult";
+import ActionMoreMenu from "./ActionMoreMenu";
+import EventHero from "./EventHero";
+import { checkInOpensAt, checkInState } from "@/lib/checkin";
+import { ineligibleCandidates } from "@/lib/event-polls-shared";
 import { loadSeriesContext } from "@/lib/series-context";
 import SeriesStrip from "./SeriesStrip";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -263,7 +266,9 @@ export default async function TournamentDetailPage({
   const gameVote = await getGameVoteView(event.id, userId);
   // Reihen-Termin: Kontext für Kopf und Reihen-Leiste (Termin x von y, Nachbarn, eigener Platz)
   const seriesCtx = event.seriesId ? await loadSeriesContext(event.seriesId, event.id, userId) : null;
-  const gameVoteAddable = gameVote && isMod && gameVote.status !== "closed" ? await addableGames(event.id) : [];
+  // Verwalter (nicht nur Mods) bearbeiten Kandidaten und legen ohne Sieger das Spiel fest
+  const canManageVote = !!gameVote && canManage;
+  const gameVoteAddable = gameVote && canManageVote && (gameVote.status !== "closed" || !gameVote.winnerGameId) ? await addableGames(event.id) : [];
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
   const isRegistered  = !!myReg && myReg.role !== "spectator";
@@ -602,10 +607,12 @@ export default async function TournamentDetailPage({
     excludedUserIds: string[];
     effectiveWinnerIds: string[];
   };
+  // Beim Abschluss "nicht da" bzw. ausgeschlossen: keine wählbaren Kandidaten (lib/event-polls-shared.ts)
+  const pollIneligible = ineligibleCandidates(event.completionData);
   const pollDisplays: PollDisplay[] = mergedPolls.map(poll => {
-    let excludedUserIds: string[] = [];
-    if (poll.excludedUserIds) { try { excludedUserIds = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
-    const excludedSet = new Set(excludedUserIds);
+    let pollExcluded: string[] = [];
+    if (poll.excludedUserIds) { try { pollExcluded = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
+    const excludedSet = new Set([...pollExcluded, ...pollIneligible]);
 
     const voteCounts: Record<string, number> = {};
     let myVote: string | null = null;
@@ -643,7 +650,7 @@ export default async function TournamentDetailPage({
       rewardsPaid: poll.rewardsPaid,
       participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
       winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
-      voteCounts, myVote, answerOptions, excludedUserIds, effectiveWinnerIds,
+      voteCounts, myVote, answerOptions, excludedUserIds: [...excludedSet], effectiveWinnerIds,
     };
   });
 
@@ -806,12 +813,6 @@ export default async function TournamentDetailPage({
   const serverTimeFallback = formatBerlinTime(date, { hour: "2-digit", minute: "2-digit" });
 
   // Stats für Header
-  // Freilose (nur ein Spieler) sind keine echten Spiele — weder gespielt noch offen
-  const realMatches = event.matches.filter(m => m.entries.length > 0 || !(m.winnerId && (!m.player1Id || !m.player2Id)));
-  const playedMatches = realMatches.filter(m =>
-    isElimination || (isGroupKnockout && m.groupIndex == null && !m.leg) ? !!m.winnerId : !!m.playedAt
-  ).length;
-  const totalMatches = realMatches.length;
 
   // Umfragen ohne (bestätigtes oder abgeleitetes) Ergebnis fürs Voting-Widget aufbereiten —
   // Umfragen mit Ergebnis laufen bereits oben in die Gewinner-Karte (completedPolls)
@@ -948,13 +949,32 @@ export default async function TournamentDetailPage({
   // Die Seite sortiert ihre Abschnitte nach Phase: vor dem Event zählen Anmeldung, Mitspieler und
   // Regeln; live das eigene Match und der Turnierbaum; in der Abstimmungsphase die Abstimmung; danach
   // das Ergebnis. Alle Abschnitte gibt es weiterhin, nur die Reihenfolge ändert sich.
-  type PagePhase = "before" | "live" | "voting" | "after";
-  const pagePhase: PagePhase =
-    event.status === "finished" ? "after"
-      : event.status === "umfrage" || gamePhaseComplete ? "voting"
-        : event.status === "active" ? "live"
-          : "before";
+  // Phasen und Reihenfolge: ./event-page-layout.ts ("drawn" = vor dem Start ausgelost, noch nicht live)
+  const pagePhase = pagePhaseOf({ status: event.status, startAt: event.startAt, gamePhaseComplete });
+
+  // ── Eigener Stand (Kopfbereich + "So läuft's ab") ──
+  const myCheckInState = checkInState({ checkInEnabled: event.checkInEnabled, startAt: event.startAt }, isDrawn);
+  const myCheckedIn = !!myReg?.checkedInAt;
+  const notDrawnMe = isDrawn && isRegistered && !event.matches.some(m => m.player1Id === userId || m.player2Id === userId);
+  const myStatus: { label: string; tone: "teal" | "amber" | "muted" } | null =
+    pagePhase === "after" || pagePhase === "voting" ? null
+      : myWaitlistPos ? { label: `Warteliste · Platz ${myWaitlistPos}`, tone: "amber" }
+      : isSpectator ? { label: "Du schaust zu", tone: "teal" }
+      : !isRegistered ? null
+      : notDrawnMe ? { label: "Nicht ausgelost", tone: "muted" }
+      : myCheckInState === "open" ? (myCheckedIn ? { label: "Du bist dabei · bereit", tone: "teal" } : { label: "Du bist dabei · noch nicht bereit", tone: "amber" })
+      : myCheckInState === "not_yet_open" && myCheckedIn ? { label: "Du bist dabei · bereit", tone: "teal" }
+      : { label: "Du bist dabei", tone: "teal" };
   const playerCount = event.registrations.filter(r => r.role !== "spectator").length;
+  const spectatorCount = event.registrations.length - playerCount;
+  // Belohnung fürs Zuschauen (wer beim Abschluss als anwesend markiert ist)
+  const spectatorReward: { coins: number; rankPoints: number } | null = (() => {
+    if (!event.spectatorMode || !event.spectatorRewardJson) return null;
+    try {
+      const r = JSON.parse(event.spectatorRewardJson) as { coins?: number; rankPoints?: number };
+      return (r.coins ?? 0) > 0 || (r.rankPoints ?? 0) > 0 ? { coins: r.coins ?? 0, rankPoints: r.rankPoints ?? 0 } : null;
+    } catch { return null; }
+  })();
   const phaseInfo = eventPhase({
     status: event.status, startAt: event.startAt, endAt: event.endAt, maxPlayers: event.maxPlayers,
     playerCount, isRegistered, gameVoteOpen: gameVote?.status === "open",
@@ -984,76 +1004,12 @@ export default async function TournamentDetailPage({
 
   // ── Kopf: Cover mit Titel, Datum, Status ──
   const heroNode = (
-    <section aria-label={event.title} className="relative overflow-hidden rounded-2xl mb-3">
-      {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
-          → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
-      <div className="relative w-full aspect-[16/9] sm:aspect-[16/6]">
-        <GameCover
-          game={event.game}
-          coverUrl={event.coverImageUrl ?? event.series?.coverImageUrl ?? null}
-          className="absolute inset-0 w-full h-full"
-          rounded="rounded-none"
-          imgClassName="w-full h-full object-cover"
-          brandBadge
-          omaOriginal={isOmaOriginal(event)}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d12] via-[#0b0d12]/50 to-transparent pointer-events-none" />
-        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
-
-        {/* Kalenderblock */}
-        <div className="absolute top-3 left-3 rounded-lg bg-[#0b0d12]/90 px-2.5 py-1.5 text-center leading-tight shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
-          <div className={`text-[11px] font-semibold ${heroDate.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{heroDate.top}</div>
-          <div className="text-2xl font-bold !text-white tabular-nums">{heroDate.day}</div>
-          <div className="text-[11px] text-gray-400 tabular-nums"><ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /></div>
-        </div>
-
-        {/* Reihen-Termin: Akzent in Reihenfarbe (wie auf der Reihen-Seite) */}
-        {seriesCtx && <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full" style={{ background: seriesCtx.color }} />}
-
-        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            {statusLabel && (
-              <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${statusTone.pill}`} style={{ textShadow: "none" }}>
-                {phaseInfo.phase === "live" && <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
-                {phaseInfo.phase === "period" && <Timer className="w-3.5 h-3.5" />}
-                {statusLabel}
-              </span>
-            )}
-            {pagePhase === "before" && startsIn && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-gray-200" style={{ textShadow: "none" }}>
-                <Clock className="w-3.5 h-3.5" /> startet {startsIn}
-              </span>
-            )}
-            {isRegistered && pagePhase !== "after" && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-teal-400/15 px-2 py-0.5 text-xs font-semibold text-teal-300" style={{ textShadow: "none" }}>
-                <CheckCircle2 className="w-3.5 h-3.5" /> Du bist dabei
-              </span>
-            )}
-          </div>
-          {seriesCtx && event.series && (
-            <Link href={`/events/series/${seriesCtx.id}`} className="mb-0.5 inline-flex items-center gap-1.5 text-xs font-semibold hover:underline" style={{ color: seriesCtx.color }}>
-              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
-              Eventreihe {seriesCtx.name} · Termin {seriesCtx.position} von {seriesCtx.total}
-            </Link>
-          )}
-          <h1 className="text-2xl sm:text-3xl font-bold !text-white leading-tight">
-            {isOmaOriginal(event) && <OmaTitlePrefix title={event.title} />}
-            {event.title}
-          </h1>
-          <p className="mt-1 text-sm text-gray-300">
-            {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long" })}
-            {" · "}<ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
-            {event.endAt && !period && <> – {formatBerlinTime(event.endAt, { hour: "2-digit", minute: "2-digit" })} Uhr</>}
-            {period && <> · bis {formatBerlinDate(event.endAt!, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</>}
-          </p>
-        </div>
-        {period && (
-          <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40" title={`${Math.round(period.progress * 100)} % des Zeitraums vorbei`}>
-            <div className="h-full bg-teal-400/80" style={{ width: `${period.progress * 100}%` }} />
-          </div>
-        )}
-      </div>
-    </section>
+    <EventHero
+      event={event} omaOriginal={isOmaOriginal(event)} heroDate={heroDate} seriesCtx={seriesCtx}
+      statusLabel={statusLabel} statusPill={statusTone.pill} phase={phaseInfo.phase}
+      showCountdown={isPrePhase(pagePhase)} startsIn={startsIn} myStatus={myStatus}
+      date={date} serverTimeFallback={serverTimeFallback} period={period}
+    />
   );
 
   // ── Aktionsleiste: genau eine Hauptaktion je Phase, daneben Kalender/Discord/Zuschauer/Stream ──
@@ -1081,18 +1037,22 @@ export default async function TournamentDetailPage({
   })();
 
   const primaryAction = (() => {
+    // Spielwahl läuft und man hat noch nicht abgestimmt → "Abstimmen" als Hauptknopf
+    if (gameVote?.status === "open" && gameVote.canVote && gameVote.myCandidateIds.length === 0) {
+      return <a href="#spielwahl" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400"><Vote className="w-3.5 h-3.5" /> Spiel wählen</a>;
+    }
     if (myPendingVote) {
       return <a href="#abstimmung" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400"><Vote className="w-3.5 h-3.5" /> Abstimmen</a>;
     }
     if (pagePhase === "live" && reportMatches.length > 0) {
-      return <a href="#ergebnis-melden" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400">Ergebnis melden</a>;
+      return <a href={myOpenReport ? "#dein-match" : "#ergebnis-melden"} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400">Ergebnis melden</a>;
     }
     if (pagePhase === "after" && isRegistered) {
       return <a href="#clip" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400"><Clapperboard className="w-3.5 h-3.5" /> Clip einreichen</a>;
     }
     if (canRegister && isRegistered) {
       return (
-        <RegisterButton eventId={event.id} isRegistered isFull={false} discordEventUrl={discordEventUrl}
+        <RegisterButton eventId={event.id} isRegistered isFull={false} discordEventUrl={discordEventUrl} spectatorSwitch={event.spectatorMode && canUnregister}
           coins={participationCoins} canUnregister={canUnregister} checkIn={event.checkInEnabled} />
       );
     }
@@ -1126,8 +1086,9 @@ export default async function TournamentDetailPage({
           checkedIn={!!myReg?.checkedInAt}
         />
       )}
-      {canRegister && event.spectatorMode && !isRegistered && (isSpectator || (!isRegistrationLocked && (!joinClosed || (isDrawn && !regStarted && !deadlinePassed)))) && (
-        <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
+      {/* Zuschauen geht bis zum Abschluss der Spielphase — auch während das Event läuft */}
+      {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !gamePhaseComplete) && (
+        <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} reward={spectatorReward} />
       )}
       {canRegister && !isRegistered && !isSpectator && (isRegistrationLocked || !isSquadMember) && (
         isRegistrationLocked ? (
@@ -1151,13 +1112,17 @@ export default async function TournamentDetailPage({
         </a>
       )}
       <span className="flex-1" />
-      {pagePhase !== "after" && (
-        <a href={`/api/events/${event.id}/ics`} download className={BTN_SECONDARY}><CalendarPlus className="w-3.5 h-3.5" /> Kalender</a>
+      {(pagePhase !== "after" || discordEventUrl || canStreamRegister) && (
+        <ActionMoreMenu>
+          {pagePhase !== "after" && (
+            <a href={`/api/events/${event.id}/ics`} download className={BTN_SECONDARY}><CalendarPlus className="w-3.5 h-3.5" /> In den Kalender</a>
+          )}
+          {discordEventUrl && (
+            <a href={discordEventUrl} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>Auf Discord ansehen ↗</a>
+          )}
+          {canStreamRegister && <StreamRegisterButton eventId={eventId} isStreaming={isCommunityStreamer} />}
+        </ActionMoreMenu>
       )}
-      {discordEventUrl && (
-        <a href={discordEventUrl} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>Discord ↗</a>
-      )}
-      {canStreamRegister && <StreamRegisterButton eventId={eventId} isStreaming={isCommunityStreamer} />}
     </div>
   );
 
@@ -1166,7 +1131,7 @@ export default async function TournamentDetailPage({
   const factsRow = (
     <div className="flex flex-wrap items-center gap-1.5 mb-5">
       {!event.game && gameVote && (
-        <span className={`${FACT} text-violet-200`}><Vote className="w-3.5 h-3.5" /> Spiel wird per Abstimmung gewählt</span>
+        <span className={`${FACT} text-violet-200`}><Vote className="w-3.5 h-3.5" /> Spiel wird per Spielwahl bestimmt</span>
       )}
       {event.game && (
         <span className={FACT}>
@@ -1198,6 +1163,13 @@ export default async function TournamentDetailPage({
       ) : participationCoins > 0 ? (
         <span className={`${FACT} font-semibold text-amber-400`}>+{participationCoins} <CoinIcon size={12} /> fürs Mitmachen</span>
       ) : null}
+      {/* Zuschauer: Anzahl und Belohnung fürs Zuschauen */}
+      {event.spectatorMode && (
+        <span className={FACT} title={spectatorReward ? "Belohnung fürs Zuschauen, wenn du beim Abschluss als anwesend markiert bist" : undefined}>
+          👁 <span className="tabular-nums">{spectatorCount}</span> Zuschauer
+          {spectatorReward && spectatorReward.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400">· +{spectatorReward.coins} <CoinIcon size={12} /> fürs Zuschauen</span>}
+        </span>
+      )}
       {/* Reihen-Termin: Preise der Endwertung — erst zum Abschluss der Reihe */}
       {event.series && seriesFinalFirst && (
         <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-white/[0.15]`}
@@ -1207,21 +1179,19 @@ export default async function TournamentDetailPage({
           {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
         </Link>
       )}
-      {hasTournament && totalMatches > 0 && (
-        <span className={FACT}><span className="tabular-nums">{playedMatches}/{totalMatches}</span> Matches gespielt</span>
-      )}
       <GameListInfo info={gameInfo} />
     </div>
   );
 
   // ── Sprungleiste ──
+  const postCount = await prisma.jobReport.count({ where: { eventId: event.id, isDraft: false, hiddenByAdminAt: null } });
   const jumpLinks = [
     { href: "#uebersicht", label: "Übersicht", show: true },
     { href: "#abstimmung", label: "Abstimmung", show: hasPollStuff },
     { href: "#turnier", label: hasTournament ? "Turnier" : "Ablauf", show: hasTournament || !!communityGoalProgress },
     { href: "#teilnehmer", label: "Teilnehmer", show: sortedRegistrations.length > 0 },
     { href: "#absprachen", label: "Absprachen", show: !!userId },
-    { href: "#beitraege", label: "Beiträge", show: true },
+    { href: "#beitraege", label: "Beiträge", show: postCount > 0 },
     { href: "#regeln", label: "Regeln", show: !!event.rules },
   ].filter(l => l.show);
   const jumpBar = (
@@ -1301,11 +1271,6 @@ export default async function TournamentDetailPage({
         <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
           <WinIcon size={18} /> {pagePhase === "after" ? "Ergebnis" : "Ergebnis (vorläufig)"}
         </h2>
-        {myFinalPlace > 0 && (
-          <span className="rounded-lg bg-teal-400/15 px-2.5 py-1 text-xs font-semibold text-teal-300">
-            Du: Platz {myFinalPlace} von {finalRanking.length}
-          </span>
-        )}
       </div>
       )}
       {podium.length > 0 ? (
@@ -1381,7 +1346,7 @@ export default async function TournamentDetailPage({
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
             <Vote className="w-4 h-4 text-violet-400" />
-            <h2 className="text-sm font-semibold text-white">Abstimmung läuft: {pollLabel}</h2>
+            <h2 className="text-sm font-semibold text-white">Abstimmung nach dem Event läuft: {pollLabel}</h2>
           </div>
           {((pollBonusCoins ?? 0) > 0 || (pollBonusRankPts ?? 0) > 0) && (
             <div className="flex items-center gap-2">
@@ -1417,7 +1382,7 @@ export default async function TournamentDetailPage({
       {/* Erst abstimmbar, sobald die Spielphase abgeschlossen ist (auch wenn die EventPoll-Datensätze
           technisch schon vorher existieren) — vorher nur ein Hinweis, welche Umfragen danach starten. */}
       {gamePhaseComplete && initialPolls.length > 0 && (
-        <PollsSection eventId={event.id} userId={userId} initialPolls={initialPolls} />
+        <PollsSection eventId={event.id} userId={userId} initialPolls={initialPolls} myRole={myReg?.role ?? null} />
       )}
       {!gamePhaseComplete && initialPolls.length > 0 && (
         <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -1439,7 +1404,9 @@ export default async function TournamentDetailPage({
 
   // ── Community-Umfragen, die im Admin an dieses Event geknüpft wurden (stehen auch auf der Startseite) ──
   const communityPollsNode = communityPolls.length > 0 ? (
-    <section aria-label="Umfragen zum Event" className="mb-5">
+    <section aria-label="Community-Umfragen" className="mb-5">
+      {/* Eigener Name, damit sie nicht mit der Abstimmung nach dem Event oder der Spielwahl verwechselt werden */}
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Community-Umfragen</h2>
       <DailyPollBanner initialPolls={communityPolls} showEventLink={false} />
     </section>
   ) : null;
@@ -1488,10 +1455,10 @@ export default async function TournamentDetailPage({
   ) : null;
 
   const gameVoteNode = gameVote ? (
-    <GameVoteSection eventId={event.id} view={gameVote} isMod={isMod} addable={gameVoteAddable} rules={event.rules} format={event.format} />
+    <GameVoteSection eventId={event.id} view={gameVote} canManage={canManageVote} addable={gameVoteAddable} rules={event.rules} format={event.format} isRegistered={isRegistered} isSpectator={isSpectator} />
   ) : null;
 
-  const rulesNode = <RulesSection id="regeln" rules={event.rules} preview={pagePhase === "before" ? 4 : 3} className="mb-5" />;
+  const rulesNode = <RulesSection id="regeln" rules={event.rules} preview={isPrePhase(pagePhase) ? 4 : 3} className="mb-5" />;
 
   const blocksNode = (event.blocksTournament || event.blocksChallenge) ? (
     <BlocksEventSection
@@ -1517,14 +1484,17 @@ export default async function TournamentDetailPage({
   );
 
   // Event-Gesamtsieger-Vorhersage (nur bei Turnieren, Community-Events haben keinen Gewinner)
-  const predictionNode = event.type === "tournament" ? (
-    <div className="mb-5 space-y-3">
+  // Nur wenn Tipps im Admin-Bereich aktiviert sind — sonst käme erst beim Abgeben ein Fehler
+  const predictionNode = event.type === "tournament" && minigamesConfig.predictionEnabled ? (
+    <div id="tipps" className="mb-5 space-y-3 scroll-mt-20">
       <EventWinnerPredictionWidget
         eventId={event.id}
         locked={isPredictionLocked}
         minWager={PREDICTION_MIN_WAGER}
         maxWager={minigamesConfig.predictionMaxWager}
         initialPrediction={myEventPrediction}
+        players={event.registrations.filter(r => r.role !== "spectator").map(r => r.user)}
+        lockAt={event.startAt.toISOString()}
       />
       <EventTippsList pot={predictionPot} tipps={eventTipps} />
     </div>
@@ -1570,6 +1540,36 @@ export default async function TournamentDetailPage({
   ) : null;
 
   // ── Turnier: Teilnehmer | Formatansicht, Ergebnis melden, Prüfen ──
+  // Eigenes Match (Arbeitskarte) bzw. Stand im K.O. — eigener Abschnitt, live und ausgelost ganz oben
+  const myMatchNode = (myOpenMatch || myKo.kind === "eliminated" || myKo.kind === "champion") ? (
+    <section id="dein-match" aria-label="Dein Match" className="scroll-mt-24">
+        {/* Eigenes offenes Match als Arbeitskarte: bestätigen oder melden direkt hier */}
+        {myOpenMatch && (
+          <div className="mb-4">
+            <MyMatchCard
+              match={myOpenMatch}
+              report={myOpenReport}
+              submission={myOpenSubmission}
+              eventId={event.id}
+              userId={userId}
+              statFields={event.statFields ? JSON.parse(event.statFields) : []}
+              locked={isParticipantEditLocked(event)}
+              startAt={event.startAt.toISOString()}
+              nextHint={myNextHint}
+            />
+          </div>
+        )}
+        {/* K.O.: kein offenes Match mehr — kurz sagen, wo man steht */}
+        {!myOpenMatch && (myKo.kind === "eliminated" || myKo.kind === "champion") && (
+          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-white/[0.08] bg-white/[0.02] text-gray-300"}`}>
+            {myKo.kind === "champion"
+              ? "Du hast das Turnier gewonnen — Glückwunsch!"
+              : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-white">{koNameOf(myKo.byUserId)}</span></>}.</>}
+          </p>
+        )}
+    </section>
+  ) : null;
+
   const tournamentNode = (
     <div id="turnier" className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5 scroll-mt-20">
       {/* Teilnehmerliste — mobil vor dem Start oben, danach eingeklappt unter der Turnieransicht */}
@@ -1601,31 +1601,6 @@ export default async function TournamentDetailPage({
             </section>
           );
         })() : null}
-
-        {/* Eigenes offenes Match als Arbeitskarte: bestätigen oder melden direkt hier */}
-        {myOpenMatch && (
-          <div className="mb-4">
-            <MyMatchCard
-              match={myOpenMatch}
-              report={myOpenReport}
-              submission={myOpenSubmission}
-              eventId={event.id}
-              userId={userId}
-              statFields={event.statFields ? JSON.parse(event.statFields) : []}
-              locked={isParticipantEditLocked(event)}
-              startAt={event.startAt.toISOString()}
-              nextHint={myNextHint}
-            />
-          </div>
-        )}
-        {/* K.O.: kein offenes Match mehr — kurz sagen, wo man steht */}
-        {!myOpenMatch && (myKo.kind === "eliminated" || myKo.kind === "champion") && (
-          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-white/[0.08] bg-white/[0.02] text-gray-300"}`}>
-            {myKo.kind === "champion"
-              ? "Du hast das Turnier gewonnen — Glückwunsch!"
-              : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-white">{koNameOf(myKo.byUserId)}</span></>}.</>}
-          </p>
-        )}
 
         <NextMatches upcoming={upcomingMatches} canReport={reportMatches.length > 0} shownMineId={myOpenMatch?.id ?? null} />
         {!hasTournament && !communityGoalProgress && (
@@ -1760,7 +1735,7 @@ export default async function TournamentDetailPage({
         userId={userId}
         isPlayer={isRegistered}
         initialUnread={commentCounts.get(event.id)?.unread ?? 0}
-        collapsedOnMobile={pagePhase !== "before"}
+        collapsedOnMobile={!isPrePhase(pagePhase)}
       />
     </div>
   ) : (
@@ -1775,15 +1750,41 @@ export default async function TournamentDetailPage({
     </div>
   );
 
+  // ── Dein Ergebnis (nach dem Abschluss der Spielphase) ──
+  const myResultNode = gamePhaseComplete && myReg ? (
+    <MyEventResult
+      place={myFinalPlace > 0 ? myFinalPlace : null}
+      total={finalRanking.length}
+      reward={eventRewardOf(event.completionData, userId)}
+      absent={absentPlayerIds.has(userId)}
+      excluded={excludedUserIds.has(userId)}
+      spectator={isSpectator}
+    />
+  ) : null;
+
+  // ── So läuft's ab (Turniere vor dem Start) ──
+  // Für Zuschauer nicht (die Schritte betreffen Spieler)
+  const howToNode = hasTournament && isPrePhase(pagePhase) && !event.blocksTournament && !isSpectator ? (
+    <EventHowTo steps={howToSteps({
+      registered: isRegistered,
+      waitlistPos: myWaitlistPos,
+      checkInEnabled: event.checkInEnabled,
+      checkInOpensAt: event.checkInEnabled ? checkInOpensAt(event) : null,
+      checkedIn: myCheckedIn,
+      checkInOpen: myCheckInState === "open",
+      hasDraw: isDrawFormat(event.format),
+      drawn: isDrawn,
+      started: event.startAt <= new Date(),
+    })} />
+  ) : null;
+
   // ── Reihenfolge je Phase ──
-  const sections: Record<PagePhase, React.ReactNode[]> = {
-    before: [descriptionNode, communityPollsNode, gameVoteNode, blocksNode, tournamentNode, commentsNode, predictionNode, rulesNode, pokalNode, pollsNode, postsNode],
-    live: [streamNode, communityPollsNode, resultsNode, blocksNode, tournamentNode, commentsNode, pollsNode, predictionNode, descriptionNode, rulesNode, postsNode, pokalNode],
-    voting: [pollsNode, communityPollsNode, resultsNode, streamNode, tournamentNode, commentsNode, blocksNode, postsNode, predictionNode, descriptionNode, rulesNode, pokalNode],
-    after: [resultsNode, communityPollsNode, pokalNode, summaryNode, clipNode, postsNode, commentsNode, pollsNode, tournamentNode, blocksNode, predictionNode, descriptionNode, rulesNode],
+  const sectionNodes: Record<SectionKey, React.ReactNode> = {
+    myMatch: myMatchNode, myResult: myResultNode, howTo: howToNode, description: descriptionNode, rules: rulesNode,
+    stream: streamNode, communityPolls: communityPollsNode, gameVote: gameVoteNode, blocks: blocksNode,
+    tournament: tournamentNode, comments: commentsNode, prediction: predictionNode, pokal: pokalNode, polls: pollsNode,
+    posts: postsNode, results: resultsNode, summary: summaryNode, clip: clipNode,
   };
-  // Stream gehört vor dem Event und danach nicht nach oben — aber nicht verloren gehen lassen
-  if (pagePhase === "before" && streamNode) sections.before.splice(1, 0, streamNode);
 
   return (
     <div id="uebersicht" className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -1824,7 +1825,7 @@ export default async function TournamentDetailPage({
       {factsRow}
       {jumpLinks.length > 2 && jumpBar}
 
-      {sections[pagePhase].map((node, i) => <React.Fragment key={i}>{node}</React.Fragment>)}
+      {SECTION_ORDER[pagePhase].map(key => <React.Fragment key={key}>{sectionNodes[key]}</React.Fragment>)}
     </div>
   );
 }

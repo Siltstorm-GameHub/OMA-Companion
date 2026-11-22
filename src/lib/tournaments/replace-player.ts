@@ -3,8 +3,7 @@
 // offenen Spielen. Bereits gespielte Spiele bleiben beim alten Spieler.
 
 import { prisma } from "@/lib/prisma";
-import { createNotification } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 import { ApplyMatchResultError } from "./applyMatchResult";
 import { withDrawLock } from "./draw";
 import { isDrawFormat } from "./draw-plan";
@@ -71,13 +70,17 @@ export async function replacePlayer(eventId: string, fromId: string, toId: strin
         .map(u => [u.id, u.username ?? u.name ?? "?"]));
       const url = `/tournament/${eventId}`;
       const line = drawLineFor(toId, event.format, event.matches.filter(m => !m.playedAt), event.participants[0]?.groupIndex ?? null, id => names.get(id) ?? "?");
-      const inTitle = `Du bist nachgerückt: ${event.title}`;
-      const outTitle = `Du wurdest ersetzt: ${event.title}`;
-      const outBody = "Der Veranstalter hat deinen Platz im Turnier an einen anderen Spieler gegeben.";
+      // Regeln "player_replaced_in" / "player_replaced_out" (Admin → Benachrichtigungen)
+      const replacement = (await prisma.user.findUnique({ where: { id: toId }, select: { username: true, name: true } }));
       await Promise.allSettled([
-        createNotification(toId, { type: "event_start", title: inTitle, body: line, url }),
-        sendPushToUsers([toId], { title: inTitle, body: line, url }),
-        createNotification(fromId, { type: "event_start", title: outTitle, body: outBody, url }),
+        dispatchNotification("player_replaced_in", {
+          users: [toId], placeholders: { "{eventName}": event.title, "{line}": line }, urlOverride: url, skipDiscordChannel: true,
+        }),
+        dispatchNotification("player_replaced_out", {
+          users: [fromId],
+          placeholders: { "{eventName}": event.title, "{replacement}": replacement?.username ?? replacement?.name ?? "einen anderen Spieler" },
+          urlOverride: url, skipDiscordChannel: true,
+        }),
       ]);
     }
   } catch (err) {

@@ -44,6 +44,8 @@ async function send(eventId: string, matchIds: string[]) {
           "{round}": stage,
         },
         urlOverride: `/tournament/${eventId}`,
+        // Ungelesenes "Dein Match ist bereit" aus der Vorrunde ersetzen statt stapeln
+        replaceUnread: true,
         // Falls der Kanal-Post dieser Regel aktiviert ist: im Kanal des Events bzw. der Reihe
         discordChannelIdOverride: resolveEventChannelId(event) ?? undefined,
       });

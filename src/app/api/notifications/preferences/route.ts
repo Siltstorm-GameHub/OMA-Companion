@@ -6,6 +6,7 @@ const DEFAULT_PREFS = {
   badge:     true,
   quest:     true,
   event:     true,
+  myEvent:   true, // Meine Events (Check-in, Auslosung, Match …) — getrennt von Ankündigungen
   points:    true,
   clip:      true,
   admin:     true,

@@ -133,10 +133,9 @@ export async function DELETE(req: NextRequest) {
   });
   if (!existing) return NextResponse.json({ ok: true });
 
-  // Bereits ausgewertete Tipps: einfach löschen, kein Einsatz mehr zu erstatten (schon abgerechnet)
+  // Ausgewertete Tipps bleiben — sonst verschwänden verlorene Tipps aus Bilanz und Jahresrückblick
   if (existing.resolved) {
-    await prisma.eventWinnerPrediction.delete({ where: { id: existing.id } });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ error: "Ausgewertete Tipps können nicht gelöscht werden" }, { status: 409 });
   }
 
   const event = await prisma.event.findUnique({

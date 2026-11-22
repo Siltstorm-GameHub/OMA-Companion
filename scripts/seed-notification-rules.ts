@@ -8,25 +8,10 @@
  * vorhanden — alles andere bekommt einen neuen sinnvollen Default.
  */
 import { prisma } from "@/lib/prisma";
+import { EVENT_PERSONAL_RULES, type RuleSeed } from "@/lib/notification-rule-defaults";
 
-interface RuleSeed {
-  key: string;
-  label: string;
-  description: string;
-  category: string;
-  pushEnabled: boolean;
-  inAppEnabled: boolean;
-  discordDmEnabled: boolean;
-  discordChanEnabled: boolean;
-  titleTemplate: string;
-  bodyTemplate: string;
-  urlTemplate?: string;
-  reminderHoursBefore?: number;
-  isEventNotification?: boolean;
-  eventAudience?: "all" | "participants";
-  /** Schlüssel des alten BotConfig-Eintrags, dessen "{key}_text" übernommen werden soll */
-  legacyBotConfigKey?: string;
-}
+// Typ und die persönlichen Event-Meldungen (Check-in, Auslosung, …) liegen in src/lib, damit
+// notify-dispatch.ts sie auch ohne Seed-Lauf als Standard nutzen kann.
 
 const RULES: RuleSeed[] = [
   {
@@ -146,16 +131,8 @@ const RULES: RuleSeed[] = [
     bodyTemplate: "Die Quests für **{month} {year}** sind da:\n{questTitles}",
     urlTemplate: "/quests",
   },
-  {
-    key: "prediction_result",
-    label: "Vorhersage-Ergebnis",
-    description: "Wenn eine Event-Sieger-Vorhersage ausgewertet wurde (richtig oder falsch).",
-    category: "events",
-    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
-    titleTemplate: "🎯 Dein Tipp war {result}",
-    bodyTemplate: "Du erhältst {reward} Münzen für deine Event-Sieger-Vorhersage.",
-    urlTemplate: "/",
-  },
+  // prediction_result → ersetzt durch prediction_settled (src/lib/notification-rule-defaults.ts)
+
   {
     key: "match_ready",
     label: "Turnier: Dein Match ist bereit",
@@ -690,6 +667,7 @@ const RULES: RuleSeed[] = [
     bodyTemplate: "Die Antworten stehen in deinem Büro zum Einfügen in einen Bericht bereit.",
     urlTemplate: "/profile",
   },
+  ...EVENT_PERSONAL_RULES,
 ];
 
 async function main() {

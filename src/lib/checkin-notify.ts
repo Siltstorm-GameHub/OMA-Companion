@@ -9,8 +9,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { CHECK_IN_MINUTES, checkInOpensAt } from "@/lib/checkin";
-import { createNotificationForUsers } from "@/lib/notifications";
-import { sendPushToUsers } from "@/lib/push";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 import { parsePublishState, type PublishState } from "@/lib/event-publish-state";
 
 async function markState(eventId: string, json: string | null, patch: Partial<PublishState>) {
@@ -18,12 +17,10 @@ async function markState(eventId: string, json: string | null, patch: Partial<Pu
   await prisma.event.update({ where: { id: eventId }, data: { publishStateJson: JSON.stringify({ ...state, ...patch }) } });
 }
 
-async function send(userIds: string[], title: string, body: string, url: string) {
+/** Über die Regel (Admin → Benachrichtigungen) — Kanäle, Texte und die Einstellungen der Mitglieder gelten */
+async function send(ruleKey: "checkin_open" | "checkin_not_drawn", userIds: string[], eventTitle: string, url: string) {
   if (!userIds.length) return;
-  await Promise.allSettled([
-    createNotificationForUsers(userIds, { type: "event_start", title, body, url }),
-    sendPushToUsers(userIds, { title, body, url }),
-  ]);
+  await dispatchNotification(ruleKey, { users: userIds, placeholders: { "{eventName}": eventTitle }, urlOverride: url });
 }
 
 /** "Check-in ist offen" für alle Events, deren Fenster gerade offen ist (noch nicht ausgelost). Wirft nie. */
@@ -46,8 +43,7 @@ export async function notifyOpenCheckIns(now = new Date()): Promise<number> {
     for (const ev of events) {
       if (parsePublishState(ev.publishStateJson).checkInNotifiedAt || checkInOpensAt(ev) > now) continue;
       await markState(ev.id, ev.publishStateJson, { checkInNotifiedAt: now.toISOString() });
-      await send(ev.registrations.map(r => r.userId), "Check-in ist offen",
-        `„${ev.title}“ startet gleich. Drück „Bin bereit“, sonst wirst du nicht ausgelost.`, `/tournament/${ev.id}`);
+      await send("checkin_open", ev.registrations.map(r => r.userId), ev.title, `/tournament/${ev.id}`);
       sent++;
     }
     return sent;
@@ -72,9 +68,7 @@ export async function notifyNotDrawn(eventId: string, drawnIds?: string[]): Prom
     const drawn = new Set(drawnIds ?? ev.participants.map(p => p.userId));
     const missing = ev.registrations.map(r => r.userId).filter(id => !drawn.has(id));
     await markState(eventId, ev.publishStateJson, { notDrawnNotifiedAt: new Date().toISOString() });
-    await send(missing, "Nicht ausgelost",
-      `Bei „${ev.title}“ warst du nicht eingecheckt und bist diesmal nicht im Turnier. Beim nächsten Mal rechtzeitig „Bin bereit“ drücken.`,
-      `/tournament/${eventId}`);
+    await send("checkin_not_drawn", missing, ev.title, `/tournament/${eventId}`);
   } catch (err) {
     console.error("[checkin] Meldung 'nicht ausgelost' fehlgeschlagen", eventId, err);
   }

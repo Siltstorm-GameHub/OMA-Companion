@@ -16,9 +16,10 @@ import { eventGenreForGame } from "@/lib/games/event-genre";
 import { IN_WHERE } from "@/lib/games/service";
 import { formatPrice, subscriptionBadges } from "@/lib/games/options";
 import {
-  buyHint, costRankOf, fitLabel, fitScore, fitsSeries, parseGameVoteConfig, rankCandidates, voteWindow,
-  type FitInput,
+  DECIDED_BY_LABEL, buyHint, costRankOf, countsVisible, decidedByOf, fitLabel, fitScore, fitsSeries, parseGameVoteConfig, rankCandidates, voteWindow,
+  type DecidedBy, type FitInput,
 } from "./rules";
+import { eventManagerIds } from "@/lib/event-managers";
 
 /** Stammspieler: Mitspieler der letzten so vielen Termine der Reihe */
 const REGULAR_EVENTS = 6;
@@ -168,13 +169,27 @@ export async function addCandidate(voteId: string, gameId: string): Promise<Resu
   return { ok: true };
 }
 
-/** Kandidat entfernen — seine Stimmen fallen mit weg. */
-export async function removeCandidate(candidateId: string): Promise<Result> {
-  const cand = await prisma.gameVoteCandidate.findUnique({ where: { id: candidateId }, select: { vote: { select: { status: true } } } });
+/** Kandidat entfernen — seine Stimmen fallen mit weg; wer dafür gestimmt hatte, bekommt eine Meldung. */
+export async function removeCandidate(candidateId: string): Promise<Result<{ removedVotes: number }>> {
+  const cand = await prisma.gameVoteCandidate.findUnique({
+    where: { id: candidateId },
+    select: {
+      game: { select: { name: true } }, ballots: { select: { userId: true } },
+      vote: { select: { status: true, event: { select: { id: true, title: true } } } },
+    },
+  });
   if (!cand) return { ok: false, status: 404, error: "Kandidat nicht gefunden" };
   if (cand.vote.status === "closed") return { ok: false, status: 409, error: "Die Abstimmung ist schon beendet" };
   await prisma.gameVoteCandidate.delete({ where: { id: candidateId } });
-  return { ok: true };
+  const voters = [...new Set(cand.ballots.map(b => b.userId))];
+  if (voters.length) {
+    await dispatchNotification("game_vote_candidate_removed", {
+      users: voters,
+      placeholders: { "{eventName}": cand.vote.event.title, "{game}": cand.game.name },
+      urlOverride: `/tournament/${cand.vote.event.id}#spielwahl`, skipDiscordChannel: true,
+    }).catch(err => console.error("[game-vote] Meldung Kandidat entfernt", err));
+  }
+  return { ok: true, removedVotes: cand.ballots.length };
 }
 
 // ── Öffnen ──────────────────────────────────────────────────────────────────────
@@ -220,7 +235,7 @@ const berlinDateTime = (d: Date) =>
  * Bei Squad-Reihen stimmt nur das Squad ab.
  */
 export async function castBallot(
-  userId: string, eventId: string, candidateIdsInput: unknown,
+  userId: string, eventId: string, candidateIdsInput: unknown, join = true,
 ): Promise<Result<{ registration: "registered" | "already" | "none" | "full" | "locked" | "squad" | "closed"; candidateIds: string[] }>> {
   await syncGameVotes();
   const vote = await prisma.gameVote.findUnique({
@@ -245,7 +260,7 @@ export async function castBallot(
 
   // Erste Teilnahme → als Mitspieler anmelden. Später (auch nach Abmeldung) nicht erneut.
   let registration: "registered" | "already" | "none" | "full" | "locked" | "squad" | "closed" = "none";
-  if (!hadBallots && ids.length > 0) {
+  if (!hadBallots && ids.length > 0 && join) {
     const reg = await ensurePlayerRegistration(userId, eventId);
     // Neue Sperrgründe (ausgeblendet, Anmeldeschluss) zählen für die Spielwahl wie "geschlossen"
     registration = reg.result === "blocked"
@@ -265,6 +280,48 @@ export async function syncGameVotes(now = new Date()): Promise<void> {
   ]);
   for (const v of toOpen) await openGameVote(v.id).catch(err => console.error("[game-vote] Öffnen", err));
   for (const v of toClose) await closeGameVote(v.id).catch(err => console.error("[game-vote] Schließen", err));
+  await remindBeforeClose(now).catch(err => console.error("[game-vote] Erinnerung", err));
+}
+
+/** So viele Stunden vor dem Ende: "Abstimmung endet bald" an Stammspieler ohne Stimme */
+const REMIND_HOURS = 3;
+
+/** Einmal je Wahl: Stammspieler (bzw. Squad), die noch nicht abgestimmt haben, kurz vor dem Ende erinnern. */
+async function remindBeforeClose(now: Date) {
+  const due = await prisma.gameVote.findMany({
+    where: { status: "open", reminderSentAt: null, closesAt: { gt: now, lte: new Date(now.getTime() + REMIND_HOURS * 3_600_000) } },
+    select: { id: true },
+  });
+  for (const { id } of due) {
+    const claimed = await prisma.gameVote.updateMany({ where: { id, reminderSentAt: null }, data: { reminderSentAt: now } });
+    if (claimed.count !== 1) continue;
+    const vote = await prisma.gameVote.findUnique({
+      where: { id },
+      select: {
+        closesAt: true, seriesId: true,
+        event: { select: { id: true, title: true, hidden: true } },
+        series: { select: { squadId: true, hidden: true } },
+        candidates: { select: { game: { select: { name: true } } } },
+        ballots: { select: { userId: true }, distinct: ["userId"] },
+      },
+    });
+    if (!vote || vote.event.hidden || vote.series.hidden) continue;
+    const pool = vote.series.squadId
+      ? (await prisma.squadMembership.findMany({ where: { squadId: vote.series.squadId }, select: { userId: true } })).map(m => m.userId)
+      : await seriesRegulars(vote.seriesId, vote.event.id);
+    const voted = new Set(vote.ballots.map(b => b.userId));
+    const users = pool.filter(u => !voted.has(u));
+    if (users.length === 0) continue;
+    await dispatchNotification("game_vote_reminder", {
+      users,
+      placeholders: {
+        "{eventName}": vote.event.title,
+        "{hours}": String(Math.max(1, Math.round((vote.closesAt.getTime() - now.getTime()) / 3_600_000))),
+        "{games}": vote.candidates.map(c => c.game.name).join(", "),
+      },
+      urlOverride: `/tournament/${vote.event.id}#spielwahl`, skipDiscordChannel: true,
+    });
+  }
 }
 
 /**
@@ -288,7 +345,11 @@ export async function closeGameVote(voteId: string): Promise<void> {
       candidates: { include: { ballots: { select: { userId: true } } } },
     },
   });
-  if (!vote || vote.candidates.length === 0) return;
+  if (!vote) return;
+  if (vote.candidates.length === 0) {
+    await markNoWinner(vote.event.id, vote.id, vote.event.title);
+    return;
+  }
   const cfg = parseGameVoteConfig(vote.series.gameVoteJson);
   const games = new Map((await loadGames({ id: { in: vote.candidates.map(c => c.gameId) } })).map(g => [g.id, g]));
   const seriesInfo = { format: vote.event.format ?? vote.series.fixedFormat ?? null, platform: vote.series.platform };
@@ -302,7 +363,7 @@ export async function closeGameVote(voteId: string): Promise<void> {
       })
     : [];
 
-  const ranking = rankCandidates(vote.candidates.map(c => {
+  const tally = vote.candidates.map(c => {
     const g = games.get(c.gameId);
     const voters = new Set(c.ballots.map(b => b.userId));
     return {
@@ -313,14 +374,23 @@ export async function closeGameVote(voteId: string): Promise<void> {
       fitScore: c.fitScore,
       eligible: !!g && fitsSeries(g, seriesInfo),
     };
-  }));
+  });
+  const ranking = rankCandidates(tally);
+  // Wodurch Platz 1 vor Platz 2 liegt — steht bei der Freigabe (knappes Ergebnis nachvollziehbar)
+  const sortedEligible = ranking.filter(r => r.place !== null).map(r => tally.find(t => t.id === r.id)!);
+  const decidedBy: DecidedBy = decidedByOf(sortedEligible);
+  await prisma.gameVote.update({ where: { id: voteId }, data: { decidedBy } });
   await prisma.$transaction(vote.candidates.map(c => prisma.gameVoteCandidate.update({
     where: { id: c.id },
     data: { approvals: c.ballots.length, place: ranking.find(r => r.id === c.id)?.place ?? null },
   })));
   const winnerCand = vote.candidates.find(c => c.id === ranking.find(r => r.place === 1)?.id);
   const winner = winnerCand ? games.get(winnerCand.gameId) ?? null : null;
-  if (!winner) return; // kein wählbarer Kandidat — Mods tragen das Spiel von Hand ein
+  if (!winner) {
+    // Kein wählbarer Kandidat: Verwalter legen das Spiel fest, bis dahin ist die Auslosung gesperrt
+    await markNoWinner(vote.event.id, vote.id, vote.event.title);
+    return;
+  }
 
   await applyWinner(vote.event.id, vote.id, winner, vote.series.gameRulesJson);
 
@@ -361,6 +431,32 @@ export async function closeGameVote(voteId: string): Promise<void> {
 
   await notifyResult(vote.event.id, vote.event.title, winner).catch(err => console.error("[game-vote] Ergebnis-Benachrichtigung", err));
   await notifyModsRules(vote.event.id, vote.event.title, winner.name).catch(err => console.error("[game-vote] Mod-Hinweis", err));
+  // Niemand hat abgestimmt: Verwalter sollen die Wahl bei der Freigabe bewusst prüfen
+  if (decidedBy === "no_votes") {
+    await notifyAttention(vote.event.id, vote.event.title,
+      `Niemand hat abgestimmt. ${winner.name} wurde nach den Gleichstand-Regeln gewählt. Prüf das bei der Freigabe, du kannst auch ein anderes Spiel nehmen.`,
+    ).catch(err => console.error("[game-vote] Hinweis keine Stimmen", err));
+  }
+}
+
+/** Kein Spiel gewählt: Auslosung sperren (Freigabe ausstehend) und Verwalter informieren. */
+async function markNoWinner(eventId: string, voteId: string, eventTitle: string) {
+  await prisma.$transaction([
+    prisma.gameVote.update({ where: { id: voteId }, data: { decidedBy: "none" } }),
+    prisma.event.update({ where: { id: eventId }, data: { gameRulesPending: true } }),
+  ]);
+  await notifyAttention(eventId, eventTitle,
+    "Die Spielwahl hat kein Spiel ergeben (kein Kandidat war wählbar). Leg das Spiel auf der Eventseite fest, vorher kann nicht ausgelost werden.",
+  ).catch(err => console.error("[game-vote] Hinweis kein Sieger", err));
+}
+
+async function notifyAttention(eventId: string, eventTitle: string, reason: string) {
+  const managers = await eventManagerIds(eventId);
+  if (managers.length === 0) return;
+  await dispatchNotification("game_vote_attention", {
+    users: managers, placeholders: { "{eventName}": eventTitle, "{reason}": reason },
+    urlOverride: `/tournament/${eventId}#spielwahl`, skipDiscordChannel: true,
+  });
 }
 
 /** Gewähltes Spiel eintragen und Regeln/Format zur Freigabe vorbelegen (aus dem Gedächtnis der Reihe). */
@@ -417,7 +513,10 @@ export async function confirmGameRules(
   if (!vote) return { ok: false, status: 404, error: "Für dieses Event gibt es keine Spielwahl" };
   if (vote.status !== "closed") return { ok: false, status: 409, error: "Die Abstimmung läuft noch" };
   const gameId = typeof input.gameId === "string" ? input.gameId : vote.winnerGameId;
-  if (!gameId || !vote.candidates.some(c => c.gameId === gameId)) return { ok: false, status: 400, error: "Bitte einen Kandidaten der Wahl wählen" };
+  // Normalfall: ein Kandidat der Wahl. Ohne Sieger (kein wählbarer Kandidat) jedes Spiel der Spieleliste.
+  if (!gameId || (vote.winnerGameId && !vote.candidates.some(c => c.gameId === gameId))) {
+    return { ok: false, status: 400, error: "Bitte einen Kandidaten der Wahl wählen" };
+  }
   const [game] = await loadGames({ id: { in: [gameId] } });
   if (!game) return { ok: false, status: 404, error: "Das Spiel ist nicht (mehr) in der Spieleliste" };
 
@@ -475,10 +574,11 @@ export function buyInfoOf(g: Pick<GameRow, "isFree" | "subscriptions" | "priceCe
 }
 
 async function notifyModsRules(eventId: string, eventTitle: string, gameName: string) {
-  const mods = (await prisma.user.findMany({ where: { role: { in: ["moderator", "admin"] }, deletedAt: null }, select: { id: true } })).map(u => u.id);
-  if (mods.length === 0) return;
+  // Die Verwalter des Events (Ersteller, Reihen-Ersteller, Squad-Captains; sonst Mods) — nicht jedes Mal alle Mods
+  const managers = await eventManagerIds(eventId);
+  if (managers.length === 0) return;
   await dispatchNotification("game_vote_rules", {
-    users: mods,
+    users: managers,
     placeholders: { "{eventName}": eventTitle, "{game}": gameName },
     urlOverride: `/tournament/${eventId}`,
     skipDiscordChannel: true,
@@ -519,6 +619,13 @@ export interface GameVoteView {
   voteCoins: number;
   /** Kauf-Hinweis zum gewählten Spiel, falls man angemeldet ist und es noch nicht "Am Start" hat */
   buyHint: string | null;
+  /** Wie entschieden wurde (nach dem Ende), z.B. "Gleichstand, entschieden per Los" */
+  decidedByLabel: string | null;
+  decidedBy: DecidedBy | null;
+  /** Zwischenstand ausgeblendet (Reihen-Einstellung) — approvals sind dann 0 */
+  countsHidden: boolean;
+  /** Wann der Zwischenstand sichtbar wird */
+  showCounts: "always" | "after_vote" | "after_end";
 }
 
 export async function getGameVoteView(eventId: string, userId: string | null): Promise<GameVoteView | null> {
@@ -559,10 +666,12 @@ export async function getGameVoteView(eventId: string, userId: string | null): P
     if (reg?.role === "player" && !has) hint = buyHint(buyInfoOf(winner.game));
   }
 
+  const cfgView = parseGameVoteConfig(vote.series.gameVoteJson);
+  const countsHidden = !countsVisible(cfgView.showCounts, vote.status, mine.length > 0);
   const candidates = vote.candidates
     .map(c => ({
       id: c.id, gameId: c.gameId, slug: c.game.slug, name: c.game.name, coverUrl: c.game.coverUrl, origin: c.origin, fitLabel: c.fitLabel,
-      approvals: c.approvals ?? c._count.ballots, place: c.place,
+      approvals: countsHidden ? 0 : c.approvals ?? c._count.ballots, place: c.place,
       priceLabel: formatPrice(c.game.priceCents, c.game.priceCurrency), discountPercent: c.game.discountPercent, isFree: c.game.isFree,
       subscriptionLabels: subscriptionBadges(c.game.subscriptions),
     }))
@@ -580,8 +689,12 @@ export async function getGameVoteView(eventId: string, userId: string | null): P
     voterCount: voters.length,
     canVote: !!userId && isSquadMember,
     squadName: vote.series.squad?.name ?? null,
-    voteCoins: parseGameVoteConfig(vote.series.gameVoteJson).voteCoins,
+    voteCoins: cfgView.voteCoins,
     buyHint: hint,
+    decidedBy: (vote.decidedBy as DecidedBy | null) ?? null,
+    decidedByLabel: vote.decidedBy ? DECIDED_BY_LABEL[vote.decidedBy as DecidedBy] ?? null : null,
+    countsHidden,
+    showCounts: cfgView.showCounts,
   };
 }
 
@@ -589,10 +702,12 @@ export async function getGameVoteView(eventId: string, userId: string | null): P
 export async function addableGames(eventId: string): Promise<{ id: string; name: string }[]> {
   const vote = await prisma.gameVote.findUnique({
     where: { eventId },
-    select: { status: true, candidates: { select: { gameId: true } }, event: { select: { format: true } }, series: { select: { fixedFormat: true, platform: true } } },
+    select: { status: true, winnerGameId: true, candidates: { select: { gameId: true } }, event: { select: { format: true } }, series: { select: { fixedFormat: true, platform: true } } },
   });
-  if (!vote || vote.status === "closed") return [];
-  const taken = new Set(vote.candidates.map(c => c.gameId));
+  if (!vote) return [];
+  // Beendet: nur ohne Sieger (dann legen Verwalter das Spiel aus der ganzen Spieleliste fest)
+  if (vote.status === "closed" && vote.winnerGameId) return [];
+  const taken = new Set(vote.status === "closed" ? [] : vote.candidates.map(c => c.gameId));
   const info = { format: vote.event.format ?? vote.series.fixedFormat ?? null, platform: vote.series.platform };
   return (await loadGames())
     .filter(g => !taken.has(g.id) && fitsSeries(g, info))

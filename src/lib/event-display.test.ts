@@ -2,7 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
   rankingWithTies,
-  dateBlock, dayBucket, eventPhase, friendsFirst, placementOf, recommendationScore, relevanceTags,
+  dateBlock, dayBucket, eventPhase, isEventRunning, friendsFirst, placementOf, recommendationScore, relevanceTags,
   startsInLabel, urgencyHint,
 } from "./event-display";
 
@@ -14,6 +14,15 @@ describe("eventPhase", () => {
     const p = eventPhase({ status: "open", startAt: "2026-11-20T19:00:00Z", playerCount: 3, maxPlayers: 16 }, NOW);
     assert.equal(p.phase, "open");
     assert.equal(p.label, null);
+  });
+
+  test("vor dem Start ausgelost: nicht Live, sondern Ausgelost", () => {
+    const p = eventPhase({ status: "active", startAt: "2026-11-30T19:00:00Z", playerCount: 8 }, NOW);
+    assert.equal(p.phase, "drawn");
+    assert.equal(p.label, "Ausgelost");
+    assert.equal(isEventRunning({ status: "active", startAt: "2026-11-30T19:00:00Z" }, NOW), false);
+    assert.equal(isEventRunning({ status: "active", startAt: NOW }, NOW), true);
+    assert.equal(isEventRunning({ status: "open", startAt: NOW }, NOW), false);
   });
 
   test("laufend: Live, aber Zeitraum-Events ruhig mit Restlaufzeit", () => {

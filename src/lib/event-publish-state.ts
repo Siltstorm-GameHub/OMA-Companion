@@ -10,6 +10,10 @@ export type PublishState = {
   checkInNotifiedAt?: string;
   /** Check-in: Nicht-Eingecheckte nach der Auslosung informiert (lib/checkin-notify.ts) */
   notDrawnNotifiedAt?: string;
+  /** "Event läuft jetzt" verschickt (Discord-Bot oder App-Start, lib/event-started-notify.ts) */
+  startedNotifiedAt?: string;
+  /** Auslosung gemeldet — eine weitere Auslosung heißt dann "Neu ausgelost" */
+  drawNotifiedAt?: string;
 };
 
 export const PUBLISH_STEP_LABELS: Record<PublishStep, string> = {
@@ -26,6 +30,8 @@ export function parsePublishState(json: string | null | undefined): PublishState
       notifiedAt: raw.notifiedAt, errors: Array.isArray(raw.errors) ? raw.errors : [],
       ...(typeof raw.checkInNotifiedAt === "string" && { checkInNotifiedAt: raw.checkInNotifiedAt }),
       ...(typeof raw.notDrawnNotifiedAt === "string" && { notDrawnNotifiedAt: raw.notDrawnNotifiedAt }),
+      ...(typeof raw.startedNotifiedAt === "string" && { startedNotifiedAt: raw.startedNotifiedAt }),
+      ...(typeof raw.drawNotifiedAt === "string" && { drawNotifiedAt: raw.drawNotifiedAt }),
     };
   } catch { return { errors: [] }; }
 }

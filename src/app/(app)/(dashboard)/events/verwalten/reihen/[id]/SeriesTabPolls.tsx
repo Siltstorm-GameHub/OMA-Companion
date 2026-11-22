@@ -94,19 +94,17 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                           </button>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Start (Stunden nach Event)</label>
-                          <NumberInput min={0} value={p.startOffsetHours}
-                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, startOffsetHours: Number(e.target.value) } : x))}
-                            className={inputCls} />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">Ende (Stunden nach Event)</label>
-                          <NumberInput min={0} value={p.endOffsetHours}
-                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, endOffsetHours: Number(e.target.value) } : x))}
-                            className={inputCls} />
-                        </div>
+                      {/* Dauer ab Ende der Spielphase (startOffsetHours bleibt 0, endOffsetHours = Dauer) */}
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Dauer der Abstimmung (Stunden)</label>
+                        <NumberInput min={1} value={Math.max(1, p.endOffsetHours - p.startOffsetHours)}
+                          onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) } : x))}
+                          className={inputCls} />
+                        <p className="text-[11px] text-gray-500 mt-1">
+                  Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
+                  einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
+                  Gleichplatzierten die volle Sieger-Belohnung.
+                </p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
