@@ -68,7 +68,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
         {captainSquads.length > 0 && (
           <button type="button" className={BTN} onClick={() => setDialog("squad")}><UserPlus className="w-3.5 h-3.5 text-emerald-400" /> Zu Squad hinzufügen</button>
         )}
-        <Link href={`/profile/compare/${userId}`} className={BTN}><Swords className="w-3.5 h-3.5 text-rose-400" /> Mit mir vergleichen</Link>
+        <Link href={`/profile/compare/${userId}`} className={BTN}><Swords className="w-3.5 h-3.5 text-primary-fg" /> Mit mir vergleichen</Link>
       </div>
 
       <Modal open={dialog === "help"} onClose={close} title={`${displayName} um Hilfe bitten`}>

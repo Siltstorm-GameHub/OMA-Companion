@@ -7,10 +7,9 @@ import { unstable_cache } from "next/cache";
 import { Circle } from "@/components/icons";
 import { ChevronRight } from "@/components/icons";
 import { Repeat, Server } from "@/components/icons";
-import { Scroll, Newspaper, ArrowUp, ArrowDown, Trophy } from "@/components/icons";
+import { Scroll, Newspaper, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
-import Image from "next/image";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
@@ -21,7 +20,6 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { spinDateKey } from "@/lib/daily-spin";
 import { getSwipeSummary } from "@/lib/games/deck";
-import RankRing from "@/components/RankRing";
 import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { getVisibleServers } from "@/lib/gameservers";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
@@ -40,10 +38,15 @@ import { eventPayout } from "@/lib/placement-rewards";
 import { homeRows, pickHomeFeature, runningPeriodEvents, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
-import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
 import CommunityBoardWidget from "./CommunityBoardWidget";
+import EventChatModule from "./EventChatModule";
+import {
+  MyMatchModule, RankingModule, SquadsModule, UpcomingEventsModule,
+  type HomeMatch, type HomeRankRow, type HomeSquad, type HomeUpcoming,
+} from "./HomeModules";
+import { getScopeTitle } from "@/lib/wanderpocal";
 
 /** Kürzlich abgeschlossenes Event mit Ergebnis — Chip "Ergebnisse: …" in der Aufgabenleiste */
 type RecentResultEvent = { id: string; title: string; game: string | null; href: string };
@@ -275,7 +278,6 @@ export default async function DashboardPage() {
     userId ? getSwipeSummary(userId).catch(() => null) : null,
   ]);
 
-  const myPoints     = sessionUser?.points ?? 0;
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 
   const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -314,6 +316,87 @@ export default async function DashboardPage() {
         })
       : Promise.resolve([]),
   ]);
+
+  // ── Module der Übersicht (Designentwurf): Rangliste, Squads, dein laufendes Match, Wanderpokal ──
+  const [topRankUsers, mySquadRows, topSquadRows, myOpenMatch, latestWanderpokal] = await Promise.all([
+    prisma.user.findMany({
+      where: { deletedAt: null, rankPoints: { gt: 0 } },
+      orderBy: { rankPoints: "desc" },
+      take: 5,
+      select: { id: true, username: true, name: true, image: true, rankPoints: true },
+    }),
+    userId
+      ? prisma.squadMembership.findMany({
+          where: { userId },
+          take: 4,
+          select: { squad: { select: { id: true, name: true, _count: { select: { memberships: true } } } } },
+        })
+      : Promise.resolve([]),
+    prisma.squad.findMany({
+      orderBy: { memberships: { _count: "desc" } },
+      take: 3,
+      select: { id: true, name: true, _count: { select: { memberships: true } } },
+    }),
+    // Offenes 1-gegen-1-Match in einem laufenden Turnier (beide Gegner stehen fest, noch kein Ergebnis)
+    userId
+      ? prisma.match.findFirst({
+          where: {
+            winnerId: null, playedAt: null,
+            player1Id: { not: null }, player2Id: { not: null },
+            OR: [{ player1Id: userId }, { player2Id: userId }],
+            event: { status: "active", hidden: false },
+          },
+          orderBy: [{ startedAt: { sort: "desc", nulls: "last" } }, { round: "asc" }],
+          select: {
+            round: true, title: true, groupIndex: true, startedAt: true, score1: true, score2: true, player1Id: true, player2Id: true,
+            event: { select: { id: true, title: true, game: true, coverImageUrl: true } },
+          },
+        })
+      : Promise.resolve(null),
+    prisma.wanderpocalHolder.findFirst({ orderBy: { heldSince: "desc" }, select: { scopeType: true, scopeValue: true } }),
+  ]);
+  const [matchUsers, wanderpokalHolders] = await Promise.all([
+    myOpenMatch
+      ? prisma.user.findMany({
+          where: { id: { in: [myOpenMatch.player1Id!, myOpenMatch.player2Id!] } },
+          select: { id: true, username: true, name: true, image: true },
+        })
+      : Promise.resolve([]),
+    latestWanderpokal
+      ? prisma.wanderpocalHolder.findMany({
+          where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
+          select: { user: { select: { username: true, name: true } } },
+        })
+      : Promise.resolve([]),
+  ]);
+  const uName = (u: { username: string | null; name: string | null } | undefined) => u?.username ?? u?.name ?? "Mitglied";
+  let homeMatch: HomeMatch | null = null;
+  if (myOpenMatch && userId) {
+    const iAmP1 = myOpenMatch.player1Id === userId;
+    const meU = matchUsers.find(u => u.id === userId);
+    const oppU = matchUsers.find(u => u.id === (iAmP1 ? myOpenMatch.player2Id : myOpenMatch.player1Id));
+    homeMatch = {
+      eventId: myOpenMatch.event.id,
+      eventTitle: myOpenMatch.event.title,
+      game: myOpenMatch.event.game,
+      coverUrl: myOpenMatch.event.coverImageUrl,
+      roundLabel: myOpenMatch.title ?? (myOpenMatch.groupIndex != null ? `Gruppe ${String.fromCharCode(65 + myOpenMatch.groupIndex)} · Spieltag ${myOpenMatch.round}` : `Runde ${myOpenMatch.round}`),
+      live: !!myOpenMatch.startedAt,
+      me: { name: uName(meU), image: meU?.image ?? null, score: iAmP1 ? myOpenMatch.score1 : myOpenMatch.score2 },
+      opponent: { name: uName(oppU), image: oppU?.image ?? null, score: iAmP1 ? myOpenMatch.score2 : myOpenMatch.score1 },
+    };
+  }
+  const rankTop: HomeRankRow[] = topRankUsers.map(u => ({ id: u.id, name: uName(u), image: u.image, rankPoints: u.rankPoints }));
+  const homeSquads: HomeSquad[] = mySquadRows.length > 0
+    ? mySquadRows.map(m => ({ id: m.squad.id, name: m.squad.name, memberCount: m.squad._count.memberships, mine: true }))
+    : topSquadRows.map(s => ({ id: s.id, name: s.name, memberCount: s._count.memberships, mine: false }));
+  const holderNames = wanderpokalHolders.map(h => uName(h.user));
+  const wanderpokal = latestWanderpokal && holderNames.length > 0
+    ? {
+        title: getScopeTitle(latestWanderpokal.scopeType, latestWanderpokal.scopeValue),
+        holders: holderNames.length > 1 ? `${holderNames.slice(0, -1).join(", ")} & ${holderNames[holderNames.length - 1]}` : holderNames[0],
+      }
+    : null;
 
   // Reihenfolge der Gewinner-Nominierungen beibehalten (findMany garantiert das nicht)
   const winnerClips = winnerNominationIds
@@ -488,11 +571,19 @@ export default async function DashboardPage() {
   const homePeriodEvents = runningPeriodEvents(homeCandidates, homeFeatureId);
   const homeEventRowsShown = homeRows(homeCandidates, homeFeatureId, now).slice(0, homePeriodEvents.length > 0 ? 1 : 2);
   const homeWeekCount = weekCount(homeCandidates, now);
+  const stageIds = new Set([homeFeatureId, ...homeEventRowsShown.map(r => r.id), ...homePeriodEvents.map(p => p.id)]);
+  const upcomingCovers: HomeUpcoming[] = homeCandidates
+    .filter(e => !stageIds.has(e.id) && e.startAt.getTime() > now.getTime() && ["open", "closed"].includes(e.status))
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+    .slice(0, 4)
+    .map(e => ({
+      id: e.id, title: e.title, game: e.game, coverUrl: e.coverUrl, omaOriginal: e.omaOriginal, startAt: e.startAt,
+      startsIn: startsInLabel(e.startAt, now), playerCount: e.playerCount, maxPlayers: e.maxPlayers, isRegistered: e.isRegistered,
+    }));
   const clipRanking = clipRankingRows.map(n => ({ id: n.id, title: n.customTitle ?? n.clipTitle ?? "Clip", votes: n._count.votes }));
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
-  const avatarUrl   = sessionUser?.image ?? null;
 
   // ── Aufgabenleiste ("Heute für dich") ──
   type QuestRow = (typeof myMonthQuests)[number] & { progress?: { completed: boolean; current: number }[] };
@@ -537,69 +628,35 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="px-4 sm:px-6 pt-0 sm:pt-6 pb-6 max-w-7xl mx-auto space-y-5">
+      <div className="px-4 sm:px-6 pb-6 max-w-7xl mx-auto space-y-6">
 
-        {/* ── Kopf: Name, Rang, Punkte, Coins — kompakt, auf allen Größen gleich ── */}
+        {/* ── Handy: "Gerade live" als wischbare Leiste (Desktop: in der Seitenleiste) ── */}
+        <div className="lg:hidden empty:hidden"><LiveStreamsBanner /></div>
+
+        {/* ── Begrüßung (Münzen stehen in der Kopfzeile, Rang in der Ranglisten-Karte) ── */}
         {userId ? (
-          <section aria-label="Dein Konto" className="flex items-center gap-3 sm:gap-4">
-            <div className="relative shrink-0">
-              <RankRing userId={userId} width={3} rounded="rounded-lg" faceClassName="card-cut w-12 h-12 sm:w-14 sm:h-14">
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt={displayName} width={56} height={56} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-black text-white"
-                    style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
-                    {firstName[0]?.toUpperCase()}
-                  </div>
-                )}
-              </RankRing>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="font-display text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight truncate">
-                Hey <StyledUserName userId={userId} name={firstName} />
-              </h1>
-              <span className={`inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
+          <section aria-label="Begrüßung" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-fg leading-tight tracking-tight">
+              Hey <StyledUserName userId={userId} name={firstName} />
+            </h1>
+            {userRole !== "user" && (
+              <span className={`text-[0.6875rem] font-semibold px-2 py-0.5 rounded-full ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                 {ROLE_LABEL[userRole] ?? "Mitglied"}
               </span>
-            </div>
-            <div className="flex items-center gap-3 sm:gap-6 shrink-0">
-              {leaderboardRank && (
-                <Link href="/leaderboard" className="text-right group" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
-                  <span className="flex items-center justify-end gap-1 font-display text-lg sm:text-2xl font-black text-white tabular-nums leading-none group-hover:text-teal-200">
-                    #{leaderboardRank}
-                    {rankTrend === "up" && <ArrowUp className="w-3.5 h-3.5 text-emerald-400" />}
-                    {rankTrend === "down" && <ArrowDown className="w-3.5 h-3.5 text-red-400" />}
-                  </span>
-                  <span className="block text-[10px] text-gray-500 mt-1">Rang von {memberCount}</span>
-                </Link>
-              )}
-              <Link href="/points" className="text-right group">
-                <span className="block font-display text-lg sm:text-2xl font-black text-teal-300 tabular-nums leading-none">
-                  <HeroStatValue value={myRankPoints} storageKey={`hero-rp-${userId}`} />
-                </span>
-                <span className="block text-[10px] text-gray-500 mt-1">Pts</span>
-              </Link>
-              <Link href="/shop" className="text-right group">
-                <span className="flex items-center justify-end gap-1 font-display text-lg sm:text-2xl font-black text-amber-400 tabular-nums leading-none">
-                  <CoinIcon size={16} />
-                  <HeroStatValue value={myPoints} storageKey={`hero-coins-${userId}`} />
-                </span>
-                <span className="block text-[10px] text-gray-500 mt-1">Coins</span>
-              </Link>
-            </div>
+            )}
           </section>
         ) : (
           /* Gäste: Einladung statt gesperrter Platzhalter */
-          <section aria-label="Willkommen" className="glass rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 border border-teal-500/20">
+          <section aria-label="Willkommen" className="rounded-card border border-line bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-teal-400">Old Masters Allies</p>
-              <h1 className="font-display text-2xl sm:text-3xl font-black text-white leading-tight mt-1">Zocken, Events, Community</h1>
-              <p className="text-sm text-gray-400 mt-1.5">
+              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-primary-fg">Old Masters Allies</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg leading-tight mt-1">Zocken, Events, Community</h1>
+              <p className="text-sm text-muted mt-1.5">
                 Melde dich mit Discord an, um bei Events mitzumachen, Punkte zu sammeln und in der Rangliste aufzusteigen.
               </p>
             </div>
             <Link href="/login?callbackUrl=%2Fdashboard"
-              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] px-5 py-2.5 text-sm font-semibold text-white transition-colors">
+              className="shrink-0 inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-[#5865F2] hover:bg-[#4752c4] px-5 text-sm font-bold text-white transition-colors">
               Mit Discord anmelden
             </Link>
           </section>
@@ -612,29 +669,44 @@ export default async function DashboardPage() {
 
         {/* ── Heute für dich ── */}
         <HomeTaskBar tasks={homeTasks} polls={dailyPolls} loggedIn={!!userId} />
-      </div>
 
-      {/* ── Gerade los: Live-Streams, gemeinsam schauen (blenden sich ohne Inhalt selbst aus) ── */}
-      <LiveStreamsBanner />
-      <WatchTogetherTeaser />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* ── Hauptspalte: Bühne · dein Match · Community-Ziel · kommende Events ── */}
+          <div className="lg:col-span-2 min-w-0 space-y-6">
+            {/* Bühne: das eine Event, das für dich gerade zählt (lib/home-event-feature.ts) */}
+            <EventsTile
+              stage
+              feature={homeFeature}
+              rows={homeEventRowsShown}
+              periodEvents={homePeriodEvents}
+              weekCount={homeWeekCount}
+              nowIso={now.toISOString()}
+              loggedIn={!!userId}
+            />
+            {homeMatch && <MyMatchModule match={homeMatch} />}
+            {/* Laufende Community-Ziele: "Gemeinsam schaffen wir …" mit Fortschritt */}
+            <CommunityGoalsBanner userId={userId} />
+            <UpcomingEventsModule events={upcomingCovers} />
+          </div>
 
-      {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-6 relative">
+          {/* ── Seitenspalte: Event-Chat · Rangliste · Squads ── */}
+          <div className="min-w-0 space-y-6">
+            {userId && <EventChatModule />}
+            <RankingModule
+              top={rankTop}
+              me={userId && leaderboardRank ? { rank: leaderboardRank, rankPoints: myRankPoints } : null}
+              memberCount={memberCount}
+              trend={rankTrend}
+              wanderpokal={wanderpokal}
+            />
+            <SquadsModule squads={homeSquads} />
+          </div>
+        </div>
 
-        {/* ── Laufende Community-Ziele: "Gemeinsam schaffen wir …" mit Fortschritt ── */}
-        <CommunityGoalsBanner userId={userId} />
+        <WatchTogetherTeaser />
 
-        {/* ── Hub-Kacheln: Events + Clip, gleiches HubTile-Gerüst → immer gleich hoch ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
-          {/* Events Hub — das eine Event, das für dich gerade zählt (lib/home-event-feature.ts) */}
-          <EventsTile
-            feature={homeFeature}
-            rows={homeEventRowsShown}
-            periodEvents={homePeriodEvents}
-            weekCount={homeWeekCount}
-            nowIso={now.toISOString()}
-            loggedIn={!!userId}
-          />
+        {/* ── Clip des Monats | Deine Reihen | Quests | Gameserver ──────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ClipOfMonthTile
             winners={winnerClips}
             monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
@@ -648,10 +720,6 @@ export default async function DashboardPage() {
             ranking={clipRanking}
             nowIso={now.toISOString()}
           />
-        </div>
-
-        {/* ── Deine Reihen | Quests | Gameserver ──────────── */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${userId ? "lg:grid-cols-3" : ""} gap-4`}>
 
           {/* Deine Reihen (bzw. aktive Reihen, solange du in keiner mitspielst) */}
           <section aria-label="Eventreihen" className="animate-slide-up stagger-3 min-w-0">

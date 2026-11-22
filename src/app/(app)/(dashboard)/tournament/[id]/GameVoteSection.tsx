@@ -235,7 +235,7 @@ export default function GameVoteSection({
                 )}
                 {canManage && view.status !== "closed" && (
                   <button type="button" title="Kandidat entfernen" disabled={saving} onClick={() => removeCandidate(c)}
-                    className="p-1 rounded text-gray-600 hover:text-rose-300 disabled:opacity-40">
+                    className="p-1 rounded text-gray-600 hover:text-primary-fg disabled:opacity-40">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}

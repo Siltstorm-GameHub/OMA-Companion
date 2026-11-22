@@ -1,15 +1,14 @@
 "use client";
-import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import { BackToTop } from "@/components/BackToTop";
 import { CommunityHub } from "@/components/CommunityHub";
 import { GuestGateProvider, GuestBanner } from "@/components/GuestGate";
-import { Sidebar } from "@/components/shell/Sidebar";
+import { Sidebar, type SupportProgress } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { BottomNav } from "@/components/shell/BottomNav";
 
 /**
  * App-Rahmen nach dem Designentwurf (OMA 2.0, Richtung G): Desktop = Seitenleiste links +
- * Kopfzeile, Handy = Kopfzeile + untere Leiste. Das News-Laufband sitzt unter der Kopfzeile.
+ * Kopfzeile, Handy = Kopfzeile + untere Leiste. Benachrichtigungen öffnen sich über die Glocke.
  *
  * `partnerFooter` kommt bewusst als bereits gerendertes ReactNode vom Server-
  * Layout rein, statt hier `<PartnerFooter />` selbst zu importieren:
@@ -22,22 +21,21 @@ import { BottomNav } from "@/components/shell/BottomNav";
  * durchreichen, nie direkt importieren.
  */
 export default function DashboardChrome({
-  children, newsItems, partnerFooter, isGuest, inviteUrl,
+  children, partnerFooter, isGuest, inviteUrl, support,
 }: {
   children: React.ReactNode;
-  newsItems: NewsItem[];
   partnerFooter: React.ReactNode;
   isGuest: boolean;
   inviteUrl: string | null;
+  support: SupportProgress | null;
 }) {
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
       <div className="min-h-dvh bg-canvas text-fg lg:flex">
-        <Sidebar />
+        <Sidebar support={support} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
-          <TopNewsFeed items={newsItems} />
 
           <main className="min-w-0 flex-1 px-0 pt-3 pb-28 lg:pt-5 lg:pb-10">
             <GuestBanner />
@@ -48,7 +46,7 @@ export default function DashboardChrome({
 
         <BackToTop />
 
-        {/* Benachrichtigungen, Event-Absprachen, Online-Leiste (Knopf unten rechts, Glocke oben) */}
+        {/* Benachrichtigungen, Event-Absprachen, Online-Liste — geöffnet über die Glocke */}
         <CommunityHub />
 
         <BottomNav />

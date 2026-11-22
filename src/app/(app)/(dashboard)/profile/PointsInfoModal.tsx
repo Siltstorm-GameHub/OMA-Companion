@@ -52,10 +52,10 @@ export default function PointsInfoModal() {
                   </div>
                   <p className="text-[11px] text-gray-400 leading-relaxed">Shop-Währung. Damit kaufst du Figuren und Items im Shop.</p>
                 </div>
-                <div className="rounded-xl bg-rose-500/8 border border-rose-500/15 p-3">
+                <div className="rounded-xl bg-primary-soft border border-primary/40 p-3">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Trophy className="w-4 h-4 text-rose-400 shrink-0" />
-                    <p className="text-sm font-bold text-rose-400">Rang-Punkte</p>
+                    <Trophy className="w-4 h-4 text-primary-fg shrink-0" />
+                    <p className="text-sm font-bold text-primary-fg">Rang-Punkte</p>
                   </div>
                   <p className="text-[11px] text-gray-400 leading-relaxed">Prestige-Währung. Bestimmt deinen Platz in der Rangliste.</p>
                 </div>

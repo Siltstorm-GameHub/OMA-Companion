@@ -101,7 +101,7 @@ export default function LigaView({
                 const isMe = s.userId === userId;
                 const diff = s.scored - s.conceded;
                 return (
-                  <tr key={s.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-surface-2"}`}>
+                  <tr key={s.userId} className={`transition-colors ${isMe ? "bg-primary-soft/60" : "hover:bg-surface-2"}`}>
                     <td className="px-4 py-3 text-center">
                       {i < 3
                         ? <span className="text-base">{MEDAL[i]}</span>
@@ -111,7 +111,7 @@ export default function LigaView({
                     <td className="px-4 py-3">
                       <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <RankedAvatar userId={s.user.id} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
-                        <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
+                        <span className={`font-medium ${isMe ? "text-primary-fg" : "text-white"}`}>
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
                       </Link>
@@ -201,7 +201,7 @@ export default function LigaView({
                     return (
                       <div key={match.id}
                         className={`glass border rounded-xl px-4 py-3 flex items-center gap-3 ${
-                          isMyMatch ? "border-rose-800/40" : "border-line"
+                          isMyMatch ? "border-primary/40" : "border-line"
                         } ${played ? "opacity-80" : ""}`}
                       >
                         {match.scheduledAt && !played && (
@@ -224,7 +224,7 @@ export default function LigaView({
                             match.winnerId === match.player1Id ? "text-emerald-300" :
                             match.winnerId && !isDraw          ? "text-gray-600"    :
                             isDraw                             ? "text-amber-200"   :
-                            p1 && p1.id === userId             ? "text-rose-300"    :
+                            p1 && p1.id === userId             ? "text-primary-fg"    :
                                                                  "text-white"
                           }`}>
                             <span className="text-sm font-medium truncate">{p1 ? <>{uname(p1)}</> : "TBD"}</span>
@@ -263,7 +263,7 @@ export default function LigaView({
                             match.winnerId === match.player2Id ? "text-emerald-300" :
                             match.winnerId && !isDraw          ? "text-gray-600"    :
                             isDraw                             ? "text-amber-200"   :
-                            p2 && p2.id === userId             ? "text-rose-300"    :
+                            p2 && p2.id === userId             ? "text-primary-fg"    :
                                                                  "text-white"
                           }`}>
                             {p2 && <RankedAvatar userId={p2.id} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}

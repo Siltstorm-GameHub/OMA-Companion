@@ -9,8 +9,8 @@ export default function NotFound() {
         {/* Glow */}
 
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-5">
-            <SearchX className="w-8 h-8 text-rose-400" />
+          <div className="w-16 h-16 rounded-2xl bg-primary-soft border border-primary/40 flex items-center justify-center mx-auto mb-5">
+            <SearchX className="w-8 h-8 text-primary-fg" />
           </div>
 
           <p className="text-5xl font-black text-white tabular-nums mb-2">404</p>
@@ -21,7 +21,7 @@ export default function NotFound() {
 
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
           >
             <Home className="w-4 h-4" />
             Zurück zum Dashboard

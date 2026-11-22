@@ -873,11 +873,11 @@ export default async function TournamentDetailPage({
                 <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
               </div>
             )}
-            <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+            <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-primary-soft/60" : ""}`}>
               <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
               <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
               <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-primary-fg" : "text-white"}`}>
                   <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
                   {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
                   {excludedUserIds.has(user.id) && (
@@ -926,11 +926,11 @@ export default async function TournamentDetailPage({
           {externalVoters.map((user, i) => {
             const isMe = user.id === userId;
             return (
-              <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+              <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-primary-soft/60" : ""}`}>
                 <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
                 <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                  <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-primary-fg" : "text-white"}`}>
                     <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                       <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
@@ -1811,9 +1811,9 @@ export default async function TournamentDetailPage({
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────── */}
       {isHidden && isMod && (
-        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border border-rose-500/20 bg-rose-500/[0.04]">
+        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border border-primary/40 bg-primary-soft">
           <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
-          <p className="text-sm text-rose-300">
+          <p className="text-sm text-primary-fg">
             <span className="font-semibold">Ausgeblendet</span> — {event.series?.hidden ? "die Eventreihe" : "dieses Event"} ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
           </p>
         </div>

@@ -3,31 +3,37 @@
 import { useEffect, useState } from "react";
 import { Eye } from "@/components/icons";
 
-type CommunityStream = {
-  user_login: string;
-  userId: string;
-  displayName: string;
-  avatar: string;
-  game_name: string;
-  viewer_count: number;
-};
+type Stream = { login: string; name: string; avatar: string; game: string; viewers: number; partner: boolean };
 
 const REFRESH_MS = 120_000;
 
+async function loadStreams(): Promise<Stream[]> {
+  const [partners, community] = await Promise.all([
+    fetch("/api/twitch/live").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    fetch("/api/twitch/community-live").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+  ]);
+  const list: Stream[] = [
+    ...(Array.isArray(partners) ? partners : []).map((s: { user_login: string; partnerName: string; logoUrl: string; game_name: string; viewer_count: number }) => ({
+      login: s.user_login, name: s.partnerName, avatar: s.logoUrl, game: s.game_name, viewers: s.viewer_count, partner: true,
+    })),
+    ...(Array.isArray(community) ? community : []).map((s: { user_login: string; displayName: string; avatar: string; game_name: string; viewer_count: number }) => ({
+      login: s.user_login, name: s.displayName, avatar: s.avatar, game: s.game_name, viewers: s.viewer_count, partner: false,
+    })),
+  ];
+  return list.sort((a, b) => b.viewers - a.viewers);
+}
+
 /**
- * "Gerade live" in der Seitenleiste: Streamer aus der Community mit Spiel und Zuschauerzahl
- * (gleiche Quelle wie LiveStreamsBanner auf der Übersicht). Zeigt nichts, wenn niemand live ist.
+ * "Gerade live" in der Seitenleiste (Desktop): Streamer der Community und Partner mit Spiel und
+ * Zuschauerzahl — dieselben Quellen wie LiveStreamsBanner, das am Handy oben auf der Übersicht
+ * als wischbare Leiste steht. Zeigt nichts, wenn niemand live ist.
  */
 export function LiveNow() {
-  const [streams, setStreams] = useState<CommunityStream[]>([]);
+  const [streams, setStreams] = useState<Stream[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    const load = () =>
-      fetch("/api/twitch/community-live")
-        .then((r) => (r.ok ? r.json() : []))
-        .then((data: CommunityStream[]) => { if (!cancelled && Array.isArray(data)) setStreams(data); })
-        .catch(() => {});
+    const load = () => loadStreams().then((s) => { if (!cancelled) setStreams(s); });
     load();
     const id = window.setInterval(load, REFRESH_MS);
     return () => { cancelled = true; window.clearInterval(id); };
@@ -42,8 +48,8 @@ export function LiveNow() {
       </p>
       {streams.slice(0, 5).map((s) => (
         <a
-          key={s.user_login}
-          href={`https://twitch.tv/${s.user_login}`}
+          key={s.login}
+          href={`https://twitch.tv/${s.login}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex min-h-11 items-center gap-2.5 rounded-control px-2.5 py-1.5 hover:bg-surface-2"
@@ -51,12 +57,14 @@ export function LiveNow() {
           {/* eslint-disable-next-line @next/next/no-img-element -- Twitch-/Discord-Avatare von fremden Hosts */}
           <img src={s.avatar} alt="" width={28} height={28} className="size-7 shrink-0 rounded-full border-2 border-live object-cover" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-fg">{s.displayName}</span>
-            <span className="block truncate text-xs text-subtle">{s.game_name || "Just Chatting"}</span>
+            <span className="block truncate text-sm font-semibold text-fg">{s.name}</span>
+            <span className="block truncate text-xs text-subtle">
+              {s.partner ? "Partner · " : ""}{s.game || "Just Chatting"}
+            </span>
           </span>
           <span className="flex shrink-0 items-center gap-1 text-xs text-muted">
             <Eye className="size-3" aria-hidden />
-            {s.viewer_count.toLocaleString("de-DE")}
+            {s.viewers.toLocaleString("de-DE")}
           </span>
         </a>
       ))}

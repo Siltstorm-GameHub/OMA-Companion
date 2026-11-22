@@ -22,3 +22,19 @@ export function publishHubBadge(count: number) {
 export function readHubBadge(): number {
   return typeof window === "undefined" ? 0 : window.__omaHubBadge ?? 0;
 }
+
+/** Online-Zahl (Presence) — der Hub lädt sie, die Seitenleiste zeigt sie an. */
+export const HUB_ONLINE_EVENT = "oma:hub-online";
+
+declare global {
+  interface Window { __omaHubOnline?: number }
+}
+
+export function publishHubOnline(count: number) {
+  window.__omaHubOnline = count;
+  window.dispatchEvent(new CustomEvent<number>(HUB_ONLINE_EVENT, { detail: count }));
+}
+
+export function readHubOnline(): number {
+  return typeof window === "undefined" ? 0 : window.__omaHubOnline ?? 0;
+}

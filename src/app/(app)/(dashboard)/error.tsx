@@ -42,7 +42,7 @@ export default function Error({
             </button>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
             >
               <Home className="w-4 h-4" />
               Dashboard

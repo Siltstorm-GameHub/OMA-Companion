@@ -77,7 +77,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
   // ── Kopf: Visitenkarte ──
   const hero = (
     <section aria-label={displayName} className="glass relative overflow-hidden rounded-2xl p-4 sm:p-6">
-      <div className={`absolute inset-0 bg-gradient-to-br ${isOwn ? "from-teal-500/10 via-transparent to-teal-900/10" : "from-rose-500/10 via-transparent to-purple-500/8"} pointer-events-none`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${isOwn ? "from-teal-500/10 via-transparent to-teal-900/10" : "from-primary/10 via-transparent to-purple-500/8"} pointer-events-none`} />
       {background && <div className="absolute inset-0 pointer-events-none" style={{ background: background.css }} />}
 
       <div className="relative flex items-start gap-4">
@@ -93,7 +93,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
 
       <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6 border-t border-line pt-4">
         <Stat value={`#${data.leaderboardRank}`} label={`Rang von ${data.totalUsers}`} href="/leaderboard" />
-        <Stat value={data.rankPoints.toLocaleString("de-DE")} label="Punkte" cls={isOwn ? "text-teal-300" : "text-rose-300"} />
+        <Stat value={data.rankPoints.toLocaleString("de-DE")} label="Punkte" cls={isOwn ? "text-teal-300" : "text-primary-fg"} />
         <Stat value={data.eventCount} label="Events" />
         <Stat value={data.eventWins} label="Siege" />
         <Stat value={pokaleTotal} label="Pokale" />

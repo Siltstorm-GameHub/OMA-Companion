@@ -110,7 +110,7 @@ export default function MyClipsPanel() {
                         onClick={() => update({ clipId: c.id, blocked: !c.blocked }, c.id)}
                         disabled={busy === c.id}
                         className={`shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
-                          c.blocked ? "border-white/[0.08] text-gray-400 hover:text-teal-300" : "border-teal-500/30 text-teal-300 hover:border-rose-400/40 hover:text-rose-300"
+                          c.blocked ? "border-white/[0.08] text-gray-400 hover:text-teal-300" : "border-teal-500/30 text-teal-300 hover:border-primary/40 hover:text-primary-fg"
                         }`}
                       >
                         {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : c.blocked ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}

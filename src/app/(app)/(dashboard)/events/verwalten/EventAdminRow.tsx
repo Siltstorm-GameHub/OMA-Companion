@@ -583,7 +583,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
               {TABS.map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)}
                   className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors mr-2 ${
-                    tab === t.key ? "border-rose-500 text-rose-400" : "border-transparent text-gray-500 hover:text-gray-300"
+                    tab === t.key ? "border-primary/40 text-primary-fg" : "border-transparent text-gray-500 hover:text-gray-300"
                   }`}>
                   {t.icon}{t.label}
                 </button>
@@ -1084,7 +1084,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                   )}
 
                   <button onClick={handleSaveClick} disabled={loading}
-                    className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50 transition-colors">
+                    className="text-sm bg-primary hover:bg-primary-hover text-primary-ink rounded-lg px-4 py-2 disabled:opacity-50 transition-colors">
                     {loading ? "Speichert…" : "Speichern"}
                   </button>
 
@@ -1319,7 +1319,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       </div>
                       {bulkSelected.length > 0 && (
                         <button onClick={bulkAdd} disabled={loading}
-                          className="flex items-center gap-1.5 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 whitespace-nowrap">
+                          className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-3 py-1.5 whitespace-nowrap">
                           <UserPlus className="w-3.5 h-3.5" />
                           {bulkSelected.length} hinzufügen
                         </button>
@@ -1373,7 +1373,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             const isSel = bulkSelected.includes(u.id);
                             return (
                               <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                                isSel ? "bg-rose-900/15 border border-rose-900/30" : "bg-gray-800 hover:bg-gray-800/80"
+                                isSel ? "bg-primary-soft/60 border border-primary/40" : "bg-gray-800 hover:bg-gray-800/80"
                               }`}>
                                 <input type="checkbox" checked={isSel}
                                   onChange={e => setBulkSelected(
@@ -1381,7 +1381,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                       ? [...bulkSelected, u.id]
                                       : bulkSelected.filter(id => id !== u.id)
                                   )}
-                                  className="rounded shrink-0 accent-rose-500" />
+                                  className="rounded shrink-0 accent-primary" />
                                 {u.image
                                   ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
                                   : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
@@ -1391,7 +1391,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                 <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
                                 <button onClick={() => addSingleUser(u.id)} disabled={loading}
                                   title="Anmelden"
-                                  className="shrink-0 text-gray-500 hover:text-rose-400 hover:bg-rose-900/30 p-1.5 rounded transition-colors disabled:opacity-50">
+                                  className="shrink-0 text-gray-500 hover:text-primary-fg hover:bg-primary-soft/60 p-1.5 rounded transition-colors disabled:opacity-50">
                                   <UserPlus className="w-3.5 h-3.5" />
                                 </button>
                               </div>

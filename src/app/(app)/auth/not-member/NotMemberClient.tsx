@@ -55,7 +55,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
 
         {/* Header */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-rose-500/30 mb-4">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-primary/30 mb-4">
             <Image src="/brand/logo-256.png" alt="OMA" width={56} height={56} className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center gap-2 mb-2">
@@ -78,7 +78,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
           <div className="divide-y divide-line max-h-72 overflow-y-auto">
             {RULES.map(rule => (
               <div key={rule.number} className="px-5 py-3.5 flex gap-3">
-                <span className="text-xs font-bold text-rose-500/70 shrink-0 w-6 mt-0.5">{rule.number}</span>
+                <span className="text-xs font-bold text-primary/70 shrink-0 w-6 mt-0.5">{rule.number}</span>
                 <div>
                   <p className="text-xs font-semibold text-gray-200 mb-0.5">{rule.title}</p>
                   <p className="text-xs text-gray-500 leading-relaxed">{rule.text}</p>

@@ -222,7 +222,7 @@ export default function TournamentManagerMobile({
 
       {/* ── Kompakter Status-Header ── */}
       <div className="flex items-center gap-2 flex-wrap text-xs">
-        <span className="bg-rose-900/40 text-rose-300 px-2 py-1 rounded-full">{formatLabel}</span>
+        <span className="bg-primary-soft/60 text-primary-fg px-2 py-1 rounded-full">{formatLabel}</span>
         <span className={`px-2 py-1 rounded-full ${
           tournament.status === "active" ? "bg-green-900/40 text-green-300" :
           tournament.status === "finished" ? "bg-gray-800 text-gray-500" : "bg-amber-900/40 text-amber-300"
@@ -446,7 +446,7 @@ function AddMatchForm({
   });
 
   return (
-    <div className="rounded-2xl border border-rose-800/60 bg-rose-950/20 p-4 space-y-4">
+    <div className="rounded-2xl border border-primary/40 bg-primary-soft/60 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
         <button onClick={onCancel} className="p-1.5 -m-1 text-gray-500 active:text-white">
@@ -502,7 +502,7 @@ function AddMatchForm({
               {sortedUsers.map(u => (
                 <button key={u.id} onClick={() => setMP2(u.id === mP2 ? "" : u.id)}
                   className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    mP2 === u.id ? "bg-rose-900/40 border-rose-600 text-white" : "bg-gray-800 border-gray-700 text-gray-300"
+                    mP2 === u.id ? "bg-primary-soft/60 border-primary/40 text-primary-ink" : "bg-gray-800 border-gray-700 text-gray-300"
                   }`}>
                   {userName(u)}
                 </button>
@@ -543,7 +543,7 @@ function AddMatchForm({
       )}
 
       <button onClick={onSubmit} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
-        className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-rose-600 disabled:opacity-40 text-white rounded-xl py-3">
+        className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-xl py-3">
         <PlusIcon className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
       </button>
     </div>

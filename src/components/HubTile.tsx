@@ -25,8 +25,10 @@ export type HubRow = {
 };
 
 export default function HubTile({
-  accent, media, main, rows, placeholderRow, footer, highlighted = false, className = "", ariaLabel,
+  accent, media, main, rows, placeholderRow, footer, highlighted = false, className = "", ariaLabel, stage = false,
 }: {
+  /** "Bühne" der Übersicht: ab lg Medium links, Inhalt rechts (statt untereinander) */
+  stage?: boolean;
   accent: HubAccent;
   media: ReactNode;
   main: ReactNode;
@@ -44,8 +46,10 @@ export default function HubTile({
 
   return (
     <section aria-label={ariaLabel}
-      className={`surface flex h-full flex-col overflow-hidden rounded-card border ${highlighted ? a.borderStrong : a.border} shadow-card ${className}`}>
-      <div className="relative aspect-video shrink-0 overflow-hidden">{media}</div>
+      className={`surface flex h-full flex-col overflow-hidden rounded-card border ${stage ? "lg:flex-row" : ""} ${highlighted ? a.borderStrong : a.border} shadow-card ${className}`}>
+      <div className={`relative aspect-video shrink-0 overflow-hidden ${stage ? "lg:aspect-auto lg:min-h-[17rem] lg:w-[58%]" : ""}`}>{media}</div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
 
       <div className="flex h-[64px] shrink-0 items-center gap-3 px-3.5">{main}</div>
 
@@ -69,6 +73,7 @@ export default function HubTile({
         <span>{footer.label}</span>
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
+      </div>
     </section>
   );
 }

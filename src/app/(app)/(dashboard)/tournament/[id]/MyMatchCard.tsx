@@ -44,11 +44,11 @@ export default function MyMatchCard({
 
   return (
     <section aria-label="Dein Match"
-      className={`rounded-2xl p-4 border space-y-3 ${match.live ? "border-red-500/50 bg-red-950/20" : "border-rose-700/40 bg-rose-950/20"}`}>
+      className={`rounded-2xl p-4 border space-y-3 ${match.live ? "border-red-500/50 bg-red-950/20" : "border-primary/40 bg-primary-soft/60"}`}>
       {ConfirmDialogElement}
       <div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 flex items-center gap-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-fg flex items-center gap-1.5">
             <Swords className="w-3.5 h-3.5" /> Dein Match · {match.label}
           </p>
           {match.live && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LÄUFT GERADE</span>}

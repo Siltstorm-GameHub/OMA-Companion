@@ -99,20 +99,20 @@ export default function LiveStreamsBanner({
   const activeStream = streams.find((s) => s.user_login === activeChannel);
 
   return (
-    <div className={fill ? "h-full" : "px-4 sm:px-6 pt-4 max-w-7xl mx-auto"}>
-      <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(20,184,166,0.15)", background: "rgba(20,184,166,0.03)" }}>
+    <div className={fill ? "h-full" : ""}>
+      <div className="rounded-card overflow-hidden border border-line bg-surface">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
           <div className="relative flex-shrink-0">
-            <Radio className="w-3.5 h-3.5 text-teal-400" />
-            <span className="live-ring absolute -top-0.5 -right-0.5 w-1.5 h-1.5" style={{ "--live-ring-color": "rgba(20,184,166,0.5)" } as CSSProperties}>
-              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-teal-400" />
+            <Radio className="w-3.5 h-3.5 text-live" />
+            <span className="live-ring absolute -top-0.5 -right-0.5 w-1.5 h-1.5" style={{ "--live-ring-color": "rgba(244,63,94,0.5)" } as CSSProperties}>
+              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-live" />
             </span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-400/70">
-            Jetzt live
+          <span className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle">
+            Gerade live
           </span>
-          <span className="ml-auto text-[10px] text-gray-600">{streams.length} live</span>
+          <span className="ml-auto text-xs text-subtle">{streams.length} live</span>
         </div>
 
         {/* Eingebetteter Player */}
@@ -122,18 +122,17 @@ export default function LiveStreamsBanner({
           </div>
         )}
 
-        {/* Stream-Karten */}
-        <div className={`grid gap-2 px-3 pb-3 ${streams.length === 1 ? "grid-cols-1 max-w-xs" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"}`}>
-          {streams.slice(0, 4).map((s) => {
+        {/* Stream-Karten: am Handy eine wischbare Leiste, ab sm ein Raster */}
+        <div className={`gap-2 px-3 pb-3 ${streams.length === 1 ? "grid grid-cols-1 max-w-xs" : "flex snap-x snap-mandatory overflow-x-auto scrollbar-none sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-4"}`}>
+          {streams.slice(0, 8).map((s, i) => {
             const kindStyle = KIND_STYLE[s.kind];
             return (
               <button
                 key={s.user_login}
                 onClick={() => setActiveChannel(s.user_login)}
-                className="group flex flex-col text-left rounded-xl overflow-hidden hover:brightness-110 transition-all"
+                className={`group flex w-44 shrink-0 snap-start flex-col text-left rounded-control overflow-hidden bg-surface-2 transition-colors sm:w-auto ${i >= 4 ? "sm:hidden" : ""}`}
                 style={{
-                  border: activeChannel === s.user_login ? `1px solid ${kindStyle.color}99` : "1px solid rgba(255,255,255,0.06)",
-                  background: "rgba(0,0,0,0.3)",
+                  border: activeChannel === s.user_login ? `1px solid ${kindStyle.color}99` : "1px solid var(--color-line)",
                 }}
               >
                 {/* Thumbnail */}

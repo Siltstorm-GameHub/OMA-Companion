@@ -181,7 +181,7 @@ export default function LiveControl() {
       <div>
         <h1 className="text-lg font-semibold text-white">Overlay-Steuerung</h1>
         <p className="flex items-center gap-1.5 text-sm text-gray-400 mt-1">
-          <Radio className={`w-3.5 h-3.5 ${state.mode === "event" ? "text-rose-400" : "text-gray-500"}`} />
+          <Radio className={`w-3.5 h-3.5 ${state.mode === "event" ? "text-primary-fg" : "text-gray-500"}`} />
           {state.mode === "event" ? <>Turnier läuft · <span className="text-gray-200">{state.title}</span></> : "Normales Streamen (kein Turnier)"}
           {busy && <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" />}
         </p>
@@ -296,7 +296,7 @@ export default function LiveControl() {
         {countdown != null && (
           <button
             onClick={stopCountdown}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold border border-rose-400/40 text-rose-200 bg-rose-500/10 hover:bg-rose-500/20"
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold border border-primary/40 text-primary-fg bg-primary-soft hover:bg-primary-hover"
           >
             <X className="w-4 h-4" /> Countdown beenden
           </button>
@@ -348,7 +348,7 @@ export default function LiveControl() {
         {activeZoom && (
           <button
             onClick={stopZoom}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold border border-rose-400/40 text-rose-200 bg-rose-500/10 hover:bg-rose-500/20"
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold border border-primary/40 text-primary-fg bg-primary-soft hover:bg-primary-hover"
           >
             <X className="w-4 h-4" /> Zurück zum normalen Overlay
           </button>

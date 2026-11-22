@@ -9,7 +9,7 @@ const FEATURES = [
   { icon: CalendarDays, color: "text-blue-400",   bg: "bg-blue-500/10   border-blue-500/20",   title: "Events",          desc: "Alle Discord-Events synchronisiert, mit Anmeldung und Punkten." },
   { icon: Scroll,       color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20", title: "Quests",          desc: "Monatliche Challenges für Voice, Chat und Events." },
   { icon: Star,         color: "text-amber-400",   bg: "bg-amber-500/10  border-amber-500/20",  title: "Punkte & Jobs",   desc: "Sammle Punkte und übernimm einen Job in der Community." },
-  { icon: Trophy,       color: "text-rose-400",    bg: "bg-rose-500/10   border-rose-500/20",   title: "Rangliste",       desc: "Tritt gegen die Community an und kämpfe um die Spitze." },
+  { icon: Trophy,       color: "text-primary-fg",    bg: "bg-primary-soft   border-primary/40",   title: "Rangliste",       desc: "Tritt gegen die Community an und kämpfe um die Spitze." },
 ];
 
 function ErrorBanner() {
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="relative flex items-center gap-3 z-10">
-          <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-rose-500/30 shrink-0">
+          <div className="w-10 h-10 rounded-xl overflow-hidden ring-1 ring-primary/30 shrink-0">
             <Image src="/brand/logo-128.png" alt="OMA" width={40} height={40} className="w-full h-full object-cover" />
           </div>
           <div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
 
         {/* Hero Text */}
         <div className="relative z-10">
-          <p className="text-xs font-semibold text-rose-400/80 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <p className="text-xs font-semibold text-primary-fg/80 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Swords className="w-3.5 h-3.5" /> Old Masters Discord Community
           </p>
           <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight mb-5">
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
           {/* Mobile Logo */}
           <div className="flex flex-col items-center mb-8 lg:hidden">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-rose-500/30 mb-4">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-primary/30 mb-4">
               <Image src="/brand/logo-256.png" alt="OMA" width={64} height={64} className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">Old Masters Ally</h1>
@@ -169,7 +169,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-4 mt-6 pt-5 border-t border-line">
                 {[
                   { icon: <Zap className="w-3 h-3 text-amber-400" />, label: "Punkte sammeln" },
-                  { icon: <Trophy className="w-3 h-3 text-rose-400" />, label: "Rangliste" },
+                  { icon: <Trophy className="w-3 h-3 text-primary-fg" />, label: "Rangliste" },
                   { icon: <Swords className="w-3 h-3 text-purple-400" />, label: "Turniere" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-1.5 text-[10px] text-gray-600">

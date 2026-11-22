@@ -1,95 +1,38 @@
-import { computeCommunityGoalProgress, goalPace, GOAL_FORMATS, GOAL_MATCH_SELECT, isAvgGoal } from "@/lib/community-goal";
-import { isEventRunning } from "@/lib/event-display";
-import { mayHaveGoalWhere, resolveEventGoal } from "@/lib/event-goal";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { isLinkPreviewBot } from "@/lib/link-preview-bots";
 import { prisma } from "@/lib/prisma";
-import { getScopeTitle } from "@/lib/wanderpocal";
+import { allocatePool } from "@/lib/donation-pool";
 import DashboardChrome from "./DashboardChrome";
 import PartnerFooter from "@/components/PartnerFooter";
-import type { NewsItem } from "@/components/TopNewsFeed";
-import { getBerlinDateParts } from "@/lib/time";
 import { GUEST_ALLOWED_PATHS } from "@/lib/guest-access";
-import { unstable_cache } from "next/cache";
-import { endsSoonLabel, isPeriodEvent, periodInfo, PERIOD_TICKER_WINDOW_MS } from "@/lib/event-period";
+import type { SupportProgress } from "@/components/shell/Sidebar";
 
-// Nutzerunabhängige News-Ticker-Daten, 60 s gecacht. Achtung: unstable_cache serialisiert als
-// JSON — Date-Felder (startAt) kommen als String zurück und werden unten per new Date() gelesen.
-const getGlobalNewsData = unstable_cache(
-  async (questMonth: number, questYear: number) => {
-    const now = new Date();
-    const [activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal] = await Promise.all([
-      // Currently running or in poll phase
-      prisma.event.findFirst({
-        where: { status: { in: ["active", "umfrage"] } },
-        orderBy: { startAt: "desc" },
-        select: { id: true, title: true, startAt: true, endAt: true, game: true, status: true },
-      }),
-      // Next upcoming event
-      prisma.event.findFirst({
-        where: { startAt: { gt: now }, status: { not: "finished" } },
-        orderBy: { startAt: "asc" },
-        select: { id: true, title: true, startAt: true, game: true, status: true },
-      }),
-      prisma.quest.count({ where: { month: questMonth, year: questYear } }),
-      prisma.user.count(),
-      prisma.monthlyClipContest.findFirst({
-        where: { status: "voting" },
-        orderBy: [{ year: "desc" }, { month: "desc" }],
-        select: { month: true, year: true },
-      }),
-      // Clip des Jahres – aktive Abstimmung
-      prisma.yearlyClipContest.findFirst({
-        where: { status: "voting" },
-        orderBy: { year: "desc" },
-        select: { year: true },
-      }),
-      // Tages-Umfrage – aktuell laufend (nicht erst kürzlich beendet)
-      prisma.dailyPoll.findFirst({
-        where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, title: true, question: true },
-      }),
-      // Wanderpokal – zuletzt vergebener Titel (nur der Scope, Halter werden unten separat geladen —
-      // bei Gleichstand teilen sich mehrere User denselben Scope)
-      prisma.wanderpocalHolder.findFirst({
-        orderBy: { heldSince: "desc" },
-        select: { scopeType: true, scopeValue: true },
-      }),
+/**
+ * Spendenpool für die Support-Karte in der Seitenleiste: worauf das Guthaben gerade hinarbeitet
+ * (erst die laufenden Kosten, dann die Ziele der Reihe nach — lib/donation-pool.ts). Für alle gleich,
+ * 10 min gecacht. Beträge werden nicht gezeigt, nur der Fortschritt in Prozent.
+ */
+const getSupportProgress = unstable_cache(
+  async (): Promise<SupportProgress | null> => {
+    const [donations, expenses, ideas, fixedCosts] = await Promise.all([
+      prisma.donation.aggregate({ _sum: { amount: true } }),
+      prisma.poolExpense.aggregate({ _sum: { amount: true } }),
+      prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
+      prisma.poolFixedCost.findMany({ where: { active: true }, orderBy: { nextDueAt: "asc" } }),
     ]);
-
-    // Wanderpokal – alle Halter des zuletzt vergebenen Scopes (Gleichstand möglich)
-    const wanderpokalHolders = latestWanderpokal
-      ? await prisma.wanderpocalHolder.findMany({
-          where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
-          select: { winCount: true, user: { select: { username: true, name: true } } },
-        })
-      : [];
-
-    // Laufendes Community-Ziel (Punktewertung mit Ziel) für den Ticker: Fortschritt + Tempo — schon hier
-    // fertig berechnet, damit der Cache nur kleine, serialisierbare Werte hält
-    const goalTicker = await (async () => {
-      const ev = await prisma.event.findFirst({
-        where: {
-          hidden: false, format: { in: [...GOAL_FORMATS] }, status: { in: ["open", "active"] }, startAt: { lte: new Date() },
-          AND: [mayHaveGoalWhere, { OR: [{ seriesId: null }, { series: { hidden: false } }] }],
-        },
-        orderBy: { startAt: "desc" },
-        select: { id: true, title: true, startAt: true, endAt: true, statConfigJson: true, format: true, series: { select: { tournamentTemplateJson: true } }, matches: { select: GOAL_MATCH_SELECT } },
-      });
-      const goal = ev ? resolveEventGoal(ev).goal : null;
-      if (!ev || !goal) return null;
-      const progress = computeCommunityGoalProgress(ev.matches, goal);
-      const pace = ev.endAt && isPeriodEvent(ev) && !isAvgGoal(goal) ? goalPace(progress.main.percent, periodInfo({ startAt: ev.startAt, endAt: ev.endAt }).progress) : null;
-      return { eventId: ev.id, title: goal.title || ev.title, percent: Math.floor(progress.main.percent), reached: progress.reached, paceLabel: pace?.label ?? null };
-    })();
-
-    return { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders, goalTicker };
+    const pool = allocatePool((donations._sum.amount ?? 0) - (expenses._sum.amount ?? 0), fixedCosts, ideas, new Date());
+    const next = pool.next;
+    if (next.kind === "none" || next.target <= 0) return null;
+    return {
+      label: next.kind === "fixed" ? "Laufende Kosten" : next.goal.title,
+      percent: Math.max(0, Math.min(100, Math.round((next.covered / next.target) * 100))),
+    };
   },
-  ["dashboard-layout-news"],
-  { revalidate: 60, tags: ["dashboard-global"] },
+  ["sidebar-support-progress"],
+  { revalidate: 600 },
 );
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -120,181 +63,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (!isGuestAllowed) redirect(`/login?notice=login_required&callbackUrl=${encodeURIComponent(pathnameHdr || "/dashboard")}`);
   }
 
-  const userId = session?.user?.id;
-
-  const now = new Date();
-  const nowParts = getBerlinDateParts(now);
-  const currentQuestMonth = nowParts.month;
-  const currentQuestYear = nowParts.year;
-
-  // ── News-Feed-Daten ──────────────────────────────────────────────────
-  // Für alle gleiche Daten kommen aus dem 60-s-Cache (getGlobalNewsData), pro Nutzer laufen nur
-  // noch zwei kleine Abfragen — das Layout rendert bei JEDEM Seitenaufruf.
-  const [
-    { activeOrPollEvent, upcomingEvent, totalMonthQuests, memberCount, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal, wanderpokalHolders, goalTicker },
-    completedMonthQuests,
-    myPoints,
-  ] = await Promise.all([
-    getGlobalNewsData(currentQuestMonth, currentQuestYear),
-    userId
-      ? prisma.userQuestProgress.count({
-          where: { userId, completed: true, quest: { month: currentQuestMonth, year: currentQuestYear } },
-        })
-      : 0,
-    userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true } })
-      : null,
-  ]);
-
-  // Laufende Zeitraum-Events (> 24 h mit Ende) erscheinen nicht täglich als "Läuft gerade", sondern erst
-  // kurz vor Schluss ("Endet in 2 Tagen") — bis dahin rückt das nächste anstehende Event nach.
-  const activePeriod = activeOrPollEvent?.status === "active" && activeOrPollEvent.endAt && isPeriodEvent(activeOrPollEvent)
-    ? periodInfo({ startAt: activeOrPollEvent.startAt, endAt: activeOrPollEvent.endAt })
-    : null;
-  const showActive = activeOrPollEvent && (!activePeriod || activePeriod.remainingMs <= PERIOD_TICKER_WINDOW_MS);
-  const nextEvent = (showActive ? activeOrPollEvent : null) ?? upcomingEvent;
-  const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
-
-  const newsItems: NewsItem[] = [];
-
-  // Aktives / Umfragephase / Nächstes Event
-  if (nextEvent) {
-    if (isEventRunning(nextEvent)) {
-      newsItems.push({
-        id: "event-next",
-        icon: "event",
-        text: `${activePeriod && nextEvent === activeOrPollEvent ? endsSoonLabel(activePeriod.remainingMs) : "Läuft gerade"}: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
-        href: "/events",
-        accent: "amber",
-      });
-    } else if (nextEvent.status === "umfrage") {
-      newsItems.push({
-        id: "event-next",
-        icon: "event",
-        text: `Umfragephase: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
-        href: "/events",
-        accent: "amber",
-      });
-    } else {
-      const d = new Date(nextEvent.startAt);
-      // Tage-Differenz anhand Kalender-Tage in Berlin-Zeitzone (verhindert Off-by-One)
-      const nowStr = new Date().toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" });
-      const evStr  = d.toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" });
-      const [nd, nm, ny] = nowStr.split(".").map(Number);
-      const [ed, em, ey] = evStr.split(".").map(Number);
-      const nowDay = new Date(ny, nm - 1, nd);
-      const evDay  = new Date(ey, em - 1, ed);
-      const diffDays = Math.round((evDay.getTime() - nowDay.getTime()) / 86_400_000);
-      const when = diffDays === 0 ? "Heute" : diffDays === 1 ? "Morgen" : `in ${diffDays} Tagen`;
-      newsItems.push({
-        id: "event-next",
-        icon: "event",
-        text: `${when}: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
-        href: "/events",
-        accent: "teal",
-      });
-    }
-  }
-
-  // Laufendes Community-Ziel: Fortschritt + Tempo
-  if (goalTicker) {
-    newsItems.push({
-      id: "community-goal",
-      icon: "leaderboard",
-      text: goalTicker.reached
-        ? `🎯 Geschafft: ${goalTicker.title} — Ziel erreicht!`
-        : `🎯 ${goalTicker.title}: ${goalTicker.percent} % geschafft${goalTicker.paceLabel ? ` · ${goalTicker.paceLabel}` : ""}`,
-      href: `/tournament/${goalTicker.eventId}`,
-      accent: goalTicker.reached ? "amber" : "teal",
-    });
-  }
-
-  // Clip des Monats – aktive Abstimmung
-  if (activeClipContest) {
-    const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-    newsItems.push({
-      id: "clip-contest",
-      icon: "clip",
-      text: `Clip des Monats ${monthNames[activeClipContest.month - 1]} – Abstimmung läuft`,
-      href: "/clip-des-monats",
-      accent: "amber",
-    });
-  }
-
-  // Clip des Jahres – aktive Abstimmung
-  if (activeYearlyClipContest) {
-    newsItems.push({
-      id: "yearly-clip-contest",
-      icon: "clip",
-      text: `Clip des Jahres ${activeYearlyClipContest.year} – Abstimmung läuft`,
-      href: "/clip-des-jahres",
-      accent: "amber",
-    });
-  }
-
-  // Tages-Umfrage
-  if (activeDailyPoll) {
-    newsItems.push({
-      id: "daily-poll",
-      icon: "poll",
-      text: `Umfrage: ${activeDailyPoll.title} – ${activeDailyPoll.question}`,
-      href: "/dashboard",
-      accent: "teal",
-    });
-  }
-
-  // Wanderpokal – zuletzt vergebener Titel (bei Gleichstand alle Halter nennen)
-  if (latestWanderpokal && wanderpokalHolders.length > 0) {
-    const holderNames = wanderpokalHolders.map((h) => h.user.username ?? h.user.name ?? "Unbekannt");
-    const namesText = holderNames.length > 1
-      ? `${holderNames.slice(0, -1).join(", ")} & ${holderNames[holderNames.length - 1]}`
-      : holderNames[0];
-    const scopeTitle = getScopeTitle(latestWanderpokal.scopeType, latestWanderpokal.scopeValue);
-    const winCount = wanderpokalHolders[0].winCount;
-    newsItems.push({
-      id: "wanderpokal",
-      icon: "wanderpokal",
-      text: `${namesText} ${holderNames.length > 1 ? "halten" : "hält"} den Wanderpokal „${scopeTitle}" · ${winCount} ${winCount === 1 ? "Sieg" : "Siege"}`,
-      href: "/profile",
-      accent: "amber",
-    });
-  }
-
-  // Offene Quests
-  if (userId && openQuestsCount > 0) {
-    newsItems.push({
-      id: "quests-open",
-      icon: "quest",
-      text: `${openQuestsCount} offene Quest${openQuestsCount !== 1 ? "s" : ""} diesen Monat`,
-      href: "/quests",
-      accent: "teal",
-    });
-  }
-
-  // Punkte-Stand
-  if (myPoints) {
-    newsItems.push({
-      id: "my-points",
-      icon: "points",
-      text: `Deine Punkte: ${myPoints.points.toLocaleString("de-DE")} · RankPts: ${myPoints.rankPoints.toLocaleString("de-DE")}`,
-      accent: "amber",
-    });
-  }
-
-  // Community-Größe
-  newsItems.push({
-    id: "members",
-    icon: "members",
-    text: `${memberCount} Mitglieder in der OMA-Community`,
-    accent: "white",
-  });
+  // Früher lag hier das News-Laufband mit eigenen Abfragen. Seine Inhalte stehen jetzt auf der
+  // Übersicht (Bühne, Community-Ziel, Quests, Rangliste mit Wanderpokal) und in der Kopfzeile (Münzen).
+  const support = await getSupportProgress().catch(() => null);
 
   return (
     <DashboardChrome
-      newsItems={newsItems}
       partnerFooter={<PartnerFooter />}
       isGuest={!session}
       inviteUrl={process.env.DISCORD_INVITE_URL ?? null}
+      support={support}
     >
       {children}
     </DashboardChrome>

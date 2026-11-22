@@ -60,7 +60,7 @@ export default function GroupStagePanel({
     return (
       <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Dices className="w-4 h-4 text-rose-400" />
+          <Dices className="w-4 h-4 text-primary-fg" />
           <p className="text-sm font-medium text-white">Gruppen auslosen</p>
         </div>
         <p className="text-xs text-gray-500">
@@ -113,7 +113,7 @@ export default function GroupStagePanel({
         {seedingToggle}
         <button type="button" disabled={loading || !!error}
           onClick={() => onAction({ generateMatches: "groups", groupCount, advancePerGroup, thirdPlaceMatch, groupLegs, knockoutLegs, singleLegFinal })}
-          className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
+          className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-3 py-2 w-full justify-center transition-colors">
           <Dices className="w-3.5 h-3.5" /> Gruppen auslosen ({participantCount} Spieler)
         </button>
       </div>

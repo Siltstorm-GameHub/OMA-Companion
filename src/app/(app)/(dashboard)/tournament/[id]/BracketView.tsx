@@ -190,7 +190,7 @@ function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }
                   : f.winnerId
                     ? <><span className="text-white">{uname(findUser(f.winnerId))}</span> schlug {uname(f.winnerId === f.player1Id ? b : a)}{f.score1 != null && <> {scoreOf(f, f.winnerId)}:{scoreOf(f, f.winnerId === f.player1Id ? f.player2Id : f.player1Id)}{f.score1 === f.score2 && " n.E."}</>}</>
                     : <>{uname(a)} gegen {uname(b)} — noch offen</>}
-                {won(f, userId) && <span className="text-rose-300"> (du)</span>}
+                {won(f, userId) && <span className="text-primary-fg"> (du)</span>}
               </p>
             );
           })}
@@ -244,7 +244,7 @@ function MatchCard({
         selected ? "ring-2 ring-teal-400/60" : ""
       } ${
         isLive    ? "border-red-500/60" :
-        isMyMatch ? "border-rose-700/60" :
+        isMyMatch ? "border-primary/40" :
         isBye     ? "border-line opacity-60" :
         match.winnerId ? "border-line opacity-70" :
         "border-line-strong"
@@ -273,7 +273,7 @@ function MatchCard({
               <span className={`text-xs truncate max-w-[100px] ${
                 isWinner ? "text-emerald-300 font-semibold" :
                 isLoser  ? "text-gray-600" :
-                isMe     ? "text-rose-300 font-medium" :
+                isMe     ? "text-primary-fg font-medium" :
                 user     ? "text-white" :
                            "text-gray-600 italic"
               }`}>

@@ -350,31 +350,15 @@ select.input-glass option { background: var(--color-surface-2); }
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* Back-to-top button: above BottomNav on mobile, fixed position on desktop */
+/* Nach-oben-Knopf: über der unteren Leiste (bis lg), am Desktop unten rechts */
 .back-to-top-btn {
-  bottom: 5.5rem;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .back-to-top-btn { bottom: 1.5rem; }
 }
 
-/* Community-Hub (Knopf unten rechts): Unread-Puls-Animation */
-@keyframes hub-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(20,184,166,0.45); }
-  60%       { box-shadow: 0 0 0 10px rgba(20,184,166,0); }
-}
-.hub-fab-pulse {
-  animation: hub-pulse 2s ease-in-out infinite;
-}
-
-/* Community-Hub: FAB und Panel – safe-area-aware */
-.hub-fab {
-  bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
-}
-@media (min-width: 1024px) {
-  .hub-fab { bottom: 5rem; }
-}
-
+/* Community-Hub-Panel (geöffnet über die Glocke) – safe-area-aware */
 .hub-panel {
   bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
 }

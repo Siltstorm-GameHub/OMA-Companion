@@ -103,7 +103,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
 
         <div className="w-11 h-11 mx-auto rounded-full flex items-center justify-center"
           style={{ background: "rgba(244,63,94,0.12)", border: "1px solid rgba(244,63,94,0.25)" }}>
-          <Lock className="w-5 h-5 text-rose-400" />
+          <Lock className="w-5 h-5 text-primary-fg" />
         </div>
         <h2 id="guest-gate-title" className="mt-3 text-base font-bold text-white">
           {opts.title ?? "Nur für Mitglieder"}
@@ -226,7 +226,7 @@ export function GuestMoreCta({ message, className = "" }: { message: string; cla
       <div className="inline-flex flex-col items-center gap-2 px-5 py-4 rounded-2xl"
         style={{ background: "rgba(6,20,18,0.85)", border: "1px solid rgba(20,184,166,0.25)" }}>
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Lock className="w-4 h-4 text-rose-400" /> {message}
+          <Lock className="w-4 h-4 text-primary-fg" /> {message}
         </div>
         <button
           type="button"

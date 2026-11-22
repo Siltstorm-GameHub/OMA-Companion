@@ -340,7 +340,7 @@ export default function FfaView({
                     const eventLigapunkte = ligaPunkteByUser[r.userId] ?? 0;
                     const winnerBonusIfWon = projectedWinnerBonusByUser[r.userId] ?? 0;
                     return (
-                      <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-surface-2"}`}>
+                      <tr key={r.userId} className={`transition-colors ${isMe ? "bg-primary-soft/60" : "hover:bg-surface-2"}`}>
                         <td className="px-4 py-3 text-center">
                           {place <= 3
                             ? <span className="text-base">{MEDAL[place - 1]}</span>
@@ -350,7 +350,7 @@ export default function FfaView({
                           <div className="flex items-center gap-2">
                             <Link href={isMe ? "/profile" : `/profile/${r.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                               <RankedAvatar userId={r.user.id} src={r.user.image} alt={uname(r.user)} size={24} className="w-6 h-6" />
-                              <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
+                              <span className={`font-medium ${isMe ? "text-primary-fg" : "text-white"}`}>
                                 {uname(r.user)}{isMe && " (du)"}
                               </span>
                             </Link>
@@ -542,7 +542,7 @@ export default function FfaView({
                     const isMe = e.userId === userId;
                     return u ? (
                       <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${
-                        isMe ? "border-rose-700 text-rose-300 bg-rose-900/20" : "border-line-strong text-gray-400 glass-heavy"
+                        isMe ? "border-primary/40 text-primary-fg bg-primary-soft/60" : "border-line-strong text-gray-400 glass-heavy"
                       }`}>
                         {uname(u)}
                       </span>
@@ -587,7 +587,7 @@ export default function FfaView({
               }
 
               return (
-                <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-line"}`}>
+                <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-primary/40" : "border-line"}`}>
                   <button
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-2 text-left"
                     onClick={() => toggle(match.id)}
@@ -653,12 +653,12 @@ export default function FfaView({
                               const isWinner = isAvg && !!e.userId && matchWinnerIds.has(e.userId);
                               const avg    = isAvg ? entryAvg(e.statsJson, statFields) : null;
                               return (
-                                <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-surface-2"}`}>
+                                <tr key={e.id} className={`transition-colors ${isMe ? "bg-primary-soft/60" : "hover:bg-surface-2"}`}>
                                   <td className="px-4 py-2.5">
                                     <div className="flex items-center gap-1.5">
                                       {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
                                       {u && <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />}
-                                      <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-rose-300" : "text-white"}`}>
+                                      <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-primary-fg" : "text-white"}`}>
                                         {u ? <>{uname(u)}</> : "?"}{isMe && " (du)"}
                                       </span>
                                       {(proofsByEntry[`${match.id}:${e.userId}`] ?? []).map((url, i, all) => (

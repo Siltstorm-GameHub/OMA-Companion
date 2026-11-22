@@ -25,7 +25,7 @@ async function fetchUserData(id: string) {
 
 type UserData = NonNullable<Awaited<ReturnType<typeof fetchUserData>>>;
 
-function StatBar({ labelA, labelB, valA, valB, colorA = "bg-rose-500", colorB = "bg-blue-500" }: {
+function StatBar({ labelA, labelB, valA, valB, colorA = "bg-primary", colorB = "bg-blue-500" }: {
   labelA: string; labelB: string; valA: number; valB: number;
   colorA?: string; colorB?: string;
 }) {
@@ -90,7 +90,7 @@ export default async function CompareProfilePage({
 
   const STATS = [
     { icon: <RankPointsIcon size={16} />,         label: "Rang-Punkte",     valA: me.rankPoints ?? 0,    valB: opponent.rankPoints ?? 0,    colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
-    { icon: <WinIcon size={16} />,                 label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-rose-500",   colorB: "bg-rose-400/50"   },
+    { icon: <WinIcon size={16} />,                 label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-primary",   colorB: "bg-primary-soft"   },
     { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         valA: me.eventCount,   valB: opponent.eventCount,   colorA: "bg-blue-500",   colorB: "bg-blue-400/50"   },
     { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-teal-500", colorB: "bg-teal-400/50" },
   ];
@@ -109,7 +109,7 @@ export default async function CompareProfilePage({
       <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
 
         <div className="relative flex items-center justify-between gap-4">
-          <Avatar user={me}       accent="ring-rose-500/30" />
+          <Avatar user={me}       accent="ring-primary/30" />
 
           <div className="text-center flex-1">
             <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">VS</p>
@@ -159,7 +159,7 @@ export default async function CompareProfilePage({
         ) : (me.rankPoints ?? 0) < (opponent.rankPoints ?? 0) ? (
           <p className="text-sm text-white">
             <span className="font-semibold">{opponent.username ?? opponent.name}</span> führt mit{" "}
-            <span className="text-rose-400 font-bold">{((opponent.rankPoints ?? 0) - (me.rankPoints ?? 0)).toLocaleString("de-DE")} Punkten</span> — hol auf! 💪
+            <span className="text-primary-fg font-bold">{((opponent.rankPoints ?? 0) - (me.rankPoints ?? 0)).toLocaleString("de-DE")} Punkten</span> — hol auf! 💪
           </p>
         ) : (
           <p className="text-sm text-gray-400">Gleichstand — ein fairer Kampf! 🤝</p>

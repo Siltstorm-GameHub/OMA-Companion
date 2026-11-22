@@ -42,8 +42,8 @@ export type EventCardData = {
 };
 
 /**
- * - "auto" (Standard): ab sm eine Kachel (Cover 16:9 oben, feste Infozone darunter), auf dem Handy
- *   eine kompakte Agenda-Zeile.
+ * - "auto" (Standard): Kachel mit Cover oben (Handy 2:1, ab sm 16:9) und Infozone darunter —
+ *   Designentwurf: viel Bildmaterial, auch am Handy.
  * - "row": immer die Agenda-Zeile — für schmale Spalten und Listen (Eventreihe, Meine Events).
  */
 export type EventCardVariant = "auto" | "row";
@@ -64,7 +64,7 @@ export default function EventCard({
   variant?: EventCardVariant;
 }) {
   const row = variant === "row";
-  /** Klasse nur in der Kachel-Ansicht ab sm — in der Zeilen-Variante nie */
+  /** Klasse nur in der Kachel-Ansicht — in der Zeilen-Variante nie */
   const tile = (cls: string) => (row ? "" : cls);
 
   const tone = TONE_CLASSES[ev.phase.tone];
@@ -91,10 +91,10 @@ export default function EventCard({
 
   return (
     <article
-      className={`surface group relative flex flex-row ${tile("sm:flex-col")} h-full overflow-hidden rounded-lg border ${border} shadow-card transition-transform duration-200 ${tile("sm:hover:-translate-y-0.5")} hover:border-line-strong focus-within:ring-2 focus-within:ring-teal-400/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
+      className={`surface group relative flex ${row ? "flex-row rounded-lg" : "flex-col rounded-card"} h-full overflow-hidden border ${border} shadow-card transition-colors duration-200 hover:border-line-strong focus-within:ring-2 focus-within:ring-teal-400/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
     >
       {/* Zeile: Datumsspalte */}
-      <div className={`${tile("sm:hidden")} flex flex-col items-center justify-center w-12 shrink-0 leading-tight py-2`}>
+      <div className={`${row ? "" : "hidden"} flex flex-col items-center justify-center w-12 shrink-0 leading-tight py-2`}>
         {ev.phase.phase === "live" ? liveBadge : (
           <>
             {/* "MORGEN" passt nicht in die schmale Spalte → Wochentag */}
@@ -106,18 +106,18 @@ export default function EventCard({
       </div>
 
       {/* Cover: Zeile = Thumbnail ohne Branding, Kachel = 16:9 mit Branding */}
-      <div className={`${tile("sm:hidden")} relative w-14 h-14 my-2 shrink-0 rounded-md overflow-hidden self-center`}>
+      <div className={`${row ? "" : "hidden"} relative w-14 h-14 my-2 shrink-0 rounded-md overflow-hidden self-center`}>
         <GameCover game={ev.game} coverUrl={ev.coverUrl} className="w-full h-full" rounded="rounded-none" imgClassName="w-full h-full object-cover" />
       </div>
       {!row && (
-        <div className="hidden sm:block relative aspect-video overflow-hidden shrink-0">
+        <div className="relative aspect-[2/1] sm:aspect-video overflow-hidden shrink-0">
           <GameCover game={ev.game} coverUrl={ev.coverUrl} className="w-full h-full" rounded="rounded-none" brandBadge omaOriginal={ev.omaOriginal}
-            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+            imgClassName="w-full h-full object-cover object-center " />
           {/* Kalenderblock */}
-          <div className="absolute top-2 left-2 rounded-md bg-canvas px-2 py-1 text-center leading-tight shadow-card">
+          <div className="absolute top-2 left-2 rounded-control bg-canvas/90 px-2 py-1 text-center leading-tight shadow-card">
             {ev.phase.phase === "live" ? liveBadge : (
               <>
-                <div className={`text-[10px] font-semibold ${ev.date.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{ev.date.top}</div>
+                <div className={`text-[10px] font-semibold ${ev.date.top === "HEUTE" ? "text-primary-fg" : "text-muted"}`}>{ev.date.top}</div>
                 <div className="text-lg font-bold !text-white tabular-nums">{ev.date.day}</div>
                 <div className="text-[10px] text-gray-400 tabular-nums">{ev.date.time}</div>
               </>
@@ -137,9 +137,9 @@ export default function EventCard({
       )}
 
       {/* Infozone */}
-      <div className={`flex-1 min-w-0 flex flex-col gap-1 px-2.5 py-2 ${tile("sm:px-3 sm:py-2.5")}`}>
+      <div className={`flex-1 min-w-0 flex flex-col gap-1 px-2.5 py-2 ${tile("px-3 py-2.5")}`}>
         {(ev.series || ev.communityBy) && (
-          <div className={`${row ? "flex" : "hidden sm:flex"} items-center gap-1.5 min-w-0 text-[11px] font-semibold`}>
+          <div className={`flex items-center gap-1.5 min-w-0 text-[11px] font-semibold`}>
             {ev.series && (
               <GateLink href={ev.series.href} className="relative z-10 truncate hover:underline" style={{ color: ev.series.color }}>
                 {ev.series.name}
@@ -149,7 +149,7 @@ export default function EventCard({
           </div>
         )}
 
-        <h3 className={`font-semibold text-white text-sm leading-snug line-clamp-1 ${tile("sm:text-[15px] sm:line-clamp-2")}`}>
+        <h3 className={`font-semibold text-white text-sm leading-snug line-clamp-1 ${tile("text-[15px] line-clamp-2")}`}>
           <GateLink href={ev.href} className="outline-none after:absolute after:inset-0 after:content-['']">
             {ev.omaOriginal && <OmaTitlePrefix title={ev.title} />}
             {ev.title}
@@ -159,7 +159,7 @@ export default function EventCard({
         {/* Signale: Zustand, Dringlichkeit, Relevanz — nur was vom Normalfall abweicht */}
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           {signal && (
-            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${tone.pill} ${ev.phase.phase === "live" ? (row ? "hidden" : "sm:hidden") : ""}`}>
+            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${tone.pill} ${ev.phase.phase === "live" ? "hidden" : ""}`}>
               {ev.phase.phase === "period" && <Timer className="w-3 h-3" />}
               {signal}
             </span>
@@ -167,7 +167,7 @@ export default function EventCard({
           {ev.urgency && <span className={`inline-flex items-center rounded px-1.5 py-px text-[11px] font-medium ${TONE_CLASSES.amber.pill}`}>{ev.urgency}</span>}
           {/* "Dein Spiel"/"Dein Squad" bewusst ohne Abzeichen — wirken nur auf Sortierung und Filter */}
           {ev.isRegistered && (
-            <span className={`${tile("sm:hidden")} inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${past ? TONE_CLASSES.muted.pill : TONE_CLASSES.teal.pill}`}>
+            <span className={`${row ? "" : "hidden"} inline-flex items-center gap-1 rounded px-1.5 py-px text-[11px] font-medium ${past ? TONE_CLASSES.muted.pill : TONE_CLASSES.teal.pill}`}>
               <Check className="w-3 h-3" />{past ? "Mitgespielt" : "Dabei"}
             </span>
           )}
@@ -183,12 +183,12 @@ export default function EventCard({
 
         {/* Belegung (nur Kachel) + Mitspieler */}
         {fillPct != null && !row && !past && (
-          <div className="hidden sm:block h-1 rounded-full bg-line overflow-hidden mt-0.5">
+          <div className="h-1 rounded-full bg-line overflow-hidden mt-0.5">
             <div className={`h-full rounded-full ${ev.urgency?.startsWith("Noch") ? "bg-amber-400" : dimmed ? "bg-gray-500" : "bg-teal-400"}`} style={{ width: `${fillPct}%` }} />
           </div>
         )}
         {ev.avatars.length > 0 && (
-          <div className={`${row ? "flex" : "hidden sm:flex"} items-center gap-2 min-w-0`}>
+          <div className="flex items-center gap-2 min-w-0">
             <div className="relative z-10 shrink-0"><AvatarStack users={ev.avatars} max={3} size="xs" /></div>
             <span className="text-[11px] text-gray-500 truncate">
               {ev.friendNames.length > 0

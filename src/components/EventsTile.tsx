@@ -88,7 +88,7 @@ const longDate = (d: Date, now: Date) => {
  * (lib/home-event-feature.ts), darunter die nächsten zwei Events. Gerüst = HubTile, damit sie
  * neben der Clip-Kachel immer gleich hoch ist.
  */
-export default function EventsTile({ feature, rows, periodEvents = [], weekCount, nowIso, loggedIn }: Props) {
+export default function EventsTile({ feature, rows, periodEvents = [], weekCount, nowIso, loggedIn, stage = false }: Props & { stage?: boolean }) {
   const now = new Date(nowIso);
   let media: ReactNode;
   let main: ReactNode;
@@ -317,6 +317,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     <HubTile
       ariaLabel="Events"
       accent="teal"
+      stage={stage}
       highlighted={highlighted}
       className="animate-slide-up stagger-1"
       media={media}

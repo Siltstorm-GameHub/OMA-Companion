@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { HUB_TOGGLE_EVENT, publishHubBadge } from "@/lib/hub-events";
+import { HUB_TOGGLE_EVENT, publishHubBadge, publishHubOnline } from "@/lib/hub-events";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Bell, Settings } from "@/components/icons";
@@ -203,8 +203,9 @@ export function CommunityHub() {
   const otherNotifUnread = Math.max(0, notifUnread - notifications.filter(n => !n.read && n.type === "event_comment").length);
   const totalBadge = otherNotifUnread + threadsUnread;
 
-  // Glocke in der Kopfzeile: Zähler melden, Öffnen/Schließen von dort annehmen
+  // Glocke in der Kopfzeile (ersetzt den früheren runden Knopf unten rechts): Zähler melden, Öffnen/Schließen von dort annehmen
   useEffect(() => { publishHubBadge(totalBadge); }, [totalBadge]);
+  useEffect(() => { publishHubOnline(onlineCount); }, [onlineCount]);
   const toggleRef = useRef(handleToggle);
   useEffect(() => { toggleRef.current = handleToggle; });
   useEffect(() => {
@@ -215,39 +216,6 @@ export function CommunityHub() {
 
   return (
     <>
-      {/* ── FAB ─────────────────────────────────────────────────────── */}
-      <button
-        onClick={handleToggle}
-        aria-label={open ? "Fenster schließen" : `Benachrichtigungen & Absprachen öffnen${totalBadge > 0 ? ` (${totalBadge} neu)` : ""}`}
-        className={`hub-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && totalBadge > 0 ? " hub-fab-pulse" : ""}`}
-        style={{
-          background: open || totalBadge > 0 ? "var(--color-primary-soft)" : "var(--color-surface)",
-          border: `1px solid ${open || totalBadge > 0 ? "var(--color-primary)" : "var(--color-line)"}`,
-        }}
-      >
-        {open ? (
-          <X className="w-5 h-5 text-teal-300" />
-        ) : (
-          <MessageCircle className={`w-5 h-5 ${totalBadge > 0 ? "text-teal-300" : "text-teal-400"}`} />
-        )}
-        {!open && totalBadge > 0 && (
-          <span
-            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
-            style={{ background: "var(--color-live)" }}
-          >
-            {totalBadge > 99 ? "99+" : totalBadge}
-          </span>
-        )}
-        {onlineCount > 0 && (
-          <span
-            className="absolute -bottom-1 -left-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
-            style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-line-strong)" }}
-            title={`${onlineCount} Spieler online`}
-          >
-            {onlineCount > 99 ? "99+" : onlineCount}
-          </span>
-        )}
-      </button>
 
       {/* ── Mobile-Backdrop ─────────────────────────────────────────── */}
       <div

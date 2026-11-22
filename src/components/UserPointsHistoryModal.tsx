@@ -193,7 +193,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
           <div className="grid grid-cols-2 gap-px bg-line border-b border-line shrink-0">
             {[
               { label: "Münzen",         value: user.points.toLocaleString("de-DE"),     color: "text-amber-400", coin: true },
-              { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400",  coin: false },
+              { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-primary-fg",  coin: false },
             ].map(s => (
               <div key={s.label} className="bg-gray-950 px-3 py-4 text-center">
                 <p className={`text-xl font-black tabular-nums ${s.color}`}>{s.value}</p>
@@ -214,7 +214,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             onChange={(k) => setTab(k as "history" | "edit")}
             tabs={[
               { key: "history", label: `Verlauf (${transactions.length})`, icon: TrendingUp, activeClassName: "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20" },
-              { key: "edit", label: "Anpassen", icon: Settings2, activeClassName: "bg-rose-600/20 text-rose-300 ring-1 ring-rose-500/20" },
+              { key: "edit", label: "Anpassen", icon: Settings2, activeClassName: "bg-primary text-primary-fg ring-1 ring-primary/30" },
             ]}
           />
         </div>
@@ -272,10 +272,10 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
 
                       // Farben: Rang-Punkte = rose/amber, Münzen = emerald/red
                       const iconBg  = isRank
-                        ? (isPos ? "bg-rose-500/10 text-rose-400"   : "bg-red-500/10 text-red-400")
+                        ? (isPos ? "bg-primary-soft text-primary-fg"   : "bg-red-500/10 text-red-400")
                         : (isPos ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400");
                       const amtCls  = isRank
-                        ? (isPos ? "bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/15"     : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15")
+                        ? (isPos ? "bg-primary-soft text-primary-fg ring-1 ring-primary/30"     : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15")
                         : (isPos ? "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/15"  : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15");
 
                       return (
@@ -291,7 +291,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                               {/* Typ-Badge */}
                               <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${
                                 isRank
-                                  ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                  ? "bg-primary-soft text-primary-fg border border-primary/40"
                                   : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
                               }`}>
                                 {isRank ? "Punkte" : "Münzen"}
@@ -368,14 +368,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                 min="0"
                 value={editRank}
                 onChange={e => setEditRank(e.target.value)}
-                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary/40"
                 placeholder="Neuer Rang-Punkte-Stand"
               />
               <input
                 type="text"
                 value={reasonRank}
                 onChange={e => setReasonRank(e.target.value)}
-                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/20"
+                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary/40"
                 placeholder="Grund (optional) – z.B. LUL Season 1 Platz 3"
               />
             </div>
@@ -408,7 +408,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             <button
               onClick={handleSaveClick}
               disabled={saving}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 bg-rose-600 hover:bg-rose-500 text-white"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 bg-primary hover:bg-primary-hover text-primary-ink"
             >
               {saving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Speichere…</>

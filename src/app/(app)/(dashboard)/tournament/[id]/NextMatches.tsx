@@ -40,9 +40,9 @@ export default function NextMatches({
   return (
     <div className="space-y-3 mb-6">
       {mine && (
-        <div className={`rounded-2xl p-4 border ${mine.live ? "border-red-500/50 bg-red-950/20" : "border-rose-700/40 bg-rose-950/20"}`}>
+        <div className={`rounded-2xl p-4 border ${mine.live ? "border-red-500/50 bg-red-950/20" : "border-primary/40 bg-primary-soft/60"}`}>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-rose-300 flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-fg flex items-center gap-1.5">
               <Swords className="w-3.5 h-3.5" /> Dein nächstes Match
             </p>
             {mine.live && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LÄUFT GERADE</span>}
@@ -53,7 +53,7 @@ export default function NextMatches({
             {when(mine.scheduledAt) && <><span>·</span><Clock className="w-3 h-3" /><span>{when(mine.scheduledAt)}</span></>}
           </p>
           {canReport && (
-            <Link href="#ergebnis-melden" className="inline-block mt-2 text-xs font-semibold text-rose-300 hover:text-rose-200">
+            <Link href="#ergebnis-melden" className="inline-block mt-2 text-xs font-semibold text-primary-fg hover:text-primary-fg">
               Ergebnis melden →
             </Link>
           )}

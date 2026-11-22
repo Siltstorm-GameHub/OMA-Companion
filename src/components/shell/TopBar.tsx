@@ -4,14 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Bell, ShieldCheck } from "@/components/icons";
+import { Bell, Plus, ShieldCheck } from "@/components/icons";
 import { useGuestGate } from "@/components/GuestGate";
 import { HUB_BADGE_EVENT, readHubBadge, toggleHub } from "@/lib/hub-events";
 import { UserMenu } from "./UserMenu";
+import { GlobalSearch } from "./GlobalSearch";
 
 /**
  * Kopfzeile: am Handy mit Logo, am Desktop nur rechtsbündig (Logo steht in der Seitenleiste).
- * Münzen · Glocke (öffnet den Community-Hub mit Benachrichtigungen und Absprachen) · Avatar-Menü.
+ * Suche · "Event erstellen" (Desktop) · Münzen · Glocke (öffnet den Community-Hub mit Benachrichtigungen
+ * und Absprachen) · Avatar-Menü.
  * Höhe fest 3.5rem (Handy) bzw. 4.5rem (Desktop) — der Community-Hub dockt darunter an.
  */
 export function TopBar() {
@@ -28,6 +30,12 @@ export function TopBar() {
           <span className="font-extrabold text-fg">OMA</span>
         </Link>
 
+        {!isGuest && (
+          <div className="hidden lg:block">
+            <GlobalSearch />
+          </div>
+        )}
+
         <div className="ml-auto flex items-center gap-2">
           {isGuest ? (
             <button
@@ -39,6 +47,15 @@ export function TopBar() {
             </button>
           ) : (
             <>
+              {/* Handy/Tablet: Lupe (das Feld klappt unter der Kopfzeile auf) */}
+              <div className="lg:hidden"><GlobalSearch /></div>
+              {/* Jedes Mitglied darf Community-Events anlegen (Limits: lib/community-event-limits.ts) */}
+              <Link
+                href="/events/verwalten/neu"
+                className="hidden h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control bg-primary px-4 text-sm font-bold text-primary-ink hover:bg-primary-hover lg:flex"
+              >
+                <Plus className="size-4" aria-hidden /> Event erstellen
+              </Link>
               {isStaff && (
                 <Link
                   href="/admin"

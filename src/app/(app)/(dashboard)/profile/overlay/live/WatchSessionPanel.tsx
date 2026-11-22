@@ -85,7 +85,7 @@ export default function WatchSessionPanel() {
         <div key={s.id} className="rounded-xl border border-white/[0.08] p-3 space-y-2">
           <p className="text-sm text-gray-200">Du streamst gemeinsam mit <span className="font-semibold">{s.host.name}</span>{s.title ? <> – „{s.title}“</> : null}.</p>
           <ShareLink slug={s.slug} />
-          <button onClick={() => act(s.id, { action: "leave" }, `l${s.id}`)} className="text-xs text-gray-500 hover:text-rose-300">Verlassen</button>
+          <button onClick={() => act(s.id, { action: "leave" }, `l${s.id}`)} className="text-xs text-gray-500 hover:text-primary-fg">Verlassen</button>
         </div>
       ))}
 
@@ -195,7 +195,7 @@ function HostingView({ session, busy, act }: {
           <button
             onClick={() => act(session.id, { action: "end" }, "end", "Session beendet")}
             disabled={busy === "end"}
-            className="text-sm px-3 py-1.5 rounded-lg border border-rose-400/40 text-rose-200 bg-rose-500/10 hover:bg-rose-500/20"
+            className="text-sm px-3 py-1.5 rounded-lg border border-primary/40 text-primary-fg bg-primary-soft hover:bg-primary-hover"
           >
             Session beenden
           </button>

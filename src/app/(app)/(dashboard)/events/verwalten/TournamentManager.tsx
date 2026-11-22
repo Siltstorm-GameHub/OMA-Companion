@@ -1069,17 +1069,17 @@ export default function TournamentManager({
           <div className="flex gap-1 p-2 bg-gray-800/50">
             {!aggregate ? null : aggregate.g1 !== aggregate.g2 ? (
               <button onClick={() => submit1v1(match.id, aggregate.g1 > aggregate.g2 ? match.player1Id! : match.player2Id!)} disabled={loading}
-                className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                 Ergebnis speichern — {userName((aggregate.g1 > aggregate.g2 ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })} kommt weiter
               </button>
             ) : (
               <>
                 <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
-                  className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                  className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                   {p1 ? userName(p1) : "?"} kommt weiter (n.E.)
                 </button>
                 <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
-                  className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+                  className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                   {p2 ? userName(p2) : "?"} kommt weiter (n.E.)
                 </button>
               </>
@@ -1092,7 +1092,7 @@ export default function TournamentManager({
         {isPending && match.leg !== 2 && hasBothScores(match.id) && (() => {
           const n1 = Number(scores1v1[match.id]!.s1), n2 = Number(scores1v1[match.id]!.s2);
           const koSingle = (isBracketFormat || (isGroupKnockout && match.groupIndex == null)) && !match.leg;
-          const btn = "flex-1 text-xs bg-rose-600/80 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate";
+          const btn = "flex-1 text-xs bg-primary hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate";
           return (
             <div className="flex gap-1 p-2 bg-gray-800/50">
               {n1 !== n2 ? (
@@ -1117,7 +1117,7 @@ export default function TournamentManager({
         {isPending && match.leg !== 2 && !hasBothScores(match.id) && (
           <div className="flex gap-1 p-2 bg-gray-800/50">
             <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
-              className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+              className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
               {p1 ? userName(p1) : "?"} gewinnt
             </button>
             {allowDraw && (
@@ -1127,7 +1127,7 @@ export default function TournamentManager({
               </button>
             )}
             <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
-              className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
+              className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
               {p2 ? userName(p2) : "?"} gewinnt
             </button>
           </div>
@@ -1279,7 +1279,7 @@ export default function TournamentManager({
                                   onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "B" ? null : "B" }))}
                                   className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
                                     matchWin[match.id] === "B"
-                                      ? "bg-rose-600 border-rose-500 text-white"
+                                      ? "bg-primary border-primary/40 text-primary-ink"
                                       : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
                                   }`}>
                                   Team B gewinnt
@@ -1401,7 +1401,7 @@ export default function TournamentManager({
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading || !!teamError}
                           title={teamError ?? undefined}
-                          className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded px-3 py-1.5">
+                          className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded px-3 py-1.5">
                           <Save className="w-3 h-3" /> Ergebnisse speichern
                         </button>
                         {isPlayed && (
@@ -1548,7 +1548,7 @@ export default function TournamentManager({
         {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
           <button key={v} type="button" onClick={() => changeViewMode(v)}
             className={`px-2.5 py-1 rounded-md border transition-colors ${
-              viewMode === v ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+              viewMode === v ? "border-primary/40 bg-primary-soft/60 text-primary-ink" : "border-gray-700 text-gray-400 hover:border-gray-600"
             }`}>
             {label}
           </button>
@@ -1902,7 +1902,7 @@ export default function TournamentManager({
           <Plus className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
         </button>
       ) : (
-        <div className="border border-rose-800 rounded-lg p-4 bg-rose-950/20 space-y-3">
+        <div className="border border-primary/40 rounded-lg p-4 bg-primary-soft/60 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
             <button onClick={() => setShowAdd(false)} className="text-gray-500 hover:text-white">
@@ -1990,7 +1990,7 @@ export default function TournamentManager({
           )}
 
           <button onClick={addMatch} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
-            className="flex items-center gap-2 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-4 py-2">
+            className="flex items-center gap-2 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-4 py-2">
             <Plus className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
           </button>
         </div>

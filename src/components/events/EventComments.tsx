@@ -277,7 +277,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
       <div className="flex-1 min-w-0">
         {!grouped && (
           <p className="flex items-baseline gap-2 text-xs mb-0.5">
-            <Link href={isMe ? "/profile" : `/profile/${c.user.id}`} className={`font-semibold truncate ${isMe ? "text-rose-300" : "text-white"} hover:underline`}>
+            <Link href={isMe ? "/profile" : `/profile/${c.user.id}`} className={`font-semibold truncate ${isMe ? "text-primary-fg" : "text-white"} hover:underline`}>
               {c.user.name}
             </Link>
             <span className="text-gray-600 shrink-0">{timeLabel(c.createdAt)}</span>

@@ -7,6 +7,7 @@ import {
   Megaphone, Scale, Search, Server, Shield, ShoppingBag, Tv2, Users, X,
 } from "@/components/icons";
 import { usePolling } from "@/lib/usePolling";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import {
   EMPTY_COUNTS, activeAdminChild, activeAdminItem, isAdminItemActive, itemCount, searchAdminNav, visibleAdminNav,
   type AdminCounts, type AdminNavGroup, type AdminNavItem,
@@ -34,10 +35,10 @@ function Count({ n }: { n: number }) {
 function ItemLink({ item, active, count, onNavigate }: { item: AdminNavItem; active: boolean; count: number; onNavigate?: () => void }) {
   return (
     <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-        active ? "bg-purple-600/20 text-purple-200 ring-1 ring-purple-500/25" : "text-gray-400 hover:text-white hover:bg-line"
+      className={`flex min-h-10 items-center gap-2.5 rounded-control px-2.5 text-sm transition-colors ${
+        active ? "bg-primary-soft font-semibold text-primary-fg" : "text-gray-300 hover:text-fg hover:bg-surface-2"
       }`}>
-      <Icon name={item.icon} className={`w-4 h-4 shrink-0 ${active ? "text-purple-300" : "text-gray-500"}`} />
+      <Icon name={item.icon} className={`w-4 h-4 shrink-0 ${active ? "text-primary-fg" : "text-subtle"}`} />
       <span className="truncate">{item.label}</span>
       <Count n={count} />
     </Link>
@@ -50,7 +51,7 @@ function NavList({ groups, pathname, counts, onNavigate }: { groups: AdminNavGro
     <div className="space-y-3">
       {groups.map((g) => (
         <div key={g.key}>
-          {g.label && <p className="px-2.5 pb-1 text-[11px] font-semibold text-gray-600">{g.label}</p>}
+          {g.label && <p className="mb-1 px-2.5 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle">{g.label}</p>}
           <ul className="space-y-0.5">
             {g.items.map((i) => {
               const isActive = active?.key === i.key || (!active && isAdminItemActive(i, pathname));
@@ -66,7 +67,7 @@ function NavList({ groups, pathname, counts, onNavigate }: { groups: AdminNavGro
                         return (
                           <li key={c.href}>
                             <Link href={c.href} onClick={onNavigate} aria-current={on ? "page" : undefined}
-                              className={`block rounded-md px-2 py-1 text-xs transition-colors ${on ? "text-white bg-line" : "text-gray-500 hover:text-gray-200"}`}>
+                              className={`block rounded-md px-2 py-1.5 text-xs transition-colors ${on ? "text-fg bg-surface-2" : "text-subtle hover:text-fg"}`}>
                               {c.label}
                             </Link>
                           </li>
@@ -101,11 +102,11 @@ function SearchBox({ groups, counts, inputRef, onNavigate }: {
             if (e.key === "Escape") { setQ(""); (e.target as HTMLInputElement).blur(); }
           }}
           placeholder="Seite suchen" aria-label="Admin-Seite suchen"
-          className="w-full rounded-lg bg-line border border-line pl-8 pr-12 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-400/50" />
+          className="w-full min-h-10 rounded-control bg-surface border border-line pl-8 pr-12 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         <kbd className="hidden lg:block absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Strg K</kbd>
       </div>
       {q.trim() && (
-        <ul className="rounded-lg border border-line bg-gray-950/80 p-1 space-y-0.5">
+        <ul className="rounded-control border border-line bg-surface-2 p-1 space-y-0.5">
           {hits.length === 0
             ? <li className="px-2.5 py-1.5 text-xs text-gray-500">Nichts gefunden</li>
             : hits.map((i) => (
@@ -123,72 +124,85 @@ function SearchBox({ groups, counts, inputRef, onNavigate }: {
  * Menü-Button mit dem aktuellen Seitennamen. Die Event-Verwaltung liegt unter /events/verwalten
  * (Punkt "Events verwalten"). Struktur und Rechte: lib/admin-nav.ts.
  */
-export default function AdminNav({ role }: { role: string }) {
+export default function AdminNav({ role, placement = "page" }: {
+  role: string;
+  /** "page": nur der Menü-Knopf am Handy/Tablet (oben im Admin-Bereich). "sidebar": die Liste in der App-Seitenleiste (Desktop). */
+  placement?: "page" | "sidebar";
+}) {
   const pathname = usePathname();
   const groups = visibleAdminNav(role);
   const isStaff = role === "moderator" || role === "admin";
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  // Jede Darstellung lädt die Zähler nur, wenn sie gerade sichtbar ist (sonst doppelte Abfragen)
+  const visible = placement === "sidebar" ? isDesktop : !isDesktop;
   const [counts, setCounts] = useState<AdminCounts>(EMPTY_COUNTS);
   const [open, setOpen] = useState(false);
   const desktopSearch = useRef<HTMLInputElement>(null);
   const mobileSearch = useRef<HTMLInputElement>(null);
 
   const loadCounts = useCallback(async () => {
-    if (!isStaff) return;
+    if (!isStaff || !visible) return;
     try {
       const res = await fetch("/api/admin/nav-counts", { cache: "no-store" });
       if (res.ok) setCounts(await res.json());
     } catch { /* Zähler sind nur ein Hinweis */ }
-  }, [isStaff]);
+  }, [isStaff, visible]);
   usePolling(loadCounts, 60_000);
 
   const active = activeAdminItem(groups, pathname);
 
   // Tab-Titel, damit man mehrere offene Admin-Tabs unterscheiden kann
   useEffect(() => {
-    document.title = `${active?.label ?? "Admin"} · Admin`;
-  }, [active?.label]);
+    if (placement === "page") document.title = `${active?.label ?? "Admin"} · Admin`;
+  }, [active?.label, placement]);
 
   // Strg/Cmd+K: Suche fokussieren (Handy: Menü öffnen)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        if (window.matchMedia("(min-width: 1024px)").matches) desktopSearch.current?.focus();
-        else { setOpen(true); setTimeout(() => mobileSearch.current?.focus(), 0); }
+        const desktop = window.matchMedia("(min-width: 1024px)").matches;
+        if (placement === "sidebar" && desktop) desktopSearch.current?.focus();
+        if (placement === "page" && !desktop) { setOpen(true); setTimeout(() => mobileSearch.current?.focus(), 0); }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [placement]);
 
   if (!isStaff) return null;
   const total = itemCount({ key: "all", href: "", label: "", icon: "", minRole: "moderator",
     counts: ["eventActions", "eventApprovals", "serverApplications", "gameSuggestions", "jobDisputes"] }, counts);
+
+  // Desktop: Liste in der App-Seitenleiste (components/shell/Sidebar.tsx)
+  if (placement === "sidebar") {
+    return (
+      <nav aria-label="Admin-Bereich" className="space-y-4">
+        <SearchBox groups={groups} counts={counts} inputRef={desktopSearch} />
+        <NavList groups={groups} pathname={pathname} counts={counts} />
+      </nav>
+    );
+  }
 
   return (
     <>
       {/* ── Handy/Tablet: Menü-Button mit aktuellem Seitennamen ── */}
       <div className="lg:hidden mb-4">
         <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
-          className="w-full flex items-center gap-2.5 rounded-xl border border-line bg-gray-900 px-3 py-2.5 text-sm text-white">
-          <Icon name={active?.icon ?? "LayoutDashboard"} className="w-4 h-4 text-purple-300" />
+          className="w-full min-h-11 flex items-center gap-2.5 rounded-control border border-line bg-surface px-3 py-2.5 text-sm text-fg">
+          <Icon name={active?.icon ?? "LayoutDashboard"} className="w-4 h-4 text-primary-fg" />
           <span className="flex-1 text-left truncate">{active?.label ?? "Admin"}</span>
           {total > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{total}</span>}
           {open ? <X className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </button>
         {open && (
-          <div className="mt-2 rounded-xl border border-line bg-gray-900 p-2 space-y-3">
+          <div className="mt-2 rounded-card border border-line bg-surface p-2 space-y-3">
             <SearchBox groups={groups} counts={counts} inputRef={mobileSearch} onNavigate={() => setOpen(false)} />
             <NavList groups={groups} pathname={pathname} counts={counts} onNavigate={() => setOpen(false)} />
           </div>
         )}
       </div>
 
-      {/* ── Desktop: Seitenleiste ── */}
-      <nav aria-label="Admin-Bereich" className="hidden lg:block w-56 shrink-0 self-start sticky top-4 space-y-3">
-        <SearchBox groups={groups} counts={counts} inputRef={desktopSearch} />
-        <NavList groups={groups} pathname={pathname} counts={counts} />
-      </nav>
     </>
   );
 }

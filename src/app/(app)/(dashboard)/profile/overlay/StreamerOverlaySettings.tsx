@@ -213,7 +213,7 @@ export default function StreamerOverlaySettings({
             </div>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-gray-500 border-t border-white/[0.06] pt-3">
-            <Radio className={`w-3.5 h-3.5 shrink-0 ${activeEvent ? "text-rose-400" : "text-gray-600"}`} />
+            <Radio className={`w-3.5 h-3.5 shrink-0 ${activeEvent ? "text-primary-fg" : "text-gray-600"}`} />
             {activeEvent
               ? <>Gerade: <span className="text-gray-300">Turnier läuft · {activeEvent.title}</span> – dein Overlay zeigt die Turnier-Ansicht.</>
               : <>Gerade: <span className="text-gray-300">Normales Streamen</span> – spielst du bei einem laufenden OMA-Turnier mit oder bist dort als Streamer angemeldet, wechselt dein Overlay automatisch in die Turnier-Ansicht.</>}
@@ -422,7 +422,7 @@ export default function StreamerOverlaySettings({
               <button
                 onClick={regenerate}
                 disabled={regenerating}
-                className="mt-2 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-white/[0.08] text-gray-300 hover:text-rose-300 hover:border-rose-400/40 transition-all disabled:opacity-50"
+                className="mt-2 flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-white/[0.08] text-gray-300 hover:text-primary-fg hover:border-primary/40 transition-all disabled:opacity-50"
               >
                 {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                 Links neu erzeugen
