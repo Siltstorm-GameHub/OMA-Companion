@@ -121,7 +121,7 @@ export default function StudioEditor({ onExported, allowWatermark = false }: { o
               {template.fields.map(f => (
                 <input key={f.key} value={values[f.key] ?? ""} placeholder={f.placeholder} maxLength={f.maxLength}
                   onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
-                  className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+                  className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
               ))}
             </div>
           )}

@@ -21,7 +21,7 @@ interface Preview {
 }
 interface Run { id: string; ranAt: string; durationMs: number; hadError: boolean; result: string }
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 
 export default function PayoutsClient() {
   const [weeks, setWeeks] = useState<Week[] | null>(null);
@@ -65,7 +65,7 @@ export default function PayoutsClient() {
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" loading={previewBusy} onClick={loadPreview}>Vorschau berechnen</Button>
             <Button size="sm" variant="danger" loading={runBusy} disabled={!preview || preview.pendingCount === 0} onClick={runNow}>Jetzt ausführen (nur Admin)</Button>
-            <span className="text-[11px] text-gray-500">Rechnet nur, schreibt nichts. „Ausführen“ zahlt nur noch nicht ausgezahlte Mitglieder.</span>
+            <span className="text-xs text-gray-500">Rechnet nur, schreibt nichts. „Ausführen“ zahlt nur noch nicht ausgezahlte Mitglieder.</span>
           </div>
           {preview && (
             <>
@@ -100,7 +100,7 @@ export default function PayoutsClient() {
                 <span className="text-xs text-gray-200">{formatBerlinDateTime(r.ranAt, { dateStyle: "short", timeStyle: "short" })} · {(r.durationMs / 1000).toFixed(1)} s</span>
                 <Badge tone={r.hadError ? "danger" : "success"}>{r.hadError ? "Fehler" : "OK"}</Badge>
               </button>
-              {openRun === r.id && <pre className="text-[10px] text-gray-400 whitespace-pre-wrap break-all bg-black/30 rounded p-2">{r.result}</pre>}
+              {openRun === r.id && <pre className="text-xs text-gray-400 whitespace-pre-wrap break-all bg-black/30 rounded p-2">{r.result}</pre>}
             </div>
           ))}
         </div>
@@ -118,7 +118,7 @@ export default function PayoutsClient() {
                 <div key={j.jobKey} className="text-xs flex flex-wrap items-center justify-between gap-2">
                   <span className="text-gray-200">{j.label} <span className="text-gray-500">· {j.paid} {j.paid === 1 ? "Mitglied" : "Mitglieder"}, {j.coins} Münzen{j.zero > 0 ? `, ${j.zero} ohne Gehalt` : ""}</span></span>
                   <span className="flex flex-wrap gap-1">
-                    {j.tiers.map(t => <span key={t.label} className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">{t.label}: {t.count}</span>)}
+                    {j.tiers.map(t => <span key={t.label} className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">{t.label}: {t.count}</span>)}
                   </span>
                 </div>
               ))}

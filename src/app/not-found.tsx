@@ -1,45 +1,19 @@
 import "./globals.css";
-import Link from "next/link";
 import { SearchX } from "@/components/icons";
-import { Home } from "@/components/icons";
+import HelpfulLinks from "@/components/HelpfulLinks";
 
+/** 404 außerhalb des App-Rahmens (z. B. unbekannte Top-Level-Pfade). */
 export default function GlobalNotFound() {
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "#080c18" }}
-    >
-      <div
-        className="rounded-2xl p-10 max-w-md w-full text-center relative overflow-hidden"
-        style={{
-          background: "rgba(15,15,23,0.75)",
-          border: "1px solid rgba(255,255,255,0.055)",
-        }}
-      >
-
-        <div className="relative">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ background: "rgba(244,63,94,0.1)", border: "1px solid rgba(244,63,94,0.2)" }}
-          >
-            <SearchX className="w-8 h-8" style={{ color: "#f87171" }} />
-          </div>
-
-          <p className="text-5xl font-black text-white tabular-nums mb-2">404</p>
-          <h1 className="text-lg font-semibold text-white mb-2">Seite nicht gefunden</h1>
-          <p className="text-sm mb-7" style={{ color: "#6b7280" }}>
-            Diese Seite existiert nicht oder wurde entfernt.
-          </p>
-
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
-            style={{ background: "#e11d48" }}
-          >
-            <Home className="w-4 h-4" />
-            Zurück zum Dashboard
-          </Link>
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-canvas">
+      <div className="rounded-card border border-line bg-surface p-6 sm:p-10 max-w-md w-full text-center">
+        <span className="mx-auto mb-5 grid size-16 place-items-center rounded-card bg-primary-soft text-primary-fg">
+          <SearchX className="w-8 h-8" />
+        </span>
+        <p className="text-5xl font-extrabold text-fg tabular-nums mb-2">404</p>
+        <h1 className="text-xl font-extrabold text-fg mb-2">Seite nicht gefunden</h1>
+        <p className="text-sm text-muted mb-6">Diese Seite existiert nicht (mehr). Spring direkt weiter:</p>
+        <HelpfulLinks />
       </div>
     </div>
   );

@@ -17,11 +17,11 @@ function IdeaRow({ item }: { item: Item }) {
       <Link href={`/community-board/idea/${item.id}`} className="flex items-start justify-between gap-3 hover:text-teal-300 transition-colors">
         <span className="min-w-0">
           <span className="block text-sm text-gray-100 truncate">{item.title}</span>
-          <span className="block text-[11px] text-gray-500 truncate">
+          <span className="block text-xs text-gray-500 truncate">
             von {item.author}{item.game ? ` · ${item.game}` : ""}{item.at ? ` · ${formatBerlinDate(item.at)}` : ""}{item.note ? ` · ${item.note}` : ""}
           </span>
         </span>
-        <span className="shrink-0 text-[11px] text-gray-500 flex items-center gap-1">
+        <span className="shrink-0 text-xs text-gray-500 flex items-center gap-1">
           {item.count > 0 ? <>{formatFixed(item.average, 1)}<Star className="w-3 h-3 text-amber-400 fill-amber-400" /></> : "–"}
         </span>
       </Link>
@@ -70,7 +70,7 @@ export default async function RoadmapPage() {
                 <a href={`https://store.steampowered.com/app/${g.appId}`} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-gray-100 hover:text-teal-300 transition-colors">
                   <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{g.name}
                 </a>
-                <span className="shrink-0 text-[11px] text-gray-500">
+                <span className="shrink-0 text-xs text-gray-500">
                   {g.votes > 0 ? `Ø ${formatFixed(g.average, 1)} ★ · ${g.votes} Stimmen` : "noch keine Stimmen"}{g.participants > 0 ? ` · ${g.participants} dabei` : ""}
                 </span>
               </li>
@@ -90,7 +90,7 @@ export default async function RoadmapPage() {
                     <Link href={`/community-board/idea/${t.id}`} className="block text-sm text-gray-100 hover:text-teal-300 transition-colors truncate">
                       <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{t.title}
                     </Link>
-                    <span className="block text-[11px] text-gray-500 pl-5">Ø {formatFixed(t.average, 1)} ★ · {t.votes} Stimmen · {t.author}</span>
+                    <span className="block text-xs text-gray-500 pl-5">Ø {formatFixed(t.average, 1)} ★ · {t.votes} Stimmen · {t.author}</span>
                   </li>
                 ))}
               </ol>

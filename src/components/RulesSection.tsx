@@ -30,7 +30,7 @@ export default function RulesSection({
   const rest = lines.slice(shown.length);
 
   return (
-    <div id={id} className={`glass rounded-2xl p-5 scroll-mt-24 ${className}`}>
+    <div id={id} className={`glass rounded-2xl p-5 scroll-mt-36 ${className}`}>
       <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
         <ScrollText className="w-3.5 h-3.5 text-teal-400" /> Regelwerk
       </h2>

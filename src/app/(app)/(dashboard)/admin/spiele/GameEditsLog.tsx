@@ -53,7 +53,7 @@ export default function GameEditsLog({ edits }: { edits: GameEditRow[] }) {
                   <Link href={`/spiele/${e.game.slug}`} className="font-semibold text-white hover:text-teal-300">{e.game.name}</Link>
                   {" · "}{FIELD_LABELS[e.field as FillableField] ?? e.field}: <span className="text-teal-200">{formatFieldValue(e.field, e.newValue)}</span>
                 </p>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {e.userName ?? "Unbekannt"} · {new Date(e.createdAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}
                   {e.reverted && " · zurückgesetzt"}
                 </p>

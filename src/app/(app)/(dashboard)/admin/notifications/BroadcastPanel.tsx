@@ -170,7 +170,7 @@ export default function BroadcastPanel() {
               type="text" value={query} onChange={handleQueryChange}
               onFocus={() => { if (query) setShowSuggestions(true); }}
               placeholder="Username eingeben…"
-              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors"
             />
             {showSuggestions && (query || suggestions.length > 0) && (
               <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl"
@@ -193,7 +193,7 @@ export default function BroadcastPanel() {
                     <div>
                       <p className="text-xs font-medium text-white">{u.username ?? u.name}</p>
                       {u.username && u.name && u.name !== u.username && (
-                        <p className="text-[10px] text-gray-500">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.name}</p>
                       )}
                     </div>
                   </button>
@@ -209,7 +209,7 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Titel</label>
         <input type="text" value={title} onChange={e => setTitle(e.target.value)}
           placeholder="📢 Wichtige Info…"
-          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors" />
+          className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors" />
       </div>
 
       {/* Text */}
@@ -217,7 +217,7 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Text</label>
         <textarea value={body} onChange={e => setBody(e.target.value)}
           placeholder="Inhalt der Benachrichtigung…" rows={3}
-          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/50 transition-colors resize-none" />
+          className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors resize-none" />
       </div>
 
       {/* Link-Dropdown */}
@@ -263,7 +263,7 @@ export default function BroadcastPanel() {
             ["discordChannel", "Discord-Kanal", MessageSquare],
           ] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => toggleChannel(key)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors"
               style={{
                 background: channels[key] ? "rgba(20,184,166,0.15)" : "rgba(255,255,255,0.02)",
                 color: channels[key] ? "#2dd4bf" : "#6b7280",

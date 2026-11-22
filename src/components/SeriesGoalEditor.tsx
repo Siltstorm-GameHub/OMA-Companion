@@ -49,13 +49,13 @@ export default function SeriesGoalEditor({
   return (
     <fieldset disabled={disabled} className="space-y-1 min-w-0 border-0 p-0 m-0 disabled:opacity-60">
       {anyFormat && (
-        <p className="text-[11px] text-gray-600">
+        <p className="text-xs text-gray-600">
           Ohne festes Format wertet das Ziel die Stat-Felder der Reihe aus. Für ein Ziel auf Spielergebnisse lege das Format der Reihe fest.
         </p>
       )}
       <CommunityGoalEditor value={goalForm} onChange={changeGoal} statFields={goalFields} inSeries
         rewardLimit={rewardLimit} seriesPointsLimit={seriesPointsLimit} />
-      <p className="text-[10px] text-gray-500">
+      <p className="text-xs text-gray-500">
         Gilt automatisch für alle Termine der Reihe. Einzelne Termine können es im Reiter „Ziel“ überschreiben oder abschalten.
       </p>
     </fieldset>

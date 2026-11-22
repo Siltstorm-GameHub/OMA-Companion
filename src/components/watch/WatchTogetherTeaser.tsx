@@ -26,7 +26,7 @@ export default function WatchTogetherTeaser() {
   return (
     <div>
       <div className="rounded-2xl border border-teal-500/20 bg-teal-500/[0.04] px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-teal-400/80">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-teal-400/80">
           <Users className="w-3.5 h-3.5" /> Zusammen ansehen
         </span>
         {groups.map(g => (

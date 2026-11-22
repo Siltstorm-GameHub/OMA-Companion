@@ -95,7 +95,7 @@ export default function WatchTogetherView({
             {focusLogin ? <><LayoutGrid className="w-3.5 h-3.5" /> Raster</> : <><Maximize2 className="w-3.5 h-3.5" /> Fokus</>}
           </button>
         )}
-        <span className="text-[11px] text-gray-500">powered by <Link href="/dashboard" className="text-teal-300 hover:underline">OMA</Link></span>
+        <span className="text-xs text-gray-500">powered by <Link href="/dashboard" className="text-teal-300 hover:underline">OMA</Link></span>
       </header>
 
       {n === 0 ? (

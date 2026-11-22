@@ -23,8 +23,8 @@ function MatchRow({ match, names }: { match: GroupMatch; names: Map<string, stri
       <GameCover game={g.name} coverUrl={g.coverUrl} className="w-24 h-11 sm:w-28 sm:h-13" rounded="rounded-md" fallbackVariant="plain" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white truncate group-hover:text-teal-200 transition-colors">{g.name}</p>
-        {facts.length > 0 && <p className="text-[11px] text-gray-500 truncate">{facts.join(" · ")}</p>}
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5 text-[11px]">
+        {facts.length > 0 && <p className="text-xs text-gray-500 truncate">{facts.join(" · ")}</p>}
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5 text-xs">
           {match.free && <span className="text-emerald-300">Kostenlos</span>}
           {match.wanters.length > 0 && (
             <span className="text-rose-300 inline-flex items-center gap-1"><Heart className="w-2.5 h-2.5" /> {match.wanters.length} auf der Wunschliste</span>
@@ -96,7 +96,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
             style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)" }}>
             <Users className="w-4.5 h-4.5 text-teal-400" />
           </div>
-          <h1 className="font-display text-2xl font-black text-white tracking-tight">Was zocken wir?</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">Was zocken wir?</h1>
         </div>
         <p className="text-xs text-gray-500 ml-11">Wähle, wer mitzockt — wir zeigen Spiele, die alle haben (oder die kostenlos sind) und zur Gruppengröße passen.</p>
       </div>
@@ -106,7 +106,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-gray-300">Wer zockt mit? <span className="text-gray-500 font-normal">({selected.length})</span></p>
           {selected.length > 1 && (
-            <button type="button" onClick={() => setSelected([meId])} className="text-[11px] text-gray-500 hover:text-white">Zurücksetzen</button>
+            <button type="button" onClick={() => setSelected([meId])} className="text-xs text-gray-500 hover:text-white">Zurücksetzen</button>
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -134,7 +134,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
             placeholder={selected.length >= MAX_MEMBERS ? `Maximal ${MAX_MEMBERS} Leute` : "Mitglied hinzufügen …"}
             disabled={selected.length >= MAX_MEMBERS}
             aria-label="Mitglied suchen"
-            className="w-full bg-line border border-line-strong rounded-xl pl-8 pr-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 disabled:opacity-50"
+            className="w-full bg-surface-2 border border-line rounded-control pl-8 pr-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary disabled:opacity-50"
           />
           {suggestions.length > 0 && (
             <div className="absolute z-20 left-0 right-0 mt-1 rounded-card glass-heavy border border-line-strong overflow-hidden">
@@ -200,7 +200,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
             </section>
           )}
 
-          <p className="text-[11px] text-gray-600 text-center">
+          <p className="text-xs text-gray-600 text-center">
             Gezählt wird „Hab ich“ auf den Spiel-Seiten und „Zockt gerade“ im Profil. Kostenlose Spiele hat jeder.
           </p>
         </>

@@ -173,19 +173,19 @@ export default function SeriesAdminRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-white text-sm">{seriesName}</p>
-            <span className="text-[10px] text-teal-600 bg-teal-500/10 border border-teal-500/15 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-teal-600 bg-teal-500/10 border border-teal-500/15 px-2 py-0.5 rounded-full">
               Eventreihe · {events.length} Events
             </span>
-            {statusCounts["active"]  > 0 && <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{statusCounts["active"]} aktiv</span>}
-            {statusCounts["open"]    > 0 && <span className="text-[10px] text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">{statusCounts["open"]} offen</span>}
-            {statusCounts["finished"]> 0 && <span className="text-[10px] text-gray-600 bg-surface-2 border border-line px-2 py-0.5 rounded-full">{statusCounts["finished"]} beendet</span>}
+            {statusCounts["active"]  > 0 && <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{statusCounts["active"]} aktiv</span>}
+            {statusCounts["open"]    > 0 && <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">{statusCounts["open"]} offen</span>}
+            {statusCounts["finished"]> 0 && <span className="text-xs text-gray-600 bg-surface-2 border border-line px-2 py-0.5 rounded-full">{statusCounts["finished"]} beendet</span>}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href={`/events/series/${seriesId}`}
             onClick={e => e.stopPropagation()}
-            className="text-[10px] text-teal-600 hover:text-teal-400 flex items-center gap-1 transition-colors"
+            className="text-xs text-teal-600 hover:text-teal-400 flex items-center gap-1 transition-colors"
           >
             <ExternalLink className="w-3 h-3" /> Ansehen
           </Link>
@@ -223,7 +223,7 @@ export default function SeriesAdminRow({
                   <GameNameInput value={fixedGame} onChange={setFixedGame} placeholder="Leer = verschiedene Spiele möglich" className={inputCls} />
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                     <input type="checkbox" checked={propagateGame} onChange={e => setPropagateGame(e.target.checked)} className="rounded accent-teal-500" />
-                    <span className="text-[11px] text-gray-500">Spiel auf alle Events der Reihe übertragen</span>
+                    <span className="text-xs text-gray-500">Spiel auf alle Events der Reihe übertragen</span>
                   </label>
                 </div>
 
@@ -239,7 +239,7 @@ export default function SeriesAdminRow({
                   </select>
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                     <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-teal-500" />
-                    <span className="text-[11px] text-gray-500">Format auf alle Turniere der Reihe übertragen</span>
+                    <span className="text-xs text-gray-500">Format auf alle Turniere der Reihe übertragen</span>
                   </label>
                 </div>
 
@@ -323,7 +323,7 @@ export default function SeriesAdminRow({
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                              <label className="flex items-center gap-1.5 text-xs text-gray-400">
                                 Teilnahmen
                                 <NumberInput min={0} value={row.participations}
                                   onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -333,10 +333,10 @@ export default function SeriesAdminRow({
                                       + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (r.stats[sr.field] ?? 0) * sr.pointsPer, 0);
                                     return { ...r, participations: newPart, points: calcPts };
                                   }))}
-                                  className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                                  className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                               </label>
                               {statRows.filter(s => s.field.trim()).map(s => (
-                                <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                <label key={s.field} className="flex items-center gap-1.5 text-xs text-gray-400">
                                   {s.field}
                                   <NumberInput min={0} value={row.stats[s.field] ?? 0}
                                     onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -346,12 +346,12 @@ export default function SeriesAdminRow({
                                         + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (newStats[sr.field] ?? 0) * sr.pointsPer, 0);
                                       return { ...r, stats: newStats, points: calcPts };
                                     }))}
-                                    className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                                    className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                                 </label>
                               ))}
-                              <label className="flex items-center gap-1.5 text-[11px] text-teal-500">
+                              <label className="flex items-center gap-1.5 text-xs text-teal-500">
                                 Punkte (auto)
-                                <span className="w-16 rounded px-1.5 py-0.5 text-[11px] text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                                <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
                                   {row.points}
                                 </span>
                               </label>

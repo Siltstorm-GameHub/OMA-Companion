@@ -131,7 +131,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
-                  <p className="text-[11px] text-gray-600">
+                  <p className="text-xs text-gray-600">
                     {app.lastConnectedAt ? `Zuletzt verbunden am ${formatDate(app.lastConnectedAt)}` : "Noch nicht verbunden"}
                   </p>
                 </div>

@@ -42,10 +42,10 @@ export default function TabSeries({ ctx }: { ctx: EventEdit }) {
                   placeholder="z.B. Kills"
                   className={inputCls}
                 />
-                <p className="text-[10px] text-gray-600 mt-1">Der Spieler mit dem höchsten Wert in diesem Feld gewinnt das Event.</p>
+                <p className="text-xs text-gray-600 mt-1">Der Spieler mit dem höchsten Wert in diesem Feld gewinnt das Event.</p>
               </div>
             )}
-            <p className="text-[11px] text-gray-500">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
+            <p className="text-xs text-gray-500">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
           </div>
         </div>
   );

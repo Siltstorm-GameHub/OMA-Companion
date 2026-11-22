@@ -29,7 +29,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-400">
                           Teilnahmen
                           <NumberInput min={0} value={row.participations}
                             onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -37,10 +37,10 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                               const newPart = Number(e.target.value);
                               return { ...r, participations: newPart, points: calcLegacyPoints(newPart, r.stats) };
                             }))}
-                            className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                            className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                         </label>
                         {statRows.filter(s => s.field.trim()).map(s => (
-                          <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                          <label key={s.field} className="flex items-center gap-1.5 text-xs text-gray-400">
                             {s.field}
                             <NumberInput min={0} value={row.stats[s.field] ?? 0}
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -48,12 +48,12 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                                 const newStats = { ...r.stats, [s.field]: Number(e.target.value) };
                                 return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                               }))}
-                              className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                              className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                           </label>
                         ))}
-                        <span className="flex items-center gap-1.5 text-[11px] text-teal-500">
+                        <span className="flex items-center gap-1.5 text-xs text-teal-500">
                           Punkte (auto)
-                          <span className="w-16 rounded px-1.5 py-0.5 text-[11px] text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                          <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
                             {row.points}
                           </span>
                         </span>
@@ -62,7 +62,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                       {polls.filter(p => p.label.trim()).length > 0 && (
                         <div className="flex flex-wrap gap-2 pt-1.5 border-t border-line mt-1">
                           {polls.filter(p => p.label.trim()).map(p => (
-                            <label key={p.label} className="flex items-center gap-1.5 text-[11px] text-violet-400">
+                            <label key={p.label} className="flex items-center gap-1.5 text-xs text-violet-400">
                               {p.label} Siege
                               <NumberInput min={0} value={row.stats[p.label] ?? 0}
                                 onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -70,7 +70,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                                   const newStats = { ...r.stats, [p.label]: Number(e.target.value) };
                                   return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                                 }))}
-                                className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                                className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                             </label>
                           ))}
                         </div>
@@ -78,7 +78,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                       {/* Dominion Bonus */}
                       {dominionEnabled && (
                         <div className="flex flex-wrap gap-2 pt-1.5 border-t border-line mt-1">
-                          <label className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                          <label className="flex items-center gap-1.5 text-xs text-amber-400">
                             <Flame className="w-3 h-3" /> Dominion Bonus (Anzahl)
                             <NumberInput min={0} value={row.stats["Dominion Bonus"] ?? 0}
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
@@ -86,7 +86,7 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                                 const newStats = { ...r.stats, "Dominion Bonus": Number(e.target.value) };
                                 return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                               }))}
-                              className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                              className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                           </label>
                         </div>
                       )}

@@ -75,7 +75,7 @@ function DateField({ value, onChange, label }: { value: string; onChange: (mmdd:
   }
   const valid = toMmdd(text) !== null;
   return (
-    <label className="flex items-center gap-1.5 text-[10px] text-gray-400">
+    <label className="flex items-center gap-1.5 text-xs text-gray-400">
       {label}
       <input
         value={text}
@@ -88,8 +88,8 @@ function DateField({ value, onChange, label }: { value: string; onChange: (mmdd:
           if (v) onChange(v);
         }}
         onBlur={() => setText(formatMmdd(value))}
-        className={`w-20 px-2 py-1.5 rounded-lg bg-line border text-white text-sm text-center tabular-nums focus:outline-none ${
-          valid ? "border-line-strong focus:border-teal-500/50" : "border-rose-500/60"
+        className={`w-20 px-2 py-1.5 rounded-control bg-surface-2 border text-fg text-sm text-center tabular-nums focus:outline-none ${
+          valid ? "border-line focus:border-primary" : "border-rose-500/60"
         }`}
       />
     </label>
@@ -186,7 +186,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             {s.emoji} {s.name}
             {running && <span className="ml-1.5 text-[9px] font-bold text-emerald-300">läuft gerade</span>}
           </p>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-xs text-gray-500">
             {count} Artikel{customized && <> · Standard {formatMmdd(s.from)}–{formatMmdd(s.to)}</>}
           </p>
         </div>
@@ -195,10 +195,10 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={enabled} onChange={e => patchSeason(season, { enabled: e.target.checked })}
             className="w-4 h-4 accent-teal-500" />
-          <span className="text-[10px] text-gray-400 w-8">{enabled ? "An" : "Aus"}</span>
+          <span className="text-xs text-gray-400 w-8">{enabled ? "An" : "Aus"}</span>
         </label>
         <button onClick={() => patchSeason(season, null)} disabled={!customized}
-          className="text-[10px] text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors">
+          className="text-xs text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition-colors">
           Standard
         </button>
       </div>
@@ -244,7 +244,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             {a?.tag === "exclusive" && a.buyable && <span className="ml-1.5 text-[9px] font-bold text-fuchsia-300">diese Woche kaufbar</span>}
             {a?.tag === "season" && a.buyable && <span className="ml-1.5 text-[9px] font-bold text-orange-300">gerade kaufbar</span>}
           </p>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-xs text-gray-500">
             <span style={{ color: rarity.color }}>{rarity.label}</span>
             {(view === "season" || view === "exclusive") && <> · {CATEGORY_META[item.category].label}</>}
             {!unlockOnly && <> · {ownerCounts[item.id] ?? 0}× verkauft</>}
@@ -253,19 +253,19 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           </p>
         </div>
         {unlockOnly ? (
-          <span className="text-[10px] text-gray-500 px-2 py-0.5 rounded-full bg-line">Freischaltung: {unlockLabel(item)}</span>
+          <span className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-line">Freischaltung: {unlockLabel(item)}</span>
         ) : (
           <>
             <label className="flex items-center gap-1.5">
               <span className="sr-only">Preis</span>
               <NumberInput min={0} value={price} className={`w-24 ${inputCls}`}
                 onChange={e => patch(item.id, { price: Math.max(0, parseInt(e.target.value, 10) || 0) })} />
-              <span className="text-[10px] text-gray-500">Münzen</span>
+              <span className="text-xs text-gray-500">Münzen</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input type="checkbox" checked={enabled} onChange={e => patch(item.id, { enabled: e.target.checked })}
                 className="w-4 h-4 accent-teal-500" />
-              <span className="text-[10px] text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
+              <span className="text-xs text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
             </label>
           </>
         )}
@@ -286,12 +286,12 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           <LookPreview look={lookOfSet(set)} name="Vorschau" size={36} className="w-48 shrink-0" />
           <div className="flex-1 min-w-[10rem]">
             <p className="text-sm text-white font-medium">{set.name}</p>
-            <p className="text-[10px] text-gray-500">{set.description}</p>
+            <p className="text-xs text-gray-500">{set.description}</p>
             <div className="flex flex-wrap gap-1 mt-1.5">
               {set.items.map(id => {
                 const c = getCosmetic(id);
                 return c ? (
-                  <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${blocked.includes(id) ? "border-rose-500/40 text-rose-300" : "border-line-strong text-gray-300"}`}>
+                  <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${blocked.includes(id) ? "border-rose-500/40 text-rose-300" : "border-line-strong text-gray-300"}`}>
                     {CATEGORY_META[c.category].label}: {c.name}
                   </span>
                 ) : null;
@@ -300,12 +300,12 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
-          <span className="text-[11px] text-gray-400 mr-auto">
+          <span className="text-xs text-gray-400 mr-auto">
             Komplett: <span className="text-white font-semibold">{price.toLocaleString("de-DE")}</span>
             <span className="line-through opacity-60 ml-1">{full.toLocaleString("de-DE")}</span> Münzen
             {blocked.length > 0 && <span className="text-rose-300"> · gerade nicht kaufbar ({blocked.length} Artikel aus)</span>}
           </span>
-          <label className="flex items-center gap-1.5 text-[10px] text-gray-400">
+          <label className="flex items-center gap-1.5 text-xs text-gray-400">
             Rabatt
             <NumberInput min={0} max={90} value={pct} className={`w-16 ${inputCls}`}
               onChange={e => patchSet(set, { discountPct: Math.min(90, Math.max(0, parseInt(e.target.value, 10) || 0)) })} />
@@ -314,7 +314,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" checked={enabled} onChange={e => patchSet(set, { enabled: e.target.checked })}
               className="w-4 h-4 accent-teal-500" />
-            <span className="text-[10px] text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
+            <span className="text-xs text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
           </label>
         </div>
       </div>
@@ -350,7 +350,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
               onChange={e => setSettings(s => ({ ...s, exclusiveCount: Math.max(0, parseInt(e.target.value, 10) || 0) }))} />
           </label>
         </div>
-        <div className="text-[11px] text-gray-500 leading-relaxed">
+        <div className="text-xs text-gray-500 leading-relaxed">
           Wechselt jeden Montag automatisch (für alle gleich). Diese Woche:{" "}
           {weekly.length === 0 ? "keine Angebote." : weekly.map((c, i) => {
             const a = avail.get(c.id)!;
@@ -387,7 +387,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
       {view === "season" ? (
         <div className="space-y-4">
           <div className="glass rounded-2xl divide-y divide-line">
-            <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Zeiträume</p>
+            <p className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-widest">Zeiträume</p>
             {SEASON_ORDER.map(renderSeasonRow)}
           </div>
           {SEASON_ORDER.map(season => {
@@ -396,7 +396,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             const w = seasonWindow(season, settings);
             return (
               <div key={season} className="glass rounded-2xl divide-y divide-line">
-                <p className="px-4 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                <p className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-widest">
                   {SEASONS[season].emoji} {SEASONS[season].name} · {formatMmdd(w.from)}–{formatMmdd(w.to)}
                 </p>
                 {list.map(renderItemRow)}

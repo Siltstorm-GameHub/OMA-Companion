@@ -9,7 +9,7 @@ export default async function AuditPage() {
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs — Protokoll</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs — Protokoll</h1>
         <p className="text-xs text-gray-500 mt-0.5">Wer hat wann was entschieden: Bewerbungen, Entzüge, Verwarnungen, Moderation, Einstellungen.</p>
       </div>
       <AdminJobsNav />

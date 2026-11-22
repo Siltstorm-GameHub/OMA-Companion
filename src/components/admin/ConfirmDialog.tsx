@@ -60,7 +60,7 @@ export function ConfirmDialog({
               autoFocus
               value={typedValue}
               onChange={(e) => setTypedValue(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-red-500/50 transition-colors"
+              className="w-full rounded-control px-3 py-2 text-sm text-fg outline-none bg-surface-2 border border-line focus:border-primary transition-colors"
             />
           </div>
         )}

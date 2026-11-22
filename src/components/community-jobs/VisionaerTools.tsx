@@ -9,7 +9,7 @@ import { formatBerlinDate } from "@/lib/time";
 
 /** Visionär-Büro: Auswertung (Sterne, Stimmen, Wochenverlauf, Status der Ideen). */
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 
 interface Stats {
   total: number; votes: number; average: number; distribution: number[]; starsThisWeek: number;
@@ -22,9 +22,9 @@ interface Stats {
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-2.5 py-2">
-      <p className="text-[10px] text-gray-500">{label}</p>
+      <p className="text-xs text-gray-500">{label}</p>
       <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
+      {sub && <p className="text-xs text-gray-600 truncate">{sub}</p>}
     </div>
   );
 }
@@ -49,7 +49,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.total} {stats.total === 1 ? "Idee" : "Ideen"} · {stats.votes > 0 ? `Ø ${formatFixed(stats.average, 1)} ★` : "noch keine Bewertung"} · diese Woche {stats.starsThisWeek} ★
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -65,15 +65,15 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
           {(lifecycle.review + lifecycle.planned + lifecycle.done + lifecycle.rejected) > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {lifecycle.review > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
-              {lifecycle.planned > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
-              {lifecycle.done > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
-              {lifecycle.rejected > 0 && <span className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
+              {lifecycle.review > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
+              {lifecycle.planned > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
+              {lifecycle.done > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
+              {lifecycle.rejected > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
             </div>
           )}
 
           {stats.best && (
-            <p className="text-[11px] text-gray-400">
+            <p className="text-xs text-gray-400">
               Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-gray-200 hover:text-teal-300 transition-colors">{stats.best.title}</Link>{" "}
               <span className="text-gray-600">(Ø {formatFixed(stats.best.average, 1)} ★ · {stats.best.count} Stimmen)</span>
             </p>
@@ -83,7 +83,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
             <div className="space-y-1">
               <p className={LABEL}>Sterne-Verteilung</p>
               {stats.distribution.map((n, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-[10px] text-gray-500">
+                <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span className="w-3 flex items-center gap-0.5 tabular-nums">{5 - i}<Star className="w-2 h-2 text-amber-400 fill-amber-400" /></span>
                   <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / maxDist) * 100}%` }} /></div>
                   <span className="w-5 text-right tabular-nums">{n}</span>
@@ -95,7 +95,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
           <div className="space-y-1.5">
             <p className={LABEL}>Sterne pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-[11px] text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (

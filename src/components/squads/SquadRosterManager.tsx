@@ -91,7 +91,7 @@ export default function SquadRosterManager({
             <Avatar u={m.user} />
             <span className="text-sm text-white flex-1 truncate">{userName(m.user)}</span>
             {m.role === "captain" && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 shrink-0">
+              <span className="flex items-center gap-1 text-xs font-semibold text-amber-400 shrink-0">
                 <Crown className="w-3 h-3" /> Captain
               </span>
             )}
@@ -122,7 +122,7 @@ export default function SquadRosterManager({
           {addableUsers.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
         </select>
         <select value={addRole} onChange={e => setAddRole(e.target.value as "member" | "captain")}
-          className="rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors">
+          className="rounded-control px-3 py-2 text-sm text-fg outline-none bg-surface-2 border border-line focus:border-primary transition-colors">
           <option value="member">Mitglied</option>
           <option value="captain">Captain</option>
         </select>

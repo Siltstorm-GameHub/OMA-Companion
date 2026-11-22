@@ -59,7 +59,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
         mode === value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
       }`}>
       <span className={`block text-sm font-semibold ${mode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
-      <span className="block text-[11px] text-gray-500">{hint}</span>
+      <span className="block text-xs text-gray-500">{hint}</span>
     </button>
   );
 
@@ -67,7 +67,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
     <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
       <div>
         <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel dieses Termins</p>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Termine übernehmen automatisch das Ziel der Eventreihe. Hier kannst du es für diesen einen Termin ändern.
         </p>
       </div>

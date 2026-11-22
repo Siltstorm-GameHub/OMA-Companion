@@ -45,7 +45,7 @@ export default async function AdminNotificationsPage() {
   return (
     <div className="max-w-3xl space-y-10">
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🔔 Benachrichtigungs-Regeln
         </h2>
         {addedRules.length > 0 && (
@@ -61,7 +61,7 @@ export default async function AdminNotificationsPage() {
       </section>
 
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           📣 Ad-hoc-Nachricht senden
         </h2>
         <BroadcastPanel />

@@ -112,7 +112,7 @@ export default async function CompareProfilePage({
           <Avatar user={me}       accent="ring-primary/30" />
 
           <div className="text-center flex-1">
-            <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">VS</p>
+            <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">VS</p>
             <div className="flex justify-center gap-3 text-xs">
               <div className="text-center">
                 <p className="text-gray-500">Rang</p>
@@ -132,7 +132,7 @@ export default async function CompareProfilePage({
 
       {/* Stats comparison */}
       <div className="glass card-shine rounded-2xl p-5 space-y-5">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Statistik-Vergleich</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Statistik-Vergleich</p>
 
         {STATS.map(s => (
           <div key={s.label}>

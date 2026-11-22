@@ -58,7 +58,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
           <div className="relative">
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Suchen, z. B. Schwert, Pokal, Feuer…"
-              className="w-full rounded-lg bg-line border border-line pl-9 pr-8 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
+              className="w-full rounded-control bg-surface-2 border border-line pl-9 pr-8 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
             {query && (
               <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
                 <X className="w-4 h-4" />

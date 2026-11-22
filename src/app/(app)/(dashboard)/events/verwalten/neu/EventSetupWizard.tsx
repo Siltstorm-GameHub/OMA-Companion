@@ -97,15 +97,15 @@ export default function EventSetupWizard(props: EventWizardProps) {
         {seasonPrefill ? (
           <button type="button"
             onClick={() => router.push(`/events/verwalten/reihen/${seasonPrefill.oldSeriesId}`)}
-            className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
-            <ChevronLeft className="w-3.5 h-3.5" />
+            className="min-h-9 text-sm text-muted hover:text-fg flex items-center gap-1 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
             Zurück zur Reihe
           </button>
         ) : (
           <button type="button"
             onClick={() => { setWizardMode("select"); setStep(0); }}
-            className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
-            <ChevronLeft className="w-3.5 h-3.5" />
+            className="min-h-9 text-sm text-muted hover:text-fg flex items-center gap-1 transition-colors">
+            <ChevronLeft className="w-4 h-4" />
             Zurück zur Auswahl
           </button>
         )}
@@ -114,7 +114,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
           {isSeriesMode
             ? <Repeat className="w-4 h-4 text-violet-400" />
             : <CalendarDays className="w-4 h-4 text-teal-400" />}
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
             {seasonPrefill
               ? `Saison ${seasonPrefill.seasonNumber} einrichten`
               : isSeriesMode ? "Neue Eventreihe" : "Neues Event"}
@@ -148,15 +148,15 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
       <StepIndicator w={w} />
 
-      <div className="rounded-2xl p-6 mb-6"
-        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="rounded-card border border-line bg-surface p-4 sm:p-6 mb-4">
         <CurrentStep w={w} />
       </div>
 
-      <div className="flex gap-3">
+      {/* Navigation klebt unten (über der unteren Leiste am Handy), damit "Weiter" immer erreichbar ist */}
+      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20 flex gap-3 rounded-card border border-line bg-sidebar p-2.5 shadow-pop">
         {step > 0 && (
           <button type="button" onClick={() => setStep(s => s - 1)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm text-gray-400 border border-line-strong hover:border-line-strong transition-colors">
+            className="flex min-h-11 items-center gap-2 px-5 rounded-control text-sm font-semibold text-fg border border-line-strong bg-surface-2 hover:bg-surface-3 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Zurück
           </button>
         )}
@@ -168,12 +168,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
             else if (isEventMode) handleSubmitEvent();
             else handleSubmitSeries();
           }}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-40"
-          style={{
-            background: isSeriesMode
-              ? "linear-gradient(135deg, #7c3aed, #8b5cf6)"
-              : "linear-gradient(135deg, #0d9488, #14b8a6)",
-          }}>
+          className="flex-1 flex min-h-11 items-center justify-center gap-2 rounded-control text-sm font-bold bg-primary text-primary-ink hover:bg-primary-hover transition-colors disabled:opacity-40">
           {loading
             ? "Wird erstellt…"
             : isLastStep

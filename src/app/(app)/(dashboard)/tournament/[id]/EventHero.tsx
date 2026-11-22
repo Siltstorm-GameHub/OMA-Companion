@@ -40,7 +40,7 @@ export default function EventHero({
   event, omaOriginal, heroDate, seriesCtx, statusLabel, statusPill, phase, showCountdown, startsIn, myStatus, date, serverTimeFallback, period,
 }: EventHeroProps) {
   return (
-      <section aria-label={event.title} className="relative overflow-hidden rounded-2xl mb-3">
+      <section aria-label={event.title} className="relative overflow-hidden rounded-card border border-line mb-3">
         {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
             → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
         <div className="relative w-full aspect-[16/9] sm:aspect-[16/6]">
@@ -53,14 +53,13 @@ export default function EventHero({
             brandBadge
             omaOriginal={omaOriginal}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d12] via-[#0b0d12]/50 to-transparent pointer-events-none" />
-          <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/50 to-transparent pointer-events-none" />
 
           {/* Kalenderblock */}
-          <div className="absolute top-3 left-3 rounded-lg bg-canvas px-2.5 py-1.5 text-center leading-tight shadow-card">
-            <div className={`text-[11px] font-semibold ${heroDate.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{heroDate.top}</div>
-            <div className="text-2xl font-bold !text-white tabular-nums">{heroDate.day}</div>
-            <div className="text-[11px] text-gray-400 tabular-nums"><ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /></div>
+          <div className="absolute top-3 left-3 rounded-control bg-canvas/90 px-3 py-1.5 text-center leading-tight shadow-card">
+            <div className={`text-xs font-bold ${heroDate.top === "HEUTE" ? "text-primary-fg" : "text-muted"}`}>{heroDate.top}</div>
+            <div className="text-2xl font-extrabold text-fg tabular-nums">{heroDate.day}</div>
+            <div className="text-xs text-muted tabular-nums"><ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /></div>
           </div>
 
           {/* Reihen-Termin: Akzent in Reihenfarbe (wie auf der Reihen-Seite) */}
@@ -69,19 +68,19 @@ export default function EventHero({
           <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
             <div className="flex flex-wrap items-center gap-2 mb-1.5">
               {statusLabel && (
-                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${statusPill}`} style={{ textShadow: "none" }}>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${statusPill}`} style={{ textShadow: "none" }}>
                   {phase === "live" && <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />}
                   {phase === "period" && <Timer className="w-3.5 h-3.5" />}
                   {statusLabel}
                 </span>
               )}
               {showCountdown && startsIn && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-gray-200" style={{ textShadow: "none" }}>
+                <span className="inline-flex items-center gap-1 rounded-full bg-canvas/80 px-2.5 py-1 text-xs font-bold text-fg" style={{ textShadow: "none" }}>
                   <Clock className="w-3.5 h-3.5" /> startet {startsIn}
                 </span>
               )}
               {myStatus && (
-                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ${myStatus.tone === "teal" ? "bg-teal-400/15 text-teal-300" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${myStatus.tone === "teal" ? "bg-teal-400/15 text-teal-300" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> {myStatus.label}
                 </span>
               )}
@@ -92,11 +91,11 @@ export default function EventHero({
                 Eventreihe {seriesCtx.name} · Termin {seriesCtx.position} von {seriesCtx.total}
               </Link>
             )}
-            <h1 className="text-2xl sm:text-3xl font-bold !text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold !text-fg leading-tight tracking-tight">
               {omaOriginal && <OmaTitlePrefix title={event.title} />}
               {event.title}
             </h1>
-            <p className="mt-1 text-sm text-gray-300">
+            <p className="mt-1.5 text-sm text-gray-200">
               {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long" })}
               {" · "}<ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
               {event.endAt && !period && <> – {formatBerlinTime(event.endAt, { hour: "2-digit", minute: "2-digit" })} Uhr</>}

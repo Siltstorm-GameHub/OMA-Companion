@@ -51,7 +51,7 @@ function Row({ row, place, isViewer }: { row: LeaderboardEntry; place: number; i
       <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white truncate font-semibold">{row.name}</p>
-        <p className="text-[11px] text-gray-500 truncate">{row.detail}</p>
+        <p className="text-xs text-gray-500 truncate">{row.detail}</p>
       </div>
       <span className="text-xs font-semibold text-white tabular-nums shrink-0 text-right">{row.value}</span>
     </Link>
@@ -92,7 +92,7 @@ export default function LeaderboardList({
 
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
+      <p className="flex items-center gap-1.5 text-xs text-gray-600 px-0.5">
         <Info className="w-3 h-3 shrink-0" />
         {note}
       </p>

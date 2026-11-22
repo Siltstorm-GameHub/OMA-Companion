@@ -29,7 +29,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="max-w-3xl mx-auto space-y-4 px-4 py-6">
       <div>
-        <h1 className="text-lg font-bold text-white">📁 {album.title}</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">📁 {album.title}</h1>
         <p className="text-xs text-gray-500 mt-0.5">
           von {album.author.username ?? album.author.name ?? "?"} · {formatBerlinDate(album.createdAt)} · {album.assets.length} {album.assets.length === 1 ? "Datei" : "Dateien"}
           {album.event && <> · <Link href={`/tournament/${album.event.id}`} className="hover:text-teal-400 transition-colors">{album.event.title}</Link></>}

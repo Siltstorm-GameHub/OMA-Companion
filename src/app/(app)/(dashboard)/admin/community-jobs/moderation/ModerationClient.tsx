@@ -71,7 +71,7 @@ export default function ModerationClient() {
         <span className="relative flex-1 min-w-[10rem]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen: Text oder Autor"
-            className="w-full bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-surface-2 border border-line rounded-control pl-7 pr-2 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         </span>
       </div>
 
@@ -84,11 +84,11 @@ export default function ModerationClient() {
                 <p className="text-xs text-gray-200 break-words">
                   {item.url ? <Link href={item.url} className="hover:text-teal-300 transition-colors">{item.title}</Link> : item.title}
                 </p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {item.authorName} · {formatBerlinDate(item.createdAt)}
                   {item.hidden && <Badge tone="danger" className="ml-2">Ausgeblendet</Badge>}
                 </p>
-                {item.hidden && item.hiddenReason && <p className="text-[10px] text-gray-500">Grund: {item.hiddenReason}</p>}
+                {item.hidden && item.hiddenReason && <p className="text-xs text-gray-500">Grund: {item.hiddenReason}</p>}
               </div>
               <div className="flex gap-1.5 shrink-0">
                 {item.canHide

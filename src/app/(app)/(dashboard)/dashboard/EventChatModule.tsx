@@ -47,13 +47,13 @@ export default function EventChatModule() {
               <span className="min-w-0 flex-1 truncate font-bold text-fg">{t.title}</span>
               <span className="shrink-0 text-subtle">{PHASE_LABEL[t.phase]}</span>
               {t.unread > 0 && (
-                <span className="shrink-0 rounded-full bg-live px-1.5 py-px text-[0.6875rem] font-bold text-white">{t.unread}</span>
+                <span className="shrink-0 rounded-full bg-live px-1.5 py-px text-xs font-bold text-white">{t.unread}</span>
               )}
             </div>
             <p className="mt-1 line-clamp-2 text-sm text-muted">
               <span className="font-semibold text-fg">{t.last!.author}:</span> {t.last!.text}
             </p>
-            <p className="mt-0.5 text-[0.6875rem] text-subtle"><RelativeTime date={t.last!.createdAt} /></p>
+            <p className="mt-0.5 text-xs text-subtle"><RelativeTime date={t.last!.createdAt} /></p>
           </Link>
         ))}
       </div>

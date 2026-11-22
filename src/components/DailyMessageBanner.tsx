@@ -61,7 +61,7 @@ export function DailyMessageBanner({
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-purple-400/70 mb-0.5">
+        <p className="text-xs font-bold uppercase tracking-[0.15em] text-purple-400/70 mb-0.5">
           Mitteilung
         </p>
         <p className="text-sm font-semibold text-white leading-snug">{message.title}</p>

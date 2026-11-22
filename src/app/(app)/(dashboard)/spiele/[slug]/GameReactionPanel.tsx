@@ -81,13 +81,13 @@ export default function GameReactionPanel({
         <div className="text-center shrink-0 w-20">
           <p className="font-display text-4xl font-black text-white leading-none">{enough ? formatRating(avg!) : "–"}</p>
           <div className="mt-1.5 flex justify-center"><StarDisplay value={enough ? avg! : 0} className="w-3 h-3" /></div>
-          <p className="text-[10px] text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {stats.ratingCount} Bewertung{stats.ratingCount === 1 ? "" : "en"}
           </p>
         </div>
         <div className="flex-1 space-y-1">
           {distribution.map(d => (
-            <div key={d.stars} className="flex items-center gap-2 text-[10px] text-gray-500">
+            <div key={d.stars} className="flex items-center gap-2 text-xs text-gray-500">
               <span className="w-2 text-right">{d.stars}</span>
               <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden">
                 <div className="h-full rounded-full bg-amber-400/80 transition-all duration-300" style={{ width: `${(d.count / maxCount) * 100}%` }} />
@@ -95,7 +95,7 @@ export default function GameReactionPanel({
               <span className="w-4 tabular-nums">{d.count}</span>
             </div>
           ))}
-          {!enough && <p className="text-[10px] text-gray-600 pt-0.5">Noch zu wenig Bewertungen für einen Schnitt.</p>}
+          {!enough && <p className="text-xs text-gray-600 pt-0.5">Noch zu wenig Bewertungen für einen Schnitt.</p>}
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function GameReactionPanel({
               counts={{ in: stats.inCount, wish: stats.wishCount }}
               disabled={busy}
             />
-            <p className="text-[11px] text-gray-500">
+            <p className="text-xs text-gray-500">
               „Am Start“ sehen alle, „Würde ich holen“ bringt dir Angebots-Hinweise, „Nicht meins“ bleibt privat.
             </p>
           </>

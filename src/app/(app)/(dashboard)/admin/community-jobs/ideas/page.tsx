@@ -9,7 +9,7 @@ export default async function AdminIdeasPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs — Ideen</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs — Ideen</h1>
         <p className="text-xs text-gray-500 mt-0.5">Ideen per Drag &amp; Drop (oder Auswahl) in die passende Spalte schieben. Der Autor wird bei jedem Statuswechsel benachrichtigt.</p>
       </div>
       <AdminJobsNav />

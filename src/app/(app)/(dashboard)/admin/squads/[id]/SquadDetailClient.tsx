@@ -87,11 +87,11 @@ export default function SquadDetailClient({
       <div className="flex items-center gap-3">
         <SeriesIcon name={squad.icon} className="w-7 h-7 shrink-0" />
         <div>
-          <h1 className="text-xl font-black text-white">{squad.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">{squad.name}</h1>
           {squad.game && <p className="text-sm text-gray-500">{squad.game}</p>}
         </div>
         {squad.hidden && (
-          <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
+          <span className="flex items-center gap-1 text-xs text-gray-500 ml-auto">
             <EyeOff className="w-3 h-3" /> ausgeblendet
           </span>
         )}

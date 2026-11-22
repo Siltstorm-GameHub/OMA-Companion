@@ -133,7 +133,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     <span className="w-2 h-2 shrink-0 rounded-full" style={{ backgroundColor: server.isOnline ? ONLINE_COLOR : OFFLINE_COLOR }} />
                     {server.name}
                     {server.openAccess && (
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
                         <Globe className="w-2.5 h-2.5" /> Offen für alle
                       </span>
                     )}

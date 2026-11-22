@@ -50,7 +50,7 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
               <p className="text-sm text-white font-medium">{item.label}</p>
               <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
               config[item.key] ? "text-emerald-300 bg-emerald-500/10" : "text-gray-500 bg-line"
             }`}>
               {config[item.key] ? "Aktiv" : "Deaktiviert"}

@@ -34,7 +34,7 @@ export default function EventEditClient(props: EventEditProps) {
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{event.title}</h1>
             <div className="mt-1 flex items-center gap-2 flex-wrap">
               <EventCategoryBadge category={event.category ?? "casual"} />
-              {event.hidden && <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">Ausgeblendet</span>}
+              {event.hidden && <span className="rounded border border-rose-500/20 bg-rose-500/10 px-1.5 py-0.5 text-xs font-medium text-rose-300">Ausgeblendet</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -55,7 +55,7 @@ export default function EventEditClient(props: EventEditProps) {
       <section aria-label="Ablauf" className="glass rounded-2xl p-3 sm:p-4 space-y-3">
         <ol className="grid grid-cols-4 gap-1.5">
           {LIFECYCLE_STEPS.map((label, i) => (
-            <li key={label} className={`border-t-[3px] pt-1.5 text-center text-[11px] ${
+            <li key={label} className={`border-t-[3px] pt-1.5 text-center text-xs ${
               i < step ? "border-teal-500/60 text-gray-400" : i === step ? "border-teal-400 text-white font-semibold" : "border-line text-gray-600"
             }`} aria-current={i === step ? "step" : undefined}>
               {label}

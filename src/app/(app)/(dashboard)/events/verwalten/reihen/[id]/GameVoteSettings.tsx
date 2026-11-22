@@ -91,7 +91,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
       {cfg.enabled && (
         <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
           <div className="space-y-1.5">
-            <p className="text-gray-500 uppercase tracking-wider text-[10px]">Beginn der Abstimmung</p>
+            <p className="text-gray-500 uppercase tracking-wider text-xs">Beginn der Abstimmung</p>
             <label className="flex items-center gap-2">
               <input type="radio" checked={cfg.opensMode === "on_create"} onChange={() => set("opensMode", "on_create")} />
               Sobald der Termin angelegt ist
@@ -102,7 +102,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
             </label>
           </div>
           <div className="space-y-1.5">
-            <p className="text-gray-500 uppercase tracking-wider text-[10px]">Ende der Abstimmung</p>
+            <p className="text-gray-500 uppercase tracking-wider text-xs">Ende der Abstimmung</p>
             <label className="flex items-center gap-2">{num("closesHoursBefore")} Stunden vor Start</label>
             {cfg.closesHoursBefore < TIGHT_CLOSE_HOURS && (
               <p className="text-amber-200">Knapp: Es bleibt wenig Zeit für Regeln und zum Installieren oder Kaufen.</p>
@@ -114,7 +114,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
           <label className="flex flex-wrap items-center gap-2">
             Zwischenstand zeigen:
             <select value={cfg.showCounts} onChange={e => set("showCounts", e.target.value as GameVoteConfig["showCounts"])}
-              className="bg-line border border-line-strong rounded-lg px-2 py-1 text-xs text-white">
+              className="bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg">
               <option value="always">immer</option>
               <option value="after_vote">erst nach der eigenen Stimme</option>
               <option value="after_end">erst nach dem Ende</option>

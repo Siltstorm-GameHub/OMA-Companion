@@ -77,7 +77,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
 
       <div className="flex flex-wrap gap-2">
         {feeds.map(f => (
-          <span key={f.label} className="text-[11px] px-2.5 py-1 rounded-full bg-line border border-line text-gray-300">
+          <span key={f.label} className="text-xs px-2.5 py-1 rounded-full bg-line border border-line text-gray-300">
             {f.label}: <span className="text-white font-semibold">{f.count}</span>
           </span>
         ))}
@@ -92,7 +92,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
                 <>
                   <GameCover game={i.name} coverUrl={i.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-lg" fallbackVariant="plain" />
                   <p className="text-xs font-semibold text-white mt-1.5 truncate">{i.name}</p>
-                  <p className="text-[11px] text-gray-500 truncate">{i.tipBy ? `Empfohlen von ${i.tipBy}` : i.label}</p>
+                  <p className="text-xs text-gray-500 truncate">{i.tipBy ? `Empfohlen von ${i.tipBy}` : i.label}</p>
                 </>
               );
               return i.slug
@@ -107,7 +107,7 @@ export default function GameSwipeAdmin({ drop, tips, feeds }: {
 
       <div className="space-y-2">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Empfehlungen</h3>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Mitglieder empfehlen Spiele auf der Spielseite („Empfehlen“). Freigegebene kommen in den nächsten Drop (höchstens 3 je Woche).
         </p>
         {tips.length === 0 && <p className="text-xs text-gray-500">Noch keine Empfehlungen.</p>}

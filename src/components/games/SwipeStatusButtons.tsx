@@ -34,7 +34,7 @@ export default function SwipeStatusButtons({
             disabled={disabled}
             aria-pressed={on}
             title={s === "in" ? "Hab ich und würde spielen — für alle sichtbar" : s === "wish" ? "Hab ich noch nicht, würde ich holen — du bekommst Angebots-Hinweise" : "Nur für dich sichtbar"}
-            className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium border transition-colors disabled:opacity-60 ${
+            className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold border transition-colors disabled:opacity-60 ${
               on ? st.on : `border-line-strong text-gray-300 ${st.off}`
             }`}
           >

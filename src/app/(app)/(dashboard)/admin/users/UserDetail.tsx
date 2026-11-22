@@ -120,7 +120,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
           <p className="truncate text-xs text-gray-500">
             {status} · dabei seit {formatBerlinDate(user.createdAt, { month: "long", year: "numeric" })}
           </p>
-          <p className="truncate text-[11px] text-gray-600">
+          <p className="truncate text-xs text-gray-600">
             {user.email ?? "keine E-Mail"}{user.discordId && <> · Discord <span className="font-mono">{user.discordId}</span></>}
           </p>
         </div>
@@ -133,7 +133,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
       <div className="grid grid-cols-3 gap-2">
         {[["Münzen", user.points], ["Rang-Punkte", user.rankPoints], ["Events", user.eventCount]].map(([label, v]) => (
           <div key={label as string} className="rounded-xl bg-surface-2 px-3 py-2">
-            <p className="text-[11px] text-gray-500">{label}</p>
+            <p className="text-xs text-gray-500">{label}</p>
             <p className="text-sm font-semibold text-white tabular-nums">{(v as number).toLocaleString("de-DE")}</p>
           </div>
         ))}
@@ -155,7 +155,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
             );
           })}
         </div>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           {isMe ? "Deine eigene Rolle kannst du nicht ändern — so sperrst du dich nicht versehentlich aus." : ROLE_INFO[user.role]?.rights}
         </p>
       </div>

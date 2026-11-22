@@ -12,7 +12,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-extras" aria-label="Extras" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Extras")}</span>
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Extras")}</span>
             Extras
           </h2>
           <div className="grid gap-3 lg:grid-cols-2 items-start">
@@ -67,7 +67,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                 <Flame className="w-3.5 h-3.5 text-orange-400" />
                 <span className="text-xs font-semibold text-orange-300">Dominion Bonus</span>
               </div>
-              <p className="text-[10px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 Bei {dominionCfg.threshold}x in Folge „{dominionTriggerLabel}&quot; gibt es
                 {dominionCfg.coins > 0 ? ` ${dominionCfg.coins} Münzen` : ""}
                 {dominionCfg.coins > 0 && dominionCfg.seriesPoints > 0 ? " + " : ""}
@@ -126,21 +126,21 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                   <div className="flex items-center gap-2">
                     <button type="button"
                       onClick={() => setSpectatorAttended(new Set(spectatorUsers.map(u => u.id)))}
-                      className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
+                      className="text-xs text-teal-400 hover:text-teal-300 transition-colors">
                       Alle anwesend
                     </button>
                     <span className="text-gray-700">·</span>
                     <button type="button"
                       onClick={() => setSpectatorAttended(new Set())}
-                      className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                      className="text-xs text-gray-500 hover:text-white transition-colors">
                       Keiner anwesend
                     </button>
                     <button type="button"
                       onClick={() => setSpectatorAttended(new Set(spectatorUsers.filter(u => spectatorActivity[u.id]?.length).map(u => u.id)))}
-                      className="text-[11px] text-gray-400 hover:text-white transition-colors">
+                      className="text-xs text-gray-400 hover:text-white transition-colors">
                       Nur Aktive
                     </button>
-                    <span className="text-[10px] text-gray-600 ml-auto">
+                    <span className="text-xs text-gray-600 ml-auto">
                       {spectatorAttended.size}/{spectatorUsers.length} anwesend
                     </span>
                   </div>
@@ -158,7 +158,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                       <Avatar u={u} size={5} />
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                       {/* Aktivität beim Event als Entscheidungshilfe */}
-                      <span className={`text-[10px] shrink-0 ${spectatorActivity[u.id]?.length ? "text-teal-300/80" : "text-gray-600"}`}>
+                      <span className={`text-xs shrink-0 ${spectatorActivity[u.id]?.length ? "text-teal-300/80" : "text-gray-600"}`}>
                         {spectatorActivity[u.id]?.length ? spectatorActivity[u.id].join(" · ") : "keine Aktivität"}
                       </span>
                     </label>

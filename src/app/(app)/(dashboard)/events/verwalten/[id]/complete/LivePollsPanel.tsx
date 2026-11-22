@@ -109,7 +109,7 @@ function SearchableSelect({
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full rounded-lg px-2 py-1 text-[11px] text-white bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors disabled:opacity-50"
+        className="w-full rounded-control px-2 py-1 text-xs text-fg bg-surface-2 border border-line focus:border-primary outline-none transition-colors disabled:opacity-50"
       />
       {open && !disabled && filtered.length > 0 && (
         <div className="absolute z-10 mt-1 left-0 right-0 max-h-40 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
@@ -119,7 +119,7 @@ function SearchableSelect({
               type="button"
               onMouseDown={e => e.preventDefault()}
               onClick={() => { onChange(o.id); setQuery(""); setOpen(false); }}
-              className="w-full text-left px-2 py-1.5 text-[11px] text-white truncate block hover:bg-violet-600/30 transition-colors"
+              className="w-full text-left px-2 py-1.5 text-xs text-white truncate block hover:bg-violet-600/30 transition-colors"
             >
               {o.label}
             </button>
@@ -150,7 +150,7 @@ function AddVoteForm({
         type="button"
         disabled={!voterId || !targetId || saving}
         onClick={() => { onSubmit(voterId, targetId); setVoterId(""); setTargetId(""); }}
-        className="text-[11px] px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+        className="text-xs px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
       >
         Eintragen
       </button>
@@ -259,7 +259,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
         <Vote className="w-3.5 h-3.5 text-violet-400" />
         <span className="text-xs font-semibold text-violet-300">Live-Umfragen</span>
         {!canManage && (
-          <span className="text-[10px] text-gray-600 ml-auto">
+          <span className="text-xs text-gray-600 ml-auto">
             {readOnly ? "Nur lesend – Event ist bereits abgeschlossen" : "Stimmen nachtragen erfordert Admin-Rechte"}
           </span>
         )}
@@ -298,17 +298,17 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                   <p className="text-xs text-gray-500 truncate">{poll.question}</p>
                 </div>
                 {isOpen ? (
-                  <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                  <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
                     <Clock className="w-3 h-3" /> Läuft noch
                   </span>
                 ) : (
-                  <span className="text-[10px] text-gray-500 bg-line border border-line px-2 py-0.5 rounded-full shrink-0">Beendet</span>
+                  <span className="text-xs text-gray-500 bg-line border border-line px-2 py-0.5 rounded-full shrink-0">Beendet</span>
                 )}
               </div>
 
               {/* Belohnungs-Hinweis */}
               {(poll.participationCoins > 0 || poll.participationSeriesPoints > 0 || poll.winnerCoins > 0 || poll.winnerRankPoints > 0) && (
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
                   {(poll.participationCoins > 0 || poll.participationSeriesPoints > 0) && (
                     <span>
                       Teilnahme:{" "}
@@ -336,7 +336,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                     <UserX className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-red-300">Kandidaten ausschließen</p>
-                      <p className="text-[11px] text-gray-400 leading-snug">
+                      <p className="text-xs text-gray-400 leading-snug">
                         Klick auf einen Namen schließt die Person aus dieser Umfrage aus (bereits abgegebene Stimmen für sie werden entfernt). Erneuter Klick lässt sie wieder zu.
                       </p>
                     </div>
@@ -381,7 +381,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                           {isWinner && <Trophy className="w-3 h-3 shrink-0" />}
                           {a.label}
                         </span>
-                        <span className="text-[10px] text-gray-500 shrink-0">{count} · {pct}%</span>
+                        <span className="text-xs text-gray-500 shrink-0">{count} · {pct}%</span>
                       </div>
                     </div>
                   );
@@ -393,13 +393,13 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
               {canManage && admin && (
                 <div className="pt-2 border-t border-line space-y-2.5">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Bereits abgestimmt ({votedRows.length})</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">Bereits abgestimmt ({votedRows.length})</p>
                     {votedRows.map(({ vote, user }) => {
                       const isSaving = savingFor === `${poll.id}:${vote.voterId}`;
                       return (
                         <div key={vote.voterId} className="flex items-center gap-2">
                           <span className="flex-1 text-xs text-gray-300 truncate">{userName(user)}</span>
-                          <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
+                          <span className="text-xs text-emerald-400 flex items-center gap-1 shrink-0">
                             <CheckCircle2 className="w-3 h-3" />
                             {answers.find(a => a.id === vote.targetId)?.label ?? vote.targetId}
                             {vote.isManual && <span className="text-gray-600">(manuell)</span>}
@@ -408,7 +408,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                             value=""
                             disabled={isSaving}
                             onChange={e => submitVote(poll.id, vote.voterId, e.target.value)}
-                            className="w-32 rounded-lg px-2 py-1 text-[11px] text-white bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors shrink-0 disabled:opacity-50"
+                            className="w-32 rounded-control px-2 py-1 text-xs text-fg bg-surface-2 border border-line focus:border-primary outline-none transition-colors shrink-0 disabled:opacity-50"
                           >
                             <option value="">Ändern…</option>
                             {answers.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -429,7 +429,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">
+                    <p className="text-xs text-gray-600 uppercase tracking-widest mb-1">
                       Stimme nachtragen (z.B. für wer nicht über die App abgestimmt hat)
                     </p>
                     <AddVoteForm
@@ -439,7 +439,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                       onSubmit={(voterId, targetId) => submitVote(poll.id, voterId, targetId)}
                     />
                     {notYetVoted.length === 0 && (
-                      <p className="text-[10px] text-gray-600 italic">Alle stimmberechtigten Personen haben bereits abgestimmt.</p>
+                      <p className="text-xs text-gray-600 italic">Alle stimmberechtigten Personen haben bereits abgestimmt.</p>
                     )}
                   </div>
                 </div>

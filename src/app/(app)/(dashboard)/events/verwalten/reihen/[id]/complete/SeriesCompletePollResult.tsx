@@ -18,17 +18,17 @@ export default function SeriesCompletePollResult({ ctx }: { ctx: SeriesComplete 
                     <span className="text-xs font-semibold text-violet-300">Abstimmungsergebnis nachtragen</span>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 mb-1 block">Thema</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Thema</label>
                     <input type="text" value={pollQuestion} onChange={e => setPollQuestion(e.target.value)}
                       placeholder="Abstimmungsthema" className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
                       <NumberInput min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
                       <NumberInput min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
                     </div>
                   </div>
@@ -36,7 +36,7 @@ export default function SeriesCompletePollResult({ ctx }: { ctx: SeriesComplete 
               )}
 
               <div className="space-y-2">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
                   Kandidaten ({pollEligible.length}/{participants.length}) — klicken zum Ausschließen
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -59,7 +59,7 @@ export default function SeriesCompletePollResult({ ctx }: { ctx: SeriesComplete 
               </div>
 
               <div className="space-y-1">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Ergebnis eintragen (Stimmen)</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Ergebnis eintragen (Stimmen)</p>
                 {pollEligible.map(u => (
                   <div key={u.id} className="flex items-center gap-3">
                     <Avatar u={u} size={5} />
@@ -76,7 +76,7 @@ export default function SeriesCompletePollResult({ ctx }: { ctx: SeriesComplete 
 
               {pollWinners.length > 0 && (
                 <div className="rounded-lg px-3 py-2 bg-violet-500/10 border border-violet-500/20">
-                  <p className="text-[10px] text-violet-400 font-medium">
+                  <p className="text-xs text-violet-400 font-medium">
                     Gewinner: {pollWinners.map(id => {
                       const u = participants.find(p => p.id === id);
                       return u ? userName(u) : id;

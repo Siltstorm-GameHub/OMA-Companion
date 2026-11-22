@@ -106,8 +106,8 @@ export default function AdminContentSection() {
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Beiträge verwalten</h2>
-      <p className="text-[11px] text-gray-600">Bearbeiten (inkl. Zuschnitt) und Herunterladen für Social-Media-Vorbereitung — vor allem für Marketing-Manager- und Fotograf-Beiträge gedacht.</p>
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Beiträge verwalten</h2>
+      <p className="text-xs text-gray-600">Bearbeiten (inkl. Zuschnitt) und Herunterladen für Social-Media-Vorbereitung — vor allem für Marketing-Manager- und Fotograf-Beiträge gedacht.</p>
       <div className="glass rounded-card overflow-hidden divide-y divide-line">
         {entries.length === 0 && <p className="p-4 text-xs text-gray-600">Keine Beiträge vorhanden.</p>}
         {entries.map(entry => {
@@ -124,7 +124,7 @@ export default function AdminContentSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <Icon className="w-3 h-3 text-teal-400 shrink-0" />
-                  <span className="text-[10px] text-gray-600">{KIND_LABEL[entry.kind]} · {entry.author.username ?? entry.author.name}</span>
+                  <span className="text-xs text-gray-600">{KIND_LABEL[entry.kind]} · {entry.author.username ?? entry.author.name}</span>
                 </div>
                 <p className="text-xs text-gray-300 truncate">{entry.title ?? entry.caption}</p>
               </div>
@@ -204,14 +204,14 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
     <div className="space-y-3">
       {entry.kind === "report" && (
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titel"
-          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       )}
       {entry.kind !== "report" && (
         <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Text" rows={4}
-          className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+          className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       )}
       {entry.kind === "report" && (
-        <p className="text-[11px] text-gray-600">Der Fließtext des Berichts lässt sich hier bewusst nicht ändern (nur Titel + Bild) — größere inhaltliche Korrekturen bitte mit dem Autor klären oder den Beitrag ausblenden (Button „Ausblenden“ in der Liste bzw. unter Moderation).</p>
+        <p className="text-xs text-gray-600">Der Fließtext des Berichts lässt sich hier bewusst nicht ändern (nur Titel + Bild) — größere inhaltliche Korrekturen bitte mit dem Autor klären oder den Beitrag ausblenden (Button „Ausblenden“ in der Liste bzw. unter Moderation).</p>
       )}
       {image && (
         <div className="space-y-2">

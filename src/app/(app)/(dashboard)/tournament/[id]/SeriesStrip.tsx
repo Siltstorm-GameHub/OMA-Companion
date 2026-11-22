@@ -27,7 +27,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
         ) : <span className="w-8" />}
 
         <ol className="flex items-center" aria-label={`Termin ${ctx.position} von ${ctx.total}`}>
-          {win.hiddenBefore > 0 && <li className="text-[10px] text-gray-600 mr-1">+{win.hiddenBefore}</li>}
+          {win.hiddenBefore > 0 && <li className="text-xs text-gray-600 mr-1">+{win.hiddenBefore}</li>}
           {win.items.map((e, i) => {
             const current = e.id === currentId;
             const dot = current
@@ -48,7 +48,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
               </li>
             );
           })}
-          {win.hiddenAfter > 0 && <li className="text-[10px] text-gray-600 ml-1">+{win.hiddenAfter}</li>}
+          {win.hiddenAfter > 0 && <li className="text-xs text-gray-600 ml-1">+{win.hiddenAfter}</li>}
         </ol>
 
         {ctx.next ? (

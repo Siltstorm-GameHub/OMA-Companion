@@ -33,7 +33,7 @@ const fmtDate = (d: Date) =>
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-surface-2 border border-line px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wider text-gray-500">{label}</p>
+      <p className="text-xs uppercase tracking-wider text-gray-500">{label}</p>
       <p className="text-sm text-white mt-0.5">{children}</p>
     </div>
   );
@@ -127,14 +127,14 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                   {game.discountPercent > 0 && game.priceInitialCents !== null && (
                     <span className="text-xs text-gray-500 line-through">{formatPrice(game.priceInitialCents, game.priceCurrency)}</span>
                   )}
-                  <span className="text-[11px] text-gray-400 inline-flex items-center gap-1">auf Steam <ExternalLink className="w-3 h-3" /></span>
+                  <span className="text-xs text-gray-400 inline-flex items-center gap-1">auf Steam <ExternalLink className="w-3 h-3" /></span>
                 </a>
               )}
               {game.subscriptions.length > 0 && (
                 <span className="inline-flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
                   Im Abo:
                   {game.subscriptions.map(s => (
-                    <span key={s} className="px-2 py-0.5 rounded-full bg-lime-400/10 border border-lime-400/25 text-lime-200 text-[11px]">
+                    <span key={s} className="px-2 py-0.5 rounded-full bg-lime-400/10 border border-lime-400/25 text-lime-200 text-xs">
                       {labelOf(GAME_SUBSCRIPTIONS, s) ?? s}
                     </span>
                   ))}
@@ -142,12 +142,12 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
               )}
             </div>
           )}
-          {game.aliases.length > 0 && <p className="text-[11px] text-gray-500 -mt-1">Auch bekannt als: {game.aliases.join(", ")}</p>}
+          {game.aliases.length > 0 && <p className="text-xs text-gray-500 -mt-1">Auch bekannt als: {game.aliases.join(", ")}</p>}
           {fields.description && <p className="text-sm text-gray-300 leading-relaxed">{fields.description}</p>}
           {chips.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {chips.map(c => (
-                <span key={c} className="text-[11px] px-2 py-0.5 rounded-full bg-line border border-line text-gray-300">{c}</span>
+                <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-line border border-line text-gray-300">{c}</span>
               ))}
             </div>
           )}
@@ -260,7 +260,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                   <Link href="/servers" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-line text-sm text-gray-200">
                     <Server className="w-3.5 h-3.5 text-teal-400 shrink-0" />
                     <span className="flex-1 truncate">{s.name}</span>
-                    <span className={`text-[10px] ${s.isOnline ? "text-teal-300" : "text-gray-600"}`}>{s.isOnline ? "Online" : "Offline"}</span>
+                    <span className={`text-xs ${s.isOnline ? "text-teal-300" : "text-gray-600"}`}>{s.isOnline ? "Online" : "Offline"}</span>
                   </Link>
                 </li>
               ))}
@@ -272,24 +272,24 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                     className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/15" : "hover:bg-line"}`}>
                     <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isNext ? "text-teal-300" : "text-gray-500"}`} />
                     <span className="flex-1 truncate">
-                      {isNext && <span className="text-[10px] font-semibold text-teal-300 mr-1.5">NÄCHSTES</span>}
+                      {isNext && <span className="text-xs font-semibold text-teal-300 mr-1.5">NÄCHSTES</span>}
                       {e.title}
                     </span>
-                    <span className="text-[10px] text-gray-500 shrink-0">{fmtDate(e.startAt)}</span>
+                    <span className="text-xs text-gray-500 shrink-0">{fmtDate(e.startAt)}</span>
                     <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
                   </Link>
                 </li>
                 );
               })}
               {detail.eventCount > detail.events.length && (
-                <li className="text-[11px] text-gray-500 px-2">… und {detail.eventCount - detail.events.length} weitere Events</li>
+                <li className="text-xs text-gray-500 px-2">… und {detail.eventCount - detail.events.length} weitere Events</li>
               )}
             </ul>
           )}
         </section>
       </div>
 
-      <div className="text-[11px] text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div className="text-xs text-gray-600 flex flex-wrap items-center gap-x-3 gap-y-1">
         {addedByName && <span>Hinzugefügt von {addedByName}</span>}
         {steamUrl && (
           <a href={steamUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-gray-300">

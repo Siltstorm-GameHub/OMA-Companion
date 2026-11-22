@@ -59,10 +59,10 @@ export default function DiscordChannelSelect({ value, onChange, emptyLabel = "St
           onChange={(e) => onChange(e.target.value.trim())}
           placeholder={`${emptyLabel} — Kanal-ID eingeben`}
           disabled={disabled}
-          className={`${baseCls} placeholder:text-gray-600`}
+          className={`${baseCls} placeholder:text-subtle`}
         />
         {manual && channels && channels.length > 0 && (
-          <button type="button" onClick={() => setManual(false)} className="text-[10px] text-gray-500 hover:text-gray-300 shrink-0">
+          <button type="button" onClick={() => setManual(false)} className="text-xs text-gray-500 hover:text-gray-300 shrink-0">
             Liste
           </button>
         )}
@@ -99,7 +99,7 @@ export default function DiscordChannelSelect({ value, onChange, emptyLabel = "St
         type="button"
         onClick={() => setManual(true)}
         title="Kanal-ID von Hand eingeben"
-        className="text-[10px] text-gray-500 hover:text-gray-300 shrink-0"
+        className="text-xs text-gray-500 hover:text-gray-300 shrink-0"
       >
         ID
       </button>

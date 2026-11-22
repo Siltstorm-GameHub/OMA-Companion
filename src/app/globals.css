@@ -1,21 +1,28 @@
 @import "tailwindcss";
 
 /*
- * ── Fluid base font-size ────────────────────────────────────────
- * Da Tailwind alle Abstände, Schriftgrößen und Icon-Größen in rem
- * berechnet, skaliert mit dieser einen Zeile die gesamte App mit
- * dem Viewport — Text, Icons, Padding, alles proportional.
- *
- * Breakpoints:
- *   320px  (kleines Handy)  → 13px
- *   480px  (Handy)          → ~14px
- *   768px  (Tablet)         → ~15.5px
- *  1024px  (kleiner Desktop)→ ~16.7px
- *  1280px  (Desktop)        → ~17.5px
- *  1536px+ (großer Desktop) → 18px  (Maximum)
+ * ── Fluide Grundschrift ─────────────────────────────────────────
+ * Alles ist in rem gesetzt; diese eine Zeile skaliert die App leicht mit dem Viewport.
+ * Untergrenze 14 px, damit "text-xs" (0,75 rem) auch am Handy noch ~10,5 px+ und Fließtext
+ * 14 px hat; Obergrenze 17 px, damit die Desktop-Ansicht mit Seitenleiste nicht zu groß wird.
+ *   375 px (Handy)    → 14 px
+ *   1024 px           → ~15 px
+ *   1440 px           → ~16,1 px
+ *   1920 px+          → 17 px
  */
 html {
-  font-size: clamp(13px, calc(11.5px + 0.5vw), 18px);
+  font-size: clamp(14px, calc(11.5px + 0.32vw), 17px);
+}
+
+/* Touch-Geräte: Eingabefelder mindestens 44 px hoch (Touch-Ziel), auch wenn eine Komponente
+   nur py-1.5 setzt. In @layer base, damit ausdrückliche Höhen-Utilities weiterhin gewinnen. */
+@layer base {
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="hidden"]),
+    select {
+      min-height: 2.75rem;
+    }
+  }
 }
 
 /*
@@ -377,19 +384,25 @@ select.input-glass option { background: var(--color-surface-2); }
 }
 
 
-/* ── Animations ────────────────────────────────────────────────── */
+/*
+ * ── Animationen ─────────────────────────────────────────────────────
+ * Seiteninhalte erscheinen sofort (ruhiges Dashboard, Richtung G). Die Einblend-Klassen bleiben
+ * als No-op bestehen; animiert wird nur noch, was Zustand zeigt (Live-Punkt, Lade-Spinner,
+ * Sheets/Modals, Wert-Änderungen).
+ */
+.animate-fade-in, .animate-slide-up, .animate-card-reveal { animation: none; }
+.stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .stagger-6 { animation-delay: 0ms; }
+
+/* ── Animations (Definitionen) ──────────────────────────────────── */
 @keyframes fade-in        { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0);  } }
 @keyframes fade-in-scale  { from { opacity:0; transform:scale(0.96);      } to { opacity:1; transform:scale(1);      } }
 @keyframes slide-up       { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-.animate-fade-in       { animation: fade-in 0.3s ease both; }
 .animate-fade-in-scale { animation: fade-in-scale 0.25s ease both; }
-.animate-slide-up      { animation: slide-up 0.35s cubic-bezier(0.16,1,0.3,1) both; }
 
 @keyframes card-reveal {
   0%   { opacity: 0; transform: translateY(16px); }
   100% { opacity: 1; transform: translateY(0); }
 }
-.animate-card-reveal { animation: card-reveal 0.45s cubic-bezier(0.16,1,0.3,1) both; }
 
 .stagger-1 { animation-delay:  40ms; }
 .stagger-2 { animation-delay:  80ms; }

@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
@@ -121,45 +122,68 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
 
   const days = groupLedgerByDay(txs, now, filter.only);
   const visibleDays = days.slice(0, DAYS_VISIBLE);
+  // Kleines Diagramm: verdiente Münzen der letzten 14 Tage (Tage ohne Buchung = 0)
+  const allDays = groupLedgerByDay(txs, now, "coins");
+  const earnedByKey = new Map(allDays.map(d => [d.key, d.coinsIn]));
+  const chartDays = Array.from({ length: 14 }, (_, i) => {
+    const p = getBerlinDateParts(new Date(now.getTime() - (13 - i) * 86_400_000));
+    const key = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+    return { key, day: p.day, earned: earnedByKey.get(key) ?? 0 };
+  });
+  const chartMax = Math.max(1, ...chartDays.map(d => d.earned));
   const olderDays = days.slice(DAYS_VISIBLE);
 
   return (
     <div className="px-4 pb-8 pt-0 sm:p-6 max-w-6xl mx-auto space-y-4 animate-fade-in">
       {/* ── Kontostand ── */}
-      <section aria-label="Kontostand" className="glass rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+      <section aria-label="Kontostand" className="rounded-card border border-line bg-surface p-4 sm:p-5 relative overflow-hidden">
         <div className="relative grid grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto] gap-4 items-center">
           <div>
-            <h1 className="text-[11px] font-semibold text-gray-500">Deine Münzen</h1>
-            <p className="mt-0.5 flex items-center gap-1.5 text-3xl font-black text-amber-300 tabular-nums">
+            <h1 className="text-sm font-semibold text-muted">Deine Münzen</h1>
+            <p className="mt-0.5 flex items-center gap-1.5 text-3xl font-extrabold text-coin tabular-nums">
               <CoinIcon size={24} /> <CountUp to={coins} duration={900} />
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-500">Diese Woche</p>
+            <p className="text-xs font-semibold text-gray-500">Diese Woche</p>
             <p className="mt-0.5 text-xl font-bold text-white tabular-nums">+{fmt(week.earned)}</p>
-            <p className="text-[11px] text-gray-500 truncate">
+            <p className="text-xs text-gray-500 truncate">
               {week.topSources.length > 0 ? `meist aus ${week.topSources.map((s) => SOURCE_LABELS[s]).join(" und ")}` : "seit Montag"}
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-500">Rang-Punkte</p>
+            <p className="text-xs font-semibold text-gray-500">Rang-Punkte</p>
             <p className="mt-0.5 flex items-center gap-1.5 text-xl font-bold text-teal-300 tabular-nums"><RankPointsIcon size={16} /> {fmt(rankPoints)}</p>
-            <p className="text-[11px] text-gray-500">nur für Platzierungen, zählen für die <Link href="/leaderboard" className="text-teal-400 hover:text-teal-300">Rangliste</Link></p>
+            <p className="text-xs text-gray-500">nur für Platzierungen, zählen für die <Link href="/leaderboard" className="text-teal-400 hover:text-teal-300">Rangliste</Link></p>
           </div>
           <Link href="/shop"
-            className="col-span-2 lg:col-span-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-500/25 px-4 py-2.5 text-sm font-semibold text-amber-200 hover:bg-amber-500/25 transition-colors">
+            className={buttonClasses("accent", "lg", "col-span-2 lg:col-span-1")}>
             <ShoppingBag className="w-4 h-4" /> Zum Shop
           </Link>
+        </div>
+
+        {/* Verdiente Münzen der letzten 14 Tage */}
+        <div className="mt-5 border-t border-line pt-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.06em] text-subtle">Verdient · letzte 14 Tage</p>
+          <div className="flex h-20 items-end gap-1" role="img" aria-label={`Verdiente Münzen der letzten 14 Tage, höchstens ${fmt(chartMax)} an einem Tag`}>
+            {chartDays.map((d, i) => (
+              <div key={d.key} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${d.day}.: +${fmt(d.earned)} Münzen`}>
+                <div className={`w-full rounded-t-[4px] ${d.earned > 0 ? (i === 13 ? "bg-coin" : "bg-coin/45") : "bg-line"}`}
+                  style={{ height: d.earned > 0 ? `${Math.max(8, (d.earned / chartMax) * 100)}%` : "4px" }} />
+                <span className={`text-[0.625rem] tabular-nums ${i === 13 ? "font-bold text-fg" : "text-subtle"}`}>{d.day}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-4 items-start">
         {/* ── Quellen ── */}
-        <section aria-label="So verdienst du Münzen" className="glass rounded-2xl p-4 sm:p-5">
-          <h2 className="text-sm font-semibold text-white">So verdienst du Münzen</h2>
-          <p className="text-[11px] text-gray-500">Mit deinem Stand für heute und diesen Monat.</p>
+        <section aria-label="So verdienst du Münzen" className="rounded-card border border-line bg-surface p-4 sm:p-5">
+          <h2 className="text-base font-extrabold text-fg">So verdienst du Münzen</h2>
+          <p className="text-xs text-gray-500">Mit deinem Stand für heute und diesen Monat.</p>
           <ul className="mt-2">{sources.map((s) => <SourceRow key={s.key} s={s} />)}</ul>
-          <p className="mt-3 flex gap-1.5 border-t border-line pt-3 text-[11px] text-gray-500 leading-relaxed">
+          <p className="mt-3 flex gap-1.5 border-t border-line pt-3 text-xs text-gray-500 leading-relaxed">
             <Users className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span>
               Außerdem: Spielwahl, Umfragen und Sieger-Tipps bei Events, Community-Ziele, {fmt(POINT_RULES.INVITE_MEMBER.amount)} fürs Einladen
@@ -169,15 +193,15 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
         </section>
 
         {/* ── Verlauf ── */}
-        <section aria-label="Verlauf" className="glass rounded-2xl p-4 sm:p-5">
+        <section aria-label="Verlauf" className="rounded-card border border-line bg-surface p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="text-sm font-semibold text-white">Verlauf</h2>
+            <h2 className="text-base font-extrabold text-fg">Verlauf</h2>
             <nav aria-label="Währung" className="flex gap-1">
               {FILTERS.map((f) => (
                 <Link key={f.key} href={f.key === "alle" ? "/points" : `/points?waehrung=${f.key}`} scroll={false}
                   aria-current={f.key === filter.key ? "true" : undefined}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                    f.key === filter.key ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+                  className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+                    f.key === filter.key ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-gray-300 hover:border-line-strong hover:bg-surface-2"
                   }`}>
                   {f.label}
                 </Link>

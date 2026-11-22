@@ -630,7 +630,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           }
                           setStatus(s);
                         }}
-                        className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
+                        className="text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2">
                         {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
@@ -652,7 +652,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       onChange={setDiscordChannelId}
                       emptyLabel="Standard (Kanal der Reihe, sonst News-Kanal)"
                     />
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       Bot postet Ankündigungen, Erinnerungen und Ergebnisse für dieses Event in diesen Kanal.
                     </p>
                   </div>
@@ -732,11 +732,11 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     {seriesMode === "keep" && event.seriesId && (
                       <div className="border-t border-teal-500/10 pt-3 mt-1 space-y-3">
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
                             Reihen-Konfiguration
                           </p>
                           <Link href={`/events/series/${event.seriesId}`}
-                            className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
+                            className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-400 transition-colors">
                             <ExternalLink className="w-2.5 h-2.5" /> Reihe ansehen
                           </Link>
                         </div>
@@ -757,7 +757,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <input type="checkbox" checked={propagateGame}
                               onChange={e => setPropagateGame(e.target.checked)}
                               className="rounded accent-teal-500" />
-                            <span className="text-[11px] text-gray-500">
+                            <span className="text-xs text-gray-500">
                               Spiel auf alle Events der Reihe übertragen
                             </span>
                           </label>
@@ -779,7 +779,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <input type="checkbox" checked={propagateFormat}
                               onChange={e => setPropagateFormat(e.target.checked)}
                               className="rounded accent-teal-500" />
-                            <span className="text-[11px] text-gray-500">
+                            <span className="text-xs text-gray-500">
                               Format auf alle Turniere der Reihe übertragen
                             </span>
                           </label>
@@ -820,7 +820,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             const labels = describeMonthlyModes(new Date(event.startAt));
                             return (
                               <div className="mt-2 space-y-1.5">
-                                <p className="text-[10px] text-gray-500">
+                                <p className="text-xs text-gray-500">
                                   Basierend auf dem Datum dieses Events ({formatBerlinDate(event.startAt)}):
                                 </p>
                                 {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
@@ -873,7 +873,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                     setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r));
                                   }}
                                   placeholder="Stat-Name (z.B. Kills)"
-                                  className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
+                                  className="min-w-0 flex-1 rounded-control px-3 py-2 text-sm text-fg outline-none bg-surface-2 border border-line focus:border-primary transition-colors"
                                 />
                                 <NumberInput
                                   min={0}
@@ -905,7 +905,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
                           {/* MVP + Gewinner-Defaults */}
                           <div className="border-t border-line pt-3 space-y-2">
-                            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Event-Abschluss Defaults</p>
+                            <p className="text-xs text-gray-600 uppercase tracking-widest font-semibold">Event-Abschluss Defaults</p>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-400 w-40 shrink-0">MVP-Stat-Feld</span>
                               <input
@@ -966,7 +966,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                       </button>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                      <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                      <label className="flex items-center gap-1.5 text-xs text-gray-400">
                                         Teilnahmen
                                         <NumberInput
                                           min={0}
@@ -978,11 +978,11 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                               + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (r.stats[sr.field] ?? 0) * sr.pointsPer, 0);
                                             return { ...r, participations: newPart, points: calcPts };
                                           }))}
-                                          className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700"
+                                          className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700"
                                         />
                                       </label>
                                       {statRows.filter(s => s.field.trim()).map(s => (
-                                        <label key={s.field} className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                        <label key={s.field} className="flex items-center gap-1.5 text-xs text-gray-400">
                                           {s.field}
                                           <NumberInput
                                             min={0}
@@ -994,14 +994,14 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                                 + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (newStats[sr.field] ?? 0) * sr.pointsPer, 0);
                                               return { ...r, stats: newStats, points: calcPts };
                                             }))}
-                                            className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700"
+                                            className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700"
                                           />
                                         </label>
                                       ))}
                                       {/* Auto-berechnete Punkte */}
-                                      <label className="flex items-center gap-1.5 text-[11px] text-teal-500">
+                                      <label className="flex items-center gap-1.5 text-xs text-teal-500">
                                         Punkte (auto)
-                                        <span className="w-16 rounded px-1.5 py-0.5 text-[11px] text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                                        <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
                                           {row.points}
                                         </span>
                                       </label>
@@ -1117,7 +1117,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         ))}
                       </div>
                       {tournament && (tmtPlayHomeAway ? "liga" : tmtFormat) !== tournament.format && (
-                        <p className="text-[11px] text-amber-500/80 mt-2">
+                        <p className="text-xs text-amber-500/80 mt-2">
                           ⚠ Format wird geändert von „{tmtFormatLabel(tournament.format)}" → „{tmtFormatLabel(tmtPlayHomeAway ? "liga" : tmtFormat)}". Bestehende Matches bleiben erhalten.
                         </p>
                       )}
@@ -1218,9 +1218,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <div className="flex items-center justify-between">
                               <p className="text-xs text-gray-400">Teilnehmer <span className="text-amber-400 font-semibold ml-1">({tmtSelected.length} von {allUsers.length})</span></p>
                               <div className="flex gap-2">
-                                <button type="button" onClick={() => setTmtSelected(allUsers.map(u => u.id))} className="text-[11px] text-gray-500 hover:text-white">Alle</button>
+                                <button type="button" onClick={() => setTmtSelected(allUsers.map(u => u.id))} className="text-xs text-gray-500 hover:text-white">Alle</button>
                                 <span className="text-gray-700">·</span>
-                                <button type="button" onClick={() => setTmtSelected([])} className="text-[11px] text-gray-500 hover:text-white">Keine</button>
+                                <button type="button" onClick={() => setTmtSelected([])} className="text-xs text-gray-500 hover:text-white">Keine</button>
                               </div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1">
@@ -1315,7 +1315,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
                         <input type="text" placeholder="User suchen…" value={search}
                           onChange={e => setSearch(e.target.value)}
-                          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-2 placeholder:text-gray-600" />
+                          className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control pl-8 pr-3 py-2 placeholder:text-subtle" />
                       </div>
                       {bulkSelected.length > 0 && (
                         <button onClick={bulkAdd} disabled={loading}
@@ -1329,7 +1329,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     {/* ── Angemeldete Teilnehmer ── */}
                     {registeredUsers.length > 0 && (
                       <div>
-                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-green-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
                           Angemeldet ({registeredUsers.length})
                         </p>
@@ -1358,13 +1358,13 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     {unregisteredUsers.length > 0 && (
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-gray-600 inline-block" />
                             Nicht angemeldet ({unregisteredUsers.length})
                           </p>
                           <button
                             onClick={() => setBulkSelected(unregisteredUsers.map(u => u.id))}
-                            className="text-[10px] text-gray-500 hover:text-white transition-colors">
+                            className="text-xs text-gray-500 hover:text-white transition-colors">
                             Alle auswählen
                           </button>
                         </div>

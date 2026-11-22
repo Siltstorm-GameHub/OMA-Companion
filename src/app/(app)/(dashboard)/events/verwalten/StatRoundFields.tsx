@@ -39,7 +39,7 @@ export default function StatRoundFields({
         </div>
       </div>
       {taken && (
-        <p className="text-[11px] text-amber-400/90">
+        <p className="text-xs text-amber-400/90">
           Runde {round} gibt es schon — passt, wenn parallel gespielt wurde (dann Zusatz z.B. „Tisch B“ eintragen).
         </p>
       )}

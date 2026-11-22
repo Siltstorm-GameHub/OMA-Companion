@@ -68,101 +68,92 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
   const finishedEvents = squadEvents.filter(e => e.status === "finished");
 
   return (
-    <div className="px-4 sm:px-6 py-5 max-w-3xl mx-auto space-y-5">
-      <Link href="/squads" className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+    <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-6">
+      <Link href="/squads" className="inline-flex min-h-9 items-center gap-1 text-sm text-muted hover:text-fg transition-colors">
         <ChevronLeft className="w-4 h-4" /> Squads
       </Link>
 
-      {squad.coverImageUrl ? (
-        <div className="relative h-36 sm:h-44 rounded-xl overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}
-          <img src={squad.coverImageUrl} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.92), rgba(13,13,15,0.15) 60%)" }} />
-          <div className="absolute bottom-3 left-4 right-4 flex items-center gap-3">
-            <SeriesIcon name={squad.icon} className="w-7 h-7 shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-xl font-black text-white truncate">{squad.name}</h1>
-              {squad.game && <p className="text-sm text-gray-300">{squad.game}</p>}
-            </div>
-            {squad.hidden && (
-              <span className="flex items-center gap-1 text-[10px] text-gray-300 ml-auto shrink-0">
-                <EyeOff className="w-3 h-3" /> ausgeblendet
-              </span>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <SeriesIcon name={squad.icon} className="w-8 h-8 shrink-0" />
-          <div>
-            <h1 className="text-xl font-black text-white">{squad.name}</h1>
-            {squad.game && <p className="text-sm text-gray-500">{squad.game}</p>}
-          </div>
-          {squad.hidden && (
-            <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
-              <EyeOff className="w-3 h-3" /> ausgeblendet
-            </span>
+      {/* Kopf: Banner (Cover oder ruhige Fläche) mit Squad-Logo, Name und Spiel */}
+      <section aria-label={squad.name} className="relative overflow-hidden rounded-card border border-line bg-surface">
+        <div className="relative h-36 sm:h-48 bg-surface-2">
+          {squad.coverImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention
+            <img src={squad.coverImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
         </div>
-      )}
+        <div className="relative -mt-10 flex items-end gap-4 px-4 pb-4 sm:px-6 sm:pb-5">
+          <span className="grid size-20 shrink-0 place-items-center rounded-card border-4 border-surface bg-surface-2">
+            <SeriesIcon name={squad.icon} className="w-10 h-10" />
+          </span>
+          <div className="min-w-0 flex-1 pb-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-fg truncate">{squad.name}</h1>
+            <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+              {squad.game && <span>{squad.game}</span>}
+              <span>{squad.memberships.length} {squad.memberships.length === 1 ? "Mitglied" : "Mitglieder"}</span>
+              {squad.hidden && <span className="inline-flex items-center gap-1 text-subtle"><EyeOff className="w-3.5 h-3.5" /> ausgeblendet</span>}
+            </p>
+          </div>
+        </div>
+      </section>
 
       {gameInfo && <GameListInfo info={gameInfo} />}
 
       {squad.description && (
-        <p className="text-sm text-gray-400 leading-relaxed">{squad.description}</p>
+        <p className="text-base text-muted leading-relaxed max-w-3xl">{squad.description}</p>
       )}
 
-      <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
-        <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5" /> Roster ({squad.memberships.length})
-        </p>
+      <section aria-label="Roster" className="space-y-3">
+        <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary-fg" /> Roster <span className="text-sm font-semibold text-subtle">{squad.memberships.length}</span>
+        </h2>
 
         {canManage ? (
           <SquadRosterManager squadId={squad.id} memberships={squad.memberships} allUsers={allUsers} />
         ) : (
-          <div className="space-y-1.5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {squad.memberships.map(m => (
-              <div key={m.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-2 border border-line">
+              <Link key={m.id} href={`/profile/${m.user.id}`} className="flex min-h-16 items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 hover:border-line-strong hover:bg-surface-2 transition-colors">
                 <Avatar u={m.user} />
-                <span className="text-sm text-white flex-1 truncate">{userName(m.user)}</span>
+                <span className="text-sm font-bold text-fg flex-1 truncate">{userName(m.user)}</span>
                 {m.role === "captain" && (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 shrink-0">
-                    <Crown className="w-3 h-3" /> Captain
+                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-400 shrink-0">
+                    <Crown className="w-3.5 h-3.5" /> Captain
                   </span>
                 )}
-              </div>
+              </Link>
             ))}
             {squad.memberships.length === 0 && (
-              <p className="text-sm text-gray-600 text-center py-4">Noch keine Mitglieder.</p>
+              <p className="text-sm text-muted text-center py-4 col-span-full">Noch keine Mitglieder.</p>
             )}
           </div>
         )}
-      </div>
+      </section>
 
       {(squadEvents.length > 0 || canManage) && (
-        <div className="rounded-xl border border-line bg-surface-2 p-4 space-y-3">
+        <section aria-label="Events" className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest flex items-center gap-1.5">
-              <CalendarDays className="w-3.5 h-3.5" /> Events
-            </p>
+            <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary-fg" /> Events
+            </h2>
             {canManage && (
               <Link href={`/events/verwalten/neu?squadId=${squad.id}`}
-                className="flex items-center gap-1 text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
-                <Plus className="w-3 h-3" /> Neues Event
+                className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-primary-fg hover:text-fg transition-colors">
+                <Plus className="w-4 h-4" /> Neues Event
               </Link>
             )}
           </div>
-          <div className="space-y-1.5">
+          <div className="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
             {[...upcomingEvents, ...finishedEvents].map(e => (
               <div key={e.id}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-2 border border-line hover:border-line-strong transition-colors">
+                className="flex min-h-14 items-center gap-3 px-4 py-2.5 hover:bg-surface-2 transition-colors">
                 <Link href={`/tournament/${e.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-sm text-white flex-1 truncate">{e.title}</span>
+                  <span className="text-sm font-semibold text-fg flex-1 truncate">{e.title}</span>
                   {e.game && <span className="text-xs text-gray-500 shrink-0">{e.game}</span>}
                   <span className="text-xs text-gray-600 shrink-0 tabular-nums">
                     {formatBerlinDate(e.startAt, { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-line text-gray-400 shrink-0">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-line text-gray-400 shrink-0">
                     {e.hidden ? "Ausgeblendet" : EVENT_STATUS_LABEL[e.status] ?? e.status}
                   </span>
                 </Link>
@@ -175,10 +166,10 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
               </div>
             ))}
             {squadEvents.length === 0 && (
-              <p className="text-sm text-gray-600 text-center py-4">Noch keine Events.</p>
+              <p className="text-sm text-muted text-center py-4">Noch keine Events.</p>
             )}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

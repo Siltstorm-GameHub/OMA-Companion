@@ -290,10 +290,10 @@ export default function FfaView({
       {/* ── Gesamtranking ───────────────────────────────────────────────── */}
       {ranked.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
             {isLigaPunkteLive && (
-              <span className="flex items-center gap-1.5 normal-case tracking-normal text-[10px] font-medium text-teal-400" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
+              <span className="flex items-center gap-1.5 normal-case tracking-normal text-xs font-medium text-teal-400" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500" />
@@ -306,7 +306,7 @@ export default function FfaView({
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[300px]">
                 <thead>
-                  <tr className="border-b border-line text-[10px] text-gray-500 uppercase tracking-wider">
+                  <tr className="border-b border-line text-xs text-gray-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
                     {(!isAvg || showAvgFieldCols) && statFields.map(f => (
@@ -359,35 +359,35 @@ export default function FfaView({
                             )}
                             {isLigaPunkteLive && projectedWinnerIds.includes(r.userId) && (
                               <span
-                                className="inline-flex items-center gap-1 text-[10px] font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-full shrink-0"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-full shrink-0"
                                 title="Führt aktuell nach Eventpunkten — würde bei Abschluss jetzt den Sieger-Bonus in Tabellenpunkten bekommen"
                               >
                                 <Trophy className="w-2.5 h-2.5" /> aktuell vorn
                               </span>
                             )}
                             {excludedSet.has(r.userId) && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
                                 Ungewertet
                               </span>
                             )}
                             {votedSet.has(r.userId) && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                                 <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
                               </span>
                             )}
                             {isPollWinner && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                                 <Vote className="w-2.5 h-2.5" />{pollLabel ?? "Poll"}
                               </span>
                             )}
                             {wonPollLabels.map(label => (
-                              <span key={label} className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span key={label} className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                                 <Vote className="w-2.5 h-2.5" />{label}
                               </span>
                             ))}
                             {dominionResultByUser[r.userId] && (
                               <span
-                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full shrink-0"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full shrink-0"
                                 title={dominionResultByUser[r.userId].bonusAwarded
                                   ? "Dominion Bonus hier ausgelöst!"
                                   : `Dominion-Streak hier +1${dominionThreshold ? ` — jetzt bei ${dominionResultByUser[r.userId].streakAfter} von ${dominionThreshold}` : ""}`}
@@ -492,7 +492,7 @@ export default function FfaView({
               </table>
             </div>
           </div>
-          <p className="text-[10px] text-gray-600 mt-1.5 px-1">
+          <p className="text-xs text-gray-600 mt-1.5 px-1">
             {isAvg
               ? <>Sortiert nach kombiniertem Durchschnitt aller Felder ({avgWinnerDirection === "low" ? "niedrigster" : "höchster"} Ø gewinnt) · nicht eingetragene Werte zählen nicht als 0</>
               : hasTurnierpunkte
@@ -514,7 +514,7 @@ export default function FfaView({
       {/* ── Ausstehende Matches ─────────────────────────────────────────── */}
       {upcomingMatches.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+          <h2 className="text-base font-extrabold text-fg mb-3">
             Ausstehende Runden
           </h2>
           <div className="space-y-2">
@@ -523,10 +523,10 @@ export default function FfaView({
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
                     <p className="text-sm font-bold text-white">{getBerlinDateParts(match.scheduledAt).day}</p>
-                    <p className="text-[10px] text-gray-500 uppercase">
+                    <p className="text-xs text-gray-500 uppercase">
                       {formatBerlinDate(match.scheduledAt, { month: "short" })}
                     </p>
-                    <p className="text-[10px] text-gray-600">
+                    <p className="text-xs text-gray-600">
                       {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
@@ -563,7 +563,7 @@ export default function FfaView({
       {/* ── Gespielte Matches mit Ergebnissen ───────────────────────────── */}
       {playedMatches.length > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
+          <h2 className="text-base font-extrabold text-fg mb-3">
             Ergebnisse
           </h2>
           <div className="space-y-2">
@@ -598,7 +598,7 @@ export default function FfaView({
                         {statRoundNote(match) && <span className="text-gray-400 font-normal"> · {statRoundNote(match)}</span>}
                       </span>
                       {match.resultConfirmed === false && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-900/30 text-amber-300 shrink-0"
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-amber-900/30 text-amber-300 shrink-0"
                           title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>
                       )}
                       {match.playedAt && (
@@ -630,7 +630,7 @@ export default function FfaView({
                     <div className="border-t border-line overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-line text-[10px] text-gray-500 uppercase tracking-wider bg-surface-2">
+                          <tr className="border-b border-line text-xs text-gray-500 uppercase tracking-wider bg-surface-2">
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
                             {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>

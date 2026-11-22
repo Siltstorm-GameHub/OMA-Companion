@@ -70,7 +70,7 @@ export default function OverlayClipsAdmin() {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-white">Overlay-Clips</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Overlay-Clips</h1>
         <p className="text-sm text-gray-500 mt-1">
           Clips im Community-Clip-Loop der OBS-Overlays (Intro, Clip-Pause, Outro). Es laufen Clips aller Mitglieder,
           die sich nicht abgemeldet haben. Ausgeschlossene Clips laufen bei niemandem mehr.
@@ -98,7 +98,7 @@ export default function OverlayClipsAdmin() {
                 {data.matureGames.map(g => (
                   <span key={g.gameId} className="flex items-center gap-1.5 text-xs pl-2.5 pr-1 py-1 rounded-lg border border-rose-500/30 bg-rose-500/5 text-rose-200">
                     {g.name}
-                    <span className="text-[10px] text-rose-200/50">{g.source === "admin" ? "manuell" : "automatisch"}</span>
+                    <span className="text-xs text-rose-200/50">{g.source === "admin" ? "manuell" : "automatisch"}</span>
                     <button
                       onClick={() => put({ gameId: g.gameId, mature: false }, `game-${g.gameId}`)}
                       disabled={busy === `game-${g.gameId}`}
@@ -145,10 +145,10 @@ export default function OverlayClipsAdmin() {
                     : <span className="w-24 aspect-video rounded-md shrink-0 bg-black/40" />}
                   <a href={`https://clips.twitch.tv/${c.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-teal-300">
                     <span className="block text-sm text-gray-200 truncate">{c.title}</span>
-                    <span className="block text-[11px] text-gray-500">
+                    <span className="block text-xs text-gray-500">
                       {c.channel} · {c.views.toLocaleString("de-DE")} Aufrufe · {c.durationSec} s{c.game ? ` · ${c.game}` : ""}
                     </span>
-                    {c.restriction && <span className="block text-[11px] text-rose-300">{RESTRICTION_LABEL[c.restriction]}</span>}
+                    {c.restriction && <span className="block text-xs text-rose-300">{RESTRICTION_LABEL[c.restriction]}</span>}
                   </a>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {c.gameId && c.restriction !== "game" && (

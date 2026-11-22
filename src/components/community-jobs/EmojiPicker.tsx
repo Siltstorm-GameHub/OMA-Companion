@@ -47,7 +47,7 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
   return (
     <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2" role="dialog" aria-label="Emoji auswählen">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex gap-1 text-[11px] font-semibold" role="tablist">
+        <div className="flex gap-1 text-xs font-semibold" role="tablist">
           <button role="tab" aria-selected={tab === "standard"} onClick={() => setTab("standard")}
             className={`px-2.5 py-1 rounded-md ${tab === "standard" ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}>Standard</button>
           {hasServer && (
@@ -62,7 +62,7 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
         <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
           {UNICODE_GROUPS.map(g => (
             <div key={g.label} className="space-y-1">
-              <p className="text-[10px] text-gray-500">{g.label}</p>
+              <p className="text-xs text-gray-500">{g.label}</p>
               <div className="flex flex-wrap gap-0.5">
                 {g.emojis.map(e => (
                   <button key={e} onClick={() => onPick(e)} aria-label={e}
@@ -75,9 +75,9 @@ export default function EmojiPanel({ onPick, onClose }: Props) {
       ) : (
         <div className="space-y-1.5">
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Server-Emoji suchen…" aria-label="Server-Emoji suchen"
-            className="w-full bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
           <div className="max-h-48 overflow-y-auto flex flex-wrap gap-0.5 pr-1">
-            {filteredServer.length === 0 && <p className="text-[11px] text-gray-600 p-1">Kein Emoji gefunden.</p>}
+            {filteredServer.length === 0 && <p className="text-xs text-gray-600 p-1">Kein Emoji gefunden.</p>}
             {filteredServer.map(e => (
               <button key={e.id} onClick={() => onPick(customEmojiToken(e))} title={`:${e.name}:`} aria-label={`:${e.name}:`}
                 className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-line transition-colors">

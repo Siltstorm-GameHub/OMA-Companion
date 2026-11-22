@@ -59,7 +59,7 @@ export default function MultiChatPanel({ channels, activeChannel = null }: { cha
         </div>
       )}
       {tab !== "all" && (
-        <p className="px-3 py-1.5 text-[11px] text-gray-500 border-t border-line shrink-0">
+        <p className="px-3 py-1.5 text-xs text-gray-500 border-t border-line shrink-0">
           Zum Schreiben im Browser bei Twitch angemeldet sein.
         </p>
       )}
@@ -110,7 +110,7 @@ function CombinedChat({ messages, byLogin, status }: { messages: ChatMessage[]; 
           return (
             <div key={m.id} className="break-words">
               <span
-                className="inline-block mr-1.5 px-1 rounded text-[10px] font-semibold align-middle"
+                className="inline-block mr-1.5 px-1 rounded text-xs font-semibold align-middle"
                 style={{ background: `${ch?.color ?? "#64748b"}33`, color: ch?.color ?? "#94a3b8" }}
                 title={`Chat von ${ch?.name ?? m.channel}`}
               >

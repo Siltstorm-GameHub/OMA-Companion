@@ -27,7 +27,7 @@ export interface IdeaPrefill {
   title?: string; body?: string; link?: string; linkLabel?: string; eventId?: string; reportId?: string; imageUrl?: string;
 }
 
-const FIELD = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const FIELD = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -192,11 +192,11 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={IDEA_TITLE_MAX} placeholder="Titel deiner Idee" className={FIELD} />
       {similar.length > 0 && (
         <div className="rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-2.5 space-y-1">
-          <p className="text-[11px] text-amber-400">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
+          <p className="text-xs text-amber-400">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
           {similar.map(s => (
             <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-gray-200 hover:text-teal-300 transition-colors">
               <span className="truncate">{s.title}</span>
-              <span className="shrink-0 text-[10px] text-gray-500">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
+              <span className="shrink-0 text-xs text-gray-500">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
             </Link>
           ))}
         </div>
@@ -247,13 +247,13 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
       ) : (
         <>
           {area("body", 6, "Beschreibung — Formatierung: **fett**, _kursiv_, - Listen", { maxLength: IDEA_BODY_MAX, resize: "resize-y" })}
-          {prefill?.link && <p className="text-[11px] text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
+          {prefill?.link && <p className="text-xs text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
         </>
       )}
 
       {/* Bilder / Mockups */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Bilder &amp; Mockups (optional, bis zu {IDEA_MAX_IMAGES})</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Bilder &amp; Mockups (optional, bis zu {IDEA_MAX_IMAGES})</p>
         <div className="flex flex-wrap items-center gap-2">
           {images.map(u => (
             <span key={u} className="relative">
@@ -302,7 +302,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
                   <img src={a.url} alt="" className="w-full h-14 object-cover" />
                 </button>
               ))}
-              {library.length === 0 && <p className="col-span-full text-[11px] text-gray-600">Nichts gefunden.</p>}
+              {library.length === 0 && <p className="col-span-full text-xs text-gray-600">Nichts gefunden.</p>}
             </div>
           </div>
         )}
@@ -310,9 +310,9 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
 
       {/* Steam-Spiel */}
       <div className="space-y-1.5">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Spiel auf Steam (optional)</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Spiel auf Steam (optional)</p>
         <input value={steamInput} onChange={e => setSteamInput(e.target.value)} placeholder="Steam-Store-Link, z.B. https://store.steampowered.com/app/252950" className={FIELD} />
-        {gameError && <p className="text-[11px] text-amber-400">{gameError}</p>}
+        {gameError && <p className="text-xs text-amber-400">{gameError}</p>}
         {game && (
           <div className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2">
             {game.image && (
@@ -321,7 +321,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
             )}
             <span className="min-w-0 text-xs">
               <span className="block font-semibold text-gray-100 truncate">{game.name}</span>
-              <span className="block text-[11px] text-gray-500">
+              <span className="block text-xs text-gray-500">
                 {[game.price, game.players != null ? `${game.players.toLocaleString("de-DE")} spielen gerade` : null, game.communityEvents > 0 ? `in der Community gespielt (${game.communityEvents} Events)` : null].filter(Boolean).join(" · ")}
               </span>
             </span>
@@ -329,7 +329,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         )}
       </div>
 
-      {(prefill?.eventId || prefill?.reportId) && <p className="text-[11px] text-gray-500">Die Idee wird mit {prefill.eventId ? "dem Event" : "dem Bericht"} verknüpft.</p>}
+      {(prefill?.eventId || prefill?.reportId) && <p className="text-xs text-gray-500">Die Idee wird mit {prefill.eventId ? "dem Event" : "dem Bericht"} verknüpft.</p>}
 
       <div className="flex justify-end">
         <Button loading={busy} disabled={!canSubmit || uploading} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>

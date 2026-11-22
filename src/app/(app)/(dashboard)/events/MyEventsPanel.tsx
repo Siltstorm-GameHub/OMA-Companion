@@ -46,7 +46,7 @@ export default async function MyEventsPanel({ userId }: { userId: string; isMode
             const asSpectator = e.registrations.find(r => r.userId === userId)?.role === "spectator";
             return (
               <EventCard key={e.id} ev={card}
-                extra={asSpectator ? <span className="text-[11px] text-gray-400">Als Zuschauer angemeldet</span> : undefined}
+                extra={asSpectator ? <span className="text-xs text-gray-400">Als Zuschauer angemeldet</span> : undefined}
                 actions={<EventCardActions ev={e} card={card} viewer={viewer} userId={userId} />} />
             );
           })}

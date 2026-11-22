@@ -202,7 +202,7 @@ export default function RegisterButton({
         </button>
         {burst > 0 && !!coins && registered && (
           <span key={burst} aria-hidden="true"
-            className="pointer-events-none absolute -top-1 left-1/2 whitespace-nowrap text-[11px] font-bold text-amber-400 value-delta-pop">
+            className="pointer-events-none absolute -top-1 left-1/2 whitespace-nowrap text-xs font-bold text-amber-400 value-delta-pop">
             +{coins} nach dem Event
           </span>
         )}
@@ -210,15 +210,15 @@ export default function RegisterButton({
 
       {registered && spectatorSwitch && !justRegistered && (
         <button type="button" onClick={switchToSpectator} disabled={loading}
-          className="text-[11px] text-gray-500 hover:text-gray-300 disabled:opacity-50">
+          className="text-xs text-gray-500 hover:text-gray-300 disabled:opacity-50">
           Lieber zuschauen
         </button>
       )}
       {justRegistered && checkIn && (
-        <span className="text-[10px] text-amber-300/90">Check-in: ab 30 Min. vor Start „Bin bereit“ drücken.</span>
+        <span className="text-xs text-amber-300/90">Check-in: ab 30 Min. vor Start „Bin bereit“ drücken.</span>
       )}
       {justRegistered && !!coins && (
-        <span className="text-[10px] text-gray-500">Die Münzen gibt es nach dem Event, wenn du dabei warst.</span>
+        <span className="text-xs text-gray-500">Die Münzen gibt es nach dem Event, wenn du dabei warst.</span>
       )}
       {justRegistered && discordEventUrl && (
         <a

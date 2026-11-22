@@ -968,23 +968,23 @@ export default function TournamentManager({
                 <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
               </span>
             )}
-            {isByeMatch && <span className="text-[10px] text-gray-500">Freilos</span>}
-            {match.walkover && <span className="text-[10px] text-gray-400" title="Gegner nicht angetreten">kampflos</span>}
+            {isByeMatch && <span className="text-xs text-gray-500">Freilos</span>}
+            {match.walkover && <span className="text-xs text-gray-400" title="Gegner nicht angetreten">kampflos</span>}
             {isPlayed && match.resultConfirmed === false && !isByeMatch && (
               <>
-                <span className="text-[10px] text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt — Punkte gibt es erst nach der Bestätigung">vorläufig</span>
+                <span className="text-xs text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt — Punkte gibt es erst nach der Bestätigung">vorläufig</span>
                 <button onClick={() => confirmProvisional(match.id)} disabled={loading}
-                  className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300 hover:bg-teal-500/20">
+                  className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 bg-teal-500/10 px-1.5 py-0.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20">
                   Bestätigen
                 </button>
               </>
             )}
-            {isLive && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LIVE</span>}
+            {isLive && <span className="text-xs font-bold text-red-400 animate-pulse">● LIVE</span>}
             {/* Live-Markierung als beschrifteter Schalter (Turnierseite & Overlay) */}
             {!isPlayed && p1 && p2 && (
               <button onClick={() => setLive(match.id, !isLive)} disabled={loading}
                 title={isLive ? "Live-Markierung beenden" : "Als „läuft gerade“ markieren (Turnierseite & Overlay)"}
-                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
+                className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold transition-colors ${
                   isLive ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-gray-700 text-gray-500 hover:text-red-300 hover:border-red-500/40"
                 }`}>
                 {isLive ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />} Live
@@ -992,7 +992,7 @@ export default function TournamentManager({
             )}
             {isEditing && (
               <button onClick={() => cancelEdit(match.id)} disabled={loading}
-                className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 px-1.5 py-0.5 text-[10px] font-semibold text-teal-300">
+                className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 px-1.5 py-0.5 text-xs font-semibold text-teal-300">
                 <X className="w-3 h-3" /> Abbrechen
               </button>
             )}
@@ -1056,7 +1056,7 @@ export default function TournamentManager({
 
         {/* Rückspiel: Gesamtergebnis */}
         {match.leg === 2 && (
-          <div className="px-3 py-1.5 bg-gray-800/40 border-t border-gray-700 text-[11px] text-gray-400">
+          <div className="px-3 py-1.5 bg-gray-800/40 border-t border-gray-700 text-xs text-gray-400">
             {aggregate
               ? <>Hinspiel {aggregate.first.score1 ?? 0}:{aggregate.first.score2 ?? 0} · <span className="text-white font-medium">Gesamt {userName(p1 ?? { id: "", name: "?", username: null, image: null })} {aggregate.g1}:{aggregate.g2} {userName(p2 ?? { id: "", name: "?", username: null, image: null })}</span>
                   {isPlayed && match.winnerId && <> · weiter: {userName((match.winnerId === match.player1Id ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })}</>}</>
@@ -1141,9 +1141,9 @@ export default function TournamentManager({
         {matchLog && (
           <div className="px-3 py-2 bg-gray-900/60 border-t border-gray-700 space-y-1">
             {matchLog === "loading" ? (
-              <p className="text-[11px] text-gray-500">Lädt…</p>
+              <p className="text-xs text-gray-500">Lädt…</p>
             ) : matchLog.length === 0 ? (
-              <p className="text-[11px] text-gray-500">Noch keine Einträge.</p>
+              <p className="text-xs text-gray-500">Noch keine Einträge.</p>
             ) : matchLog.map(entry => {
               const describe = (st: MatchLogEntry["after"]) => {
                 if (!st || !st.played) return "offen";
@@ -1152,7 +1152,7 @@ export default function TournamentManager({
                 return [score, winner ? `Sieger ${userName(winner)}` : "Unentschieden"].filter(Boolean).join(" · ");
               };
               return (
-                <p key={entry.id} className="text-[11px] text-gray-400">
+                <p key={entry.id} className="text-xs text-gray-400">
                   <span className="text-gray-500">{fmtDate(entry.createdAt)}</span> · {entry.actor} ·{" "}
                   {entry.action === "reset" ? "zurückgesetzt" : `${describe(entry.before)} → ${describe(entry.after)}`}
                 </p>
@@ -1208,7 +1208,7 @@ export default function TournamentManager({
                       {/* Punkt 2: Werte des vorherigen Matches übernehmen (gleiche Teilnehmer über mehrere Runden) */}
                       {matchIdx > 0 && (
                         <button type="button" onClick={() => copyFromPreviousMatch(match.id)}
-                          className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors">
+                          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors">
                           <RefreshCw className="w-3 h-3" /> Werte aus vorherigem Match übernehmen
                         </button>
                       )}
@@ -1241,7 +1241,7 @@ export default function TournamentManager({
                             {addable.length > 0 && (
                               <select value="" disabled={loading}
                                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
-                                className="text-xs bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-300">
+                                className="text-xs bg-surface-2 border border-line rounded-control px-2 py-1 text-gray-300">
                                 <option value="">+ Spieler hinzufügen…</option>
                                 {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
                               </select>
@@ -1285,7 +1285,7 @@ export default function TournamentManager({
                                   Team B gewinnt
                                 </button>
                               </div>
-                              <p className="text-[11px] text-amber-500/80">
+                              <p className="text-xs text-amber-500/80">
                                 Team-Modus aktiv — jeder Spieler muss unten einem Team zugewiesen sein, bevor du speicherst.
                               </p>
                             </div>
@@ -1302,7 +1302,7 @@ export default function TournamentManager({
                           );
                         })()}
                         {trackPlacement && placementPoints && (
-                          <p className="text-[11px] text-gray-500 mb-2">
+                          <p className="text-xs text-gray-500 mb-2">
                             Platzierung dieser Runde → Punkte: {Object.entries(placementPoints)
                               .sort(([a], [b]) => Number(a) - Number(b))
                               .map(([place, pts]) => `Platz ${place} = ${pts}`).join(" · ")}
@@ -1356,7 +1356,7 @@ export default function TournamentManager({
                                                 }));
                                               }}
                                               disabled={!entry.userId}
-                                              className={`w-6 h-6 rounded text-[10px] font-bold border transition-colors disabled:opacity-30 ${
+                                              className={`w-6 h-6 rounded text-xs font-bold border transition-colors disabled:opacity-30 ${
                                                 entryTeam === team
                                                   ? team === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-rose-600 border-rose-500 text-white"
                                                   : "bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500"
@@ -1464,7 +1464,7 @@ export default function TournamentManager({
           {label}
         </button>
       ))}
-      <span className="ml-auto text-[11px] text-gray-600">{duelView === "tree" ? "Paarung antippen zum Eintragen" : "Alle Matches nach Runde"}</span>
+      <span className="ml-auto text-xs text-gray-600">{duelView === "tree" ? "Paarung antippen zum Eintragen" : "Alle Matches nach Runde"}</span>
     </div>
   );
   const treeView = showTree && tree && (
@@ -1473,7 +1473,7 @@ export default function TournamentManager({
         selectedKey={treeSlot?.key ?? null} onSelect={k => setTreeSel(cur => cur === k ? null : k)} />
       {treeSlot && (
         <section aria-label="Gewählte Paarung" className="space-y-2">
-          <p className="flex items-center gap-2 text-[11px] text-gray-500">
+          <p className="flex items-center gap-2 text-xs text-gray-500">
             <span className="min-w-0 flex-1">{treeSlot.key === "third" ? "Spiel um Platz 3" : tree.columns.find(c => c.round === treeSlot.round)?.label}
               {treeSlot.matches.length > 1 && " · Hin- und Rückspiel"}</span>
             <button type="button" onClick={() => setTreeSel(null)} className="text-gray-500 hover:text-gray-300">Schließen</button>
@@ -1481,7 +1481,7 @@ export default function TournamentManager({
           <div className={`grid gap-2 ${treeSlot.matches.length > 1 ? "md:grid-cols-2" : ""}`}>
             {treeSlot.matches.map(m => (
               <div key={m.id} className="space-y-1">
-                {treeSlot.matches.length > 1 && <p className="text-[11px] text-gray-500">{m.leg === 2 ? "Rückspiel" : "Hinspiel"}</p>}
+                {treeSlot.matches.length > 1 && <p className="text-xs text-gray-500">{m.leg === 2 ? "Rückspiel" : "Hinspiel"}</p>}
                 {renderDuelCard(m, treeAllowDraw(m))}
               </div>
             ))}
@@ -1494,11 +1494,11 @@ export default function TournamentManager({
   // Auslosung: zufällig oder gesetzt (K.O.-Baum und Gruppen)
   const seedingToggle = (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-gray-500">Auslosung:</span>
+      <span className="text-xs text-gray-500">Auslosung:</span>
       {([["random", "Zufällig"], ["rank", "Nach Rangpunkten setzen"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setSeeding(k)} aria-pressed={seeding === k}
           title={k === "rank" ? "Die Stärksten (Rangpunkte) treffen erst spät aufeinander bzw. landen in verschiedenen Gruppen" : undefined}
-          className={`rounded-md px-2 py-1 text-[11px] transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
+          className={`rounded-md px-2 py-1 text-xs transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
           {label}
         </button>
       ))}
@@ -1543,7 +1543,7 @@ export default function TournamentManager({
   return (
     <div className="tm-root space-y-4" data-tm-view={viewMode}>
 
-      <div className="flex items-center justify-end gap-1.5 text-[11px] text-gray-500">
+      <div className="flex items-center justify-end gap-1.5 text-xs text-gray-500">
         <span>Ansicht:</span>
         {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
           <button key={v} type="button" onClick={() => changeViewMode(v)}
@@ -1569,7 +1569,7 @@ export default function TournamentManager({
       {!isFfa && goalBar}
       {pendingSubmissions.length > 0 && (
         <section aria-label="Gemeldete Ergebnisse" className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-[11px] font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
+          <p className="text-xs font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
           <InlineSubmissions eventId={event.id} items={pendingSubmissions} resultsHref={resultsHref} />
         </section>
       )}
@@ -1578,25 +1578,25 @@ export default function TournamentManager({
       {showReplace && isDrawn && (
         <div className="rounded-lg border border-gray-700 bg-gray-800/30 p-3 space-y-2">
           <p className="text-xs text-gray-300 font-medium">Spieler ersetzen</p>
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             Der Nachrücker übernimmt alle noch offenen Spiele, gespielte bleiben beim alten Spieler. Zur Wahl stehen
             angemeldete Spieler, die nicht ausgelost sind. Andere Mitglieder erst im Reiter „Teilnehmer“ eintragen.
             Wer nur ein Spiel verpasst, wird besser über ⋯ → „kampflos weiter“ gewertet.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select value={replaceFrom} onChange={e => setReplaceFrom(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              className="bg-surface-2 border border-line rounded-control px-2 py-1.5 text-xs text-fg">
               <option value="">Wer fällt aus?</option>
               {replaceFromOptions.map(id => <option key={id} value={id}>{nameOfUser(id)}</option>)}
             </select>
             <select value={replaceTo} onChange={e => setReplaceTo(e.target.value)}
-              className="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              className="bg-surface-2 border border-line rounded-control px-2 py-1.5 text-xs text-fg">
               <option value="">Wer rückt nach?</option>
               {replaceToOptions.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
             </select>
           </div>
           {replaceToOptions.length === 0 && (
-            <p className="text-[11px] text-amber-300">Kein angemeldeter Spieler ohne Platz. Trag den Nachrücker zuerst im Reiter „Teilnehmer“ ein.</p>
+            <p className="text-xs text-amber-300">Kein angemeldeter Spieler ohne Platz. Trag den Nachrücker zuerst im Reiter „Teilnehmer“ ein.</p>
           )}
           <button type="button" onClick={replacePlayerAction} disabled={loading || !replaceFrom || !replaceTo}
             className="text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
@@ -1618,13 +1618,13 @@ export default function TournamentManager({
           </button>
           {showSchedule && (
             <div className="px-3 pb-3 space-y-2">
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 Jeder Spieltag bzw. jede K.O.-Runde bekommt ein eigenes Zeitfenster (Gruppen spielen gleichzeitig,
                 Hin- und Rückspiel getrennt). Freilose werden nicht terminiert.
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
-                  className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
+                  className="text-xs bg-surface-2 border border-line text-fg rounded-control px-2 py-1.5" />
                 <span className="text-xs text-gray-400">alle</span>
                 <NumberInput min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
                   className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
@@ -1658,7 +1658,7 @@ export default function TournamentManager({
                 <select
                   value={latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id}
                   onChange={e => setLatecomerRound(prev => ({ ...prev, [u.id]: e.target.value }))}
-                  className="rounded-lg px-2 py-1.5 text-xs text-white bg-gray-800 border border-gray-700 outline-none focus:border-amber-500/50">
+                  className="rounded-control px-2 py-1.5 text-xs text-fg bg-surface-2 border border-line outline-none focus:border-primary">
                   {[...statRounds].reverse().map(m => <option key={m.id} value={m.id}>{statRoundLabel(m)}</option>)}
                 </select>
                 <button type="button" disabled={loading}
@@ -1756,7 +1756,7 @@ export default function TournamentManager({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {nextDuels.map(m => (
               <div key={m.id} className="space-y-1">
-                <p className="text-[11px] text-gray-500">{duelStageLabel(m)}</p>
+                <p className="text-xs text-gray-500">{duelStageLabel(m)}</p>
                 {renderDuelCard(m, isGroupKnockout ? (m.groupIndex != null || m.leg === 1) : supportsDraw)}
               </div>
             ))}
@@ -1774,7 +1774,7 @@ export default function TournamentManager({
       {canGenerate && (
         <div className="rounded-lg border border-blue-900/40 bg-blue-900/10 p-3 space-y-2">
           {isBracketFormat && seedingToggle}
-          <p className="text-[11px] text-gray-400">{drawPreview(tournament.format, drawCount)}</p>
+          <p className="text-xs text-gray-400">{drawPreview(tournament.format, drawCount)}</p>
           <button onClick={generateRoundRobinMatches} disabled={loading}
             className="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 bg-blue-900/30 hover:bg-blue-900/40 border border-blue-900/50 rounded-lg px-3 py-2 transition-colors w-full justify-center">
             <RefreshCw className="w-3.5 h-3.5" />
@@ -1829,7 +1829,7 @@ export default function TournamentManager({
                 {label}
               </button>
             ))}
-            <span className="ml-auto text-[11px] text-gray-600">
+            <span className="ml-auto text-xs text-gray-600">
               {statView === "table"
                 ? (hasEventPoints ? "Wertung nach Eventpunkten, wie beim Abschluss" : tournament.format === "avg_stats" ? `Wertung nach Ø pro Runde · ${avgDirection === "low" ? "niedrigster" : "höchster"} gewinnt` : `Wertung nach ${visibleStatFields[0] ?? "erstem Stat"}`)
                 : "Runde aufklappen zum Korrigieren"}
@@ -1922,13 +1922,13 @@ export default function TournamentManager({
               <label className="text-xs text-gray-500 block mb-1">Titel (optional)</label>
               <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
                 placeholder="z.B. Gruppenphase A"
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
               />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Datum & Uhrzeit</label>
               <input type="datetime-local" value={mScheduled} onChange={e => setMScheduled(e.target.value)}
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
               />
             </div>
             {is1v1 && (
@@ -1943,7 +1943,7 @@ export default function TournamentManager({
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Spieler 1</label>
                   <select value={mP1} onChange={e => setMP1(e.target.value)}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
+                    className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2">
                     <option value="">– wählen –</option>
                     {allUsers.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
                   </select>
@@ -1951,7 +1951,7 @@ export default function TournamentManager({
                 <div>
                   <label className="text-xs text-gray-500 block mb-1">Spieler 2</label>
                   <select value={mP2} onChange={e => setMP2(e.target.value)}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
+                    className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2">
                     <option value="">– wählen –</option>
                     {allUsers.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
                   </select>
@@ -1984,7 +1984,7 @@ export default function TournamentManager({
             <label className="text-xs text-gray-500 block mb-1">Notizen (optional)</label>
             <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
               placeholder="z.B. Map: Verdansk, Server: EU"
-              className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+              className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
             />
           </div>
           )}

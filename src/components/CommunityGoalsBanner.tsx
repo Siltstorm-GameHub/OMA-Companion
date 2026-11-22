@@ -167,14 +167,14 @@ function SpotlightCard({ item }: { item: GoalItem }) {
             <Target className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${reached ? "text-amber-300" : spotlight.kind === "final" ? "text-amber-300" : "text-teal-300"}`}>
+            <p className={`text-xs font-bold uppercase tracking-widest truncate ${reached ? "text-amber-300" : spotlight.kind === "final" ? "text-amber-300" : "text-teal-300"}`}>
               {SPOTLIGHT_ICON[spotlight.kind]} {headline}{item.remainingLabel ? ` · ${item.remainingLabel}` : ""}
             </p>
             <p className="text-sm font-semibold text-white truncate group-hover:text-teal-100">{item.title}</p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-sm font-bold text-white tabular-nums">{Math.floor(main.percent)} %</p>
-            <p className="text-[10px] text-gray-500 tabular-nums">{valueLabel(main.total, goal)} / {formatGoalNumber(goal.target, goal)}</p>
+            <p className="text-xs text-gray-500 tabular-nums">{valueLabel(main.total, goal)} / {formatGoalNumber(goal.target, goal)}</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-300 shrink-0" />
         </div>
@@ -184,12 +184,12 @@ function SpotlightCard({ item }: { item: GoalItem }) {
             style={{ width: `${main.percent}%` }} />
         </div>
         {item.pace && (
-          <p className={`mt-1.5 text-[11px] font-semibold ${PACE_COLOR[item.pace.status]}`}>
+          <p className={`mt-1.5 text-xs font-semibold ${PACE_COLOR[item.pace.status]}`}>
             {PACE_ICON[item.pace.status]} {item.pace.label} <span className="font-normal text-gray-500">· Soll nach Zeit: {Math.round(item.pace.expectedPercent)} %</span>
           </p>
         )}
         <div className="mt-1.5 flex items-center justify-between gap-3">
-          <p className="text-[11px] text-gray-400 min-w-0">
+          <p className="text-xs text-gray-400 min-w-0">
             {item.myValue > 0
               ? <>{isAvgGoal(goal) ? "Dein Ø" : "Dein Beitrag"}: <span className="text-teal-300 font-semibold tabular-nums">{formatGoalNumber(item.myValue, goal)} {unit}</span></>
               : item.isParticipant
@@ -220,7 +220,7 @@ function CompactRow({ item }: { item: GoalItem }) {
         <p className="text-xs font-semibold text-gray-200 truncate group-hover:text-white">
           <span className="text-teal-400/80">🎯</span> {item.title}
         </p>
-        <p className="text-[10px] text-gray-500 truncate">
+        <p className="text-xs text-gray-500 truncate">
           {status}
           {item.myValue > 0 && <> · {isAvgGoal(goal) ? "dein Ø" : "dein Beitrag"} <span className="text-teal-300/90 tabular-nums">{formatGoalNumber(item.myValue, goal)}</span></>}
         </p>
@@ -260,7 +260,7 @@ function HistoryDots({ history, current, withStreak }: { history: boolean[]; cur
         <span className={`w-2 h-2 rounded-full border ${current ? "bg-amber-300 border-amber-300" : "border-teal-400/70"}`} />
       </span>
       {withStreak && streak >= 2 && (
-        <span className="text-[10px] font-semibold text-amber-300 tabular-nums">🔥 {streak}× in Folge</span>
+        <span className="text-xs font-semibold text-amber-300 tabular-nums">🔥 {streak}× in Folge</span>
       )}
     </span>
   );

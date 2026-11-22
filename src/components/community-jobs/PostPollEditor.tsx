@@ -12,7 +12,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 /** Umfrage im Editor — `locked` = es gibt schon Stimmen, dann nicht mehr änderbar. */
 export type PollDraft = PollInput & { locked?: boolean };
 
-const INPUT = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const INPUT = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
 
 export function emptyPoll(): PollDraft {
@@ -41,7 +41,7 @@ export default function PostPollEditor({
   return (
     <div className="rounded-lg border border-line-strong bg-surface-2">
       <button type="button" onClick={onToggle} aria-expanded={open}
-        className="w-full px-3 py-2 flex items-center justify-between text-left text-[11px] text-gray-400 hover:text-white">
+        className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-gray-400 hover:text-white">
         <span className="inline-flex items-center gap-1.5"><Vote className="w-3.5 h-3.5" /> Umfrage{p ? `: ${p.question || "ohne Frage"}` : ""}</span>
         <span>{open ? "−" : "+"}</span>
       </button>
@@ -51,13 +51,13 @@ export default function PostPollEditor({
             <Button size="sm" variant="outline" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => onChange(emptyPoll())}>Umfrage hinzufügen</Button>
           )}
           {p?.locked && (
-            <p className="text-[11px] text-amber-400/90">Es wurde schon abgestimmt — die Umfrage lässt sich nicht mehr ändern.</p>
+            <p className="text-xs text-amber-400/90">Es wurde schon abgestimmt — die Umfrage lässt sich nicht mehr ändern.</p>
           )}
           {p && !p.locked && (
             <>
               <input value={p.question} onChange={e => set({ question: e.target.value })} maxLength={POLL_QUESTION_MAX}
                 placeholder="Frage, z.B. „Wer holt sich den Turniersieg?“" className={INPUT} />
-              <label className="flex items-center gap-2 text-[11px] text-gray-500">
+              <label className="flex items-center gap-2 text-xs text-gray-500">
                 Art
                 <Select size="sm" value={p.kind} onChange={e => {
                   const kind = e.target.value as PollKind;
@@ -70,7 +70,7 @@ export default function PostPollEditor({
               </label>
 
               {p.kind === "event_winner" ? (
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {eventId
                     ? "Die Antworten sind die angemeldeten Spieler des Events. Abstimmen geht bis zum Event-Start, aufgelöst wird automatisch nach dem Event."
                     : "Wähle oben ein Event, um nach dem Gewinner zu fragen."}
@@ -99,8 +99,8 @@ export default function PostPollEditor({
                   {p.options.length < POLL_OPTIONS_MAX && (
                     <Button size="sm" variant="ghost" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => set({ options: [...p.options, ""] })}>Antwort</Button>
                   )}
-                  {p.kind === "quiz" && <p className="text-[10px] text-gray-600">Markiere die richtige Antwort — sie wird erst beim Ende der Umfrage verraten.</p>}
-                  <label className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
+                  {p.kind === "quiz" && <p className="text-xs text-gray-600">Markiere die richtige Antwort — sie wird erst beim Ende der Umfrage verraten.</p>}
+                  <label className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                     Ende {p.kind === "quiz" ? "(Standard: in 7 Tagen)" : "(optional)"}
                     <input type="datetime-local" className={SMALL}
                       value={p.closesAt ? toDatetimeLocalBerlin(p.closesAt) : ""}
@@ -109,7 +109,7 @@ export default function PostPollEditor({
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-amber-300" /> Belohnung</span>
                 <label className="flex items-center gap-1">
                   Mitmachen
@@ -126,7 +126,7 @@ export default function PostPollEditor({
                   </label>
                 )}
               </div>
-              <p className="text-[10px] text-gray-600">Münzen zahlt das System. Pro Tag gibt es höchstens 30 Münzen fürs Mitmachen und 300 fürs Richtigliegen je Person; du selbst kannst nicht teilnehmen.</p>
+              <p className="text-xs text-gray-600">Münzen zahlt das System. Pro Tag gibt es höchstens 30 Münzen fürs Mitmachen und 300 fürs Richtigliegen je Person; du selbst kannst nicht teilnehmen.</p>
               <Button size="sm" variant="ghost" icon={<Trash2 className="w-3.5 h-3.5" />} onClick={() => onChange(null)}>Umfrage entfernen</Button>
             </>
           )}

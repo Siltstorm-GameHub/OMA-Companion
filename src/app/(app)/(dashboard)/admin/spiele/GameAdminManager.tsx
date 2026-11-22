@@ -97,7 +97,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
       <label className="block space-y-1 -mt-2">
         <span className="text-xs font-semibold text-gray-300">Andere Schreibweisen</span>
         <input value={aliases} onChange={e => setAliases(e.target.value)} placeholder="z.B. CS2, CS:GO 2" className={`${input} w-full`} />
-        <span className="block text-[11px] text-gray-500">Komma-getrennt. Events, Gameserver und Profile mit diesen Namen werden dem Spiel zugeordnet.</span>
+        <span className="block text-xs text-gray-500">Komma-getrennt. Events, Gameserver und Profile mit diesen Namen werden dem Spiel zugeordnet.</span>
       </label>
       <div className="space-y-1.5">
         <span className="text-xs font-semibold text-gray-300">Im Abo enthalten</span>
@@ -108,9 +108,9 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
             </Chip>
           ))}
         </div>
-        <span className="block text-[11px] text-gray-500">„auto“ = wird täglich mit dem Game-Pass-Katalog abgeglichen (über Name und andere Schreibweisen). Die übrigen pflegt ihr hier.</span>
+        <span className="block text-xs text-gray-500">„auto“ = wird täglich mit dem Game-Pass-Katalog abgeglichen (über Name und andere Schreibweisen). Die übrigen pflegt ihr hier.</span>
       </div>
-      <p className="text-[11px] text-gray-500">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
+      <p className="text-xs text-gray-500">Geänderte Steam-/IGDB-ID → Cover und automatische Angaben werden neu geladen. Was du hier änderst, überschreiben Steam/IGDB später nicht mehr.</p>
       <GameFieldsForm value={fields} onChange={setFields} showDescription />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
@@ -252,7 +252,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
           Preise & Game Pass abgleichen
         </Button>
         {enrichProgress && <span className="text-xs text-gray-400">{enrichProgress}</span>}
-        <p className="basis-full text-[11px] text-gray-500">
+        <p className="basis-full text-xs text-gray-500">
           Übernehmen sammelt alle Spiele, die schon in Events, Liga-Spieltagen, Gameservern, Lieblingsspielen und Spiele-Ideen stehen.
           Danach ergänzt der Abgleich mit Steam und IGDB Cover, Beschreibung, Konsolen und Spieleranzahl (nur bei eindeutigem Namens-Treffer).
         </p>
@@ -262,14 +262,14 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
       <div className="flex flex-wrap items-center gap-2">
         {(Object.keys(VIEW_LABELS) as View[]).map(v => (
           <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${view === v ? "bg-purple-600/20 border-purple-400/40 text-purple-200" : "border-line text-gray-400 hover:text-white"}`}>
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${view === v ? "bg-primary-soft border-primary/40 text-primary-fg" : "border-line text-gray-400 hover:text-white"}`}>
             {VIEW_LABELS[v]}{v === "PENDING" && pendingCount > 0 ? ` (${pendingCount})` : ""}
           </button>
         ))}
         <div className="relative ml-auto">
           <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen …" aria-label="Spiel suchen"
-            className="w-48 bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-48 bg-surface-2 border border-line rounded-control pl-7 pr-2 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         </div>
       </div>
 
@@ -287,7 +287,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                     <Badge tone={STATUS_BADGE[g.status].tone}>{STATUS_BADGE[g.status].label}</Badge>
                     {!g.enriched && g.status !== "HIDDEN" && <Badge tone="info">Abgleich offen</Badge>}
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
                     {g.steamAppId ? (
                       <a href={`https://store.steampowered.com/app/${g.steamAppId}/`} target="_blank" rel="noopener noreferrer" className="hover:text-gray-300 inline-flex items-center gap-0.5">
                         Steam {g.steamAppId} <ExternalLink className="w-2.5 h-2.5" />
@@ -315,7 +315,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
               {mergeFor === g.id && (
                 <div className="border-t border-line p-3 flex flex-wrap items-center gap-2 bg-black/20 text-xs text-gray-300">
                   <span>„{g.name}“ aufgehen lassen in:</span>
-                  <select value={mergeTarget} onChange={e => setMergeTarget(e.target.value)} className="input-glass rounded-card px-2 py-1.5 text-xs text-white max-w-xs">
+                  <select value={mergeTarget} onChange={e => setMergeTarget(e.target.value)} className="input-glass rounded-card px-2 py-1.5 text-xs text-fg max-w-xs">
                     <option value="">Spiel wählen …</option>
                     {games.filter(x => x.id !== g.id).sort((a, b) => a.name.localeCompare(b.name, "de")).map(x => (
                       <option key={x.id} value={x.id}>{x.name}</option>

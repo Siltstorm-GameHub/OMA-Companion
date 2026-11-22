@@ -14,7 +14,7 @@ export default function SeriesCompleteNewSeason({ ctx }: { ctx: SeriesComplete }
                 <span className="text-xs font-semibold text-teal-300">Neue Saison starten</span>
               </label>
               {startNewSeason && (
-                <p className="text-[10px] text-gray-600">
+                <p className="text-xs text-gray-600">
                   Nach dem Abschluss öffnet sich der Saison-Assistent: dort kannst du Name, Spiel, Format,
                   Punktesystem, Belohnungen sowie Start- und Enddatum der neuen Saison prüfen und anpassen,
                   bevor sie angelegt wird.

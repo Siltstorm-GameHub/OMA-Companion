@@ -38,7 +38,7 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
               <span className="flex-1 text-left text-xs font-medium text-gray-500 group-hover:text-gray-300 transition-colors">
                 Vergangene Events
               </span>
-              <span className="text-[10px] text-gray-600 px-1.5 py-0.5 rounded-full bg-line tabular-nums">
+              <span className="text-xs text-gray-600 px-1.5 py-0.5 rounded-full bg-line tabular-nums">
                 {past.length}
               </span>
               {pastOpen

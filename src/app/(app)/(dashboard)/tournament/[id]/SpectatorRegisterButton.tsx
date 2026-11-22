@@ -70,7 +70,7 @@ export default function SpectatorRegisterButton({ eventId, isSpectator, reward }
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
       Als Zuschauer anmelden
-      {rewardText && <span className="text-[11px] text-amber-300">{rewardText}</span>}
+      {rewardText && <span className="text-xs text-amber-300">{rewardText}</span>}
     </button>
   );
 }

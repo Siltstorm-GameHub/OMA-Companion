@@ -31,7 +31,7 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
           Saison-Verlauf <span className="text-gray-600 font-normal tabular-nums">· {doneCount} von {events.length} gespielt</span>
         </h2>
         {next && (
-          <Link href={`/tournament/${next.id}`} className="text-[11px] font-medium text-teal-300 hover:text-teal-200">
+          <Link href={`/tournament/${next.id}`} className="text-xs font-medium text-teal-300 hover:text-teal-200">
             {next.state === "live" ? "Läuft gerade" : `Nächster: ${shortDate(next.startAt)}`} →
           </Link>
         )}
@@ -61,7 +61,7 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
                 ) : (
                   <span className="mt-[5px] h-3 w-3 rounded-full bg-white/[0.15] group-hover:bg-white/30" />
                 )}
-                <span className={`text-[10px] tabular-nums whitespace-nowrap ${e.state === "next" || e.state === "live" ? "text-teal-300 font-semibold" : "text-gray-600"}`}>
+                <span className={`text-xs tabular-nums whitespace-nowrap ${e.state === "next" || e.state === "live" ? "text-teal-300 font-semibold" : "text-gray-600"}`}>
                   {shortDate(e.startAt)}
                 </span>
               </Link>

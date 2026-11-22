@@ -26,10 +26,10 @@ interface Props {
   loggedIn: boolean;
 }
 
-const BTN = "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
-const BTN_PRIMARY = `${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`;
+const BTN = "shrink-0 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-control px-4 text-sm font-bold transition-colors";
+const BTN_PRIMARY = `${BTN} bg-primary text-primary-ink hover:bg-primary-hover`;
 const BTN_VIOLET = `${BTN} bg-violet-500 text-white hover:bg-violet-400`;
-const BTN_SECONDARY = `${BTN} border border-line bg-line text-gray-300 hover:bg-line`;
+const BTN_SECONDARY = `${BTN} border border-line-strong bg-surface-2 text-fg hover:bg-surface-3`;
 
 function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; children: ReactNode }) {
   const cls = {
@@ -39,7 +39,7 @@ function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; 
     yellow: "text-yellow-300",
   }[tone];
   return (
-    <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-canvas px-2 py-1 text-[11px] font-semibold shadow-card ${cls}`}>
+    <span className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-canvas/90 px-2.5 py-1 text-xs font-bold shadow-card ${cls}`}>
       {children}
     </span>
   );
@@ -66,9 +66,10 @@ function Avatars({ ev }: { ev: HomeEventCandidate }) {
   );
 }
 
-function Title({ title, omaOriginal, href }: { title: string; omaOriginal: boolean; href: string }) {
+/** Auf der Bühne groß und zweizeilig, sonst eine Zeile */
+function Title({ title, omaOriginal, href, stage }: { title: string; omaOriginal: boolean; href: string; stage: boolean }) {
   return (
-    <Link href={href} className="block truncate text-[15px] font-bold text-white leading-tight hover:underline">
+    <Link href={href} className={`block font-extrabold text-fg leading-tight hover:underline ${stage ? "line-clamp-2 text-base lg:text-2xl" : "truncate text-[15px]"}`}>
       {omaOriginal && <OmaTitlePrefix title={title} />}
       {title}
     </Link>
@@ -111,7 +112,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
             </span>
           )}
           {r.pollWins.length > 0 && (
-            <span className="flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-[11px] font-semibold text-violet-200">
+            <span className="flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold text-violet-200">
               <Trophy className="w-3.5 h-3.5 shrink-0 text-violet-300" />
               <span className="truncate">Umfrage gewonnen: {r.pollWins.join(", ")}</span>
             </span>
@@ -128,8 +129,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     main = (
       <>
         <div className="min-w-0 flex-1">
-          <Title title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
-          <p className="truncate text-[11px] text-gray-400">Danke fürs Mitmachen · {r.total} dabei</p>
+          <Title stage={stage} title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
+          <p className="truncate text-xs text-muted lg:text-sm">Danke fürs Mitmachen · {r.total} dabei</p>
         </div>
         <Link href={`/tournament/${r.id}`} className={BTN_SECONDARY}>Ansehen</Link>
       </>
@@ -144,7 +145,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
           <span className="text-5xl font-black text-yellow-300 drop-shadow-card tabular-nums">{r.place}.</span>
           <span className="text-xs font-semibold text-gray-200">von {r.total}</span>
           {r.pollWins.length > 0 && (
-            <span className="mt-2 flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-[11px] font-semibold text-violet-200 shadow-card">
+            <span className="mt-2 flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold text-violet-200 shadow-card">
               <Trophy className="w-3.5 h-3.5 shrink-0 text-violet-300" />
               <span className="truncate">Umfrage gewonnen: {r.pollWins.join(", ")}</span>
             </span>
@@ -156,8 +157,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     main = (
       <>
         <div className="min-w-0 flex-1">
-          <Title title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
-          <p className="line-clamp-2 text-[11px] text-gray-400">
+          <Title stage={stage} title={r.title} omaOriginal={r.omaOriginal} href={`/tournament/${r.id}`} />
+          <p className="line-clamp-2 text-xs text-muted lg:text-sm">
             Platz {r.place} von {r.total}
             {r.winnerNames.length > 0 && (r.place === 1
               ? <> · Sieg geteilt mit <span className="text-yellow-300">{r.winnerNames.join(", ")}</span></>
@@ -177,7 +178,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       <>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-bold text-white leading-tight">Gerade ist nichts geplant</p>
-          <p className="truncate text-[11px] text-gray-400">Hast du eine Idee? Schlag ein Event vor.</p>
+          <p className="truncate text-xs text-muted lg:text-sm">Hast du eine Idee? Schlag ein Event vor.</p>
         </div>
         <Link href="/events/verwalten/neu" className={BTN_SECONDARY}>Vorschlagen</Link>
       </>
@@ -252,8 +253,8 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     main = (
       <>
         <div className="min-w-0 flex-1">
-          <Title title={ev.title} omaOriginal={ev.omaOriginal} href={href} />
-          <p className="truncate text-[11px] text-gray-400">{sub}</p>
+          <Title stage={stage} title={ev.title} omaOriginal={ev.omaOriginal} href={href} />
+          <p className="truncate text-xs text-muted lg:text-sm">{sub}</p>
         </div>
         {action}
       </>

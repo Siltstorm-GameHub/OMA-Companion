@@ -72,7 +72,7 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
           <Link href={resultsHref}
             className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line">
             Ergebnis-Meldungen
-            {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{pendingCount}</span>}
+            {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-black tabular-nums">{pendingCount}</span>}
           </Link>
         )}
         <DropMenu label="Werkzeuge" items={tools}
@@ -141,11 +141,11 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
           : <>{s.forUser ?? s.by}: {Object.entries(s.stats).filter(([k]) => !k.startsWith("_")).map(([k, v]) => `${formatDecimal(v)} ${k}`).join(" · ") || "keine Werte"}</>;
         return (
           <li key={s.id} className="flex items-center gap-2 py-2 flex-wrap">
-            <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">gemeldet</span>
+            <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-300">gemeldet</span>
             <span className="min-w-0 flex-1 text-sm text-gray-300">
               <span className="text-gray-500">{s.matchLabel} · </span>{what}
               {/* Relative Zeit weicht zwischen Server und Browser minimal ab — kein Hydration-Fehler */}
-              <span className="block text-[11px] text-gray-500" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
+              <span className="block text-xs text-gray-500" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
             </span>
             <button type="button" onClick={() => act(s.id, "approve")} disabled={!!busy}
               className="inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">
@@ -155,7 +155,7 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
               className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-line disabled:opacity-50">
               <X className="w-3.5 h-3.5" /> Ablehnen
             </button>
-            <Link href={resultsHref} className="text-[11px] text-gray-500 hover:text-gray-300">Prüfen</Link>
+            <Link href={resultsHref} className="text-xs text-gray-500 hover:text-gray-300">Prüfen</Link>
           </li>
         );
       })}

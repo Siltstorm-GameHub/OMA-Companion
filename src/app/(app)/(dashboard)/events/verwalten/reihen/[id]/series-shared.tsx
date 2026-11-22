@@ -180,7 +180,7 @@ export function Checkbox({ checked, onChange, label }: { checked: boolean; onCha
   return (
     <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="rounded accent-teal-500" />
-      <span className="text-[11px] text-gray-500">{label}</span>
+      <span className="text-xs text-gray-500">{label}</span>
     </label>
   );
 }

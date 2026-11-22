@@ -58,10 +58,10 @@ export default function TipPanel({ slug, initial, isModerator }: {
             value={note}
             onChange={e => setNote(e.target.value.slice(0, NOTE_MAX))}
             placeholder="Warum? (optional, steht auf der Karte)"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-400/40"
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] text-gray-600">
+            <span className="text-xs text-gray-600">
               {isModerator ? "Als Moderator kommt es direkt in den nächsten Drop." : "Das Team prüft Empfehlungen, bevor sie im Drop landen."}
             </span>
             <div className="flex gap-2">

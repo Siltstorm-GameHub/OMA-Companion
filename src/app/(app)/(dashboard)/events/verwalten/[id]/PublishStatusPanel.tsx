@@ -64,7 +64,7 @@ export default function PublishStatusPanel({
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           <input type="datetime-local" value={planned} onChange={e => setPlanned(e.target.value)}
-            className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5" />
+            className="text-xs bg-surface-2 border border-line text-fg rounded-control px-2 py-1.5" />
           <button type="button" disabled={busy || !planned} onClick={() => savePublishAt(planned)}
             className="text-xs text-violet-300 border border-violet-600/50 rounded-lg px-3 py-1.5 hover:bg-violet-900/20 disabled:opacity-40">
             Veröffentlichung planen
@@ -76,7 +76,7 @@ export default function PublishStatusPanel({
             </button>
           )}
         </div>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Beim Sichtbarschalten (oder zum geplanten Zeitpunkt) wird das Event auf Discord angekündigt und
           per Push gemeldet.
         </p>

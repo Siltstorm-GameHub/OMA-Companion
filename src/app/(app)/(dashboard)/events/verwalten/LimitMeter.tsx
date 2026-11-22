@@ -15,7 +15,7 @@ function Meter({ label, used, max, unit }: { label: string; used: number; max: n
       <div className="mt-1 h-1.5 rounded-full bg-line overflow-hidden">
         <div className={`h-full rounded-full ${full ? "bg-amber-400" : "bg-teal-400"}`} style={{ width: `${pct}%` }} />
       </div>
-      <p className={`mt-1 text-[11px] ${full ? "text-amber-300" : "text-gray-500"}`}>
+      <p className={`mt-1 text-xs ${full ? "text-amber-300" : "text-gray-500"}`}>
         {full ? "Limit erreicht" : `noch ${left} ${left === 1 ? unit.one : unit.many} möglich`}
       </p>
     </div>
@@ -35,7 +35,7 @@ export default function LimitMeter({ openEvents, maxOpenEvents, activeSeries, ma
         <Meter label="Offene Einzel-Events" used={openEvents} max={maxOpenEvents} unit={{ one: "Event", many: "Events" }} />
         <Meter label="Aktive Eventreihen" used={activeSeries} max={maxActiveSeries} unit={{ one: "Reihe", many: "Reihen" }} />
       </div>
-      <p className="mt-3 flex gap-1.5 text-[11px] text-gray-500 leading-relaxed">
+      <p className="mt-3 flex gap-1.5 text-xs text-gray-500 leading-relaxed">
         <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
         <span>
           Es zählen Events, die noch nicht abgeschlossen sind (auch vorbeigegangene ohne Ergebnis), und Reihen mit

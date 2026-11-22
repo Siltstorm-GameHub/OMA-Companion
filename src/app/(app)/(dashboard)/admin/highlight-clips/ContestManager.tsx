@@ -245,7 +245,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <select
                       value={periodMonthInput}
                       onChange={(e) => setPeriodMonthInput(e.target.value)}
-                      className="rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+                      className="rounded-control px-2 py-1 text-sm text-fg bg-surface-2 border border-line outline-none focus:border-primary"
                     >
                       {MONTH_NAMES.map((name, i) => (
                         <option key={name} value={i + 1} className="bg-gray-900">{name}</option>
@@ -254,7 +254,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <NumberInput
                       value={periodYearInput}
                       onChange={(e) => setPeriodYearInput(e.target.value)}
-                      className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+                      className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-primary"
                     />
                     <button
                       onClick={() => savePeriod(contest.id)}
@@ -324,7 +324,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                   min={0}
                   value={participationInputs[contest.id] ?? contest.participationCoins}
                   onChange={(e) => setParticipationInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
-                  className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+                  className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-primary"
                 />
               </div>
               <div className="w-px h-6 bg-line" />
@@ -334,13 +334,13 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                   min={0}
                   value={rewardInputs[contest.id] ?? contest.rewardCoins}
                   onChange={(e) => setRewardInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
-                  className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+                  className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-line border border-line-strong outline-none focus:border-primary"
                 />
               </div>
               <button
                 onClick={() => saveRewards(contest.id)}
                 disabled={saving === contest.id}
-                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-purple-500/15 border border-purple-500/20 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 transition-colors ml-auto"
+                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-primary-soft border border-primary/40 text-primary-fg hover:bg-primary-hover disabled:opacity-50 transition-colors ml-auto"
               >
                 {saving === contest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 Speichern
@@ -408,7 +408,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                               placeholder="Nutzername suchen…"
                               value={userSearchInput}
                               onChange={(e) => { setUserSearchInput(e.target.value); searchUsers(e.target.value); }}
-                              className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+                              className="flex-1 rounded-control px-2 py-1.5 text-sm text-fg bg-surface-2 border border-line outline-none focus:border-primary"
                             />
                             {userSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
                           </div>
@@ -452,7 +452,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <span className="text-gray-600 w-4 text-right">{i + 1}.</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-white truncate">{nom.customTitle ?? nom.clipTitle ?? nom.clipUrl}</p>
-                      {nom.customTitle && nom.clipTitle && <p className="text-[11px] text-gray-600 truncate">Original: {nom.clipTitle}</p>}
+                      {nom.customTitle && nom.clipTitle && <p className="text-xs text-gray-600 truncate">Original: {nom.clipTitle}</p>}
                       <p className="text-xs text-gray-500">
                         {nom.submittedBy ? (
                           <Link href={`/profile/${nom.submittedBy.id}`} className="hover:text-gray-300 transition-colors">{name}</Link>

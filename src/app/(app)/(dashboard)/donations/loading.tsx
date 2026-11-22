@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/Skeleton";
 
 export default function DonationsLoading() {
   return (
-    <div className="px-4 pt-0 pb-8 sm:py-8 animate-fade-in">
+    <div className="px-4 pt-0 pb-8 sm:py-8">
       {/* Reiter */}
       <Skeleton className="h-12 max-w-sm mx-auto rounded-2xl mb-7" />
 

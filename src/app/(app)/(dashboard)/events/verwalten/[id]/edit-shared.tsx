@@ -224,7 +224,7 @@ export function Switch({ checked, onChange, label, hint }: { checked: boolean; o
     <label className="flex items-start justify-between gap-3 cursor-pointer">
       <span className="min-w-0">
         <span className="block text-sm text-gray-300">{label}</span>
-        {hint && <span className="block text-[11px] text-gray-500">{hint}</span>}
+        {hint && <span className="block text-xs text-gray-500">{hint}</span>}
       </span>
       <input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
       <span aria-hidden className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/[0.12] transition-colors peer-checked:bg-teal-500 peer-focus-visible:ring-2 peer-focus-visible:ring-teal-400/60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />

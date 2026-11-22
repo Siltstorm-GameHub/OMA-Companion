@@ -51,11 +51,11 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
               )}
               <span className="min-w-0 flex-1">
                 <span className="block text-sm text-gray-200 truncate">{item.title}</span>
-                <span className="block text-[11px] text-gray-500 truncate">
+                <span className="block text-xs text-gray-500 truncate">
                   {meta.label}{item.meta ? ` · ${item.meta}` : ""} · {formatBerlinDate(item.date)}
                 </span>
               </span>
-              <span className="shrink-0 text-[11px] text-gray-400 tabular-nums">{item.thumbs} 👍</span>
+              <span className="shrink-0 text-xs text-gray-400 tabular-nums">{item.thumbs} 👍</span>
             </>
           );
           const cls = "flex items-center gap-3 hover:text-teal-400 transition-colors";

@@ -56,7 +56,7 @@ export default function MissingFieldsPanel({ slug, current, missing }: { slug: s
         <div className="space-y-4 pt-1">
           <GameFieldsForm value={value} onChange={setValue} only={missing} />
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
-            <p className="text-[11px] text-gray-500">Du kannst nur leere Angaben füllen. Das Team sieht, wer was ergänzt hat.</p>
+            <p className="text-xs text-gray-500">Du kannst nur leere Angaben füllen. Das Team sieht, wer was ergänzt hat.</p>
             <div className="flex gap-2 shrink-0">
               <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setValue(current); }}>Abbrechen</Button>
               <Button size="sm" onClick={save} loading={saving} disabled={changed.length === 0} icon={<Check className="w-3.5 h-3.5" />}>Speichern</Button>

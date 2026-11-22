@@ -56,7 +56,7 @@ export default function FanshopSection() {
         />
       </div>
 
-      <p className="text-[11px] text-gray-600 text-center max-w-2xl mx-auto">
+      <p className="text-xs text-gray-600 text-center max-w-2xl mx-auto">
         Der Shop wird von Spreadshirt betrieben — Zahlung, Versand und Widerruf laufen dort.
       </p>
     </div>

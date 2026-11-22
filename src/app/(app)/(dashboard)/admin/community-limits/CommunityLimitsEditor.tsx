@@ -29,7 +29,7 @@ function NumberField({ label, value, onChange, disabled, step = 1 }: {
 }) {
   return (
     <label className="block">
-      <span className="block text-[11px] text-gray-400 mb-1">{label}</span>
+      <span className="block text-xs text-gray-400 mb-1">{label}</span>
       <NumberInput min={0} step={step} value={value} disabled={disabled}
         onChange={e => onChange(Number(e.target.value))} className={inputCls} />
     </label>
@@ -41,11 +41,11 @@ function PlacesRow({ label, values, onChange, disabled }: {
 }) {
   return (
     <div>
-      <span className="block text-[11px] text-gray-400 mb-1">{label}</span>
+      <span className="block text-xs text-gray-400 mb-1">{label}</span>
       <div className="grid grid-cols-3 gap-2">
         {[0, 1, 2].map(i => (
           <label key={i} className="block">
-            <span className="block text-[10px] text-gray-600 mb-0.5">Platz {i + 1}</span>
+            <span className="block text-xs text-gray-600 mb-0.5">Platz {i + 1}</span>
             <NumberInput min={0} value={values[i] ?? 0} disabled={disabled}
               onChange={e => { const next = [...values]; next[i] = Number(e.target.value); onChange(next); }}
               className={inputCls} />
@@ -109,7 +109,7 @@ function SeasonCard({ value, onChange, disabled }: {
         <NumberField label="Max. Faktor" step={0.1} value={value.maxFactor} disabled={disabled}
           onChange={v => onChange({ ...value, maxFactor: v })} />
       </div>
-      <ul className="text-[11px] text-gray-500 space-y-0.5">
+      <ul className="text-xs text-gray-500 space-y-0.5">
         {[2, value.referenceEventCount, 10].map(n => <li key={n}>{example(n)}</li>)}
       </ul>
     </section>

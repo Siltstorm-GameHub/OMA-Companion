@@ -17,7 +17,7 @@ export default function IdeaFromButton({ prefill, label = "Idee dazu" }: { prefi
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-amber-400 transition-colors">
+      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-amber-400 transition-colors">
         <Lightbulb className="w-3 h-3" /> {label}
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title="Idee einreichen" size="lg">

@@ -21,26 +21,14 @@ export default function SupportTabs({
 
   return (
     <div>
-      <div
-        className="flex items-center gap-1.5 mb-7 p-1.5 rounded-2xl max-w-sm mx-auto"
-        style={{
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(20,184,166,0.16)",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.03)",
-        }}
-      >
+      <div className="flex items-center gap-1 mb-6 p-1 rounded-card max-w-sm mx-auto border border-line bg-surface">
         <button
           type="button"
           onClick={() => setTab("donations")}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{
-            background: tab === "donations"
-              ? "linear-gradient(135deg, rgba(20,184,166,0.9), rgba(13,148,136,0.9))"
-              : "transparent",
-            color: tab === "donations" ? "#fff" : "var(--nav-icon-inactive, #6b7280)",
-            boxShadow: tab === "donations" ? "0 4px 14px rgba(20,184,166,0.35)" : "none",
-            transform: tab === "donations" ? "scale(1.02)" : "scale(1)",
-          }}
+          aria-pressed={tab === "donations"}
+          className={`flex-1 flex min-h-11 items-center justify-center gap-2 px-4 rounded-control text-sm font-bold transition-colors ${
+            tab === "donations" ? "bg-primary-soft text-primary-fg" : "text-muted hover:text-fg hover:bg-surface-2"
+          }`}
         >
           <Heart className="w-4 h-4" />
           Spendenpool
@@ -48,15 +36,10 @@ export default function SupportTabs({
         <button
           type="button"
           onClick={() => setTab("fanshop")}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
-          style={{
-            background: tab === "fanshop"
-              ? "linear-gradient(135deg, rgba(20,184,166,0.9), rgba(13,148,136,0.9))"
-              : "transparent",
-            color: tab === "fanshop" ? "#fff" : "var(--nav-icon-inactive, #6b7280)",
-            boxShadow: tab === "fanshop" ? "0 4px 14px rgba(20,184,166,0.35)" : "none",
-            transform: tab === "fanshop" ? "scale(1.02)" : "scale(1)",
-          }}
+          aria-pressed={tab === "fanshop"}
+          className={`flex-1 flex min-h-11 items-center justify-center gap-2 px-4 rounded-control text-sm font-bold transition-colors ${
+            tab === "fanshop" ? "bg-primary-soft text-primary-fg" : "text-muted hover:text-fg hover:bg-surface-2"
+          }`}
         >
           <ShoppingBag className="w-4 h-4" />
           Fanshop

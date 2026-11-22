@@ -39,7 +39,7 @@ export default function SeriesCompleteClient(props: Props) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <CheckCircle2 className="w-5 h-5 text-teal-400" />
-        <h1 className="text-lg font-bold text-white">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
           {isPollOnly ? "Abstimmung nachtragen" : isReEdit ? "Abschluss bearbeiten" : "Eventreihe abschließen"}
         </h1>
         <span className="text-sm text-gray-500">· {seriesName}</span>
@@ -116,13 +116,13 @@ export default function SeriesCompleteClient(props: Props) {
                   </h2>
 
                   {isReEdit && (
-                    <p className="text-[11px] text-amber-300/80 rounded-lg px-3 py-2 bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-xs text-amber-300/80 rounded-lg px-3 py-2 bg-amber-500/10 border border-amber-500/20">
                       Die bisherige Vergabe wird vollständig zurückgebucht und durch die folgende ersetzt.
                     </p>
                   )}
 
                   <div className="space-y-1.5">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Auszahlung</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Auszahlung</p>
                     {preview.length === 0 ? (
                       <p className="text-xs text-gray-500">Keine Münzen oder Rang-Punkte.</p>
                     ) : (
@@ -132,7 +132,7 @@ export default function SeriesCompleteClient(props: Props) {
                             <span className="w-6 text-gray-500 text-center">{r.place ? `${r.place}.` : "–"}</span>
                             <span className="flex-1 text-white truncate">
                               {nameOf(r.uid)}
-                              {r.poll && <span className="ml-1.5 text-[10px] text-violet-400">Abstimmung</span>}
+                              {r.poll && <span className="ml-1.5 text-xs text-violet-400">Abstimmung</span>}
                             </span>
                             {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">+{r.coins} <CoinIcon size={11} /></span>}
                             {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">+{r.rankPoints} <RankPointsIcon size={11} /></span>}
@@ -149,14 +149,14 @@ export default function SeriesCompleteClient(props: Props) {
 
                   {pokalIds.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Eventreihen-Pokal</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Eventreihen-Pokal</p>
                       <p className="text-xs text-amber-200 flex items-center gap-1.5"><Trophy className="w-3.5 h-3.5 text-amber-400" /> {pokalIds.map(nameOf).join(", ")}</p>
                     </div>
                   )}
 
                   {openEvents.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">Offene Termine</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Offene Termine</p>
                       <p className="text-xs text-gray-300">
                         {openEvents.length} Termin{openEvents.length === 1 ? "" : "e"}: {effectiveOpenEventsAction === "move"
                           ? "werden in die neue Saison verschoben"
@@ -166,7 +166,7 @@ export default function SeriesCompleteClient(props: Props) {
                   )}
 
                   {!isReEdit && (
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-xs text-gray-500">
                       Danach ist die Saison gesperrt: keine neuen Termine und keine Änderungen an Punkteregeln oder Belohnungen mehr.
                       {startNewSeason ? " Anschließend richtest du die neue Saison ein." : ""}
                     </p>
@@ -190,7 +190,7 @@ export default function SeriesCompleteClient(props: Props) {
           {/* Hinweis neue Saison */}
           {!isReEdit && startNewSeason && (
             <div className="rounded-lg px-3 py-2 bg-surface-2 border border-line">
-              <p className="text-[10px] text-gray-500 flex items-start gap-1.5">
+              <p className="text-xs text-gray-500 flex items-start gap-1.5">
                 <Plus className="w-3 h-3 shrink-0 mt-0.5 text-teal-500" />
                 Nach dem Abschluss wirst du zum Saison-Assistenten weitergeleitet, um die neue Saison einzurichten.
               </p>

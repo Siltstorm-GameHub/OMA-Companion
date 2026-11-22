@@ -144,7 +144,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{current.title}</p>
-          {current.meta && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{current.meta}</p>}
+          {current.meta && <p className="text-xs text-gray-500 mt-0.5 truncate">{current.meta}</p>}
 
           {/* Aktueller Halter (Wanderpokal) — deutlich sichtbar mit echtem Profilbild + Rangrahmen */}
           {current.holderUserId && (
@@ -169,7 +169,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
             className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-line border border-line text-gray-300 hover:bg-line transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <p className="flex-1 text-center text-[10px] text-gray-600 tabular-nums">Pokal {clampedIndex + 1} von {count}</p>
+          <p className="flex-1 text-center text-xs text-gray-600 tabular-nums">Pokal {clampedIndex + 1} von {count}</p>
           <button onClick={() => go(1)}
             aria-label="Nächster Pokal"
             className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-line border border-line text-gray-300 hover:bg-line transition-colors">

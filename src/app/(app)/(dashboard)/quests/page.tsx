@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
@@ -129,8 +130,6 @@ export default async function QuestsPage() {
     historyByMonth.get(key)!.push(toRow(q));
   }
 
-  const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
-
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-3xl mx-auto space-y-5 animate-fade-in">
 
@@ -140,7 +139,7 @@ export default async function QuestsPage() {
           <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2">
               <Scroll className="w-5 h-5 text-amber-400" />
-              <h1 className="font-display text-2xl font-black text-white tracking-tight">Quests im {MONTH_NAMES[month - 1]}</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">Quests im {MONTH_NAMES[month - 1]}</h1>
             </div>
             <p className="text-sm text-gray-400 mt-1">
               <span className={allDone ? "text-emerald-400 font-semibold" : "text-white font-semibold"}>{done.length} von {rows.length}</span> erledigt
@@ -156,7 +155,7 @@ export default async function QuestsPage() {
               <CoinIcon size={16} />{coins.earned.toLocaleString("de-DE")}
               <span className="text-sm font-semibold text-gray-500">/ {coins.total.toLocaleString("de-DE")}</span>
             </p>
-            <p className="text-[11px] text-gray-500 mt-0.5">Münzen verdient</p>
+            <p className="text-xs text-gray-500 mt-0.5">Münzen verdient</p>
           </div>
           {isStaff && <QuestRegenerateButton />}
         </div>
@@ -175,9 +174,9 @@ export default async function QuestsPage() {
         />
       )}
 
-      {/* ── Offen: am nächsten am Ziel zuerst, mit Los-Button ── */}
+      {/* ── Offen: als Karten, am nächsten am Ziel zuerst, mit Los-Button ── */}
       {open.length > 0 && (
-        <section aria-label="Offene Quests" className="glass rounded-2xl overflow-hidden divide-y divide-line">
+        <section aria-label="Offene Quests" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {open.map(q => {
             const type = q.type as QuestType;
             const meta = QUEST_TYPE_META[type];
@@ -186,27 +185,35 @@ export default async function QuestsPage() {
             const rate = paced ? dailyRate(q, daysToGo) : null;
             const pct = Math.round(questRatio(q) * 100);
             return (
-              <div key={q.id} className="flex items-start gap-3 px-4 py-3.5">
-                <span className="text-xl leading-none mt-0.5 shrink-0" aria-hidden>{meta?.icon ?? "📜"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">{q.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    <span className="tabular-nums">{q.current}/{q.target} {meta?.unit}</span>
-                    {rate !== null && <> · <span className="text-gray-200">~{rate} {paced!.unit} pro Tag</span> bis Monatsende</>}
-                    {action?.hint && <> · <span className="text-teal-300">{action.hint}</span></>}
-                  </p>
-                  <div className="mt-2 h-1.5 rounded-full bg-line overflow-hidden">
-                    <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
+              <article key={q.id} className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-control bg-surface-2 text-xl" aria-hidden>{meta?.icon ?? "📜"}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-extrabold leading-snug text-fg">{q.title}</p>
+                    {QUEST_ACTIONS[type] && <p className="mt-0.5 text-xs text-subtle">{QUEST_ACTIONS[type]!.counts}</p>}
                   </div>
-                  {QUEST_ACTIONS[type] && <p className="text-[11px] text-gray-600 mt-1.5">{QUEST_ACTIONS[type]!.counts}</p>}
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-coin-soft px-2.5 py-1 text-sm font-bold tabular-nums text-coin">+{q.reward}<CoinIcon size={13} /></span>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <span className="flex items-center gap-0.5 text-xs font-bold text-amber-400 tabular-nums">+{q.reward}<CoinIcon size={12} /></span>
-                  {action && (action.external
-                    ? <a href={action.href} target="_blank" rel="noopener noreferrer" className={`${BTN} border border-line-strong bg-line text-gray-200 hover:bg-line`}>{action.label} ↗</a>
-                    : <Link href={action.href} className={`${BTN} bg-teal-500 text-teal-950 hover:bg-teal-400`}>{action.label} <ChevronRight className="w-3.5 h-3.5" /></Link>)}
+                <div>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                    <span className="font-bold tabular-nums text-fg">{q.current}/{q.target} <span className="font-normal text-muted">{meta?.unit}</span></span>
+                    <span className="text-xs font-semibold tabular-nums text-primary-fg">{pct} %</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-line">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                  </div>
+                  {(rate !== null || action?.hint) && (
+                    <p className="mt-1.5 text-xs text-muted">
+                      {rate !== null && <>~{rate} {paced!.unit} pro Tag bis Monatsende</>}
+                      {rate !== null && action?.hint && " · "}
+                      {action?.hint && <span className="text-primary-fg">{action.hint}</span>}
+                    </p>
+                  )}
                 </div>
-              </div>
+                {action && (action.external
+                  ? <a href={action.href} target="_blank" rel="noopener noreferrer" className={buttonClasses("secondary", "md", "mt-auto")}>{action.label} ↗</a>
+                  : <Link href={action.href} className={buttonClasses("primary", "md", "mt-auto")}>{action.label} <ChevronRight className="w-4 h-4" /></Link>)}
+              </article>
             );
           })}
         </section>
@@ -247,7 +254,7 @@ export default async function QuestsPage() {
       {/* ── Verlauf: ein Monat pro Zeile ── */}
       {historyByMonth.size > 0 && (
         <section aria-label="Vergangene Monate" className="space-y-2">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Vergangene Monate</h2>
+          <h2 className="text-base font-extrabold text-fg">Vergangene Monate</h2>
           <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
             {Array.from(historyByMonth.entries()).map(([key, quests]) => {
               const [y, m] = key.split("-").map(Number);

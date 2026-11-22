@@ -49,8 +49,7 @@ function Bar({ value, max, tone = "teal", className = "h-2" }: { value: number; 
 
 function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl p-4 sm:p-5 ${className}`}
-      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className={`rounded-card border border-line bg-surface p-4 sm:p-5 ${className}`}>
       {children}
     </div>
   );
@@ -59,7 +58,7 @@ function Card({ children, className = "" }: { children: ReactNode; className?: s
 function SectionTitle({ icon, children, hint }: { icon: ReactNode; children: ReactNode; hint?: ReactNode }) {
   return (
     <div className="mb-3">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-white">{icon}{children}</h2>
+      <h2 className="flex items-center gap-2 text-base font-extrabold text-fg">{icon}{children}</h2>
       {hint && <p className="mt-0.5 text-xs text-gray-500">{hint}</p>}
     </div>
   );
@@ -74,7 +73,7 @@ function PayPalButton() {
   return (
     <a href="https://paypal.me/OMACommunity" target="_blank" rel="noopener noreferrer"
       className="flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-transform hover:scale-[1.02] active:scale-95"
-      style={{ background: "linear-gradient(135deg, #0070BA, #003087)", boxShadow: "0 4px 16px rgba(0,112,186,0.3)" }}>
+      style={{ background: "#0070BA" }}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="white" aria-hidden="true">
         <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z" />
       </svg>
@@ -117,11 +116,10 @@ function NextTargetHero({ data }: { data: DonationPoolData }) {
   }
 
   return (
-    <div className="rounded-2xl p-5 sm:p-6 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-center"
-      style={{ background: "linear-gradient(135deg, rgba(20,184,166,0.10), rgba(20,184,166,0.02))", border: "1px solid rgba(20,184,166,0.18)" }}>
+    <div className="rounded-card border border-primary/40 bg-surface p-5 sm:p-6 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-center">
       <div className="min-w-0">
         <p className={`flex items-center gap-1.5 text-xs font-semibold ${next.kind === "fixed" ? "text-sky-300" : "text-teal-300"}`}>{label}</p>
-        <h1 className="mt-1 text-xl sm:text-2xl font-black text-white">{title}</h1>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-fg">{title}</h1>
         {text && <p className="mt-1 text-sm text-gray-400">{text}</p>}
         {progress && (
           <div className="mt-4">
@@ -158,7 +156,7 @@ function BalanceCard({ data }: { data: DonationPoolData }) {
         <span className="text-gray-600">=</span>
         <b className={`font-black ${balance >= 0 ? "text-teal-300" : "text-red-400"}`}>{fmt(balance)} €</b>
       </p>
-      <p className="mt-1 text-[11px] text-gray-600">eingenommen − ausgegeben = im Pool</p>
+      <p className="mt-1 text-xs text-gray-600">eingenommen − ausgegeben = im Pool</p>
     </Card>
   );
 }
@@ -210,13 +208,13 @@ function FixedCostsCard({ data }: { data: DonationPoolData }) {
             <li key={f.id} className="flex items-center gap-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-white">{f.title}</p>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {eur(f.amount)} {f.yearly ? "im Jahr" : "im Monat"} · {dueLabel(f.nextDueAt, f.monthsUntilDue, f.yearly)}
                   {f.yearly && f.target < f.amount && <> · {eur(f.target)} zurückgelegt</>}
                 </p>
               </div>
               <div className="w-20 shrink-0"><Bar value={f.covered} max={f.target || 1} tone="sky" /></div>
-              <span className={`w-14 shrink-0 text-right text-[11px] font-semibold ${done ? "text-sky-300" : "text-gray-500"}`}>
+              <span className={`w-14 shrink-0 text-right text-xs font-semibold ${done ? "text-sky-300" : "text-gray-500"}`}>
                 {done ? "gedeckt" : `${Math.round((f.covered / (f.target || 1)) * 100)} %`}
               </span>
             </li>
@@ -243,10 +241,10 @@ function GoalsCard({ data }: { data: DonationPoolData }) {
           const active = pool.next.kind === "goal" && pool.next.goal.id === g.id;
           return (
             <li key={g.id} className="flex items-center gap-3 py-2.5">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold tabular-nums ${active ? "bg-teal-500/20 text-teal-300" : "bg-line text-gray-500"}`}>{i + 1}</span>
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${active ? "bg-teal-500/20 text-teal-300" : "bg-line text-gray-500"}`}>{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <p className={`truncate text-sm ${active || done ? "text-white" : "text-gray-300"}`}>{g.title}</p>
-                {g.description && <p className="truncate text-[11px] text-gray-500">{g.description}</p>}
+                {g.description && <p className="truncate text-xs text-gray-500">{g.description}</p>}
               </div>
               {cost != null && cost > 0 ? (
                 <>
@@ -254,7 +252,7 @@ function GoalsCard({ data }: { data: DonationPoolData }) {
                   <span className={`w-14 shrink-0 text-right text-xs tabular-nums ${done ? "text-teal-300 font-semibold" : "text-gray-400"}`}>{done ? "gedeckt" : eur(cost)}</span>
                 </>
               ) : (
-                <span className="shrink-0 text-[11px] text-gray-600">Preis offen</span>
+                <span className="shrink-0 text-xs text-gray-600">Preis offen</span>
               )}
             </li>
           );
@@ -267,7 +265,7 @@ function GoalsCard({ data }: { data: DonationPoolData }) {
 function LedgerRow({ e }: { e: LedgerEntry }) {
   return (
     <li className="flex items-center gap-3 py-2">
-      <span className="w-14 shrink-0 text-[11px] text-gray-500 tabular-nums">{MONTHS[e.month - 1]} {String(e.year).slice(2)}</span>
+      <span className="w-14 shrink-0 text-xs text-gray-500 tabular-nums">{MONTHS[e.month - 1]} {String(e.year).slice(2)}</span>
       {e.kind === "in" ? (
         <span className="min-w-0 flex-1 truncate text-sm text-gray-300">Spenden · {e.donors} {e.donors === 1 ? "Person" : "Leute"}</span>
       ) : (
@@ -325,7 +323,7 @@ function DonorWall({ data }: { data: DonationPoolData }) {
               <span className={`rounded-full p-[2px] ${d.thisMonth ? "bg-teal-400" : "bg-line"}`}>
                 <RankedAvatar userId={d.id} src={d.image} alt={name} size={40} />
               </span>
-              <span className={`w-full truncate text-center text-[10px] ${isMe ? "text-teal-300" : "text-gray-500"}`}>{isMe ? "Du" : name}</span>
+              <span className={`w-full truncate text-center text-xs ${isMe ? "text-teal-300" : "text-gray-500"}`}>{isMe ? "Du" : name}</span>
             </li>
           );
         })}

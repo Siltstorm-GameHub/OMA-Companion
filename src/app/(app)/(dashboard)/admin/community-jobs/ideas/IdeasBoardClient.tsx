@@ -64,19 +64,19 @@ export default function IdeasBoardClient() {
               onDragOver={e => { e.preventDefault(); setOverCol(col.id); }} onDragLeave={() => setOverCol(cur => (cur === col.id ? null : cur))}
               onDrop={() => { if (dragId) move(dragId, col.id); setDragId(null); setOverCol(null); }}
               className={`rounded-xl border p-2 space-y-2 min-h-32 transition-colors ${overCol === col.id ? "border-teal-500/50 bg-teal-500/[0.05]" : "border-line-strong bg-surface-2"}`}>
-              <p className="text-[11px] font-semibold text-gray-300 px-1">{col.label} <span className="text-gray-600">({items.length})</span></p>
+              <p className="text-xs font-semibold text-gray-300 px-1">{col.label} <span className="text-gray-600">({items.length})</span></p>
               {items.map(i => (
                 <div key={i.id} draggable onDragStart={() => setDragId(i.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }}
                   className="rounded-lg bg-line border border-line-strong p-2 space-y-1 cursor-grab active:cursor-grabbing">
                   <Link href={`/community-board/idea/${i.id}`} className="block text-xs text-gray-100 hover:text-teal-300 transition-colors line-clamp-2">{i.title}</Link>
-                  <p className="text-[10px] text-gray-500 truncate">
+                  <p className="text-xs text-gray-500 truncate">
                     {i.author}{ideaCategoryLabel(i.category) ? ` · ${ideaCategoryLabel(i.category)}` : ""}{i.game ? ` · ${i.game}` : ""}
                   </p>
-                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
                     {i.votes > 0 ? <>{formatFixed(i.average, 1)}<Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> · {i.votes}</> : "keine Stimmen"}
                     {(i.participants + i.helpers) > 0 && <span> · 🙋 {i.participants}/{i.helpers}</span>}
                   </p>
-                  {i.draftEventId && <Link href={`/events/verwalten/${i.draftEventId}`} className="block text-[10px] text-teal-400 hover:text-teal-300">Event-Entwurf →</Link>}
+                  {i.draftEventId && <Link href={`/events/verwalten/${i.draftEventId}`} className="block text-xs text-teal-400 hover:text-teal-300">Event-Entwurf →</Link>}
                   <Select size="sm" value={i.lifecycle} onChange={e => move(i.id, e.target.value)} className="w-full" aria-label="Status">
                     {IDEA_LIFECYCLES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                   </Select>

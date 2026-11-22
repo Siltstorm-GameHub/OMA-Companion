@@ -253,10 +253,10 @@ export default function TournamentManagerMobile({
       <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(165deg, rgba(20,184,166,0.12), rgba(31,41,55,0.9))", border: "1px solid rgba(20,184,166,0.35)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-teal-400">
               {(is1v1 ? !isPlayed1v1 : !isPlayedFfa) ? "Jetzt dran" : "Zuletzt angesehen"}
             </span>
-            <span className="text-[11px] text-gray-400">{matchLabel(focused)}</span>
+            <span className="text-xs text-gray-400">{matchLabel(focused)}</span>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => goto(-1)} disabled={focusIdx === 0}
@@ -282,7 +282,7 @@ export default function TournamentManagerMobile({
           />
         ) : (
           <button type="button" onClick={() => setEditingMetaId(focused.id)}
-            className="flex items-center gap-1 text-[11px] text-gray-400 active:text-white -mt-1">
+            className="flex items-center gap-1 text-xs text-gray-400 active:text-white -mt-1">
             <Pencil className="w-3 h-3" /> Rundennummer/Zusatz ändern
           </button>
         ))}
@@ -335,7 +335,7 @@ export default function TournamentManagerMobile({
       {/* ── Übrige Matches als kompakte Liste ── */}
       {hasMatches && (
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5 px-1">Alle Matches</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5 px-1">Alle Matches</p>
         <div className="space-y-1.5">
           {matches.map((m, idx) => {
             const played = is1v1 ? !!(m.winnerId || m.playedAt) : !!m.playedAt;
@@ -355,13 +355,13 @@ export default function TournamentManagerMobile({
                       ? `${m.player1Id ? userName(allUsers.find(u => u.id === m.player1Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"} vs. ${m.player2Id ? userName(allUsers.find(u => u.id === m.player2Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"}`
                       : statRoundLabel(m)}
                   </p>
-                  {is1v1 && <p className="text-[10px] text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
+                  {is1v1 && <p className="text-xs text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
                 </div>
                 {is1v1 && played && (
-                  <span className="text-[10px] text-teal-400 shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
+                  <span className="text-xs text-teal-400 shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
                 )}
                 {!is1v1 && (
-                  <span className="text-[10px] text-gray-500 shrink-0">{m.entries.length} Sp.</span>
+                  <span className="text-xs text-gray-500 shrink-0">{m.entries.length} Sp.</span>
                 )}
                 <button onClick={e => { e.stopPropagation(); deleteMatch(m.id); }}
                   className="p-1.5 -m-1 text-gray-600 active:text-red-500 shrink-0">
@@ -465,14 +465,14 @@ function AddMatchForm({
         <label className="text-xs text-gray-500 block mb-1.5">Titel (optional)</label>
         <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
           placeholder="z.B. Gruppenphase A"
-          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-3"
+          className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
         />
       </div>
 
       <div>
         <label className="text-xs text-gray-500 block mb-1.5">Datum &amp; Uhrzeit</label>
         <input type="datetime-local" value={mScheduled} onChange={e => setMScheduled(e.target.value)}
-          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-3"
+          className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
         />
       </div>
       </>)}
@@ -537,7 +537,7 @@ function AddMatchForm({
         <label className="text-xs text-gray-500 block mb-1.5">Notizen (optional)</label>
         <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
           placeholder="z.B. Map: Verdansk, Server: EU"
-          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-xl px-3 py-3"
+          className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
         />
       </div>
       )}
@@ -631,7 +631,7 @@ function FocusedDuelCard({
           Unentschieden
         </button>
       )}
-      {!canPlay && <p className="text-[11px] text-gray-600 text-center">Wartet noch auf beide Teilnehmer.</p>}
+      {!canPlay && <p className="text-xs text-gray-600 text-center">Wartet noch auf beide Teilnehmer.</p>}
     </div>
   );
 }
@@ -691,7 +691,7 @@ function FocusedFfaCard({
       {trackMatchWin && (
         usesTeams ? (
           <div className="space-y-1.5">
-            <p className="text-[11px] text-gray-400">Match Win <span className="text-gray-600">(Sieger-Team +1)</span></p>
+            <p className="text-xs text-gray-400">Match Win <span className="text-gray-600">(Sieger-Team +1)</span></p>
             <div className="flex gap-2">
               <button onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
                 className={`flex-1 text-xs font-semibold rounded-xl py-2.5 border ${matchWin[match.id] === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-400"}`}>
@@ -713,7 +713,7 @@ function FocusedFfaCard({
         )
       )}
       {teamError && (
-        <p className="text-[11px] text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {teamError}</p>
+        <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {teamError}</p>
       )}
 
       {/* Spieler in diesem Match ändern — auch bei laufenden Matches */}
@@ -740,7 +740,7 @@ function FocusedFfaCard({
             {addable.length > 0 && (
               <select value="" disabled={loading}
                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
-                className="w-full text-sm bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-gray-300">
+                className="w-full text-sm bg-surface-2 border border-line rounded-control px-3 py-2.5 text-gray-300">
                 <option value="">+ Spieler hinzufügen…</option>
                 {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
               </select>
@@ -801,7 +801,7 @@ function FocusedFfaCard({
       </div>
 
       {trackPlacement && placementPoints && (
-        <p className="text-[10px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Platz → Punkte: {Object.entries(placementPoints).sort(([a], [b]) => Number(a) - Number(b)).map(([p, pts]) => `${p}.=${pts}`).join(" · ")}
         </p>
       )}

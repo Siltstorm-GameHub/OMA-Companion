@@ -33,11 +33,11 @@ export default function EventCompleteClient(props: Props) {
           {/* Schritte springen zum jeweiligen Abschnitt */}
           {steps.map((label, i) => (
             <a key={label} href={`#schritt-${label.toLowerCase()}`}
-              className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-gray-300 hover:border-teal-500/40 hover:text-white">
+              className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-gray-300 hover:border-teal-500/40 hover:text-white">
               <span className="font-semibold text-teal-300">{i + 1}</span> {label}
             </a>
           ))}
-          <span className="text-[11px] text-gray-500">
+          <span className="text-xs text-gray-500">
             · {registeredUsers.length} {registeredUsers.length === 1 ? "Spieler" : "Spieler"}
             {spectatorUsers.length > 0 && ` · ${spectatorUsers.length} Zuschauer`}
           </span>
@@ -85,7 +85,7 @@ export default function EventCompleteClient(props: Props) {
       )}
       {/* Sieger-Tipps: der festgelegte Sieger verteilt den Pott */}
       {predictionInfo && !isPollOnly && (
-        <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-[11px] text-violet-200">
+        <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-xs text-violet-200">
           🎯 {predictionInfo.count} {predictionInfo.count === 1 ? "Tipp" : "Tipps"} auf den Sieger, Pott {predictionInfo.pot} Münzen.{" "}
           {predictionInfo.resolved
             ? "Änderst du den Sieger, wird der Pott automatisch neu verteilt."
@@ -93,12 +93,12 @@ export default function EventCompleteClient(props: Props) {
         </p>
       )}
       {rewardsCapped && (
-        <p className="rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-[11px] text-gray-400">
+        <p className="rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-xs text-gray-400">
           Die Beträge sind auf die Obergrenzen für Mitglieder-Events gekürzt. Genau so werden sie ausgezahlt.
         </p>
       )}
       {isPollOnly && pollAutoEnd && (
-        <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-[11px] text-violet-200">
+        <p className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-2.5 text-xs text-violet-200">
           Die Umfrage endet automatisch am {formatBerlinDateTime(pollAutoEnd, { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} Uhr.
           Danach wird das Event von selbst abgeschlossen und die Umfrage-Belohnungen gehen raus. Du kannst sie auch jetzt schon beenden.
         </p>
@@ -164,7 +164,7 @@ export default function EventCompleteClient(props: Props) {
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Niemand in der Platzierung, es würden keine Platzierungs-Belohnungen vergeben.
             </p>
           )}
-          <p className="text-[11px] text-teal-200/90">Beim Klick auf den Hauptknopf: {actionSummary}</p>
+          <p className="text-xs text-teal-200/90">Beim Klick auf den Hauptknopf: {actionSummary}</p>
           <div className="flex items-center gap-x-3 gap-y-2 flex-wrap">
             {/* Handy: Zusammenfassung über volle Breite, Buttons darunter */}
             <div className="min-w-0 flex-1 basis-full sm:basis-0">
@@ -180,7 +180,7 @@ export default function EventCompleteClient(props: Props) {
                     {totals.rankPoints > 0 && <> · {totals.rankPoints} Rang-Punkte</>}
                     {totals.tablePoints > 0 && <> · {totals.tablePoints} Tabellenpunkte</>}
                   </p>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-gray-500">
                     {[
                       excludedUsers.size > 0 && `${excludedUsers.size} disqualifiziert`,
                       absentPlayers.size > 0 && `${absentPlayers.size} nicht da`,

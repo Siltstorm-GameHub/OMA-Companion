@@ -38,7 +38,7 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
                 Werte-Erfassung einschalten
               </button>
             )}
-            <p className="text-[11px] text-gray-500">Danach erscheint hier das Ziel. Gespeichert wird mit „Speichern“ oben.</p>
+            <p className="text-xs text-gray-500">Danach erscheint hier das Ziel. Gespeichert wird mit „Speichern“ oben.</p>
           </div>
         )}
       </Section>
@@ -51,13 +51,13 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
         <SeriesGoalEditor format={fixedFormat || null} value={tournamentTemplate} onChange={setTournamentTemplate}
           statFields={eventStatFields} disabled={isArchived}
           rewardLimit={goalLimits?.coins ?? null} seriesPointsLimit={goalLimits?.seriesPoints ?? null} />
-        <p className="text-[11px] text-teal-300/80 mt-2">
+        <p className="text-xs text-teal-300/80 mt-2">
           Änderst du das Ziel, während ein Termin schon läuft, behalten laufende und vergangene Termine ihr bisheriges Ziel.
           Alle kommenden übernehmen das neue. Gespeichert wird mit „Speichern“ oben.
         </p>
         {!isArchived && upcomingTermineCount > 0 && (
           <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-line">
-            <p className="text-[11px] text-gray-500 flex-1 min-w-[200px]">
+            <p className="text-xs text-gray-500 flex-1 min-w-[200px]">
               Einzelne kommende Termine haben ein eigenes Ziel oder keins? Hier setzt du alle {upcomingTermineCount}
               {" "}kommenden Termine auf das Ziel der Reihe zurück. Wirkt sofort.
             </p>
@@ -70,7 +70,7 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
       </Section>
 
       <Section title="Ziel je Termin und Planung">
-        <p className="text-[11px] text-gray-500 mb-2">Änderungen in diesem Abschnitt gelten sofort, ohne „Speichern“.</p>
+        <p className="text-xs text-gray-500 mb-2">Änderungen in diesem Abschnitt gelten sofort, ohne „Speichern“.</p>
         <SeriesCycleGoals seriesId={series.id} fixedFormat={fixedFormat || null}
           events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}
           statFields={eventStatFields} disabled={isArchived} goalLimits={goalLimits} />

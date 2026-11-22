@@ -101,9 +101,9 @@ export default function GroupStagePanel({
           Spiel um Platz 3 (Verlierer der Halbfinals)
         </label>
         {error ? (
-          <p className="text-[11px] text-amber-500">{error}</p>
+          <p className="text-xs text-amber-500">{error}</p>
         ) : (
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             → {groupCount} {groupCount === 1 ? "Gruppe" : "Gruppen"} à {minSize === maxSize ? minSize : `${minSize}–${maxSize}`} Spieler
             · {plannedGroupMatches} Gruppenspiele{groupLegs === 2 ? " (Hin & Rück)" : ""} · {qualifiers} Spieler in der K.O.-Runde
             {knockoutLegs === 2 ? (singleLegFinal ? " (Hin & Rück, Finale einfach)" : " (Hin & Rück)") : ""}
@@ -149,7 +149,7 @@ export default function GroupStagePanel({
         </p>
         {!anyPlayed && (
           <button type="button" disabled={loading} onClick={() => onAction({ generateMatches: "reset_groups" })}
-            className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-amber-400 transition-colors">
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-amber-400 transition-colors">
             <RotateCcw className="w-3 h-3" /> Neu auslosen
           </button>
         )}
@@ -161,7 +161,7 @@ export default function GroupStagePanel({
             <p className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 text-xs font-medium text-white">{groupLabel(gi)}</p>
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-[10px] text-gray-500 uppercase">
+                <tr className="text-xs text-gray-500 uppercase">
                   <th className="text-left px-2 py-1 font-medium">#</th>
                   <th className="text-left px-2 py-1 font-medium">Spieler</th>
                   <th className="text-center px-1 py-1 font-medium" title="Spiele">Sp</th>
@@ -196,7 +196,7 @@ export default function GroupStagePanel({
       </div>
 
       {withoutGroup.length > 0 && (
-        <p className="text-[11px] text-amber-500">
+        <p className="text-xs text-amber-500">
           Ohne Gruppe (nach der Auslosung hinzugefügt, spielen nicht mit): {withoutGroup.map(p => userName(p.user)).join(", ")}
         </p>
       )}
@@ -208,7 +208,7 @@ export default function GroupStagePanel({
             K.O.-Baum passt nicht mehr zu den aktuellen Platzierungen.
           </p>
           {knockoutPlayed ? (
-            <p className="text-[11px] text-gray-400">
+            <p className="text-xs text-gray-400">
               In der K.O.-Runde wurden schon Ergebnisse eingetragen. Zum Neu-Setzen erst diese zurücksetzen.
             </p>
           ) : (
@@ -231,7 +231,7 @@ export default function GroupStagePanel({
         </button>
       ) : !knockoutPlayed && (
         <button type="button" disabled={loading} onClick={() => onAction({ generateMatches: "reset_knockout" })}
-          className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-amber-400 transition-colors">
+          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-400 transition-colors">
           <RotateCcw className="w-3 h-3" /> K.O.-Runde verwerfen (z.B. nach einer Ergebnis-Korrektur in der Gruppe)
         </button>
       )}

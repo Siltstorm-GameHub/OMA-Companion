@@ -33,7 +33,7 @@ export default function ProfileRecentEvents({ eventRegs, userId, isOwn }: { even
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
           <CalendarDays className="w-3.5 h-3.5 text-teal-500/70" /> Letzte Events
         </h2>
-        {isOwn && <Link href="/events?tab=mine" className="text-[11px] text-teal-500 hover:text-teal-300">Meine Events →</Link>}
+        {isOwn && <Link href="/events?tab=mine" className="text-xs text-teal-500 hover:text-teal-300">Meine Events →</Link>}
       </div>
       {eventRegs.length === 0 ? (
         <div className="glass rounded-2xl px-4 py-5 text-center">
@@ -47,7 +47,7 @@ export default function ProfileRecentEvents({ eventRegs, userId, isOwn }: { even
             const upcoming = reg.event.status && reg.event.status !== "finished" && reg.event.status !== "umfrage";
             const badge = place
               ? <span className={`shrink-0 min-w-[2.25rem] text-center text-xs font-bold px-1.5 py-0.5 rounded-md border tabular-nums ${PLACE_CLS[place - 1] ?? "bg-line text-gray-300 border-line"}`}>{place}.</span>
-              : <span className="shrink-0 min-w-[2.25rem] text-center text-[10px] font-medium px-1.5 py-0.5 rounded-md border border-line text-gray-400">
+              : <span className="shrink-0 min-w-[2.25rem] text-center text-xs font-medium px-1.5 py-0.5 rounded-md border border-line text-gray-400">
                   {upcoming ? "bald" : reg.role === "spectator" ? "Zusch." : "dabei"}
                 </span>;
             return (
@@ -56,7 +56,7 @@ export default function ProfileRecentEvents({ eventRegs, userId, isOwn }: { even
                 {badge}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">{reg.event.title}</p>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-gray-500">
                     {formatBerlinDate(reg.event.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                     {reg.event.game ? ` · ${reg.event.game}` : ""}
                   </p>

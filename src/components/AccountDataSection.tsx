@@ -34,7 +34,7 @@ export default function AccountDataSection() {
 
   return (
     <section id="account">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔒 Konto & Daten</h2>
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">🔒 Konto & Daten</h2>
       <div className="glass card-shine rounded-2xl p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -76,7 +76,7 @@ export default function AccountDataSection() {
                 <input
                   value={confirm}
                   onChange={e => setConfirm(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl bg-black/30 border border-line-strong px-3 py-2 text-sm text-white outline-none focus:border-red-500/50"
+                  className="mt-1.5 w-full rounded-control bg-black/30 border border-line px-3 py-2 text-sm text-fg outline-none focus:border-primary"
                   autoComplete="off"
                 />
               </label>
@@ -96,7 +96,7 @@ export default function AccountDataSection() {
           )}
         </div>
 
-        <p className="text-[11px] text-gray-600">
+        <p className="text-xs text-gray-600">
           <Link href="/datenschutz" className="hover:text-gray-400 underline-offset-2 hover:underline">Datenschutz</Link>
           {" · "}
           <Link href="/impressum" className="hover:text-gray-400 underline-offset-2 hover:underline">Impressum</Link>

@@ -16,7 +16,7 @@ const TONES: Record<InboxTone, string> = {
   teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
   blue: "text-sky-300 bg-sky-500/10 border-sky-500/20",
   red: "text-red-300 bg-red-500/10 border-red-500/20",
-  violet: "text-purple-300 bg-purple-500/10 border-purple-500/20",
+  violet: "text-primary-fg bg-primary-soft border-primary/40",
 };
 const fmt = (n: number) => n.toLocaleString("de-DE");
 
@@ -36,7 +36,7 @@ export function InboxList({ label, items, now }: { label: string; items: InboxIt
   if (items.length === 0) return null;
   return (
     <div className="mt-2">
-      <p className="text-[11px] font-semibold text-gray-500">{label}</p>
+      <p className="text-xs font-semibold text-gray-500">{label}</p>
       <ul className="divide-y divide-line">
         {items.map((t) => {
           const I = ICONS[t.icon as keyof typeof ICONS] ?? CalendarClock;
@@ -69,16 +69,16 @@ export function UpcomingList({ events, now }: { events: UpcomingEvent[]; now: Da
         return (
           <li key={e.id}>
             <Link href={`/events/verwalten/${e.id}`} className="group flex items-center gap-3 py-2">
-              <span className="w-[5.5rem] shrink-0 text-[11px] text-gray-500 tabular-nums">{whenLabel(e.startAt, now)}</span>
+              <span className="w-[5.5rem] shrink-0 text-xs text-gray-500 tabular-nums">{whenLabel(e.startAt, now)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-gray-200 group-hover:text-white">{e.title}</span>
                 {(e.awaitingApproval || e.notAnnounced) && (
-                  <span className="block text-[11px] text-amber-300/90">
+                  <span className="block text-xs text-amber-300/90">
                     {e.awaitingApproval ? "wartet noch auf Freigabe" : "nicht im Discord angekündigt"}
                   </span>
                 )}
               </span>
-              <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+              <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
                 empty ? "bg-amber-500/15 text-amber-300" : full ? "bg-teal-500/15 text-teal-300" : "bg-line text-gray-300"
               }`} title="Anmeldungen als Spieler">
                 {empty ? "0 Anm." : e.maxPlayers ? `${e.players}/${e.maxPlayers}` : e.players}
@@ -95,10 +95,10 @@ function PulseTile({ label, p, hint }: { label: string; p: PulseValue; hint?: st
   const tone = p.delta > 0 ? "text-emerald-300" : p.delta < 0 ? "text-red-300" : "text-gray-500";
   return (
     <div className="rounded-xl bg-surface-2 p-3" title={hint}>
-      <p className="text-[11px] text-gray-500">{label}</p>
+      <p className="text-xs text-gray-500">{label}</p>
       <p className="mt-0.5 flex items-baseline gap-1.5">
         <span className="text-lg font-bold text-white tabular-nums">{fmt(p.value)}</span>
-        <span className={`text-[11px] font-semibold tabular-nums ${tone}`}>{p.delta > 0 ? "+" : p.delta < 0 ? "−" : "±"}{fmt(Math.abs(p.delta))}</span>
+        <span className={`text-xs font-semibold tabular-nums ${tone}`}>{p.delta > 0 ? "+" : p.delta < 0 ? "−" : "±"}{fmt(Math.abs(p.delta))}</span>
       </p>
     </div>
   );
@@ -125,7 +125,7 @@ export function NotableList({ items }: { items: NotableTx[] }) {
             <span className="block truncate text-sm text-gray-200">
               <Link href={`/profile/${t.userId}`} className="font-medium text-white hover:text-teal-200">{t.userName}</Link> · {t.label}
             </span>
-            <span className="block text-[11px] text-gray-500">{NOTABLE_LABELS[t.kind]} · {formatBerlinDate(t.createdAt, { weekday: "short", day: "numeric", month: "numeric" })}</span>
+            <span className="block text-xs text-gray-500">{NOTABLE_LABELS[t.kind]} · {formatBerlinDate(t.createdAt, { weekday: "short", day: "numeric", month: "numeric" })}</span>
           </span>
           <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.rank ? "text-teal-300" : t.amount < 0 ? "text-red-300" : "text-amber-300"}`}>
             {t.amount > 0 ? "+" : "−"}{fmt(Math.abs(t.amount))}{t.rank && " Rang"}
@@ -151,7 +151,7 @@ export function RunningList({ items, now }: { items: { key: string; title: strin
         <li key={r.key}>
           <Link href={r.href} className="group flex items-center gap-3 py-2 text-sm">
             <span className="flex-1 truncate text-gray-200 group-hover:text-white">{r.title}</span>
-            <span className="shrink-0 text-[11px] text-gray-500">{left(r.endsAt)}</span>
+            <span className="shrink-0 text-xs text-gray-500">{left(r.endsAt)}</span>
             <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-300" />
           </Link>
         </li>

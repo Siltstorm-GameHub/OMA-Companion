@@ -162,7 +162,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
 
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-            {editId ? <><Pencil className="w-4 h-4 text-purple-400" /> Mitteilung bearbeiten</> : <><Plus className="w-4 h-4 text-purple-400" /> Neue Mitteilung</>}
+            {editId ? <><Pencil className="w-4 h-4 text-primary-fg" /> Mitteilung bearbeiten</> : <><Plus className="w-4 h-4 text-primary-fg" /> Neue Mitteilung</>}
           </h2>
           {editId && (
             <button type="button" onClick={resetForm}
@@ -181,7 +181,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
             maxLength={80}
             placeholder="z.B. Willkommen zum Sommer-Event!"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors"
           />
         </div>
 
@@ -195,9 +195,9 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
             maxLength={500}
             rows={3}
             placeholder="Die Mitteilung, die alle User sehen sollen …"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors resize-none"
           />
-          <p className="text-[11px] text-gray-700 text-right mt-0.5">{form.content.length}/500</p>
+          <p className="text-xs text-gray-700 text-right mt-0.5">{form.content.length}/500</p>
         </div>
 
         {/* Zeitraum */}
@@ -208,7 +208,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
               required type="datetime-local"
               value={form.startDate}
               onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg focus:outline-none focus:border-primary transition-colors"
             />
           </div>
           <div>
@@ -217,7 +217,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
               required type="datetime-local"
               value={form.endDate}
               onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-              className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg focus:outline-none focus:border-primary transition-colors"
             />
           </div>
         </div>
@@ -227,22 +227,22 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
           <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
             <input type="checkbox" checked={form.isActive}
               onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="accent-purple-500 w-4 h-4" />
+              className="accent-primary w-4 h-4" />
             Sofort aktiv
           </label>
           {!editId && (
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
               <input type="checkbox" checked={form.sendPush}
                 onChange={e => setForm(f => ({ ...f, sendPush: e.target.checked }))}
-                className="accent-purple-500 w-4 h-4" />
-              <Bell className="w-3.5 h-3.5 text-purple-400" />
+                className="accent-primary w-4 h-4" />
+              <Bell className="w-3.5 h-3.5 text-primary-fg" />
               Push-Benachrichtigung senden
             </label>
           )}
         </div>
 
         <button type="submit" disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors">
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-ink transition-colors">
           <Send className="w-3.5 h-3.5" />
           {saving ? "Wird gespeichert…" : editId ? "Speichern" : "Erstellen"}
         </button>
@@ -274,7 +274,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
               {/* Status-Icon */}
               <div className="mt-0.5 shrink-0">
                 {active
-                  ? <CheckCircle className="w-4 h-4 text-purple-400" />
+                  ? <CheckCircle className="w-4 h-4 text-primary-fg" />
                   : <Clock className="w-4 h-4 text-gray-600" />}
               </div>
 
@@ -285,7 +285,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Aktiv-Toggle */}
                     <button onClick={() => toggleActive(m)} title={m.isActive ? "Deaktivieren" : "Aktivieren"}
-                      className={`p-1.5 rounded-md transition-colors ${m.isActive ? "text-purple-400 hover:bg-purple-500/10" : "text-gray-600 hover:bg-line"}`}>
+                      className={`p-1.5 rounded-md transition-colors ${m.isActive ? "text-primary-fg hover:bg-primary-hover" : "text-gray-600 hover:bg-line"}`}>
                       {m.isActive ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
                     </button>
                     {/* Bearbeiten */}
@@ -303,10 +303,10 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
 
                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{m.content}</p>
 
-                <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-700">
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-700">
                   <span>{formatDate(m.startDate)} – {formatDate(m.endDate)}</span>
                   {!m.isActive && <span className="text-amber-600">Inaktiv</span>}
-                  {active && <span className="text-purple-400 font-medium">Wird gerade angezeigt</span>}
+                  {active && <span className="text-primary-fg font-medium">Wird gerade angezeigt</span>}
                 </div>
               </div>
             </div>

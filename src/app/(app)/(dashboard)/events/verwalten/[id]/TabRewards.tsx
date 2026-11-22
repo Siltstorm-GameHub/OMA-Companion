@@ -29,7 +29,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   <CoinIcon size={16} />
                   <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
                 </div>
-                <p className="text-[11px] text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
+                <p className="text-xs text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Münzen</label>
@@ -43,7 +43,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   </div>
                 </div>
                 {!hasPlacement && (
-                  <p className="text-[11px] text-gray-500">Ohne Platzierung: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
+                  <p className="text-xs text-gray-500">Ohne Platzierung: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
                 )}
               </div>
 
@@ -70,7 +70,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   </div>
                 ))}
                 {lim && (
-                  <p className={`text-[11px] ${placementsOver ? "text-amber-300" : "text-gray-500"}`}>
+                  <p className={`text-xs ${placementsOver ? "text-amber-300" : "text-gray-500"}`}>
                     Höchstens: {placements.map(p => { const l = placeLimit(p.place)!; return `${p.place}. ${l.coins} Münzen${l.rankPoints ? `, ${l.rankPoints} RP` : ""}`; }).join(" · ")}
                     {placementsOver && ". Zu hohe Werte werden beim Speichern gekürzt."}
                   </p>
@@ -181,7 +181,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   <label className={labelCls}>Dauer der Abstimmung (Std.)</label>
                   <NumberInput min={1} value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
                     onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })} className={inputCls} />
-                  <p className="text-[11px] text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                   Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
                   einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
                   Gleichplatzierten die volle Sieger-Belohnung.

@@ -1,10 +1,11 @@
 "use client";
+import { RankCell as UiRankCell } from "@/components/ui/Table";
 import { useState } from "react";
 import Link from "next/link";
 import { TrendingUp, TrendingDown } from "@/components/icons";
 import { Ban } from "@/components/icons";
 import { ChevronDown, ChevronUp } from "@/components/icons";
-import { Medal, Minus, Flame, Crown } from "@/components/icons";
+import { Minus, Flame, Crown } from "@/components/icons";
 import RankedAvatar from "@/components/RankedAvatar";
 
 type StandingRow = {
@@ -61,7 +62,6 @@ interface Props {
   badges?: Record<string, string>;
 }
 
-const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
 
 function uname(u: StandingUser) { return u.username ?? u.name ?? "?"; }
 
@@ -77,10 +77,8 @@ function Avatar({ u, size = 7 }: { u: StandingUser | undefined; size?: number })
   );
 }
 
-function RankCell({ rank }: { rank: number }) {
-  if (rank <= 3) return <Medal className={`w-4 h-4 ${MEDALS[rank - 1]}`} />;
-  return <span className="text-xs text-gray-600 font-mono tabular-nums">{rank}</span>;
-}
+// Platz-Anzeige: gemeinsamer Baustein (1–3 in Medaillenfarben), siehe components/ui/Table.tsx
+const RankCell = UiRankCell;
 
 function RankDelta({ delta }: { delta: DeltaInfo }) {
   if (delta.isNew) {
@@ -92,7 +90,7 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
   }
   if (delta.rankDelta > 0) {
     return (
-      <span className="flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 leading-none">
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 leading-none">
         <TrendingUp className="w-2.5 h-2.5" />
         {delta.rankDelta}
       </span>
@@ -100,7 +98,7 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
   }
   if (delta.rankDelta < 0) {
     return (
-      <span className="flex items-center gap-0.5 text-[10px] font-semibold text-red-400 leading-none">
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-red-400 leading-none">
         <TrendingDown className="w-2.5 h-2.5" />
         {Math.abs(delta.rankDelta)}
       </span>
@@ -226,16 +224,16 @@ export default function SeriesStandingsTable({
         {hasDelta && lastEventTitle && (
           <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3 text-emerald-500/60" />
-            <span className="text-[10px] text-gray-600">
+            <span className="text-xs text-gray-600">
               Veränderung nach: <span className="text-gray-500">{lastEventTitle}</span>
             </span>
           </div>
         )}
         {/* Header */}
-        <div className="grid items-center px-4 py-2.5 border-b border-line"
+        <div className="grid items-center px-4 py-2.5 border-b border-line bg-surface-2"
           style={{ gridTemplateColumns: fullGridCols }}>
           {headers.map((col, i) => (
-            <span key={i} className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest truncate ${col.cls}`}>
+            <span key={i} className={`text-xs font-bold text-subtle uppercase tracking-[0.06em] truncate ${col.cls}`}>
               {col.label}
             </span>
           ))}
@@ -253,8 +251,8 @@ export default function SeriesStandingsTable({
               className="grid items-center px-4 py-3 border-b border-line last:border-0 hover:bg-surface-2 transition-colors"
               style={{
                 gridTemplateColumns: fullGridCols,
-                background: isMe ? "rgba(20,184,166,0.05)" : "",
-                borderLeft: isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
+                background: isMe ? "rgb(22 48 45 / 0.7)" : "",
+                borderLeft: isMe ? "3px solid var(--color-primary)" : "3px solid transparent",
               }}>
               <div className="flex items-center justify-center"><RankCell rank={rank} /></div>
               {deltaColPresent && (
@@ -264,14 +262,14 @@ export default function SeriesStandingsTable({
               )}
               <div className="flex items-center gap-2.5 min-w-0">
                 <Avatar u={u} size={7} />
-                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
+                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-primary-fg" : "text-fg"}`}>
                   {name}
-                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {isMe && <span className="text-xs text-teal-600 ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
-                  {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
+                  {row.hasLegacy && <span className="text-xs text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
                   {row.disqualifiedEventCount > 0 && (
                     <span
-                      className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
                       title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Tabellenpunkte`}
                     >
                       <Ban className="w-2.5 h-2.5" /> {row.disqualifiedEventCount}
@@ -308,7 +306,7 @@ export default function SeriesStandingsTable({
                 <div key={`streak-${i}`} className="text-center">
                   {(dominionStreaks?.[row.userId] ?? 0) > 0 ? (
                     <span
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[11px] font-semibold text-orange-400"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-xs font-semibold text-orange-400"
                       title={dominionThreshold ? `Noch ${Math.max(dominionThreshold - dominionStreaks![row.userId], 0)}x bis zum Dominion Bonus` : undefined}
                     >
                       <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}
@@ -357,17 +355,17 @@ export default function SeriesStandingsTable({
         {hasDelta && lastEventTitle && (
           <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3 text-emerald-500/60" />
-            <span className="text-[10px] text-gray-600 truncate">
+            <span className="text-xs text-gray-600 truncate">
               nach: <span className="text-gray-500">{lastEventTitle}</span>
             </span>
           </div>
         )}
-        <div className="grid items-center px-4 py-2.5 border-b border-line"
+        <div className="grid items-center px-4 py-2.5 border-b border-line bg-surface-2"
           style={{ gridTemplateColumns: compactCols }}>
-          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">#</span>
+          <span className="text-xs font-bold text-subtle uppercase tracking-[0.06em]">#</span>
           {deltaColPresent && <span />}
-          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</span>
-          <span className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest ${showPoints ? "text-right" : "text-center"}`}>
+          <span className="text-xs font-bold text-subtle uppercase tracking-[0.06em]">Spieler</span>
+          <span className={`text-xs font-bold text-subtle uppercase tracking-[0.06em] ${showPoints ? "text-right" : "text-center"}`}>
             {showPoints ? "Punkte" : (fallbackStatField ?? "Events")}
           </span>
         </div>
@@ -380,11 +378,11 @@ export default function SeriesStandingsTable({
           return (
             <Link key={row.userId}
               href={isMe ? "/profile" : `/profile/${row.userId}`}
-              className="grid items-center px-4 py-3 border-b border-line last:border-0"
+              className="grid min-h-14 items-center px-4 py-2.5 border-b border-line last:border-0 hover:bg-surface-2"
               style={{
                 gridTemplateColumns: compactCols,
-                background: isMe ? "rgba(20,184,166,0.05)" : "",
-                borderLeft: isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
+                background: isMe ? "rgb(22 48 45 / 0.7)" : "",
+                borderLeft: isMe ? "3px solid var(--color-primary)" : "3px solid transparent",
               }}>
               <div className="flex items-center justify-center"><RankCell rank={rank} /></div>
               {deltaColPresent && (
@@ -394,9 +392,9 @@ export default function SeriesStandingsTable({
               )}
               <div className="flex items-center gap-2 min-w-0">
                 <Avatar u={u} size={6} />
-                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
+                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-primary-fg" : "text-fg"}`}>
                   {name}
-                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {isMe && <span className="text-xs text-teal-600 ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.disqualifiedEventCount > 0 && (
                     <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>
@@ -433,7 +431,7 @@ export default function SeriesStandingsTable({
 
   if (mode === "compact") {
     return (
-      <div className="glass card-shine rounded-2xl overflow-hidden">
+      <div className="rounded-card border border-line bg-surface overflow-hidden">
         {CompactTable()}
       </div>
     );
@@ -441,7 +439,7 @@ export default function SeriesStandingsTable({
 
   if (mode === "full") {
     return (
-      <div className="glass card-shine rounded-2xl overflow-hidden">
+      <div className="rounded-card border border-line bg-surface overflow-hidden">
         <div className="overflow-x-auto">
           {FullTable()}
         </div>
@@ -451,7 +449,7 @@ export default function SeriesStandingsTable({
 
   // mode === "auto": compact on mobile with optional expand, full on desktop
   return (
-    <div className="glass card-shine rounded-2xl overflow-hidden">
+    <div className="rounded-card border border-line bg-surface overflow-hidden">
       <div className="lg:hidden">
         {expanded && hasExtraData ? (
           <div className="overflow-x-auto">{FullTable()}</div>

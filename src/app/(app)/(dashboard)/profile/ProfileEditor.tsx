@@ -139,7 +139,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
             )}
             <button
               onClick={() => setOpen(true)}
-              className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border border-line text-gray-500 hover:text-white hover:border-line-strong transition-colors"
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-500 hover:text-white hover:border-line-strong transition-colors"
             >
               <Pencil className="w-3 h-3" /> Profil bearbeiten
             </button>
@@ -162,9 +162,9 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
               onChange={e => setBio(e.target.value.slice(0, MAX_BIO))}
               rows={3}
               placeholder="Schreib einen kurzen Gruß für alle, die dein Profil besuchen..."
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-white resize-none outline-none bg-line border border-line-strong focus:border-indigo-500/40 placeholder-gray-600"
+              className="w-full rounded-control px-3 py-2.5 text-sm text-fg resize-none outline-none bg-surface-2 border border-line focus:border-primary placeholder:text-subtle"
             />
-            <p className="text-[10px] text-gray-600 text-right">{bio.length}/{MAX_BIO}</p>
+            <p className="text-xs text-gray-600 text-right">{bio.length}/{MAX_BIO}</p>
           </div>
 
           {/* Geburtstag */}
@@ -178,9 +178,9 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
               onChange={e => setBirthday(e.target.value)}
               placeholder="TT-MM  (z.B. 24-03 für 24. März)"
               maxLength={5}
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-line border border-line-strong focus:border-pink-500/40 placeholder-gray-600"
+              className="w-full rounded-control px-3 py-2.5 text-sm text-fg outline-none bg-surface-2 border border-line focus:border-primary placeholder:text-subtle"
             />
-            <p className="text-[10px] text-gray-600">
+            <p className="text-xs text-gray-600">
               Format: Tag-Monat · Jahreszahl wird nicht gespeichert · Du bekommst am Geburtstag einen Münzen-Boost 🎂
             </p>
           </div>
@@ -195,9 +195,9 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
               value={twitchInput}
               onChange={e => setTwitchInput(e.target.value)}
               placeholder="Dein Twitch-Loginname (z.B. ninja)"
-              className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-line border border-line-strong focus:border-purple-500/40 placeholder-gray-600"
+              className="w-full rounded-control px-3 py-2.5 text-sm text-fg outline-none bg-surface-2 border border-line focus:border-primary placeholder:text-subtle"
             />
-            <p className="text-[10px] text-gray-600">
+            <p className="text-xs text-gray-600">
               Wenn du live bist, erscheinst du im "Community streamt gerade"-Widget auf dem Dashboard.
               Auch ohne eigenen Stream sinnvoll: Gewinnt einer deiner Clips den Clip des Monats, bekommst du die Münzen automatisch.
             </p>

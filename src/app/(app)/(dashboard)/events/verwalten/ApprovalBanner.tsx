@@ -41,10 +41,10 @@ export function RejectControl({ kind, id, compact = false, onDone }: {
   }
   return (
     <div className="basis-full flex flex-col gap-2 rounded-lg border border-rose-500/25 bg-rose-500/[0.05] p-2.5">
-      <label className="text-[11px] text-rose-200" htmlFor={`reject-${id}`}>Grund (sieht der Ersteller)</label>
+      <label className="text-xs text-rose-200" htmlFor={`reject-${id}`}>Grund (sieht der Ersteller)</label>
       <textarea id={`reject-${id}`} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} autoFocus
         placeholder="z.B. Termin überschneidet sich mit dem Clan-Abend"
-        className="w-full rounded-lg bg-black/20 border border-line-strong px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-rose-400/50" />
+        className="w-full rounded-control bg-black/20 border border-line px-2.5 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       {error && <p className="text-xs text-rose-400">{error}</p>}
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-white px-2">Abbrechen</button>

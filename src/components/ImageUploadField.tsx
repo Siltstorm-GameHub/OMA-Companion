@@ -86,7 +86,7 @@ export default function ImageUploadField({
           value={value}
           onChange={(e) => { setPreviewFailed(false); onChange(e.target.value); }}
           placeholder="https://… oder Datei hochladen"
-          className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-surface-2 border border-line-strong text-sm text-white placeholder:text-gray-600 focus:border-teal-500/40 focus:outline-none"
+          className="flex-1 min-w-0 px-3 py-2 rounded-control bg-surface-2 border border-line text-sm text-fg placeholder:text-subtle focus:border-primary focus:outline-none"
         />
 
         <button
@@ -139,7 +139,7 @@ export default function ImageUploadField({
         }}
       />
 
-      {hint && <p className="text-[10px] text-gray-600">{hint}</p>}
+      {hint && <p className="text-xs text-gray-600">{hint}</p>}
 
       {presets && showPresets && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 rounded-xl border border-line bg-black/20">
@@ -156,7 +156,7 @@ export default function ImageUploadField({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- statisches SVG aus public/ */}
                 <img src={p.url} alt="" loading="lazy" className="w-full aspect-[1200/630] object-cover transition-transform duration-300 group-hover:scale-105" />
-                <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-[10px] font-semibold text-white bg-gradient-to-t from-black/85 to-transparent">
+                <span className="absolute inset-x-0 bottom-0 px-2 py-1 text-xs font-semibold text-white bg-gradient-to-t from-black/85 to-transparent">
                   {p.label}
                 </span>
                 {active && (
@@ -186,11 +186,11 @@ export default function ImageUploadField({
       )}
 
       {activePreset && (
-        <p className="text-[10px] text-teal-400/80">Vorlage: {activePreset.label}</p>
+        <p className="text-xs text-teal-400/80">Vorlage: {activePreset.label}</p>
       )}
 
       {value && previewFailed && (
-        <p className="text-[10px] text-red-400">Bild konnte nicht geladen werden — URL prüfen.</p>
+        <p className="text-xs text-red-400">Bild konnte nicht geladen werden — URL prüfen.</p>
       )}
     </div>
   );

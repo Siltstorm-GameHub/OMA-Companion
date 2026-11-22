@@ -168,7 +168,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
             value={twitchInput}
             onChange={(e) => { setTwitchInput(e.target.value); setPreview(null); }}
             onKeyDown={(e) => e.key === "Enter" && fetchPreview()}
-            className="flex-1 bg-line border border-line-strong rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
+            className="flex-1 bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-line"
           />
           <button
             onClick={fetchPreview}
@@ -199,7 +199,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                 placeholder="Anzeigename"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                className="bg-line border border-line-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
+                className="bg-surface-2 border border-line rounded-control px-3 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-line"
               />
               <button
                 onClick={addPartner}
@@ -281,7 +281,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                       placeholder="Nutzername suchen…"
                       value={userSearchInput}
                       onChange={(e) => { setUserSearchInput(e.target.value); searchUsers(e.target.value); }}
-                      className="flex-1 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-line-strong"
+                      className="flex-1 bg-surface-2 border border-line rounded-control px-3 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-line"
                     />
                     {userSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
                   </div>

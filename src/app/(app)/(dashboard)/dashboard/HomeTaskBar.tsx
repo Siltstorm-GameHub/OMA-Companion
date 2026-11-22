@@ -16,25 +16,20 @@ const ICON: Record<HomeTask["key"], ComponentType<{ className?: string }>> = {
   quest: Target,
 };
 
-/** Icon-Fläche, Rahmen beim Hover und Fortschrittsfarbe je Ton */
-const TONE: Record<HomeTaskTone, { icon: string; hover: string; bar: string }> = {
-  amber:  { icon: "bg-amber-500/15 text-amber-300",   hover: "hover:border-amber-400/40",  bar: "bg-amber-400" },
-  violet: { icon: "bg-violet-500/15 text-violet-300", hover: "hover:border-violet-400/40", bar: "bg-violet-400" },
-  orange: { icon: "bg-orange-500/15 text-orange-300", hover: "hover:border-orange-400/40", bar: "bg-orange-400" },
-  teal:   { icon: "bg-teal-500/15 text-teal-300",     hover: "hover:border-teal-400/40",   bar: "bg-teal-400" },
-  twitch: { icon: "bg-[#9146ff]/20 text-[#bf94ff]",   hover: "hover:border-[#9146ff]/50",  bar: "bg-[#9146ff]" },
-};
-
-/** Desktop: eine Zeile, Spaltenzahl = Anzahl Aufgaben (höchstens 5) — keine Lücken */
-const LG_COLS: Record<number, string> = {
-  1: "lg:grid-cols-2", 2: "lg:grid-cols-2", 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5",
+/** Icon-Fläche und Fortschrittsfarbe je Ton */
+const TONE: Record<HomeTaskTone, { icon: string; bar: string }> = {
+  amber:  { icon: "bg-coin-soft text-coin",             bar: "bg-coin" },
+  violet: { icon: "bg-violet-500/15 text-violet-300",   bar: "bg-violet-400" },
+  orange: { icon: "bg-orange-500/15 text-orange-300",   bar: "bg-orange-400" },
+  teal:   { icon: "bg-primary-soft text-primary-fg",    bar: "bg-primary" },
+  twitch: { icon: "bg-[#9146ff]/20 text-[#bf94ff]",     bar: "bg-[#9146ff]" },
 };
 
 /**
- * "Heute für dich": was gerade ansteht, als Kacheln in einer eigenen Karte — Glücksrad, Clip-Voting,
- * GameSwipe, neue Ergebnisse, fast fertige Quest; jeweils mit Nutzen oder Frist. Erledigtes taucht
- * nicht auf (der Server liefert nur offene Aufgaben). Community-Umfragen stehen immer direkt
- * aufgeklappt darüber. Ohne offene Aufgabe verschwindet die Karte.
+ * "Heute für dich": was gerade ansteht — Glücksrad, Clip-Voting, GameSwipe, neue Ergebnisse, fast
+ * fertige Quest; jeweils mit Nutzen oder Frist. Bewusst eine schmale Leiste über der Bühne (am Handy
+ * wischbar), damit die Bühne im ersten Bildschirm bleibt. Erledigtes taucht nicht auf (der Server
+ * liefert nur offene Aufgaben). Community-Umfragen stehen immer direkt aufgeklappt darüber.
  */
 export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTask[]; polls: DailyPollView[]; loggedIn: boolean }) {
   if (tasks.length === 0 && polls.length === 0) return null;
@@ -43,40 +38,34 @@ export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTas
     <section aria-label="Heute für dich" className="space-y-2.5">
       <DailyPollBanner initialPolls={polls} loggedIn={loggedIn} />
       {tasks.length > 0 && (
-        <div className="glass rounded-2xl border border-line p-3 sm:p-4">
-          <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-white">
-              <span className="relative flex h-2 w-2" aria-hidden>
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
-              </span>
-              Heute für dich
-            </h2>
-            <span className="flex items-center gap-1 text-[11px] text-gray-400 tabular-nums">
+        <div>
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h2 className="text-base font-extrabold text-fg">Heute für dich</h2>
+            <span className="flex items-center gap-1 text-xs text-subtle tabular-nums">
               {tasks.length} offen
-              {coins > 0 && <> · bis zu {coins.toLocaleString("de-DE")} <CoinIcon size={11} /></>}
+              {coins > 0 && <> · bis zu {coins.toLocaleString("de-DE")} <CoinIcon size={12} /></>}
             </span>
           </div>
-          <ul className={`grid grid-cols-2 gap-2 ${LG_COLS[Math.min(tasks.length, 5)]}`}>
-            {tasks.map((t, i) => {
+          <ul className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0 lg:grid lg:auto-cols-fr lg:grid-flow-col lg:overflow-visible">
+            {tasks.map((t) => {
               const Icon = ICON[t.key];
               const tone = TONE[t.tone];
-              // Ungerade Anzahl: die letzte Kachel mobil über die volle Breite
-              const wide = tasks.length % 2 === 1 && i === tasks.length - 1;
-              const liClass = wide ? "col-span-2 lg:col-span-1" : "";
+              const liClass = "w-64 shrink-0 snap-start lg:w-auto";
               const tile = (
                 <Link href={t.href}
-                  className={`group flex h-full flex-col gap-1.5 rounded-xl border border-line bg-surface-2 p-2.5 sm:p-3 transition-colors hover:bg-line ${tone.hover}`}>
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone.icon}`}>
-                    <Icon className="w-4 h-4" />
+                  className={`flex h-full min-h-16 items-center gap-3 rounded-card border border-line bg-surface px-3.5 py-2.5 transition-colors hover:border-line-strong hover:bg-surface-2 ${t.dismissIds?.length ? "pr-9" : ""}`}>
+                  <span className={`grid size-10 shrink-0 place-items-center rounded-control ${tone.icon}`}>
+                    <Icon className="size-[1.125rem]" />
                   </span>
-                  <span className="text-[13px] font-semibold leading-tight text-white">{t.label}</span>
-                  <span className="line-clamp-2 text-[11px] leading-snug text-gray-400">{t.sub}</span>
-                  {t.progress != null && (
-                    <span className="mt-auto h-1 w-full overflow-hidden rounded-full bg-line">
-                      <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(t.progress * 100)}%` }} />
-                    </span>
-                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-fg">{t.label}</span>
+                    <span className="block truncate text-xs text-muted">{t.sub}</span>
+                    {t.progress != null && (
+                      <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-line">
+                        <span className={`block h-full rounded-full ${tone.bar}`} style={{ width: `${Math.round(t.progress * 100)}%` }} />
+                      </span>
+                    )}
+                  </span>
                 </Link>
               );
               return t.dismissIds?.length

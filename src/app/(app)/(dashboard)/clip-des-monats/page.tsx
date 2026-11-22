@@ -113,7 +113,7 @@ export default async function ClipDesMonatsPage() {
           />
         </section>
       ) : (
-        <div className="glass rounded-2xl p-8 text-center text-gray-400">
+        <div className="rounded-card border border-line bg-surface p-8 text-center text-muted">
           <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p>Gerade läuft keine Abstimmung.</p>
           <p className="text-sm text-gray-500 mt-1">Zu Beginn jedes Monats startet eine neue Runde mit den Clips des Vormonats.</p>
@@ -127,7 +127,7 @@ export default async function ClipDesMonatsPage() {
         <section aria-label="Letzter Sieger" className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Trophy className="w-5 h-5 text-amber-400" />
-            <h2 className="text-base font-bold text-white">
+            <h2 className="text-base font-extrabold text-fg">
               Sieger {MONTH_NAMES[finishedContest.month - 1]} {finishedContest.year}
             </h2>
             {winners.length > 1 && (

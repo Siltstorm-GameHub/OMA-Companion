@@ -115,7 +115,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
         <ol className="mt-5 space-y-3 text-left">
           {inviteUrl && (
             <li className="flex items-start gap-3">
-              <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-teal-500/15 border border-teal-500/30 text-[11px] font-bold text-teal-300 flex items-center justify-center">1</span>
+              <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-teal-500/15 border border-teal-500/30 text-xs font-bold text-teal-300 flex items-center justify-center">1</span>
               <div className="flex-1">
                 <p className="text-xs text-gray-400 mb-1.5">Tritt dem OMA-Discord-Server bei</p>
                 <DiscordJoinButton href={inviteUrl} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors" />
@@ -123,7 +123,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
             </li>
           )}
           <li className="flex items-start gap-3">
-            <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-[#5865F2]/15 border border-[#5865F2]/30 text-[11px] font-bold text-indigo-300 flex items-center justify-center">{inviteUrl ? "2" : "1"}</span>
+            <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-[#5865F2]/15 border border-[#5865F2]/30 text-xs font-bold text-indigo-300 flex items-center justify-center">{inviteUrl ? "2" : "1"}</span>
             <div className="flex-1">
               <p className="text-xs text-gray-400 mb-1.5">{inviteUrl ? "Danach hier mit Discord anmelden" : "Melde dich mit Discord an"}</p>
               <DiscordLoginButton
@@ -154,7 +154,7 @@ export function GuestBanner() {
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3.5 py-2.5">
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-white leading-snug">Du siehst gerade nur die Vorschau</p>
-          <p className="text-[11px] text-gray-400 leading-snug">
+          <p className="text-xs text-gray-400 leading-snug">
             Tritt dem Discord-Server bei und melde dich an, um Events, Quests, Shop &amp; mehr zu nutzen.
           </p>
         </div>
@@ -174,7 +174,7 @@ export function GuestBanner() {
           <button
             type="button"
             onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
-            className="hidden sm:inline text-[11px] text-gray-500 hover:text-teal-300 underline underline-offset-2 transition-colors whitespace-nowrap"
+            className="hidden sm:inline text-xs text-gray-500 hover:text-teal-300 underline underline-offset-2 transition-colors whitespace-nowrap"
           >
             Wie geht das?
           </button>

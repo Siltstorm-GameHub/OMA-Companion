@@ -62,7 +62,7 @@ function Tag({ children, tone = "gray", title }: { children: ReactNode; tone?: "
     rose: "text-rose-300 bg-rose-500/10 border-rose-500/20",
     teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
   }[tone];
-  return <span title={title} className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium ${cls}`}>{children}</span>;
+  return <span title={title} className={`shrink-0 rounded border px-1.5 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
 }
 
 /** Status-Markierungen einer Event-Zeile — auf dem Handy unter dem Titel, ab Tablet rechts daneben */
@@ -138,23 +138,23 @@ function EventLine({ ev, now, right }: { ev: ManageEvent; now: Date; right?: Rea
   return (
     <li className="flex items-center gap-3 py-2.5">
       <span className="w-11 shrink-0 text-center leading-tight">
-        <span className="block text-[10px] text-gray-500">{b.weekday}</span>
+        <span className="block text-xs text-gray-500">{b.weekday}</span>
         <span className="block text-base font-bold text-white tabular-nums">{b.day}</span>
-        <span className="block text-[10px] text-gray-500 tabular-nums">{b.time}</span>
+        <span className="block text-xs text-gray-500 tabular-nums">{b.time}</span>
       </span>
       <Link href={`/events/verwalten/${ev.id}`} className="group min-w-0 flex-1">
         <span className="flex items-center gap-1.5 min-w-0">
           {color && <span className="w-1 h-3.5 rounded-full shrink-0" style={{ background: color }} />}
           <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{ev.title}</span>
         </span>
-        <span className="block truncate text-[11px] text-gray-500">
+        <span className="block truncate text-xs text-gray-500">
           {ev.series ? `${ev.series.name} · Termin ${ev.series.index} von ${ev.series.total}` : ev.game ?? "Kein Spiel festgelegt"}
           {ev.createdBy && ` · von ${ev.createdBy}`}
         </span>
         <span className="mt-1 flex flex-wrap gap-1 sm:hidden empty:hidden"><EventTags ev={ev} status={status} /></span>
       </Link>
       <span className="hidden sm:flex items-center gap-1"><EventTags ev={ev} status={status} /></span>
-      <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+      <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
         ev.players === 0 ? "bg-amber-500/10 text-amber-300" : "bg-line text-gray-300"
       }`} title="Anmeldungen als Spieler">
         {ev.maxPlayers ? `${ev.players}/${ev.maxPlayers}` : ev.players}
@@ -231,7 +231,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Titel, Spiel, Reihe oder Person"
             aria-label="Events durchsuchen"
-            className="w-full rounded-lg bg-line border border-line pl-8 pr-3 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-400/50" />
+            className="w-full rounded-control bg-surface-2 border border-line pl-8 pr-3 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         </div>
       )}
 
@@ -252,11 +252,11 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 {/* basis-56: auf schmalen Bildschirmen rutschen die Knöpfe in eine eigene Zeile */}
                 <span className="min-w-0 flex-1 basis-56">
                   <span className="block truncate text-sm font-medium text-white">{a.title}</span>
-                  <span className="block truncate text-[11px] text-gray-500">
+                  <span className="block truncate text-xs text-gray-500">
                     {a.kind === "series" ? "Reihe" : "Event"} von {a.by} · wartet {since(a.since, now).replace("seit ", "")}
                   </span>
                   {a.facts.length > 0 && (
-                    <span className="mt-0.5 block text-[11px] text-gray-400">{a.facts.join(" · ")}</span>
+                    <span className="mt-0.5 block text-xs text-gray-400">{a.facts.join(" · ")}</span>
                   )}
                 </span>
                 {/* "contents": die Knöpfe sind direkte Flex-Kinder der Zeile — so öffnet das Ablehnen-Feld
@@ -275,7 +275,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 <span className="w-8 h-8 shrink-0 rounded-lg border border-violet-500/20 bg-violet-500/10 text-violet-300 flex items-center justify-center"><Flag className="w-4 h-4" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-white">{s.name}</span>
-                  <span className="block truncate text-[11px] text-gray-500">Alle {s.total} Termine gespielt · Endwertung offen</span>
+                  <span className="block truncate text-xs text-gray-500">Alle {s.total} Termine gespielt · Endwertung offen</span>
                 </span>
                 <Link href={`/events/verwalten/reihen/${s.id}/complete`} className={BTN}>Saison abschließen</Link>
               </li>
@@ -285,7 +285,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><Flag className="w-4 h-4" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-white">{s.name}</span>
-                  <span className="block truncate text-[11px] text-gray-500">Saison abgeschlossen · noch keine neue Saison</span>
+                  <span className="block truncate text-xs text-gray-500">Saison abgeschlossen · noch keine neue Saison</span>
                 </span>
                 <Link href={`/events/verwalten/reihen/${s.id}/new-season`} className={BTN}>Neue Saison</Link>
               </li>
@@ -298,7 +298,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                   <span className={`w-8 h-8 shrink-0 rounded-lg border flex items-center justify-center ${tone}`}><I className="w-4 h-4" /></span>
                   <Link href={`/events/verwalten/${ev.id}`} className="min-w-0 flex-1 group">
                     <span className="block truncate text-sm font-medium text-white group-hover:text-teal-200">{ev.title}</span>
-                    <span className={`block truncate text-[11px] ${action.late ? "text-red-300" : "text-gray-500"}`}>
+                    <span className={`block truncate text-xs ${action.late ? "text-red-300" : "text-gray-500"}`}>
                       {action.label}{action.since && ` · ${since(action.since, now)}`}
                     </span>
                   </Link>
@@ -314,7 +314,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
       {(seriesShown.length > 0 || upcomingCount > 0 || (!empty && !q)) && (
         <div className={`grid gap-4 items-start ${seriesShown.length > 0 ? "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" : ""}`}>
           {seriesShown.length > 0 && (
-            <section aria-label="Eventreihen" className="glass rounded-2xl p-4 lg:sticky lg:top-4">
+            <section aria-label="Eventreihen" className="glass rounded-2xl p-4 lg:sticky lg:top-[5.5rem]">
               <h2 className="text-sm font-semibold text-white">
                 Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
               </h2>
@@ -332,7 +332,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                             <SeriesIcon name={s.icon} className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{s.name}</span>
                           </span>
-                          <span className="block truncate text-[11px] text-gray-500">
+                          <span className="block truncate text-xs text-gray-500">
                             {s.archived ? `Saison abgeschlossen · ${s.total} Termine` : s.total > 0 ? `${s.played} von ${s.total} gespielt` : "Noch keine Termine"}
                             {s.archived ? "" : s.seasonDone ? (isStaff ? " · Endwertung offen" : " · ein Mod schließt die Saison ab")
                               : s.next ? ` · nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
@@ -364,10 +364,10 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 Anstehend <span className="ml-1 font-normal text-gray-500">· {upcomingCount}</span>
               </h2>
               {series.length > 0 && (
-                <label className="ml-auto flex items-center gap-1.5 text-[11px] text-gray-500">
+                <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
                   Zeigen:
                   <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}
-                    className="max-w-[12rem] rounded-md bg-line border border-line px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-teal-400/50">
+                    className="max-w-[12rem] rounded-control bg-surface-2 border border-line px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-primary">
                     <option value="">Alle Events</option>
                     {series.map((s) => <option key={s.id} value={s.id}>Nur {s.name}</option>)}
                   </select>
@@ -378,7 +378,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
               <p className="mt-2 text-sm text-gray-500">{filterSeries ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
             ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
               <div key={key} className="mt-2">
-                <p className="text-[11px] font-semibold text-gray-500">{label}</p>
+                <p className="text-xs font-semibold text-gray-500">{label}</p>
                 <ul className="divide-y divide-line">
                   {upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
                 </ul>

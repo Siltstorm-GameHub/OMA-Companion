@@ -1,5 +1,6 @@
 import Link from "next/link";
-import PlaceMedal from "@/components/PlaceMedal";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RankCell } from "@/components/ui/Table";
 import { HeartColor as Heart } from "@/components/icons-color";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,7 @@ import { unstable_cache } from "next/cache";
 import { getSessionUser } from "@/lib/roles";
 import RankedAvatar from "@/components/RankedAvatar";
 import { calcStreak } from "@/lib/streak";
-import { TrendingUp, TrendingDown, Trophy, Minus } from "@/components/icons";
+import { TrendingUp, TrendingDown, Minus } from "@/components/icons";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { GateLink, GuestMoreCta } from "@/components/GuestGate";
 import { GUEST_LEADERBOARD_LIMIT } from "@/lib/guest-access";
@@ -79,14 +80,14 @@ function RankDeltaBadge({ delta }: { delta: number | null }) {
   if (delta === null) return <span className="w-6" />;
   if (delta > 0) {
     return (
-      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-emerald-400 leading-none" title={`${delta} Plätze hoch seit Monatsbeginn`}>
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 leading-none" title={`${delta} Plätze hoch seit Monatsbeginn`}>
         <TrendingUp className="w-3 h-3" />{delta}
       </span>
     );
   }
   if (delta < 0) {
     return (
-      <span className="flex items-center gap-0.5 text-[11px] font-semibold text-red-400 leading-none" title={`${-delta} Plätze runter seit Monatsbeginn`}>
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-red-400 leading-none" title={`${-delta} Plätze runter seit Monatsbeginn`}>
         <TrendingDown className="w-3 h-3" />{Math.abs(delta)}
       </span>
     );
@@ -181,19 +182,19 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     const name = p.username ?? p.name ?? "Unbekannt";
     return (
       <GateLink key={e.id} href={isMe ? "/profile" : `/profile/${e.id}`}
-        className={`grid items-center gap-x-3 px-3 sm:px-4 py-2.5 transition-colors [grid-template-columns:2rem_1.75rem_2.25rem_1fr_auto] ${
-          isMe || opts.highlight ? "bg-teal-500/[0.07] hover:bg-teal-500/[0.1]" : "hover:bg-surface-2"
+        className={`grid min-h-14 items-center gap-x-3 px-3 sm:px-4 py-2 transition-colors [grid-template-columns:2rem_1.75rem_2.5rem_1fr_auto] ${
+          isMe || opts.highlight ? "bg-primary-soft/70" : "hover:bg-surface-2"
         }`}>
-        <span className={`text-center text-xs font-bold tabular-nums ${isMe ? "text-teal-300" : "text-gray-500"}`}>{e.rank}</span>
+        <span className="flex justify-center"><RankCell rank={e.rank} /></span>
         <span className="flex justify-center">{view === "gesamt" ? <RankDeltaBadge delta={rankDelta(e)} /> : <span />}</span>
-        <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={36} rounded="full" className="w-9 h-9" />
+        <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={40} rounded="full" className="w-10 h-10" />
         <div className="min-w-0">
-          <p className={`text-sm font-semibold truncate leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
+          <p className={`text-sm font-bold truncate leading-tight ${isMe ? "text-primary-fg" : "text-fg"}`}>
             <CosmeticName nameColor={looks.get(e.id)?.nameColor}>{name}</CosmeticName>
             <WanderpocalBadgeServer userId={e.id} holdersMap={holdersMap} />
-            {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
+            {isMe && <span className="text-xs text-gray-500 ml-1 font-normal">du</span>}
           </p>
-          <p className="flex items-center gap-2 text-[11px] text-gray-500 leading-tight mt-0.5 min-w-0">
+          <p className="flex items-center gap-2 text-xs text-gray-500 leading-tight mt-0.5 min-w-0">
             {wins > 0 && <span className="shrink-0">{wins} {wins === 1 ? "Sieg" : "Siege"}</span>}
             {streak > 0 && (
               <span className="flex items-center gap-0.5 text-pink-400 shrink-0" title={`${streak} Monate in Folge unterstützt`}>
@@ -203,42 +204,36 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
             <CosmeticTitle title={looks.get(e.id)?.title} className="truncate" />
           </p>
         </div>
-        <span className={`text-sm font-black tabular-nums text-right ${isMe ? "text-teal-300" : "text-white"}`}>{fmt(e.points)}</span>
+        <span className={`text-sm font-extrabold tabular-nums text-right ${isMe ? "text-primary-fg" : "text-fg"}`}>{fmt(e.points)}</span>
       </GateLink>
     );
   };
 
+  // Podium wie auf der Übersicht: 2 · 1 · 3, Avatar mit Medaillen-Ring, Platz-Badge und Sockel
   const PODIUM = [
-    { idx: 1, order: "order-1", size: 52, pad: "pt-5", ring: "ring-slate-300/50", text: "text-slate-200" },
-    { idx: 0, order: "order-2", size: 68, pad: "pt-3", ring: "ring-yellow-400/60", text: "text-yellow-200" },
-    { idx: 2, order: "order-3", size: 52, pad: "pt-7", ring: "ring-orange-400/50", text: "text-orange-200" },
+    { idx: 1, size: 64, ring: "ring-gray-300", badge: "bg-gray-300 text-canvas", stand: "h-20" },
+    { idx: 0, size: 84, ring: "ring-coin", badge: "bg-coin text-canvas", stand: "h-28" },
+    { idx: 2, size: 64, ring: "ring-amber-700", badge: "bg-amber-700 text-fg", stand: "h-14" },
   ];
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
 
       {/* ── Kopf ── */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-500/10 border border-amber-500/25">
-          <Trophy className="w-4.5 h-4.5 text-amber-400" />
-        </div>
-        <div>
-          <h1 className="font-display text-2xl font-black text-white tracking-tight leading-none">Rangliste</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            {view === "monat"
-              ? `Wer im ${monthName} die meisten Rang-Punkte geholt hat · ${entries.length} dabei`
-              : `${fmt(entries.length)} Mitglieder · nach Rang-Punkten`}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Rangliste"
+        description={view === "monat"
+          ? `Wer im ${monthName} die meisten Rang-Punkte geholt hat · ${entries.length} dabei`
+          : `${fmt(entries.length)} Mitglieder · nach Rang-Punkten`}
+      />
 
       {/* ── Dein Stand ── */}
       {userId && (
-        <section aria-label="Dein Stand" className="glass rounded-2xl p-4 border border-teal-400/25 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <section aria-label="Dein Stand" className="rounded-card border border-primary/40 bg-surface p-4 sm:p-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           {mine ? (
             <>
               <div className="flex-1 min-w-[200px]">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Dein Stand</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Dein Stand</p>
                 <p className="text-xl font-black text-white tabular-nums leading-tight mt-0.5">
                   Platz {mine.entry.rank} <span className="text-sm font-normal text-gray-500">von {fmt(mine.total)}</span>
                   {view === "gesamt" && (() => {
@@ -255,14 +250,14 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
               </div>
               <div className="text-right">
                 <p className="text-xl font-black text-teal-300 tabular-nums leading-none">{fmt(mine.entry.points)}</p>
-                <p className="text-[11px] text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   {view === "monat" ? pointsLabel : <>Punkte{(mineOverall?.entry.gain ?? 0) > 0 && <> · +{fmt(mineOverall!.entry.gain)} im {monthName}</>}</>}
                 </p>
               </div>
             </>
           ) : (
             <div className="flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Dein Stand</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Dein Stand</p>
               <p className="text-sm text-gray-300 mt-1">
                 {view === "monat"
                   ? `Du hast im ${monthName} noch keine Rang-Punkte. Eine Turnierplatzierung bringt dich in die Monatswertung.`
@@ -278,13 +273,13 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       <nav aria-label="Zeitraum" className="flex items-center gap-1.5">
         {([["gesamt", "Gesamt"], ["monat", `Diesen Monat`]] as const).map(([key, label]) => (
           <Link key={key} href={key === "gesamt" ? "/leaderboard" : "/leaderboard?zeitraum=monat"} aria-current={view === key ? "page" : undefined}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              view === key ? "border-teal-400 bg-teal-500 text-teal-950" : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
+            className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+              view === key ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-gray-300 hover:border-line-strong hover:bg-surface-2"
             }`}>
             {label}
           </Link>
         ))}
-        {view === "gesamt" && <span className="ml-auto text-[11px] text-gray-600">Pfeile: Veränderung seit 1. {monthName}</span>}
+        {view === "gesamt" && <span className="ml-auto hidden text-xs text-subtle sm:inline">Pfeile: Veränderung seit 1. {monthName}</span>}
       </nav>
 
       {entries.length === 0 && (
@@ -295,7 +290,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
 
       {/* ── Podest ── */}
       {podium.length === 3 && (
-        <div className="flex items-end justify-center gap-2 sm:gap-4">
+        <div className="grid grid-cols-3 items-end gap-2 sm:gap-4 rounded-card border border-line bg-surface px-3 pt-6 sm:px-6">
           {PODIUM.map(cfg => {
             const e = podium[cfg.idx];
             const p = personOf.get(e.id);
@@ -303,18 +298,20 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
             const isMe = e.id === userId;
             const name = p.username ?? p.name ?? "?";
             return (
-              <GateLink key={e.id} href={isMe ? "/profile" : `/profile/${e.id}`}
-                className={`${cfg.order} ${cfg.pad} glass rounded-2xl flex-1 max-w-[190px] px-3 pb-3 flex flex-col items-center text-center hover:-translate-y-0.5 transition-transform ${cfg.idx === 0 ? "border border-yellow-400/30" : ""}`}>
-                <span className="text-xl mb-1.5"><PlaceMedal place={cfg.idx + 1} /></span>
-                <span className={`rounded-full ring-2 ${cfg.ring}`}>
-                  <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={cfg.size} rounded="full" />
+              <GateLink key={e.id} href={isMe ? "/profile" : `/profile/${e.id}`} className="group flex min-w-0 flex-col items-center text-center">
+                <span className="relative">
+                  <span className={`block rounded-full ring-[3px] ${cfg.ring}`}>
+                    <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={cfg.size} rounded="full" />
+                  </span>
+                  <span className={`absolute -bottom-2 left-1/2 grid size-7 -translate-x-1/2 place-items-center rounded-full text-sm font-extrabold ${cfg.badge}`}>{cfg.idx + 1}</span>
                 </span>
-                <p className={`mt-2 max-w-full truncate text-sm font-bold ${isMe ? "text-teal-300" : cfg.text}`}>
+                <p className={`mt-4 max-w-full truncate text-sm sm:text-base font-extrabold ${isMe ? "text-primary-fg" : "text-fg"} group-hover:text-primary-fg`}>
                   <CosmeticName nameColor={looks.get(e.id)?.nameColor}>{name}</CosmeticName>
                   <WanderpocalBadgeServer userId={e.id} holdersMap={holdersMap} />
                 </p>
-                <p className="text-sm font-black text-white tabular-nums">{fmt(e.points)}</p>
-                {view === "gesamt" && <span className="mt-1"><RankDeltaBadge delta={rankDelta(e)} /></span>}
+                <p className="text-sm font-bold text-muted tabular-nums">{fmt(e.points)}</p>
+                {view === "gesamt" && <span className="mt-1 h-4"><RankDeltaBadge delta={rankDelta(e)} /></span>}
+                <span className={`mt-3 w-full rounded-t-control bg-surface-2 ${cfg.stand}`} aria-hidden />
               </GateLink>
             );
           })}
@@ -323,8 +320,8 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
 
       {/* ── Liste ab Platz 4 + dein Ausschnitt ── */}
       {(rest.length > 0 || myWindow.length > 0) && (
-        <div className="surface rounded-2xl overflow-hidden shadow-card">
-          <div className="grid items-center gap-x-3 px-3 sm:px-4 py-2 text-[10px] font-semibold text-gray-600 uppercase tracking-widest border-b border-line [grid-template-columns:2rem_1.75rem_2.25rem_1fr_auto]">
+        <div className="rounded-card border border-line bg-surface overflow-hidden shadow-card">
+          <div className="grid items-center gap-x-3 px-3 sm:px-4 py-2.5 bg-surface-2 text-xs font-bold text-subtle uppercase tracking-[0.06em] border-b border-line [grid-template-columns:2rem_1.75rem_2.5rem_1fr_auto]">
             <span className="text-center">#</span><span /><span /><span>Mitglied</span><span className="text-right">{pointsLabel}</span>
           </div>
           <div className="divide-y divide-line">
@@ -332,7 +329,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           </div>
           {myWindow.length > 0 && (
             <>
-              <div className="px-4 py-1.5 text-center text-[11px] text-gray-600 border-y border-dashed border-line">
+              <div className="px-4 py-1.5 text-center text-xs text-gray-600 border-y border-dashed border-line">
                 ⋯ dein Ausschnitt ⋯
               </div>
               <div className="divide-y divide-line">
@@ -344,6 +341,18 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       )}
 
       <GuestMoreCta message={`Die komplette Rangliste gibt's nach dem Login`} />
+
+      {/* Deine Position bleibt beim Scrollen sichtbar (über der unteren Leiste am Handy) */}
+      {mine && (
+        <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20 flex items-center gap-3 rounded-card border border-primary/40 bg-sidebar px-4 py-2.5 shadow-pop">
+          <RankCell rank={mine.entry.rank} />
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-fg">
+            Du · Platz {mine.entry.rank}
+            {mine.above && <span className="font-normal text-muted"> · {fmt(mine.above.gap)} bis Platz {entries.find(x => x.id === mine.above!.id)?.rank}</span>}
+          </span>
+          <span className="shrink-0 text-sm font-extrabold tabular-nums text-primary-fg">{fmt(mine.entry.points)}</span>
+        </div>
+      )}
     </div>
   );
 }

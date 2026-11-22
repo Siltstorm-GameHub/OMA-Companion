@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export type GamesSection = "spielen" | "spieleliste" | "shop";
 
+// "Games" in der Navigation öffnet die Spieleliste (was zocken wir?) — die Minispiele (OMA Blocks)
+// sind ein Reiter daneben, der Shop gehört dazu, weil man dort die Münzen ausgibt.
 const TABS: { key: GamesSection; label: string; href: string; icon: typeof Gamepad2 }[] = [
-  { key: "spielen", label: "Spielen", href: "/games", icon: LayoutGrid },
   { key: "spieleliste", label: "Spieleliste", href: "/spiele", icon: Gamepad2 },
+  { key: "spielen", label: "Minispiele", href: "/games", icon: LayoutGrid },
   { key: "shop", label: "Shop", href: "/shop", icon: ShoppingBag },
 ];
 
@@ -17,7 +19,7 @@ export default async function GamesSectionTabs({ active, userId }: { active: Gam
   const coins = userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0 : null;
 
   return (
-    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-2xl p-1 bg-surface-2 border border-line">
+    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-card p-1 bg-surface border border-line">
       {TABS.map((t) => {
         const on = t.key === active;
         const Icon = t.icon;
@@ -26,14 +28,14 @@ export default async function GamesSectionTabs({ active, userId }: { active: Gam
             key={t.key}
             href={t.href}
             aria-current={on ? "page" : undefined}
-            className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-xs sm:text-sm font-semibold transition-colors min-w-0 ${
-              on ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white hover:bg-line"
+            className={`flex min-h-11 items-center justify-center gap-1.5 rounded-control px-2 text-sm font-semibold transition-colors min-w-0 ${
+              on ? "bg-primary-soft text-primary-fg" : "text-muted hover:text-fg hover:bg-surface-2"
             }`}
           >
-            <Icon className={`w-4 h-4 shrink-0 ${on ? "text-teal-300" : ""}`} />
+            <Icon className="w-4 h-4 shrink-0" />
             <span className="truncate">{t.label}</span>
             {t.key === "shop" && coins !== null && (
-              <span className="hidden min-[400px]:flex items-center gap-0.5 text-[11px] text-amber-300 tabular-nums shrink-0">
+              <span className="hidden min-[400px]:flex items-center gap-0.5 text-xs text-amber-300 tabular-nums shrink-0">
                 <CoinIcon size={11} /> {coins.toLocaleString("de-DE")}
               </span>
             )}

@@ -55,6 +55,10 @@ export default function LoginPage() {
 
       {/* ── Linke Seite: Branding ──────────────────────────────────── */}
       <div className="relative hidden lg:flex flex-1 flex-col justify-between p-12 overflow-hidden border-r border-line bg-sidebar">
+        {/* Großes Event-Cover-Motiv statt Feature-Kacheln — zeigt sofort, worum es geht */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- statisches Motiv aus /public */}
+        <img src="/event-covers/logo-esports.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/70 to-canvas/30" />
 
         {/* Logo */}
         <div className="relative flex items-center gap-3 z-10">
@@ -62,10 +66,10 @@ export default function LoginPage() {
             <Image src="/brand/logo-128.png" alt="OMA" width={40} height={40} className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-sm font-black text-white tracking-widest uppercase">Old Masters Ally</p>
+            <p className="text-sm font-extrabold text-fg tracking-widest uppercase">Old Masters Ally</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span className="text-[10px] text-emerald-500/80 font-semibold tracking-widest uppercase">Online</span>
+              <span className="text-xs text-emerald-500/80 font-semibold tracking-widest uppercase">Online</span>
             </div>
           </div>
         </div>
@@ -75,29 +79,25 @@ export default function LoginPage() {
           <p className="text-xs font-semibold text-primary-fg/80 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Swords className="w-3.5 h-3.5" /> Old Masters Discord Community
           </p>
-          <h1 className="text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight mb-5">
+          <h1 className="text-4xl xl:text-6xl font-extrabold text-fg leading-tight tracking-tight mb-5">
             Deine Community.<br />
             <span className="text-gradient-gaming">Deine Erfolge.</span>
           </h1>
-          <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+          <p className="text-gray-200 text-lg leading-relaxed max-w-md">
             Verwalte Events, nimm an Turnieren teil und sammle Punkte durch deine Discord-Aktivität.
           </p>
         </div>
 
-        {/* Feature-Grid */}
-        <div className="relative z-10 grid grid-cols-2 gap-3">
-          {FEATURES.map(({ icon: Icon, color, bg, title, desc }) => (
-            <div key={title} className={`glass rounded-2xl p-4 border ${bg}`}>
-              <div className={`w-8 h-8 rounded-xl ${bg} border flex items-center justify-center mb-3`}>
-                <Icon className={`w-4 h-4 ${color}`} />
-              </div>
-              <p className="text-sm font-semibold text-white mb-1">{title}</p>
-              <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
-            </div>
+        {/* Kurz und knapp, was man hier macht */}
+        <ul className="relative z-10 flex flex-wrap gap-2">
+          {FEATURES.map(({ icon: Icon, color, title }) => (
+            <li key={title} className="flex items-center gap-2 rounded-full border border-line bg-canvas/80 px-3.5 py-2 text-sm font-semibold text-fg">
+              <Icon className={`w-4 h-4 ${color}`} /> {title}
+            </li>
           ))}
-        </div>
+        </ul>
 
-        <p className="relative z-10 text-xs text-gray-700">© 2025 Old Masters Ally · Companion App</p>
+        <p className="relative z-10 text-xs text-subtle">© 2025 Old Masters Ally · Companion App</p>
       </div>
 
       {/* ── Rechte Seite: Login ────────────────────────────────────── */}
@@ -172,7 +172,7 @@ export default function LoginPage() {
                   { icon: <Trophy className="w-3 h-3 text-primary-fg" />, label: "Rangliste" },
                   { icon: <Swords className="w-3 h-3 text-purple-400" />, label: "Turniere" },
                 ].map(item => (
-                  <div key={item.label} className="flex items-center gap-1.5 text-[10px] text-gray-600">
+                  <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-600">
                     {item.icon} {item.label}
                   </div>
                 ))}
@@ -184,7 +184,7 @@ export default function LoginPage() {
             Mit der Anmeldung werden deine Discord-Daten wie in der{" "}
             <a href="/datenschutz" className="underline hover:text-gray-500">Datenschutzerklärung</a> beschrieben verarbeitet.
           </p>
-          <p className="text-center text-[11px] text-gray-700 mt-2">
+          <p className="text-center text-xs text-gray-700 mt-2">
             <a href="/impressum" className="hover:text-gray-500">Impressum</a> · <a href="/datenschutz" className="hover:text-gray-500">Datenschutz</a>
           </p>
         </div>

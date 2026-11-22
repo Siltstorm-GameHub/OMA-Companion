@@ -20,7 +20,7 @@ export interface EditorMedia {
   clipStart?: number | null; clipEnd?: number | null; posterUrl?: string | null;
 }
 
-const SMALL_INPUT = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL_INPUT = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 
 export async function uploadBlob(blob: Blob, name: string): Promise<string> {
   const body = new FormData();
@@ -73,7 +73,7 @@ export function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => v
           <div className="h-full bg-teal-400 transition-all" style={{ width: `${progress}%` }} />
         </div>
       )}
-      <span className="text-[10px] text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
+      <span className="text-xs text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
       <input type="file" accept={CLIP_ALLOWED_TYPES.join(",")} className="hidden" disabled={uploading}
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
     </label>
@@ -137,7 +137,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-[11px] text-gray-500 flex items-center gap-1.5"><Images className="w-3.5 h-3.5" /> Bilder &amp; Clips (optional, bis {POST_MEDIA_MAX})</p>
+        <p className="text-xs text-gray-500 flex items-center gap-1.5"><Images className="w-3.5 h-3.5" /> Bilder &amp; Clips (optional, bis {POST_MEDIA_MAX})</p>
         {media.length > 0 && <AlbumSelect albums={albums} value={albumId} onChange={onAlbumChange} />}
       </div>
 
@@ -158,7 +158,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
                 className={`w-full ${SMALL_INPUT}`} />
               {isVideoUrl(m.url) && (
                 <button type="button" onClick={() => setTrimming(trimming === m.url ? null : m.url)}
-                  className="w-full text-[10px] text-gray-400 hover:text-teal-300 text-left">
+                  className="w-full text-xs text-gray-400 hover:text-teal-300 text-left">
                   ✂ {m.clipStart != null || m.clipEnd != null || m.posterUrl ? "Schnitt/Vorschaubild ändern" : "Schneiden & Vorschaubild"}
                 </button>
               )}
@@ -191,7 +191,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
           <Button size="sm" variant={mode === "clip" ? "primary" : "outline"} onClick={() => setMode(mode === "clip" ? null : "clip")}>Clip</Button>
           <Button size="sm" variant={mode === "studio" ? "primary" : "outline"} icon={<Wand2 className="w-3.5 h-3.5" />} onClick={() => setMode(mode === "studio" ? null : "studio")}>Im Studio gestalten</Button>
           <Button size="sm" variant={mode === "collage" ? "primary" : "outline"} onClick={() => setMode(mode === "collage" ? null : "collage")}>Monats-Collage</Button>
-          <label className="flex items-center gap-1.5 text-[11px] text-gray-500" title="Blendet „© Name · OMA“ unten rechts in hochgeladene Bilder ein">
+          <label className="flex items-center gap-1.5 text-xs text-gray-500" title="Blendet „© Name · OMA“ unten rechts in hochgeladene Bilder ein">
             <input type="checkbox" checked={watermark} onChange={e => setWatermark(e.target.checked)} /> Wasserzeichen
           </label>
         </div>

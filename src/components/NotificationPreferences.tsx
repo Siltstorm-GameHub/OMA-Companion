@@ -79,7 +79,7 @@ export default function NotificationPreferences() {
       <span className="text-base shrink-0">{cat.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-white">{cat.label}</p>
-        <p className="text-[11px] text-gray-500 mt-0.5">{cat.desc}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{cat.desc}</p>
       </div>
       <div
         className="w-9 h-5 rounded-full flex items-center transition-all shrink-0"
@@ -106,8 +106,8 @@ export default function NotificationPreferences() {
           <Bell style={{ width: 14, height: 14, color: "rgba(20,184,166,0.7)" }} />
           <span className="text-sm font-semibold text-white">Benachrichtigungen</span>
         </div>
-        {saving && <span className="text-[11px] text-gray-500">Wird gespeichert…</span>}
-        {saved  && <span className="text-[11px]" style={{ color: "#2dd4bf" }}>Gespeichert ✓</span>}
+        {saving && <span className="text-xs text-gray-500">Wird gespeichert…</span>}
+        {saved  && <span className="text-xs" style={{ color: "#2dd4bf" }}>Gespeichert ✓</span>}
       </div>
       <div className="divide-y" style={{ borderColor: "rgba(20,184,166,0.05)" }}>
         {CATEGORIES.map(renderToggle)}
@@ -118,7 +118,7 @@ export default function NotificationPreferences() {
       <div className="px-4 py-2.5 flex items-center gap-1.5"
         style={{ borderTop: "1px solid rgba(20,184,166,0.08)" }}>
         <BellOff style={{ width: 11, height: 11, color: "#6b7280" }} />
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           In-App-Benachrichtigungen im Profil-Menü oben rechts.
         </p>
       </div>

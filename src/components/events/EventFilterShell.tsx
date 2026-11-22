@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type EventFilterGame = { key: string; label: string };
 
-type Filter = { kind: "all" } | { kind: "mine" } | { kind: "registered" } | { kind: "game"; key: string };
+type Filter = { kind: "all" } | { kind: "mine" } | { kind: "registered" } | { kind: "tournament" } | { kind: "game"; key: string };
 
 /**
  * Schnellfilter über der Event-Liste. Die Kacheln rendert der Server; sie tragen
@@ -31,6 +31,9 @@ export default function EventFilterShell({
         case "mine": return el.dataset.mine === "1" || el.dataset.registered === "1";
         case "registered": return el.dataset.registered === "1";
         case "game": return el.dataset.game === filter.key;
+        // Turniere = Events mit Platzierung (data-kind, lib/event-placement.ts). Am Handy gibt es keinen
+        // eigenen Menüpunkt "Turniere" — dieser Filter ersetzt ihn (Designentwurf).
+        case "tournament": return el.dataset.kind === "tournament";
       }
     };
     let count = 0;
@@ -47,6 +50,7 @@ export default function EventFilterShell({
 
   const chips: { label: string; f: Filter }[] = [
     { label: "Alle", f: { kind: "all" } },
+    { label: "Turniere", f: { kind: "tournament" } },
     ...(loggedIn ? [{ label: "Für mich", f: { kind: "mine" } as Filter }, { label: "Angemeldet", f: { kind: "registered" } as Filter }] : []),
     ...games.map(g => ({ label: g.label, f: { kind: "game", key: g.key } as Filter })),
   ];
@@ -57,10 +61,10 @@ export default function EventFilterShell({
       <div role="toolbar" aria-label="Events filtern" className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-5 px-5 sm:mx-0 sm:px-0 sm:flex-wrap">
         {chips.map(c => (
           <button key={c.label} type="button" aria-pressed={isActive(c.f)} onClick={() => setFilter(c.f)}
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`shrink-0 inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors ${
               isActive(c.f)
-                ? "border-teal-400 bg-teal-500 text-teal-950"
-                : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
+                ? "border-primary/40 bg-primary-soft text-primary-fg"
+                : "border-line bg-surface text-gray-300 hover:border-line-strong hover:bg-surface-2"
             }`}>
             {c.label}
           </button>
@@ -70,12 +74,14 @@ export default function EventFilterShell({
         {children}
       </div>
       {visibleCount === 0 && (
-        <div className="rounded-lg border border-dashed border-line-strong px-4 py-6 text-center text-sm text-gray-500">
+        <div className="rounded-card border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">
           {filter.kind === "registered"
             ? "Du bist gerade für kein Event angemeldet."
             : filter.kind === "mine"
               ? "Gerade passt kein Event zu deinen Spielen oder Squads. Markier Spiele im GameSwipe, dann tauchen sie hier auf."
-              : "Für dieses Spiel steht gerade nichts an."}
+              : filter.kind === "tournament"
+                ? "Gerade ist kein Turnier geplant."
+                : "Für dieses Spiel steht gerade nichts an."}
         </div>
       )}
     </div>

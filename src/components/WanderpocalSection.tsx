@@ -26,13 +26,13 @@ interface Props {
 
 function HolderChip({ holder }: { holder: WanderpocalHolderInfo }) {
   if (!holder.holderUserId) {
-    return <span className="text-[10px] text-gray-600 italic">noch nie vergeben</span>;
+    return <span className="text-xs text-gray-600 italic">noch nie vergeben</span>;
   }
   return (
     <Link href={`/profile/${holder.holderUserId}`}
       className="inline-flex items-center gap-1.5 group/holder">
       <RankedAvatar userId={holder.holderUserId} src={holder.holderAvatarUrl} alt={holder.holderName ?? "Halter"} size={16} />
-      <span className="text-[10px] text-gray-500 group-hover/holder:text-teal-300 transition-colors truncate max-w-[90px]">
+      <span className="text-xs text-gray-500 group-hover/holder:text-teal-300 transition-colors truncate max-w-[90px]">
         {holder.holderName ?? "Unbekannt"}
       </span>
     </Link>
@@ -61,7 +61,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
 
   return (
     <div className="space-y-4">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
         Wanderpokal
       </h2>
 
@@ -78,7 +78,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
               >
                 <ScopeIcon scopeType={t.scopeType} scopeValue={t.scopeValue} size={22} />
                 <p className="text-xs font-semibold text-amber-300 leading-tight">{title}</p>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {typeLabel} · {t.winCount} {t.winCount === 1 ? "Sieg" : "Siege"}
                 </p>
               </div>
@@ -97,7 +97,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
             .filter((g) => g.rows.length > 0)
             .map((group) => (
               <div key={group.label}>
-                <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-600 uppercase tracking-wider border-b border-line">
+                <div className="px-3 py-1.5 text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-line">
                   {group.label}
                 </div>
                 {group.rows
@@ -123,7 +123,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap, holde
                           <span className="text-gray-300 text-xs">
                             {title}
                             {isHolder && (
-                              <span className="ml-1.5 text-[10px] text-amber-400 font-medium">🏆 Pokalhalter</span>
+                              <span className="ml-1.5 text-xs text-amber-400 font-medium">🏆 Pokalhalter</span>
                             )}
                           </span>
                           {holder && !isHolder && (

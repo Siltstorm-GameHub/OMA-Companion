@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageHeader } from "@/components/ui/PageHeader";
 import type { LucideIcon } from "lucide-react";
 import { GateLink } from "@/components/GuestGate";
 import { ChevronRight, Heart, Trophy } from "@/components/icons";
@@ -26,10 +27,7 @@ const TILES: Tile[] = [
 export default function CommunityPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-      <div>
-        <h1 className="text-xl font-extrabold text-fg">Community</h1>
-        <p className="mt-0.5 text-sm text-muted">Alles, was die OMA-Community gemeinsam macht.</p>
-      </div>
+      <PageHeader title="Community" description="Alles, was die OMA-Community gemeinsam macht." />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {TILES.map((t) => (

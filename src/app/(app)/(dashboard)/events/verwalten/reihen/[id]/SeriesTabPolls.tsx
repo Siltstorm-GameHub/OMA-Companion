@@ -100,7 +100,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                         <NumberInput min={1} value={Math.max(1, p.endOffsetHours - p.startOffsetHours)}
                           onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) } : x))}
                           className={inputCls} />
-                        <p className="text-[11px] text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                   Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
                   einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
                   Gleichplatzierten die volle Sieger-Belohnung.

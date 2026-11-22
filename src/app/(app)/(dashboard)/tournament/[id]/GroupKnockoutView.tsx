@@ -59,7 +59,7 @@ export default function GroupKnockoutView({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
           <LayoutGrid className="w-3.5 h-3.5 text-primary-fg" /> Gruppenphase
         </h2>
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -74,11 +74,11 @@ export default function GroupKnockoutView({
               <div key={gi} className="glass rounded-2xl overflow-hidden">
                 <div className="px-4 py-2.5 border-b border-line flex items-center justify-between">
                   <span className="text-sm font-semibold text-white">{groupLabel(gi)}</span>
-                  <span className="text-[10px] text-gray-600">{played}/{gMatches.length} gespielt</span>
+                  <span className="text-xs text-gray-600">{played}/{gMatches.length} gespielt</span>
                 </div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    <tr className="text-xs text-gray-500 uppercase tracking-wider">
                       <th className="text-left px-3 py-2 font-medium">#</th>
                       <th className="text-left px-2 py-2 font-medium">Spieler</th>
                       <th className="text-center px-1 py-2 font-medium" title="Spiele">Sp</th>
@@ -108,7 +108,7 @@ export default function GroupKnockoutView({
                           <td className="text-center px-1 py-2 text-gray-500 tabular-nums text-xs">{s.played}</td>
                           <td className="text-center px-1 py-2 text-xs tabular-nums">
                             <span className="text-gray-400">{s.scored}:{s.conceded}</span>
-                            <span className={`ml-1 text-[10px] ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-700" : "text-gray-700"}`}>
+                            <span className={`ml-1 text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-700" : "text-gray-700"}`}>
                               ({diff > 0 ? "+" : ""}{diff})
                             </span>
                           </td>
@@ -137,7 +137,7 @@ export default function GroupKnockoutView({
                       m.winnerId === id ? "text-emerald-300" : m.winnerId ? "text-gray-600" : isDraw ? "text-amber-200" : "text-gray-300";
                     return (
                       <div key={m.id} className={`flex items-center gap-2 px-4 py-1.5 text-xs ${isMine ? "bg-primary-soft/60" : ""}`}>
-                        <span className={`text-[10px] w-6 shrink-0 ${isLive ? "text-red-400 font-bold animate-pulse" : "text-gray-700"}`}>{isLive ? "LIVE" : `${m.round}.`}</span>
+                        <span className={`text-xs w-6 shrink-0 ${isLive ? "text-red-400 font-bold animate-pulse" : "text-gray-700"}`}>{isLive ? "LIVE" : `${m.round}.`}</span>
                         <span className={`flex-1 truncate text-right ${nameCls(m.player1Id)}`}>{uname(p1)}</span>
                         <span className={`w-12 text-center shrink-0 tabular-nums font-semibold ${isDraw ? "text-amber-400" : "text-white"}`}>
                           {m.playedAt ? `${m.score1 ?? "–"}:${m.score2 ?? "–"}` : <span className="text-gray-600 font-normal">vs</span>}
@@ -154,7 +154,7 @@ export default function GroupKnockoutView({
             );
           })}
         </div>
-        <p className="text-[11px] text-gray-700 mt-1.5 px-1">
+        <p className="text-xs text-gray-700 mt-1.5 px-1">
           Sieg = 3 Pkt · Unentschieden = 1 Pkt · danach Tordifferenz, Tore, direkter Vergleich · die Top {advancePerGroup} jeder Gruppe (grün) erreichen die K.O.-Runde
         </p>
       </div>
@@ -163,11 +163,11 @@ export default function GroupKnockoutView({
         <div className="space-y-4">
           <BracketView matches={knockoutMatches} participants={participants} userId={userId} holders={holders} />
           {hasTwoLegs && (
-            <p className="text-[11px] text-gray-600 -mt-2 px-1">Hin- und Rückspiel: angezeigt ist das Gesamtergebnis beider Spiele.</p>
+            <p className="text-xs text-gray-600 -mt-2 px-1">Hin- und Rückspiel: angezeigt ist das Gesamtergebnis beider Spiele.</p>
           )}
           {thirdPlace && (
             <div>
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Spiel um Platz 3</h2>
+              <h2 className="text-base font-extrabold text-fg mb-2">Spiel um Platz 3</h2>
               <div className="glass rounded-card border border-line-strong divide-y divide-line max-w-xs">
                 {([[thirdPlace.player1Id, thirdPlace.score1], [thirdPlace.player2Id, thirdPlace.score2]] as const).map(([id, score], i) => {
                   const u = findUser(id);

@@ -271,7 +271,7 @@ export function CommunityHub() {
           />
           <button
             onClick={() => setOpen(false)}
-            className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-line transition-colors"
+            className="w-10 h-10 shrink-0 rounded-control flex items-center justify-center text-subtle hover:text-fg hover:bg-surface-2 transition-colors"
             aria-label="Fenster schließen"
           >
             <X className="w-4 h-4" />
@@ -281,20 +281,24 @@ export function CommunityHub() {
         {/* ── Benachrichtigungen ──────────────────────────────────────── */}
         {activeTab === "notifications" && (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            {notifications.length > 0 && (
-              <div className="flex items-center justify-end gap-3 px-4 py-2 flex-shrink-0">
+            <div className="flex items-center justify-end gap-3 px-4 py-2 flex-shrink-0">
+                <Link href="/benachrichtigungen" onClick={() => setOpen(false)}
+                  className="mr-auto text-xs font-semibold text-primary-fg hover:text-fg transition-colors">
+                  Alle anzeigen →
+                </Link>
+            {notifications.length > 0 && (<>
                 {notifUnread > 0 && (
                   <button onClick={markAllRead}
-                    className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+                    className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
                     Alle lesen
                   </button>
                 )}
                 <button onClick={deleteAllNotifications}
-                  className="text-[11px] text-gray-500 hover:text-red-400 transition-colors">
+                  className="text-xs text-gray-500 hover:text-red-400 transition-colors">
                   Alle löschen
                 </button>
-              </div>
-            )}
+              </>)}
+            </div>
 
             {notifications.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 py-10">
@@ -319,8 +323,8 @@ export function CommunityHub() {
                           style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-gray-500 truncate">{n.body}</p>
-                        <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
+                        <p className="text-xs text-gray-500 truncate">{n.body}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
                           {timeAgo(n.createdAt)}
                         </p>
                       </div>
@@ -351,7 +355,7 @@ export function CommunityHub() {
               <Link
                 href="/profile?tab=settings#notifications"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
               >
                 <Settings style={{ width: 11, height: 11 }} />
                 Einstellungen
@@ -369,7 +373,7 @@ export function CommunityHub() {
                 className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <span className="text-[10px] text-gray-500 flex-shrink-0">
+                <span className="text-xs text-gray-500 flex-shrink-0">
                   {onlineCount} online
                 </span>
                 <div className="flex items-center gap-1.5 min-w-0">

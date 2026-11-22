@@ -87,7 +87,7 @@ export default function CheckInButton({
         {checkedIn ? "Bereit (zurücknehmen)" : "Bin bereit"}
       </button>
       {!checkedIn && (
-        <span className="text-[11px] text-gray-400">Bis zur Auslosung möglich. Wer nicht bereit ist, wird nicht ausgelost.</span>
+        <span className="text-xs text-gray-400">Bis zur Auslosung möglich. Wer nicht bereit ist, wird nicht ausgelost.</span>
       )}
       {ConfirmDialogElement}
     </div>

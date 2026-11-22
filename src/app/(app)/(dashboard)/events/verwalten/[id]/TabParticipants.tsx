@@ -27,7 +27,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-[11px] text-gray-500">Änderungen in diesem Reiter gelten sofort, ohne Speichern.</p>
+      <p className="text-xs text-gray-500">Änderungen in diesem Reiter gelten sofort, ohne Speichern.</p>
 
       {/* Suche: filtert die Angemeldeten und findet weitere Mitglieder */}
       <div className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input type="search" placeholder="Mitglied suchen (Name oder Username)…" value={search}
             onChange={e => setSearch(e.target.value)} aria-label="Mitglied suchen"
-            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-9 pr-3 py-2 placeholder:text-gray-600" />
+            className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control pl-9 pr-3 py-2 placeholder:text-subtle" />
         </div>
         <button type="button" onClick={() => setPasteImportOpen(o => !o)}
           className="shrink-0 text-xs text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-2 transition-colors">
@@ -46,19 +46,19 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
       {/* Namen-Liste einfügen (z.B. aus Discord kopiert) statt einzeln zu suchen */}
       {pasteImportOpen && (
         <div className="rounded-lg border border-line bg-surface-2 p-3 space-y-2">
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             Namen oder Usernamen einfügen, getrennt durch Zeilenumbruch oder Komma. Gefundene Mitglieder werden als Spieler ausgewählt.
           </p>
           <textarea value={pasteImportText} onChange={e => setPasteImportText(e.target.value)}
             rows={3} placeholder={"z.B.\nMaxMustermann\nErikaM"}
-            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 placeholder:text-gray-600 resize-none" />
+            className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2 placeholder:text-subtle resize-none" />
           <div className="flex items-center gap-2 flex-wrap">
             <button type="button" onClick={applyPasteImport} disabled={!pasteImportText.trim()}
               className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-40 text-white rounded-lg px-3 py-1.5 transition-colors">
               Abgleichen und auswählen
             </button>
             {pasteImportResult && (
-              <span className="text-[11px] text-gray-500">
+              <span className="text-xs text-gray-500">
                 {pasteImportResult.matched} gefunden
                 {pasteImportResult.unmatched.length > 0 && `, nicht gefunden: ${pasteImportResult.unmatched.join(", ")}`}
               </span>
@@ -110,7 +110,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
       {/* Suchergebnis: noch nicht angemeldete Mitglieder */}
       {searchActive && (
         <div>
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
             Nicht angemeldet {searching && <Loader2 className="w-3 h-3 animate-spin" />}
           </p>
           {!searching && addableUsers.length === 0 ? (
@@ -131,7 +131,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
                     <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
                     {ctx.spectatorMode && (
                       <button type="button" onClick={() => toggleSelected(u, "spectator", !asSpectator)}
-                        className={`shrink-0 text-[10px] rounded-full px-2 py-0.5 border transition-colors ${asSpectator ? "border-teal-500/40 bg-teal-500/15 text-teal-300" : "border-gray-700 text-gray-500 hover:text-gray-300"}`}>
+                        className={`shrink-0 text-xs rounded-full px-2 py-0.5 border transition-colors ${asSpectator ? "border-teal-500/40 bg-teal-500/15 text-teal-300" : "border-gray-700 text-gray-500 hover:text-gray-300"}`}>
                         👁️ Zuschauer
                       </button>
                     )}
@@ -150,7 +150,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
 
       {/* Angemeldete Spieler */}
       <div>
-        <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-widest mb-1.5">
+        <p className="text-xs font-semibold text-emerald-600 uppercase tracking-widest mb-1.5">
           Spieler ({registeredIds.size}{event.maxPlayers ? `/${event.maxPlayers}` : ""})
         </p>
         {players.length === 0 ? (
@@ -163,7 +163,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
                 <span className="flex-1 text-sm text-emerald-300 truncate font-medium">{userName(u)}</span>
                 {checkInEnabled && (
                   <button type="button" onClick={() => setPlayerCheckIn(u.id, !checkedInIds.has(u.id))}
-                    className={`shrink-0 text-[10px] font-semibold rounded-full px-2 py-0.5 border transition-colors ${
+                    className={`shrink-0 text-xs font-semibold rounded-full px-2 py-0.5 border transition-colors ${
                       checkedInIds.has(u.id)
                         ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
                         : "border-gray-700 text-gray-500 hover:text-gray-300"
@@ -185,7 +185,7 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
       {/* Angemeldete Zuschauer */}
       {ctx.spectatorMode && (
         <div className="pt-2 border-t border-line">
-          <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest mb-1.5">
+          <p className="text-xs font-semibold text-teal-600/80 uppercase tracking-widest mb-1.5">
             👁️ Zuschauer ({spectatorIds.size})
           </p>
           {spectators.length === 0 ? (

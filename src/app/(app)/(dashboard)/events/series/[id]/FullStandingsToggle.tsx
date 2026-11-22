@@ -56,7 +56,7 @@ export default function FullStandingsToggle({ defaultExpanded, ...props }: Props
           <p className="text-sm font-semibold text-white group-hover:text-teal-200 transition-colors">
             Vollständige Tabelle
           </p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5">
             {open ? "Ausblenden" : "Alle Statistiken & Veränderungen anzeigen"}
           </p>
         </div>

@@ -20,7 +20,7 @@ function CopyField({ label, value, onCopy }: { label: string; value: string; onC
       className="flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg bg-line border border-line-strong hover:bg-line transition-colors text-left"
     >
       <div className="min-w-0">
-        <p className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</p>
+        <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
         <p className="text-sm text-white font-mono truncate">{value}</p>
       </div>
       {copied ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Copy className="w-3.5 h-3.5 text-gray-500 shrink-0" />}

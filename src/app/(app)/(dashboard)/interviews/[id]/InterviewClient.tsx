@@ -43,7 +43,7 @@ export default function InterviewClient({ interview }: { interview: Interview })
   return (
     <div className="max-w-2xl mx-auto space-y-4 px-4 py-6">
       <div>
-        <h1 className="text-lg font-bold text-white">Interview</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Interview</h1>
         <p className="text-xs text-gray-500 mt-0.5">
           {interview.viewerIsInterviewee
             ? `${name(interview.journalist)} möchte dich für einen Bericht im Community-Board interviewen.`
@@ -65,7 +65,7 @@ export default function InterviewClient({ interview }: { interview: Interview })
             {canAnswer ? (
               <textarea value={answers[i]} onChange={e => setAnswers(a => a.map((x, j) => (j === i ? e.target.value : x)))} rows={3} maxLength={1500}
                 placeholder="Deine Antwort (leer lassen, wenn du nicht antworten möchtest)"
-                className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+                className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-y" />
             ) : (
               <p className="text-sm text-gray-300 whitespace-pre-line">{interview.answers[i] || <span className="text-gray-600">—</span>}</p>
             )}
@@ -79,7 +79,7 @@ export default function InterviewClient({ interview }: { interview: Interview })
           <Button loading={busy === "send"} disabled={busy !== null || answers.every(a => !a.trim())} onClick={() => submit(false)}>Antworten senden</Button>
         </div>
       )}
-      {canAnswer && <p className="text-[11px] text-gray-600">Deine Antworten kann der Journalist in seinem Bericht veröffentlichen — mit deinem Namen.</p>}
+      {canAnswer && <p className="text-xs text-gray-600">Deine Antworten kann der Journalist in seinem Bericht veröffentlichen — mit deinem Namen.</p>}
     </div>
   );
 }

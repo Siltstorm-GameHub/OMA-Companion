@@ -9,7 +9,7 @@ export default async function AnomaliesPage() {
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs — Auffälligkeiten</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs — Auffälligkeiten</h1>
         <p className="text-xs text-gray-500 mt-0.5">Muster bei den Bewertungen der letzten 30 Tage. Das sind nur Hinweise, es gibt keine automatischen Strafen — vieles davon ist harmlos (Freunde, Stammleser).</p>
       </div>
       <AdminJobsNav />

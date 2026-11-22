@@ -46,7 +46,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           </div>
           {goalStatus.rewarded.length > 0 ? (
             <div>
-              <p className="text-[11px] text-gray-500 mb-1">Belohnt ({goalStatus.rewarded.length})</p>
+              <p className="text-xs text-gray-500 mb-1">Belohnt ({goalStatus.rewarded.length})</p>
               <ul className="flex flex-wrap gap-1.5">
                 {goalStatus.rewarded.map(r => (
                   <li key={r.id} className="rounded-full bg-line px-2 py-0.5 text-xs text-gray-200">
@@ -59,10 +59,10 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
               </ul>
             </div>
           ) : (
-            <p className="text-[11px] text-gray-500">Noch niemand belohnt.</p>
+            <p className="text-xs text-gray-500">Noch niemand belohnt.</p>
           )}
           <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-line">
-            <p className="flex-1 min-w-[200px] text-[11px] text-gray-500">
+            <p className="flex-1 min-w-[200px] text-xs text-gray-500">
               Einen Wert korrigiert? „Neu auswerten“ bucht die Ziel-Münzen zurück und vergibt sie mit den aktuellen Werten neu.
             </p>
             <button type="button" onClick={reevaluateGoal} disabled={reevaluating}
@@ -89,7 +89,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
                     goalMode === value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                   }`}>
                   <span className={`block text-sm font-semibold ${goalMode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
-                  <span className="block text-[11px] text-gray-500">{hint}</span>
+                  <span className="block text-xs text-gray-500">{hint}</span>
                 </button>
               ))}
             </div>
@@ -103,7 +103,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
             <CommunityGoalEditor value={{ ...goalForm, enabled: true }} onChange={f => setGoalForm({ ...f, enabled: true })}
               statFields={goalFieldsFor(event.format, tmtStatFields)} inSeries={!!event.series} hideToggle {...editorProps} />
           )}
-          <p className="text-[11px] text-gray-500">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
+          <p className="text-xs text-gray-500">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
         </section>
       ) : !hasTournament && eventKind === "community" ? (
         // "Ohne Platzierung" ohne Spielplan: Ziel direkt einrichten (legt eine Werte-Erfassung an)
@@ -114,7 +114,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
             werden sie danach im Reiter „Spielplan“ (von dir oder per Screenshot-Meldung). Eine Platzierung gibt es weiterhin nicht.
           </p>
           <div>
-            <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
             <StatFieldEditor fields={setupFields} onChange={setSetupFields} isAvg={false} />
           </div>
           <CommunityGoalEditor value={{ ...goalForm, enabled: true }} onChange={f => setGoalForm({ ...f, enabled: true })}
@@ -123,7 +123,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50">
             {goalSetupLoading ? "Legt an…" : "Ziel anlegen"}
           </button>
-          <p className="text-[11px] text-gray-500">„Ziel anlegen“ gilt sofort.</p>
+          <p className="text-xs text-gray-500">„Ziel anlegen“ gilt sofort.</p>
         </section>
       ) : (
         <section aria-label="Kein Ziel möglich" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-2">

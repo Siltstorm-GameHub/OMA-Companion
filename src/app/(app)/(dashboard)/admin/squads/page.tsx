@@ -15,7 +15,7 @@ export default async function AdminSquadsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-black text-white">Squads</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Squads</h1>
         <p className="text-sm text-gray-400 mt-1">
           Persistente eSports-Teams (z.B. „Rocket League Team") — Mitglieder können in mehreren Squads
           gleichzeitig sein. Captains verwalten das Roster ihres eigenen Squads direkt auf der

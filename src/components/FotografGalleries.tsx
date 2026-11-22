@@ -15,7 +15,7 @@ export function AssetGrid({ assets }: { assets: GridAsset[] }) {
             // eslint-disable-next-line @next/next/no-img-element -- Blob-Bilder beliebiger Größe
             : <img src={a.url} alt={a.caption ?? ""} loading="lazy" className="w-full h-full object-cover" />}
           {a._count.votes > 0 && (
-            <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-gray-100">{a._count.votes} 👍</span>
+            <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-gray-100">{a._count.votes} 👍</span>
           )}
         </a>
       ))}

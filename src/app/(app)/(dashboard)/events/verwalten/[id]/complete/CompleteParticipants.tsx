@@ -11,7 +11,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-teilnehmer" aria-label="Teilnehmer" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Teilnehmer")}</span>
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Teilnehmer")}</span>
             Teilnehmer
           </h2>
           <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
@@ -36,14 +36,14 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
                         className="rounded accent-teal-500 shrink-0" />
                       <Avatar u={u} size={5} />
                       <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : isAbsent ? "text-gray-500" : "text-white"}`}>{userName(u)}</span>
-                      {isExcluded && <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>}
-                      {isAbsent && !isExcluded && <span className="text-[10px] text-gray-500 shrink-0">nicht da</span>}
+                      {isExcluded && <span className="text-xs text-red-400 shrink-0">Disqualifiziert</span>}
+                      {isAbsent && !isExcluded && <span className="text-xs text-gray-500 shrink-0">nicht da</span>}
                       <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
                         {!isExcluded && !isAbsent && effectiveParticipationCoins > 0 && (
-                          <span className="text-[10px] text-amber-400 tabular-nums leading-tight">+{effectiveParticipationCoins} <CoinIcon size={11} /></span>
+                          <span className="text-xs text-amber-400 tabular-nums leading-tight">+{effectiveParticipationCoins} <CoinIcon size={11} /></span>
                         )}
                         {!isExcluded && !isAbsent && participationRankPts > 0 && (
-                          <span className="text-[10px] text-teal-400 tabular-nums leading-tight">+{participationRankPts} <RankPointsIcon size={11} /></span>
+                          <span className="text-xs text-teal-400 tabular-nums leading-tight">+{participationRankPts} <RankPointsIcon size={11} /></span>
                         )}
                       </span>
                       <button
@@ -59,7 +59,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
               </div>
             )}
             <div>
-              <label className="text-[11px] text-gray-500 block mb-1">Begründung / Notiz (optional)</label>
+              <label className="text-xs text-gray-500 block mb-1">Begründung / Notiz (optional)</label>
               <textarea
                 value={rankingNote}
                 onChange={e => { setRankingNote(e.target.value); setRankingDirty(true); }}

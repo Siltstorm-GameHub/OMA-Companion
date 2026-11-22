@@ -59,7 +59,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             placeholder="z.B. Rocket League" className={inputCls} style={inputStyle} />
         )}
         {variousGames && (
-          <p className="text-[11px] text-gray-500 px-1">
+          <p className="text-xs text-gray-500 px-1">
             Jedes Event kann ein eigenes Spiel und Format haben. Format-Vorlage für die Reihe entfällt.
           </p>
         )}
@@ -75,7 +75,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
                   fixedGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-[10px] font-medium leading-tight text-center ${fixedGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                <span className={`text-xs font-medium leading-tight text-center ${fixedGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
               </button>
             ))}
           </div>
@@ -118,7 +118,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
           <div>
             <p className="text-sm text-gray-200">Unsichtbar erstellen</p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Die Reihe wird angelegt, aber noch nicht veröffentlicht. Sichtbarkeit kann jederzeit in den Reihen-Einstellungen geändert werden.
             </p>
           </div>
@@ -131,7 +131,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
           <div>
             <p className="text-sm text-gray-200">Selbst-Anmeldung deaktivieren</p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               User können sich für kein Event dieser Reihe selbst anmelden — nur Admins/Moderatoren
               tragen Teilnehmer ein. Gilt automatisch auch für später generierte Termine der Reihe.
               Praktisch für Team-interne Reihen (z.B. Trainingsserien).
@@ -148,7 +148,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             {!forceSquad && <option value="">– Für alle offen –</option>}
             {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <p className="text-[11px] text-gray-500 mt-1.5">
+          <p className="text-xs text-gray-500 mt-1.5">
             Gilt für alle Events der Reihe (auch später generierte) — bleiben für alle sichtbar,
             aber nur Mitglieder dieses Squads können sich als Spieler anmelden.
           </p>

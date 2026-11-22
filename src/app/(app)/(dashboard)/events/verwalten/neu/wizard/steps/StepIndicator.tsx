@@ -11,30 +11,30 @@ export default function StepIndicator({ w }: { w: EventWizard }) {
     ? base.filter((_, i) => i !== 2)
     : base;
   return (
-    <div className="flex items-center gap-1 mb-8 flex-wrap">
+    <ol className="mb-6 flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Schritte">
       {labels.map((label, i) => {
         const active = i === step;
         const done   = i < step;
         return (
-          <div key={i} className="flex items-center gap-1">
+          <li key={i} className="flex shrink-0 items-center gap-1.5" aria-current={active ? "step" : undefined}>
             <div className={`flex items-center gap-1.5 ${active || done ? "" : "opacity-40"}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                done   ? "bg-teal-500 text-white"
-                : active ? "bg-teal-500/20 border-2 border-teal-500 text-teal-400"
-                : "bg-line border border-line-strong text-gray-500"
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-extrabold transition-colors ${
+                done   ? "bg-primary text-primary-ink"
+                : active ? "bg-primary-soft border-2 border-primary text-primary-fg"
+                : "bg-surface-2 border border-line text-subtle"
               }`}>
                 {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
               </div>
-              <span className={`text-xs font-medium hidden sm:block ${
-                active ? "text-teal-300" : done ? "text-gray-400" : "text-gray-600"
+              <span className={`text-sm font-semibold ${active ? "" : "hidden sm:block"} ${
+                active ? "text-fg" : done ? "text-muted" : "text-subtle"
               }`}>{label}</span>
             </div>
             {i < labels.length - 1 && (
-              <div className={`h-px mx-0.5 ${i < step ? "bg-teal-500/50" : "bg-line"}`} style={{ width: 14 }} />
+              <div className={`h-0.5 mx-0.5 rounded-full ${i < step ? "bg-primary" : "bg-line"}`} style={{ width: 18 }} />
             )}
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }

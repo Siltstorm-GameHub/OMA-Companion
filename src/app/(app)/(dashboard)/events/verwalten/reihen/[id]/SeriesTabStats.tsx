@@ -37,7 +37,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
 
           {eventStatFields.length > 0 && (
             <Section title="Sieger-Ermittlung">
-              <p className="text-[11px] text-gray-500 mb-2">
+              <p className="text-xs text-gray-500 mb-2">
                 Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
               </p>
               <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)} className={inputCls}>

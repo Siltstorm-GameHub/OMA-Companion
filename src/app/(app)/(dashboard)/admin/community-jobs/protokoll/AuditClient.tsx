@@ -47,7 +47,7 @@ export default function AuditClient() {
         <span className="relative flex-1 min-w-[10rem]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen: Team-Mitglied, Betroffene, Grund"
-            className="w-full bg-line border border-line-strong rounded-lg pl-7 pr-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-surface-2 border border-line rounded-control pl-7 pr-2 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         </span>
       </div>
 
@@ -61,9 +61,9 @@ export default function AuditClient() {
                 {e.targetLabel && <> — {e.targetLabel}</>}
                 {e.jobKey && <span className="text-gray-500"> · {getCommunityJob(e.jobKey)?.label ?? e.jobKey}</span>}
               </p>
-              <p className="text-[10px] text-gray-500">{e.actorName ?? "?"} · {formatBerlinDateTime(e.createdAt, { dateStyle: "short", timeStyle: "short" })}</p>
-              {e.reason && <p className="text-[11px] text-gray-400">Grund: {e.reason}</p>}
-              {e.detail && <p className="text-[10px] text-gray-600 break-all">{e.detail.length > 180 ? `${e.detail.slice(0, 180)}…` : e.detail}</p>}
+              <p className="text-xs text-gray-500">{e.actorName ?? "?"} · {formatBerlinDateTime(e.createdAt, { dateStyle: "short", timeStyle: "short" })}</p>
+              {e.reason && <p className="text-xs text-gray-400">Grund: {e.reason}</p>}
+              {e.detail && <p className="text-xs text-gray-600 break-all">{e.detail.length > 180 ? `${e.detail.slice(0, 180)}…` : e.detail}</p>}
             </div>
           ))}
         </div>

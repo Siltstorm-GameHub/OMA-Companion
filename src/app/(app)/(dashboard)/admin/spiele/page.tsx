@@ -67,7 +67,7 @@ export default async function AdminSpielePage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-black text-white">Spieleliste</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Spieleliste</h1>
         <p className="text-sm text-gray-400 mt-1">
           Vorschläge ohne Steam-/IGDB-Treffer freischalten, Angaben korrigieren, Ergänzungen von Mitgliedern prüfen
           und Dubletten zusammenführen. Spiele mit Treffer erscheinen sofort.

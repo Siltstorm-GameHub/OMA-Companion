@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { eventHasPlacement } from "@/lib/event-placement";
 import { prisma } from "@/lib/prisma";
 import { parseCycleConfig } from "@/lib/series-cycles-config";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
-import { CalendarDays, ExternalLink, Plus, Users, EyeOff } from "@/components/icons";
+import { ExternalLink, Plus, Users, EyeOff } from "@/components/icons";
 import SyncButton from "./SyncButton";
 import { GateLink, GuestMoreCta } from "@/components/GuestGate";
 import EventCardActions from "@/components/events/EventCardActions";
@@ -205,29 +207,16 @@ export default async function EventsPage() {
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
 
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-              <CalendarDays className="w-4 h-4 text-teal-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Events</h1>
-          </div>
-          <p className="text-sm text-gray-500 ml-10">
-            {openCount > 0
-              ? <><span className="text-teal-300 font-medium">{openCount}</span> offene Events</>
-              : "Alle Events"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <GateLink href="/events/verwalten/neu"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 transition-colors text-sm font-medium text-white">
-            <Plus className="w-3.5 h-3.5" />
-            <span>Neues Event</span>
+      <PageHeader
+        title="Events"
+        description={openCount > 0 ? <><span className="font-semibold text-primary-fg">{openCount}</span> offene Events · Turniere, Community-Abende und Reihen</> : "Turniere, Community-Abende und Reihen"}
+        actions={<>
+          <GateLink href="/events/verwalten/neu" className={buttonClasses("primary", "md")}>
+            <Plus className="w-4 h-4" /> Neues Event
           </GateLink>
           {isMod && <SyncButton />}
-        </div>
-      </div>
+        </>}
+      />
 
       <EventsTabs
         eventsPanel={<>
@@ -263,7 +252,7 @@ export default async function EventsPage() {
           <EventFilterShell games={gameChips} loggedIn={!!userId}>
             {groups.map(group => (
               <section key={group.key} data-ev-section aria-label={group.label} className="mb-5 last:mb-0">
-                <h2 className="sticky top-0 z-20 flex items-center gap-3 py-1.5 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-xs font-semibold text-gray-300 tracking-wide">
+                <h2 className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] lg:top-[4.5rem] z-20 flex items-center gap-3 py-2 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-xs font-semibold text-gray-300 tracking-wide">
                   {group.label}
                   <span className="text-gray-600 font-normal">{group.items.length}</span>
                   <span className="h-px flex-1 bg-line" />
@@ -275,11 +264,12 @@ export default async function EventsPage() {
                       <div key={item.ev.id} data-ev
                         data-registered={card.isRegistered ? "1" : undefined}
                         data-mine={card.relevance.length > 0 ? "1" : undefined}
-                        data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}>
+                        data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}
+                        data-kind={card.kind}>
                         <ScrollReveal className="h-full">
                           <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />}
                             extra={item.ev.seriesId && (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) > 0 ? (
-                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-[11px] text-teal-300 hover:text-white">
+                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-xs text-teal-300 hover:text-white">
                                 🔁 +{moreCyclesBySeries.get(item.ev.seriesId)} weitere {moreCyclesBySeries.get(item.ev.seriesId) === 1 ? "Zyklus" : "Zyklen"} · Anmeldung offen
                               </Link>
                             ) : undefined} />
@@ -298,7 +288,7 @@ export default async function EventsPage() {
         <div className="space-y-1.5">
           <div className="flex items-center gap-3 pb-1">
             <div className="h-px flex-1 bg-rose-500/10" />
-            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-rose-400 uppercase tracking-widest">
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 uppercase tracking-widest">
               <EyeOff className="w-3 h-3" /> Ausgeblendet · nur für Admins/Mods sichtbar
             </span>
             <div className="h-px flex-1 bg-rose-500/10" />
@@ -313,16 +303,16 @@ export default async function EventsPage() {
                 <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
                   {ev.title}
                 </p>
-                <p className="text-[10px] text-gray-600">
+                <p className="text-xs text-gray-600">
                   {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                   {ev.series && <> · {ev.series.name}</>}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                <span className="flex items-center gap-1 text-xs text-gray-600">
                   <Users className="w-3 h-3" />{ev._count.registrations}
                 </span>
-                <span className="flex items-center gap-1 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
+                <span className="flex items-center gap-1 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
                   <EyeOff className="w-2.5 h-2.5" /> Ausgeblendet
                 </span>
               </div>
@@ -335,7 +325,7 @@ export default async function EventsPage() {
         <div className="space-y-1.5">
           <div className="flex items-center gap-3 pb-1">
             <div className="h-px flex-1 bg-line" />
-            <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Abgeschlossen</span>
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Abgeschlossen</span>
             <div className="h-px flex-1 bg-line" />
           </div>
 
@@ -353,13 +343,13 @@ export default async function EventsPage() {
                       {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}
                       {ev.title}
                     </GateLink>
-                    <p className="text-[10px] text-gray-600">
+                    <p className="text-xs text-gray-600">
                       {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
                       {ev.series && <> · {ev.series.name}</>}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                    <span className="flex items-center gap-1 text-xs text-gray-600">
                       <Users className="w-3 h-3" />{playersOf(ev).length}
                     </span>
                     {discordUrl && (
@@ -368,7 +358,7 @@ export default async function EventsPage() {
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
-                    <span className="text-[10px] text-gray-600 bg-gray-800/60 border border-line px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-gray-600 bg-gray-800/60 border border-line px-1.5 py-0.5 rounded">
                       Beendet
                     </span>
                   </div>

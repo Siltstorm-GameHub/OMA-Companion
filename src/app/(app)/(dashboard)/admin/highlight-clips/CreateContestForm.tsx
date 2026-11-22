@@ -97,7 +97,7 @@ export default function CreateContestForm({
   return (
     <div className="glass rounded-2xl p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-purple-400" />
+        <Sparkles className="w-4 h-4 text-primary-fg" />
         <h2 className="font-bold text-white">Neue Abstimmung starten</h2>
       </div>
 
@@ -114,7 +114,7 @@ export default function CreateContestForm({
             type="date"
             value={periodStart}
             onChange={(e) => setPeriodStart(e.target.value)}
-            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+            className="w-full rounded-control px-2 py-1.5 text-sm text-fg bg-surface-2 border border-line outline-none focus:border-primary"
           />
         </div>
         <div>
@@ -123,7 +123,7 @@ export default function CreateContestForm({
             type="date"
             value={periodEnd}
             onChange={(e) => setPeriodEnd(e.target.value)}
-            className="w-full rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+            className="w-full rounded-control px-2 py-1.5 text-sm text-fg bg-surface-2 border border-line outline-none focus:border-primary"
           />
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function CreateContestForm({
           min={1}
           value={votingDurationDays}
           onChange={(e) => setVotingDurationDays(e.target.value)}
-          className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+          className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-primary"
         />
       </div>
 
@@ -158,7 +158,7 @@ export default function CreateContestForm({
             onChange={(e) => setChannelInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChannel(); } }}
             placeholder="Twitch-Login hinzufügen…"
-            className="flex-1 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+            className="flex-1 rounded-control px-2 py-1.5 text-sm text-fg bg-surface-2 border border-line outline-none focus:border-primary"
           />
           <button
             onClick={addChannel}
@@ -172,7 +172,7 @@ export default function CreateContestForm({
       <button
         onClick={submit}
         disabled={submitting || hasActiveContest}
-        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-purple-500/15 border border-purple-500/20 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium bg-primary-soft border border-primary/40 text-primary-fg hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
         Abstimmung starten

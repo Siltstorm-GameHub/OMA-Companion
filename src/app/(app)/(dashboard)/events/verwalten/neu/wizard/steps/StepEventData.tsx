@@ -54,7 +54,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
         {game !== BLOCKS_GAME && (
           <button type="button" onClick={() => { setGame(BLOCKS_GAME); setEventType("tournament"); }}
-            className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-violet-300 hover:text-violet-200">
+            className="mt-1.5 inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200">
             🧱 Event für unser App-Spiel OMA Blocks (Versus-Turnier oder Challenge)
           </button>
         )}
@@ -81,7 +81,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
                   genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
               </button>
             ))}
           </div>
@@ -140,7 +140,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
               className="w-4 h-4 mt-0.5 accent-violet-500 shrink-0" />
             <div>
               <p className="text-sm text-gray-300">{label}</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
             </div>
           </label>
         ))}
@@ -156,7 +156,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
           <div>
             <p className="text-sm text-gray-200">Selbst-Anmeldung deaktivieren</p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               User können sich nicht selbst anmelden — nur Admins/Moderatoren tragen Teilnehmer im
               Tab „Teilnehmer" ein. Praktisch für Team-interne Events (z.B. Trainingsreihen).
             </p>
@@ -172,7 +172,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             {!forceSquad && <option value="">– Für alle offen –</option>}
             {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <p className="text-[11px] text-gray-500 mt-1.5">
+          <p className="text-xs text-gray-500 mt-1.5">
             Event bleibt für alle sichtbar, aber nur Mitglieder dieses Squads können sich als
             Spieler anmelden (Zuschauer-Anmeldung bleibt offen).
           </p>

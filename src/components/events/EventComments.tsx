@@ -112,7 +112,7 @@ export default function EventComments({
   const total = data?.comments.length ?? 0;
 
   return (
-    <section id={isPanel ? undefined : "absprachen"} ref={rootRef} className={isPanel ? "flex-1 min-h-0 flex flex-col" : "scroll-mt-24"}>
+    <section id={isPanel ? undefined : "absprachen"} ref={rootRef} className={isPanel ? "flex-1 min-h-0 flex flex-col" : "scroll-mt-36"}>
       {/* Kopf: mobil (eingeklappt) ein Knopf, ab lg eine Überschrift */}
       {!isPanel && <><button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
         className={`w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 text-left lg:hidden ${open ? "mb-3" : ""}`}>
@@ -120,7 +120,7 @@ export default function EventComments({
         <span className="text-sm font-semibold text-white">Absprachen</span>
         {total > 0 && <span className="text-xs text-gray-500 tabular-nums">{total}</span>}
         {unread > 0 && !open && (
-          <span className="shrink-0 whitespace-nowrap text-[11px] px-1.5 py-0.5 rounded-full bg-teal-500 text-teal-950 font-semibold">{unread} neu</span>
+          <span className="shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded-full bg-teal-500 text-teal-950 font-semibold">{unread} neu</span>
         )}
         {pinned.length > 0 && !open && <span className="text-xs truncate text-amber-300/90 min-w-0">📌 {plainCommentText(pinned[pinned.length - 1].content)}</span>}
         <ChevronDown className={`w-4 h-4 text-gray-500 ml-auto shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -228,7 +228,7 @@ function PinnedItem({ c, eventId, canPin, onChange }: { c: EventCommentDTO; even
       <span className="shrink-0 mt-0.5" aria-hidden>📌</span>
       <div className="flex-1 min-w-0">
         <CommentText content={c.content} />
-        <p className="text-[11px] text-amber-200/60 mt-0.5">
+        <p className="text-xs text-amber-200/60 mt-0.5">
           {c.user.name} · {timeLabel(c.createdAt)}{c.mirrored && " · auch auf Discord"}
         </p>
       </div>
@@ -287,7 +287,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
         {editing ? (
           <div className="space-y-1.5">
             <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={2} autoFocus
-              className="w-full rounded-lg bg-black/30 border border-line-strong px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/50" />
+              className="w-full rounded-control bg-black/30 border border-line px-2.5 py-1.5 text-sm text-fg focus:outline-none focus:border-primary" />
             <div className="flex gap-2 text-xs">
               <button type="button" disabled={busy} onClick={() => run(async () => { await api(base, "PATCH", { content: draft }); setEditing(false); })}
                 className="px-2.5 py-1 rounded-lg bg-teal-500 text-teal-950 font-semibold disabled:opacity-50">Speichern</button>
@@ -297,7 +297,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
         ) : (
           <>
             <CommentText content={c.content} />
-            {c.edited && <span className="text-[10px] text-gray-600">(bearbeitet)</span>}
+            {c.edited && <span className="text-xs text-gray-600">(bearbeitet)</span>}
           </>
         )}
 
@@ -332,7 +332,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
               const r = await api(base, "PATCH", { pinned: !c.pinned });
               if (!c.pinned) toast.success(r.mirrored ? "Angepinnt und auf Discord geteilt" : "Angepinnt");
             })}>
-              <span className="text-[11px] leading-none">📌</span>
+              <span className="text-xs leading-none">📌</span>
             </IconBtn>
           )}
           {c.canEdit && <IconBtn label="Bearbeiten" onClick={() => setEditing(true)}><Pencil className="w-3.5 h-3.5" /></IconBtn>}
@@ -377,7 +377,7 @@ function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
   return (
     <div className="shrink-0 border-b border-line px-3 py-2 bg-surface-2">
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
-        <span className="text-[11px] text-gray-500 mr-1">Rückmeldungen ({total} Spieler):</span>
+        <span className="text-xs text-gray-500 mr-1">Rückmeldungen ({total} Spieler):</span>
         {items.filter(i => i.count > 0).map(i => (
           <button key={i.key} type="button" onClick={() => setOpenKey(k => (k === i.key ? null : i.key))} aria-expanded={openKey === i.key}
             className={`px-2 py-1 rounded-lg border transition-colors ${openKey === i.key ? "bg-line border-white/25" : "border-line-strong hover:bg-line"} ${i.tone}`}>
@@ -432,7 +432,7 @@ export function StatusBar({ eventId, myStatus, isPlayer, readyOpensAt, onPosted,
   return (
     <div className={compact ? "" : "shrink-0 border-b border-line px-3 py-2.5"}>
       <div className="flex flex-wrap items-center gap-1.5">
-        {!compact && <span className="text-[11px] text-gray-500 mr-1">Kurz Bescheid geben:</span>}
+        {!compact && <span className="text-xs text-gray-500 mr-1">Kurz Bescheid geben:</span>}
         <button type="button" disabled={busy} onClick={() => setLateOpen(o => !o)} className={chip(myStatus?.status === "late")}>⏰ Komme später</button>
         <button type="button" disabled={busy} onClick={() => post("absent")} className={chip(myStatus?.status === "absent")}>❌ Kann nicht</button>
         {readyLocked(readyOpensAt) ? (
@@ -445,7 +445,7 @@ export function StatusBar({ eventId, myStatus, isPlayer, readyOpensAt, onPosted,
       </div>
       {lateOpen && (
         <div className="flex items-center gap-1.5 mt-2">
-          <span className="text-[11px] text-gray-500 mr-1">Etwa</span>
+          <span className="text-xs text-gray-500 mr-1">Etwa</span>
           {LATE_OPTIONS.map(m => (
             <button key={m} type="button" disabled={busy} onClick={() => post("late", m)} className={chip(false)}>+{m} min</button>
           ))}
@@ -554,7 +554,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
             }
             if (e.key === "Escape") setMentionQuery(null);
           }}
-          className="block flex-1 min-w-0 min-h-10 resize-none rounded-xl bg-black/30 border border-line-strong px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/50" />
+          className="block flex-1 min-w-0 min-h-10 resize-none rounded-control bg-black/30 border border-line px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         <button type="button" onClick={send} disabled={sending || !text.trim() || visibleLength > COMMENT_MAX_LENGTH}
           aria-label="Senden"
           className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-teal-500 text-teal-950 hover:bg-teal-400 disabled:opacity-40 transition-colors">
@@ -562,7 +562,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
         </button>
       </div>
       {visibleLength > COMMENT_MAX_LENGTH - 100 && (
-        <p className={`text-[11px] mt-1 text-right tabular-nums ${visibleLength > COMMENT_MAX_LENGTH ? "text-rose-400" : "text-gray-500"}`}>
+        <p className={`text-xs mt-1 text-right tabular-nums ${visibleLength > COMMENT_MAX_LENGTH ? "text-rose-400" : "text-gray-500"}`}>
           {visibleLength}/{COMMENT_MAX_LENGTH}
         </p>
       )}

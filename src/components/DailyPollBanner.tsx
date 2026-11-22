@@ -29,7 +29,7 @@ function ResultLine({ pct, count, leading, mine }: { pct: number; count: number;
       <div className="h-1 rounded-full bg-line overflow-hidden">
         <div className={`h-full rounded-full transition-all ${leading ? "bg-amber-400" : "bg-purple-400"}`} style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[10px] text-gray-500 tabular-nums">
+      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-gray-500 tabular-nums">
         <span className={leading ? "text-amber-300 font-semibold" : ""}>{pct}%</span>
         <span>· {count} Stimme{count === 1 ? "" : "n"}</span>
         {leading && <span className="text-amber-300/90">· vorne</span>}
@@ -43,7 +43,7 @@ function ResultLine({ pct, count, leading, mine }: { pct: number; count: number;
 function ShowAllToggle({ total, shown, open, onToggle }: { total: number; shown: number; open: boolean; onToggle: () => void }) {
   if (total <= shown) return null;
   return (
-    <button type="button" onClick={onToggle} className="text-[11px] font-medium text-purple-300 hover:text-purple-200 transition-colors">
+    <button type="button" onClick={onToggle} className="text-xs font-medium text-purple-300 hover:text-purple-200 transition-colors">
       {open ? "Weniger anzeigen" : `Alle ${total} anzeigen`}
     </button>
   );
@@ -193,14 +193,14 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-purple-400/70 mb-0.5">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-purple-400/70 mb-0.5">
             {poll.ended ? "Umfrage beendet" : "Umfrage"}
           </p>
           <p className="text-sm font-semibold text-white leading-snug">{poll.title}</p>
           <p className="text-xs text-gray-400 mt-1 leading-relaxed">{poll.question}</p>
 
           {/* Hinweise: Auswahlmodus, Belohnung, Event */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             {canVote && poll.options.length > 0 && (
               <span className="text-gray-500">
                 {poll.allowMultiple ? "Mehrfachauswahl möglich" : "Eine Antwort wählen"}
@@ -287,7 +287,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
               maxLength={500}
               rows={2}
               placeholder="Eigene Antwort …"
-              className="w-full mt-2 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors resize-none"
+              className="w-full mt-2 bg-surface-2 border border-line rounded-control px-3 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors resize-none"
             />
           )}
 
@@ -295,7 +295,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
           {poll.allowFreeText && poll.freeTextGameMode && canVote && (
             <div className="mt-2">
               <PollGameSuggestInput value={freeTextGames} onChange={setFreeTextGames} onDraftChange={setGameDraft} />
-              <p className="text-[10px] text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-1">
                 Kein Treffer? Kein Problem — dein eingetippter Titel wird beim Abstimmen trotzdem übernommen.
               </p>
             </div>
@@ -304,9 +304,9 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
           {/* Freitext-Antworten (nach Abstimmung/Ende sichtbar) */}
           {freeTextAnswers.length > 0 && (
             <div className="mt-2.5 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Eigene Antworten</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Eigene Antworten</p>
               {(allFreeText ? freeTextAnswers : freeTextAnswers.slice(0, FREE_TEXT_PREVIEW)).map((t, i) => (
-                <p key={i} className="text-[11px] text-gray-400 bg-surface-2 rounded-md px-2 py-1 [overflow-wrap:anywhere]">{t}</p>
+                <p key={i} className="text-xs text-gray-400 bg-surface-2 rounded-md px-2 py-1 [overflow-wrap:anywhere]">{t}</p>
               ))}
               <ShowAllToggle total={freeTextAnswers.length} shown={FREE_TEXT_PREVIEW} open={allFreeText} onToggle={() => setAllFreeText(o => !o)} />
             </div>
@@ -315,20 +315,20 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
           {/* Spielevorschläge (aggregiert, nach Abstimmung/Ende sichtbar) */}
           {gameSuggestions.length > 0 && (
             <div className="mt-2.5 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Vorschläge</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Vorschläge</p>
               {(allGames ? gameSuggestions : gameSuggestions.slice(0, GAME_SUGGESTION_PREVIEW)).map((g, i) => (
                 <div key={i} className="flex items-center gap-2.5 px-2 py-1.5 rounded-md bg-surface-2 border border-line">
                   {g.appId && (
                     <img src={coverUrl(g.appId)} alt="" className="w-10 h-6 rounded object-cover shrink-0" />
                   )}
-                  <span className="text-[11px] text-white/85 flex-1 min-w-0 [overflow-wrap:anywhere]">{g.name}</span>
+                  <span className="text-xs text-white/85 flex-1 min-w-0 [overflow-wrap:anywhere]">{g.name}</span>
                   {g.appId && (
                     <a href={steamUrl(g.appId)} target="_blank" rel="noopener noreferrer"
                       className="text-gray-500 hover:text-purple-300 transition-colors shrink-0" title="Zur Steam-Seite">
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
-                  <span className="text-[11px] text-gray-500 tabular-nums shrink-0">{g.count}x</span>
+                  <span className="text-xs text-gray-500 tabular-nums shrink-0">{g.count}x</span>
                 </div>
               ))}
               <ShowAllToggle total={gameSuggestions.length} shown={GAME_SUGGESTION_PREVIEW} open={allGames} onToggle={() => setAllGames(o => !o)} />

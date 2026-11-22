@@ -24,7 +24,7 @@ export function ValueDeltaBadge({ delta }: { delta: number | null }) {
   const positive = delta > 0;
   return (
     <span
-      className={`value-delta-pop absolute left-1/2 -top-1 -translate-x-1/2 text-[11px] font-bold tabular-nums whitespace-nowrap pointer-events-none ${
+      className={`value-delta-pop absolute left-1/2 -top-1 -translate-x-1/2 text-xs font-bold tabular-nums whitespace-nowrap pointer-events-none ${
         positive ? "text-emerald-400" : "text-red-400"
       }`}
     >

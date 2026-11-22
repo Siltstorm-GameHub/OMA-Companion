@@ -16,7 +16,7 @@ export default function SeriesCompleteOpenEvents({ ctx }: { ctx: SeriesComplete 
               </div>
               <ul className="space-y-1">
                 {openEvents.map(ev => (
-                  <li key={ev.id} className="text-[11px] text-gray-400 flex items-center gap-2">
+                  <li key={ev.id} className="text-xs text-gray-400 flex items-center gap-2">
                     <span className="truncate flex-1">{ev.title}</span>
                     <span className="text-gray-600 shrink-0">
                       {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}
@@ -40,7 +40,7 @@ export default function SeriesCompleteOpenEvents({ ctx }: { ctx: SeriesComplete 
                       onChange={() => setOpenEventsAction(value)} />
                     <span>
                       <span className="text-xs text-white">{label}</span>
-                      <span className="block text-[10px] text-gray-500">{hint}</span>
+                      <span className="block text-xs text-gray-500">{hint}</span>
                     </span>
                   </label>
                 ))}

@@ -1,59 +1,25 @@
-﻿import { Skeleton, SkeletonStatCards } from "@/components/Skeleton";
+import { Skeleton } from "@/components/Skeleton";
 
+/** Platzhalter im Aufbau des Profils: Visitenkarte · "Ich"-Kacheln · Reiter · Inhalt */
 export default function ProfileLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
-      {/* Hero */}
-      <div className="glass rounded-2xl p-6">
-        <div className="flex items-center gap-5 flex-wrap">
-          <Skeleton className="w-20 h-20 rounded-2xl shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-7 w-36" />
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-2 w-full max-w-xs mt-3" />
-          </div>
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5" aria-busy="true" aria-label="Profil lädt">
+      <div className="rounded-card border border-line bg-surface p-4 sm:p-6">
+        <div className="flex items-start gap-4">
+          <Skeleton className="size-[72px] rounded-card shrink-0" />
+          <div className="flex-1 space-y-2"><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-32" /></div>
+        </div>
+        <div className="mt-4 flex gap-6 border-t border-line pt-4">
+          {[0, 1, 2, 3, 4].map(i => <Skeleton key={i} className="h-10 w-14" />)}
         </div>
       </div>
-
-      {/* Stats */}
-      <SkeletonStatCards count={4} />
-
-      {/* Content grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-card" />)}
+      </div>
+      <div className="flex gap-2">{[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-28 rounded-control" />)}</div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          {/* Badges */}
-          <div className="space-y-3">
-            <Skeleton className="h-3 w-20" />
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-7 w-24 rounded-full" />
-              ))}
-            </div>
-          </div>
-          {/* Quests */}
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-28" />
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="glass rounded-card p-4 space-y-2">
-                <div className="flex justify-between">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-4 w-16" />
-                </div>
-                <Skeleton className="h-1.5 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-5">
-          <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex justify-between items-center px-4 py-3">
-                <Skeleton className="h-3.5 w-28" />
-                <Skeleton className="h-3.5 w-10" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <Skeleton className="h-80 rounded-card lg:col-span-2" />
+        <Skeleton className="h-80 rounded-card" />
       </div>
     </div>
   );

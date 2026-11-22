@@ -13,10 +13,10 @@ export default function ClipVoteHeader({
   rewardCoins: number;
 }) {
   return (
-    <div className="flex items-start justify-between flex-wrap gap-3">
+    <div className="flex items-center justify-between flex-wrap gap-3 rounded-card border border-line bg-surface p-4 sm:p-5">
       <div className="min-w-0">
-        <h2 className="text-lg font-bold text-white">{title}</h2>
-        <p className="text-sm text-gray-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">{title}</h2>
+        <p className="text-sm text-muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span>{clipCount} {clipCount === 1 ? "Clip" : "Clips"} zur Auswahl</span>
           {participationCoins > 0 && (
             <span className="flex items-center gap-0.5 text-[#b794ff]">· +{participationCoins}<CoinIcon size={12} /> fürs Abstimmen</span>

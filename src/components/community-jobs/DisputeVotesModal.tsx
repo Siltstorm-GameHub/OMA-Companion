@@ -96,9 +96,9 @@ export default function DisputeVotesModal({
                   {v.voter.username ?? v.voter.name}
                   {v.stars != null && <span className="text-amber-400"> · {v.stars}★</span>}
                 </span>
-                <span className="text-[10px] text-gray-600">{formatBerlinDate(v.createdAt)}</span>
+                <span className="text-xs text-gray-600">{formatBerlinDate(v.createdAt)}</span>
               </div>
-              {v.reason && <p className="text-[11px] text-gray-500">{v.reason}</p>}
+              {v.reason && <p className="text-xs text-gray-500">{v.reason}</p>}
               {v.disputed ? (
                 <Badge tone={v.disputeResolution === "OVERTURNED" ? "danger" : v.disputeResolution === "UPHELD" ? "success" : "warning"}>
                   {v.disputeResolution === "OVERTURNED" ? "Gestrichen" : v.disputeResolution === "UPHELD" ? "Bestätigt" : "Anfechtung offen"}
@@ -106,7 +106,7 @@ export default function DisputeVotesModal({
               ) : disputingId === v.id ? (
                 <div className="space-y-1.5">
                   <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Begründung für die Anfechtung" rows={2}
-                    className="w-full bg-line border border-line-strong rounded-lg px-2 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+                    className="w-full bg-surface-2 border border-line rounded-control px-2 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
                   <div className="flex justify-end gap-1.5">
                     <Button size="sm" variant="ghost" onClick={() => setDisputingId(null)}>Abbrechen</Button>
                     <Button size="sm" loading={busy} disabled={!reason.trim()} onClick={() => fileDispute(v.id)}>Absenden</Button>

@@ -21,17 +21,17 @@ export default function SeriesCompletePoll({ ctx }: { ctx: SeriesComplete }) {
               {pollEnabled && (
                 <div className="space-y-3 mt-1">
                   <div>
-                    <label className="text-[10px] text-gray-500 mb-1 block">Abstimmungsthema</label>
+                    <label className="text-xs text-gray-500 mb-1 block">Abstimmungsthema</label>
                     <input type="text" value={pollQuestion} onChange={e => setPollQuestion(e.target.value)}
                       placeholder="z.B. MVP der Saison, Trostpreis, …" className={inputCls} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={11} /> Punkte Gewinner</label>
                       <NumberInput min={0} value={pollRankPts} onChange={e => setPollRankPts(Number(e.target.value))} className={numCls} />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><CoinIcon size={11} /> Münzen Gewinner</label>
                       <NumberInput min={0} value={pollCoins} onChange={e => setPollCoins(Number(e.target.value))} className={numCls} />
                     </div>
                   </div>

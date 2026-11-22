@@ -67,7 +67,7 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
 
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         Lege Ziele für die nächsten Zyklen im Voraus fest. Jeder neu angelegte Termin übernimmt das oberste Ziel, das zu
         ihm passt. Ziele, die nicht passen (z. B. fehlendes Stat-Feld), bleiben stehen. Ist keins passend, gilt das Ziel der Reihe.
       </p>
@@ -75,7 +75,7 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
         <ol className="rounded-xl overflow-hidden border border-line divide-y divide-line">
           {plan.map((g, i) => (
             <li key={i} className="flex items-center gap-2 px-3 py-2">
-              <span className="text-[11px] text-gray-500 w-24 shrink-0">{i === 0 ? "Als Nächstes" : `${i + 1}. in der Liste`}</span>
+              <span className="text-xs text-gray-500 w-24 shrink-0">{i === 0 ? "Als Nächstes" : `${i + 1}. in der Liste`}</span>
               <span className="text-xs text-teal-300/90 flex-1 min-w-0 truncate">🎯 {goalSummary(g)}</span>
               {!disabled && (
                 <span className="flex items-center gap-1 shrink-0">
@@ -84,7 +84,7 @@ export default function GoalPlanEditor({ seriesId, initialPlan, goalFields, disa
                   <button type="button" aria-label="Nach unten" disabled={saving || i === plan.length - 1} onClick={() => move(i, 1)}
                     className="p-1 text-gray-500 hover:text-white disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
                   <button type="button" onClick={() => startEdit(i)} disabled={saving}
-                    className="text-[11px] text-teal-300 hover:text-white px-1.5">Ändern</button>
+                    className="text-xs text-teal-300 hover:text-white px-1.5">Ändern</button>
                   <button type="button" aria-label="Entfernen" disabled={saving} onClick={() => void save(plan.filter((_, k) => k !== i))}
                     className="p-1 text-gray-500 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
                 </span>

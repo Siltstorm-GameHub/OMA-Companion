@@ -1,12 +1,13 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CoinIcon from "@/components/CoinIcon";
 import Shortfall from "@/components/shop/Shortfall";
 import { Tabs } from "@/components/admin/Tabs";
-import { Check, ChevronRight, Clock, Crown, Lock, ShoppingBag, Sparkles, Undo2 } from "@/components/icons";
+import { Check, ChevronRight, Clock, Crown, Lock, Sparkles, Undo2 } from "@/components/icons";
 import { CosmeticName, CosmeticTitle } from "@/components/cosmetics/CosmeticName";
 import LookPreview, { PreviewAvatar, lookOfSet } from "@/components/cosmetics/LookPreview";
 import { setCachedLook } from "@/components/cosmetics/useUserLook";
@@ -43,28 +44,28 @@ function byPrice(avail: Map<string, ItemAvailability>) {
 function ItemPreview({ item, image, name }: { item: Cosmetic; image: string | null; name: string }) {
   switch (item.category) {
     case "frame":
-      return <PreviewAvatar look={{ frame: item.id }} image={image} name={name} size={52} />;
+      return <PreviewAvatar look={{ frame: item.id }} image={image} name={name} size={68} />;
     case "aura":
-      return <PreviewAvatar look={{ aura: item.id }} image={image} name={name} size={44} />;
+      return <PreviewAvatar look={{ aura: item.id }} image={image} name={name} size={60} />;
     case "background":
       return (
-        <div className="w-full h-14 rounded-xl border border-line-strong relative overflow-hidden bg-surface-2">
+        <div className="w-full h-20 rounded-control border border-line relative overflow-hidden bg-surface-2">
           <div className="absolute inset-0" style={{ background: item.css }} />
         </div>
       );
     case "title":
-      return <div className="h-14 flex items-center justify-center px-1 text-center"><CosmeticTitle title={item.id} className="text-[10px]" /></div>;
+      return <div className="h-20 flex items-center justify-center px-1 text-center"><CosmeticTitle title={item.id} className="text-sm" /></div>;
     case "nameColor":
       return (
-        <div className="h-14 flex items-center justify-center px-2 max-w-full">
-          <CosmeticName nameColor={item.id} className="text-base font-black truncate max-w-full">{name}</CosmeticName>
+        <div className="h-20 flex items-center justify-center px-2 max-w-full">
+          <CosmeticName nameColor={item.id} className="text-lg font-extrabold truncate max-w-full">{name}</CosmeticName>
         </div>
       );
   }
 }
 
 function TagBadge({ a, item }: { a: ItemAvailability; item: Cosmetic }) {
-  const base = "absolute top-2 right-2 z-10 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md";
+  const base = "absolute top-2.5 right-2.5 z-10 text-xs font-extrabold px-2 py-0.5 rounded-full";
   if (a.tag === "offer" && a.discountPct) return <span className={`${base} bg-rose-500 text-white`}>−{a.discountPct} %</span>;
   if (a.tag === "exclusive") return <span className={`${base} bg-fuchsia-500/90 text-white`}>Exklusiv</span>;
   if (a.tag === "season" && item.season) return <span className={`${base} bg-orange-500/90 text-white`}>{SEASONS[item.season].emoji}</span>;
@@ -75,13 +76,13 @@ function TagBadge({ a, item }: { a: ItemAvailability; item: Cosmetic }) {
 function SectionHead({ icon, title, right }: { icon: ReactNode; title: string; right?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-      <h2 className="text-xs font-semibold text-gray-300 flex items-center gap-2">{icon} {title}</h2>
+      <h2 className="text-base font-extrabold text-fg flex items-center gap-2">{icon} {title}</h2>
       {right}
     </div>
   );
 }
 
-const GRID = "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5";
+const GRID = "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3";
 
 type MainTab = "highlights" | "sets" | "all" | "owned";
 
@@ -221,27 +222,27 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
 
     let action: ReactNode;
     if (isEquipped) {
-      action = <span className="flex items-center justify-center gap-1 py-1.5 text-teal-300"><Check className="w-3.5 h-3.5" /> Angelegt</span>;
+      action = <span className="flex min-h-10 items-center justify-center gap-1 text-sm font-semibold text-primary-fg"><Check className="w-4 h-4" /> Angelegt</span>;
     } else if (isOwned) {
       action = (
         <button onClick={() => equip(item.category, item.id)} disabled={!!busy}
-          className="w-full py-1.5 rounded-lg font-semibold text-white bg-teal-600 hover:bg-teal-500 transition-colors disabled:opacity-50">
+          className="w-full min-h-10 rounded-control text-sm font-bold text-primary-ink bg-primary hover:bg-primary-hover transition-colors disabled:opacity-50">
           {isBusy ? "…" : "Anlegen"}
         </button>
       );
     } else if (isUnlockItem) {
-      action = <span className="flex items-center justify-center gap-1 py-1.5 text-gray-500"><Lock className="w-3 h-3" /> {unlockLabel(item)}</span>;
+      action = <span className="flex min-h-10 items-center justify-center gap-1 text-sm text-subtle"><Lock className="w-3.5 h-3.5" /> {unlockLabel(item)}</span>;
     } else if (!a.buyable) {
-      action = <span className="block text-center py-1.5 text-gray-500">Nicht im Angebot</span>;
+      action = <span className="flex min-h-10 items-center justify-center text-sm text-subtle">Nicht im Angebot</span>;
     } else if (confirmBuy === item.id) {
       action = (
         <div className="flex gap-1.5">
           <button onClick={() => buy(item)} disabled={!!busy}
-            className="flex-1 py-1.5 rounded-lg font-semibold text-black bg-amber-400 hover:bg-amber-300 transition-colors disabled:opacity-50">
+            className="flex-1 min-h-10 rounded-control text-sm font-bold text-canvas bg-coin hover:bg-amber-300 transition-colors disabled:opacity-50">
             {isBusy ? "…" : "Kaufen!"}
           </button>
           <button onClick={() => setConfirmBuy(null)} disabled={!!busy} aria-label="Abbrechen"
-            className="px-2 py-1.5 rounded-lg text-gray-400 bg-line hover:bg-line transition-colors">✕</button>
+            className="min-h-10 px-3 rounded-control text-muted bg-surface-2 hover:bg-surface-3 transition-colors">✕</button>
         </div>
       );
     } else if (!affordable && a.price !== null) {
@@ -251,10 +252,10 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         <button
           onClick={() => { setConfirmBuy(item.id); setPreviewSet(null); setPreview(item.id); }}
           disabled={!!busy}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors text-amber-200 bg-amber-500/15 hover:bg-amber-500/25"
+          className="w-full flex min-h-10 items-center justify-center gap-1.5 rounded-control text-sm font-bold transition-colors text-coin bg-coin-soft border border-coin/25 hover:bg-coin/20"
         >
           <CoinIcon size={13} /> {fmt(a.price ?? 0)}
-          {a.discountPct && a.basePrice !== null && <span className="text-[10px] line-through opacity-60">{fmt(a.basePrice)}</span>}
+          {a.discountPct && a.basePrice !== null && <span className="text-xs line-through opacity-60">{fmt(a.basePrice)}</span>}
         </button>
       );
     }
@@ -266,21 +267,21 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         tabIndex={0}
         onClick={() => showItem(item.id)}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showItem(item.id); } }}
-        className={`glass relative rounded-2xl p-2.5 flex flex-col gap-2 cursor-pointer transition-all border ${
-          isEquipped ? "border-teal-500/50" : isPreviewed ? "border-white/30" : "border-transparent hover:border-line-strong"
+        className={`relative rounded-card bg-surface p-3 flex flex-col gap-2.5 cursor-pointer transition-colors border ${
+          isEquipped ? "border-primary/60" : isPreviewed ? "border-fg/40" : "border-line hover:border-line-strong"
         }`}
         title={isUnlockItem && !isOwned && requirement ? requirement : undefined}
       >
-        <div className="absolute top-0 inset-x-3 h-px pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${rarity.color}80, transparent)` }} />
+        <div className="absolute top-0 inset-x-6 h-0.5 rounded-b-full pointer-events-none" style={{ background: rarity.color }} />
         {!isOwned && <TagBadge a={a} item={item} />}
-        <div className="flex items-center justify-center min-h-[64px]">
+        <div className="flex items-center justify-center min-h-[6.5rem] rounded-control bg-surface-2">
           <ItemPreview item={item} image={image} name={displayName} />
         </div>
         <div className="min-w-0 px-0.5">
-          <p className="text-[13px] font-semibold text-white truncate leading-tight">{item.name}</p>
-          <p className="text-[10px] font-medium" style={{ color: rarity.color }}>{rarity.label}</p>
+          <p className="text-sm font-bold text-fg truncate leading-tight">{item.name}</p>
+          <p className="text-xs font-medium" style={{ color: rarity.color }}>{rarity.label}</p>
         </div>
-        <div className="mt-auto text-xs" onClick={e => e.stopPropagation()}>{action}</div>
+        <div className="mt-auto" onClick={e => e.stopPropagation()}>{action}</div>
       </div>
     );
   }
@@ -302,7 +303,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white">{set.name}</p>
-            <p className="text-[11px] text-gray-500">{set.description}</p>
+            <p className="text-xs text-gray-500">{set.description}</p>
           </div>
           {!complete && s.discountPct > 0 && <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-500 text-black">−{s.discountPct} %</span>}
         </div>
@@ -315,7 +316,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             if (!c) return null;
             const have = owned.has(id);
             return (
-              <span key={id} className={`text-[10px] px-1.5 py-0.5 rounded-full border ${have ? "border-teal-500/40 text-teal-300 bg-teal-500/10" : "border-line-strong text-gray-400"}`}>
+              <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${have ? "border-teal-500/40 text-teal-300 bg-teal-500/10" : "border-line-strong text-gray-400"}`}>
                 {have && "✓ "}{c.name}
               </span>
             );
@@ -328,11 +329,11 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
           ) : confirmBuy === confirmKey ? (
             <div className="flex gap-1.5">
               <button onClick={() => buySet(s.id)} disabled={!!busy}
-                className="flex-1 py-1.5 rounded-lg font-semibold text-black bg-amber-400 hover:bg-amber-300 transition-colors disabled:opacity-50">
+                className="flex-1 min-h-10 rounded-control text-sm font-bold text-canvas bg-coin hover:bg-amber-300 transition-colors disabled:opacity-50">
                 {busy === s.id ? "…" : `${s.missing.length} Artikel kaufen!`}
               </button>
               <button onClick={() => setConfirmBuy(null)} disabled={!!busy} aria-label="Abbrechen"
-                className="px-2 py-1.5 rounded-lg text-gray-400 bg-line hover:bg-line transition-colors">✕</button>
+                className="min-h-10 px-3 rounded-control text-muted bg-surface-2 hover:bg-surface-3 transition-colors">✕</button>
             </div>
           ) : !affordable ? (
             <Shortfall price={s.price} balance={state.balance} basePrice={s.price < s.fullPrice ? s.fullPrice : null} />
@@ -340,11 +341,11 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             <button
               onClick={() => { setConfirmBuy(confirmKey); setPreview(null); setPreviewSet(s.id); }}
               disabled={!!busy}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-semibold transition-colors text-amber-200 bg-amber-500/15 hover:bg-amber-500/25"
+              className="w-full flex min-h-10 items-center justify-center gap-1.5 rounded-control text-sm font-bold transition-colors text-coin bg-coin-soft border border-coin/25 hover:bg-coin/20"
             >
               <CoinIcon size={13} /> {fmt(s.price)}
-              {s.price < s.fullPrice && <span className="text-[10px] line-through opacity-60">{fmt(s.fullPrice)}</span>}
-              {s.missing.length < set.items.length && <span className="text-[10px] opacity-70">· {s.missing.length} fehlen</span>}
+              {s.price < s.fullPrice && <span className="text-xs line-through opacity-60">{fmt(s.fullPrice)}</span>}
+              {s.missing.length < set.items.length && <span className="text-xs opacity-70">· {s.missing.length} fehlen</span>}
             </button>
           )}
         </div>
@@ -364,21 +365,12 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
     <div className="space-y-5">
       {/* Kopf */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
-            <ShoppingBag className="w-4.5 h-4.5 text-amber-400" />
-          </div>
-          <div>
-            <h1 className="font-display text-2xl font-black text-white tracking-tight leading-none">Shop</h1>
-            <p className="text-[11px] text-gray-500 mt-1">Rahmen, Auren, Hintergründe, Titel und Namensfarben</p>
-          </div>
-        </div>
+        <PageHeader title="Shop" description="Rahmen, Auren, Hintergründe, Titel und Namensfarben" />
         <Link href="/points" title="Woher kommen Münzen?"
           className="group glass rounded-card px-4 py-2 flex items-center gap-2 hover:bg-line transition-colors">
           <CoinIcon size={18} />
           <span className="text-lg font-black text-amber-300 tabular-nums">{fmt(state.balance)}</span>
-          <span className="flex items-center gap-0.5 border-l border-line-strong pl-2 text-[11px] font-semibold text-amber-200/80 group-hover:text-amber-200">
+          <span className="flex items-center gap-0.5 border-l border-line-strong pl-2 text-xs font-semibold text-amber-200/80 group-hover:text-amber-200">
             Münzen verdienen <ChevronRight className="w-3.5 h-3.5" />
           </span>
         </Link>
@@ -386,7 +378,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
 
       <div className="grid grid-cols-1 lg:grid-cols-[17rem_1fr] gap-5 items-start">
         {/* ── Vorschau (Desktop: bleibt beim Scrollen stehen) ── */}
-        <aside className="lg:sticky lg:top-4 space-y-3">
+        <aside className="lg:sticky lg:top-[5.5rem] space-y-3">
           <div className={`relative rounded-2xl border transition-colors ${hasPreview ? "border-amber-400/40" : "border-line-strong"}`}>
             <LookPreview look={previewLook} image={image} name={displayName} size={72} className="!rounded-2xl !border-0 min-h-[7rem]" />
             <span className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${hasPreview ? "bg-amber-400 text-black" : "bg-line text-gray-300"}`}>
@@ -399,7 +391,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               <Undo2 className="w-3 h-3" /> Vorschau zurücksetzen
             </button>
           ) : (
-            <p className="text-[11px] text-gray-600 text-center">Tippe auf einen Artikel oder ein Set für die Vorschau.</p>
+            <p className="text-xs text-gray-600 text-center">Tippe auf einen Artikel oder ein Set für die Vorschau.</p>
           )}
 
           {/* Aktuell angelegt — schnell ablegen */}
@@ -409,12 +401,12 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               return (
                 <div key={cat} className="flex items-center justify-between gap-2 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="text-[10px] text-gray-500">{CATEGORY_META[cat].label}</p>
+                    <p className="text-xs text-gray-500">{CATEGORY_META[cat].label}</p>
                     <p className={`text-xs truncate ${item ? "text-white" : "text-gray-600"}`}>{item?.name ?? "—"}</p>
                   </div>
                   {item && (
                     <button onClick={() => equip(cat, null)} disabled={!!busy}
-                      className="text-[10px] text-gray-500 hover:text-white transition-colors disabled:opacity-50">
+                      className="text-xs text-gray-500 hover:text-white transition-colors disabled:opacity-50">
                       ablegen
                     </button>
                   )}
@@ -441,7 +433,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                     icon={<Sparkles className="w-3.5 h-3.5 text-rose-400" />}
                     title="Angebote der Woche"
                     right={state.weekEndsAt && (
-                      <span className="text-[11px] text-gray-500 flex items-center gap-1" suppressHydrationWarning>
+                      <span className="text-xs text-gray-500 flex items-center gap-1" suppressHydrationWarning>
                         <Clock className="w-3 h-3" /> neu am Montag · {timeLeft(state.weekEndsAt)}
                       </span>
                     )}
@@ -456,7 +448,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                     icon={<span>{activeSeasons.map(s => SEASONS[s].emoji).join(" ")}</span>}
                     title={`Saison: ${activeSeasons.map(s => SEASONS[s].name).join(" & ")}`}
                     right={(
-                      <span className="text-[11px] text-orange-300/80 flex items-center gap-1" suppressHydrationWarning>
+                      <span className="text-xs text-orange-300/80 flex items-center gap-1" suppressHydrationWarning>
                         <Clock className="w-3 h-3" /> {timeLeft(seasonUntil)}
                       </span>
                     )}
@@ -497,7 +489,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-gray-500">{CATEGORY_META[category].hint} Günstigste zuerst.</p>
+              <p className="text-xs text-gray-500">{CATEGORY_META[category].hint} Günstigste zuerst.</p>
               {categoryItems.length > 0
                 ? <div className={GRID}>{categoryItems.map(renderItem)}</div>
                 : <div className="glass rounded-2xl p-8 text-center text-sm text-gray-500">Gerade gibt es hier nichts im Angebot.</div>}
@@ -523,7 +515,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             )
           )}
 
-          <p className="text-[11px] text-gray-600 flex items-start gap-1.5 pt-2">
+          <p className="text-xs text-gray-600 flex items-start gap-1.5 pt-2">
             <Crown className="w-3 h-3 mt-0.5 shrink-0" />
             Belohnungs-Artikel (Turniersieg, Clip des Monats/Jahres, Veteran, Spende) und die Community-Job-Titel sind nicht käuflich —
             du findest sie unter „Alle Artikel“ und schaltest sie frei.

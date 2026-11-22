@@ -71,8 +71,8 @@ interface Revision { id: string; title: string; bodyMarkdown: string; note: stri
 interface FoundUser { id: string; username: string | null; name: string | null }
 interface InterviewOption { id: string; status: string; interviewee: { username: string | null; name: string | null }; markdown: string | null }
 
-const INPUT = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
-const SMALL_INPUT = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const INPUT = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
+const SMALL_INPUT = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 
 function appendLink(text: string, link?: string): string {
   if (!link || text.includes(link)) return text;
@@ -579,14 +579,14 @@ export default function ReportEditor({
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={REPORT_TITLE_MAX} placeholder="Titel (optional)" className={INPUT} />
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <label className="space-y-1 text-[11px] text-gray-500">
+        <label className="space-y-1 text-xs text-gray-500">
           Kategorie
           <Select value={category} className="w-full" onChange={e => setCategory(e.target.value)}>
             <option value="">Keine Kategorie</option>
             {REPORT_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </Select>
         </label>
-        <label className="space-y-1 text-[11px] text-gray-500">
+        <label className="space-y-1 text-xs text-gray-500">
           Event
           <Select value={eventId} className="w-full" onChange={e => setEventId(e.target.value)}>
             <option value="">Kein Event</option>
@@ -611,7 +611,7 @@ export default function ReportEditor({
 
       {/* Reihe */}
       <div className="space-y-1">
-        <p className="text-[11px] text-gray-500">Reihe (z.B. „Turnier-Rückblick“, optional)</p>
+        <p className="text-xs text-gray-500">Reihe (z.B. „Turnier-Rückblick“, optional)</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <Select value={seriesId} onChange={e => setSeriesId(e.target.value)}>
             <option value="">Keine Reihe</option>
@@ -626,8 +626,8 @@ export default function ReportEditor({
       {/* Titelbild */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-gray-500">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
-          <button onClick={() => setPhotoOpen(v => !v)} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+          <p className="text-xs text-gray-500">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
+          <button onClick={() => setPhotoOpen(v => !v)} className="text-xs text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
             <Camera className="w-3 h-3" /> Bild bei anderen anfragen
           </button>
         </div>
@@ -643,11 +643,11 @@ export default function ReportEditor({
         )}
         <input value={assetQuery} onChange={e => setAssetQuery(e.target.value)} placeholder="Mediathek durchsuchen (Unterschrift, Event, Fotograf)" className={`w-full ${SMALL_INPUT}`} />
         {assets.length === 0 ? (
-          <p className="text-[11px] text-gray-600">{assetQuery ? "Nichts gefunden." : "Noch keine Bilder in der Mediathek."}</p>
+          <p className="text-xs text-gray-600">{assetQuery ? "Nichts gefunden." : "Noch keine Bilder in der Mediathek."}</p>
         ) : (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button onClick={() => setCoverAssetId("")} aria-pressed={coverAssetId === ""}
-              className={`shrink-0 w-16 h-12 rounded-lg border text-[10px] ${coverAssetId === "" ? "border-teal-400 text-teal-300" : "border-line-strong text-gray-500 hover:text-white"}`}>
+              className={`shrink-0 w-16 h-12 rounded-lg border text-xs ${coverAssetId === "" ? "border-teal-400 text-teal-300" : "border-line-strong text-gray-500 hover:text-white"}`}>
               Keins
             </button>
             {assets.map(a => (
@@ -659,9 +659,9 @@ export default function ReportEditor({
             ))}
           </div>
         )}
-        {coverAssetId && <p className="text-[10px] text-gray-600">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
+        {coverAssetId && <p className="text-xs text-gray-600">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
         <button type="button" onClick={() => setCoverPickerOpen(v => !v)} aria-expanded={coverPickerOpen}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+          className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
           {coverPickerOpen ? "Spiel-Cover ausblenden" : "Oder ein Spiel-Cover als Titelbild wählen"}
         </button>
         {coverPickerOpen && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
@@ -684,7 +684,7 @@ export default function ReportEditor({
               </button>
             ))}
           </div>
-          <div className="flex rounded-lg border border-line-strong overflow-hidden text-[11px] font-semibold" role="tablist">
+          <div className="flex rounded-lg border border-line-strong overflow-hidden text-xs font-semibold" role="tablist">
             <button role="tab" aria-selected={!preview} onClick={() => setPreview(false)}
               className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}><Pencil className="w-3 h-3" /> Schreiben</button>
             <button role="tab" aria-selected={preview} onClick={() => setPreview(true)}
@@ -704,14 +704,14 @@ export default function ReportEditor({
               <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
                 className="w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">@{u.username ?? u.name}</button>
             ))}
-            <p className="text-[10px] text-gray-600">Genannte Spieler bekommen beim Veröffentlichen eine Benachrichtigung.</p>
+            <p className="text-xs text-gray-600">Genannte Spieler bekommen beim Veröffentlichen eine Benachrichtigung.</p>
           </div>
         )}
 
         {panel === "blocks" && !preview && (
           <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-gray-300">Bausteine einfügen</p>
+              <p className="text-xs font-semibold text-gray-300">Bausteine einfügen</p>
               <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -722,9 +722,9 @@ export default function ReportEditor({
               <Button size="sm" variant="outline" onClick={() => { setPanel(null); fillRecap("month"); }}>Monatsrückblick</Button>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-gray-500">Interview einfügen</p>
-              {interviews === null && <p className="text-[10px] text-gray-600">Lädt…</p>}
-              {interviews !== null && interviews.length === 0 && <p className="text-[10px] text-gray-600">Keine beantworteten Interviews vorhanden.</p>}
+              <p className="text-xs text-gray-500">Interview einfügen</p>
+              {interviews === null && <p className="text-xs text-gray-600">Lädt…</p>}
+              {interviews !== null && interviews.length === 0 && <p className="text-xs text-gray-600">Keine beantworteten Interviews vorhanden.</p>}
               {interviews?.map(i => (
                 <button key={i.id} onClick={() => { insertBlock(i.markdown!); setPanel(null); }}
                   className="block w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">Interview mit {i.interviewee.username ?? i.interviewee.name}</button>
@@ -744,7 +744,7 @@ export default function ReportEditor({
             className={`${INPUT} resize-y font-mono text-[13px] leading-relaxed`} />
         )}
 
-        <div className="flex items-center justify-between gap-2 text-[10px] text-gray-600 flex-wrap">
+        <div className="flex items-center justify-between gap-2 text-xs text-gray-600 flex-wrap">
           <span className={body.length > REPORT_BODY_MAX ? "text-red-400" : ""}>{body.length.toLocaleString("de-DE")}/{REPORT_BODY_MAX.toLocaleString("de-DE")} Zeichen · {words} Wörter · ca. {minutes} Min. Lesezeit</span>
           {assets.length > 0 && !preview && (
             <span className="flex items-center gap-1.5">
@@ -767,13 +767,13 @@ export default function ReportEditor({
       {/* Werbung */}
       <div className="rounded-lg border border-line-strong bg-surface-2">
         <button type="button" onClick={() => setMarketingOpen(v => !v)} aria-expanded={marketingOpen}
-          className="w-full px-3 py-2 flex items-center justify-between text-left text-[11px] text-gray-400 hover:text-white">
+          className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-gray-400 hover:text-white">
           <span className="inline-flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Werbung für ein Event oder Training</span>
           <span>{marketingOpen ? "−" : "+"}</span>
         </button>
         {marketingOpen && (
           <div className="px-3 pb-3 space-y-2">
-            {!facts && <p className="text-[11px] text-gray-600">Wähle oben ein Event, dann füllt die Vorlage Datum, Spiel und Anmeldungen automatisch ein.</p>}
+            {!facts && <p className="text-xs text-gray-600">Wähle oben ein Event, dann füllt die Vorlage Datum, Spiel und Anmeldungen automatisch ein.</p>}
             <div className="flex flex-wrap items-center gap-1.5">
               <Select size="sm" value={template} onChange={e => setTemplate(e.target.value as MarketingTemplateId)} aria-label="Werbe-Vorlage">
                 {MARKETING_TEMPLATES.filter(t => (t.id === "training") === !!trainingSessionId).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -794,22 +794,22 @@ export default function ReportEditor({
         )}
       </div>
 
-      {prefill?.link && <p className="text-[11px] text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
+      {prefill?.link && <p className="text-xs text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
 
       {/* Korrekturhinweis + Versionsverlauf (nur bei veröffentlichten Berichten) */}
       {isPublishedEdit && (
         <div className="space-y-1.5">
           <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200}
             placeholder="Korrekturhinweis (öffentlich, optional — z.B. „Tippfehler im Ergebnis korrigiert“)" className={INPUT} />
-          <button onClick={toggleRevisions} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
+          <button onClick={toggleRevisions} className="text-xs text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
             <History className="w-3 h-3" /> Frühere Versionen {revisions ? `(${revisions.length})` : ""}
           </button>
           {showRevisions && (
             <div className="rounded-lg bg-surface-2 p-2 space-y-1 max-h-40 overflow-y-auto">
-              {revisions === null && <p className="text-[11px] text-gray-600">Lädt…</p>}
-              {revisions !== null && revisions.length === 0 && <p className="text-[11px] text-gray-600">Noch keine früheren Versionen.</p>}
+              {revisions === null && <p className="text-xs text-gray-600">Lädt…</p>}
+              {revisions !== null && revisions.length === 0 && <p className="text-xs text-gray-600">Noch keine früheren Versionen.</p>}
               {revisions?.map(r => (
-                <div key={r.id} className="flex items-center justify-between gap-2 text-[11px]">
+                <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
                   <span className="text-gray-400 truncate">{formatBerlinDateTime(r.savedAt, { dateStyle: "short", timeStyle: "short" })} · {r.title}{r.note ? ` — ${r.note}` : ""}</span>
                   <Button size="sm" variant="ghost" onClick={() => {
                     if (body.trim() && !window.confirm("Aktuellen Text durch diese Version ersetzen? (Erst mit „Speichern“ wird es übernommen.)")) return;
@@ -824,7 +824,7 @@ export default function ReportEditor({
 
       {(!reportId || isDraftEdit) && (
         <div className="rounded-lg border border-line-strong bg-surface-2 px-3 py-2 flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+          <label className="flex items-center gap-1.5 text-xs text-gray-400">
             <input type="checkbox" checked={scheduleOn} onChange={e => setScheduleOn(e.target.checked)} />
             <CalendarClock className="w-3.5 h-3.5" /> Zeitgesteuert veröffentlichen
           </label>
@@ -832,7 +832,7 @@ export default function ReportEditor({
             <input type="datetime-local" value={scheduleAt} onChange={e => setScheduleAt(e.target.value)} aria-label="Veröffentlichungszeitpunkt"
               className={SMALL_INPUT} />
           )}
-          {scheduleOn && <span className="text-[10px] text-gray-600">Bis dahin bleibt der Beitrag ein Entwurf (Berliner Zeit).</span>}
+          {scheduleOn && <span className="text-xs text-gray-600">Bis dahin bleibt der Beitrag ein Entwurf (Berliner Zeit).</span>}
         </div>
       )}
 

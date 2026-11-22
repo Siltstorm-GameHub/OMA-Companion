@@ -28,7 +28,7 @@ function Limit({ value, max }: { value: number; max: number | null | undefined }
   if (max == null) return null;
   const over = value > max;
   return (
-    <p className={`mt-1 text-[10px] ${over ? "text-amber-300" : "text-gray-500"}`}>
+    <p className={`mt-1 text-xs ${over ? "text-amber-300" : "text-gray-500"}`}>
       {over ? `Höchstens ${max}, ausgezahlt werden ${max}` : `max. ${max}`}
     </p>
   );
@@ -87,7 +87,7 @@ export default function CommunityGoalEditor({
             <input type="checkbox" checked={value.enabled} onChange={e => set({ enabled: e.target.checked })} className="rounded" />
             <span>🎯 Community-Ziel aktivieren</span>
           </label>
-          <p className="text-[11px] text-gray-500 -mt-2">
+          <p className="text-xs text-gray-500 -mt-2">
             {resultMode
               ? "Zählt die Tore laut Spielergebnis über alle Spiele, z. B. „100 Tore insgesamt“."
               : "Zählt die gewählten Werte über alle Runden, z. B. „1.000 Tore zusammen“. Die Werte kommen aus den Runden bzw. den Screenshot-Meldungen der Teilnehmer."}
@@ -99,14 +99,14 @@ export default function CommunityGoalEditor({
         <div className="space-y-3">
           {/* ── 1. Was wird gezählt ── */}
           {resultMode ? (
-            <p className="text-[11px] text-gray-400 rounded-lg border border-line bg-surface-2 px-3 py-2">
+            <p className="text-xs text-gray-400 rounded-lg border border-line bg-surface-2 px-3 py-2">
               ⚽ Gezählt werden die Tore laut Ergebnis jedes gewerteten Spiels (bei 3:1 bekommt Spieler 1 drei, Spieler 2 ein Tor).
             </p>
           ) : (
             <div>
-              <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Was wird gezählt?</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Was wird gezählt?</p>
               {statFields.length === 0 ? (
-                <p className="text-[11px] text-amber-300/90">Lege zuerst Statistik-Felder an (z. B. „Tore“ oder „Schritte“).</p>
+                <p className="text-xs text-amber-300/90">Lege zuerst Statistik-Felder an (z. B. „Tore“ oder „Schritte“).</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {statFields.map(f => {
@@ -123,7 +123,7 @@ export default function CommunityGoalEditor({
                   })}
                 </div>
               )}
-              {selected.length > 1 && <p className="text-[10px] text-gray-500 mt-1">Mehrere Felder werden zusammengezählt.</p>}
+              {selected.length > 1 && <p className="text-xs text-gray-500 mt-1">Mehrere Felder werden zusammengezählt.</p>}
             </div>
           )}
 
@@ -150,7 +150,7 @@ export default function CommunityGoalEditor({
               <Limit value={value.rewardCoins} max={rewardLimit} />
             </div>
           </div>
-          <p className="text-[10px] text-gray-500 -mt-1">
+          <p className="text-xs text-gray-500 -mt-1">
             {value.scope === "team" ? "Belohnt wird jeder im Team, das die Marke erreicht und etwas beigetragen hat."
               : value.scope === "solo" ? "Belohnt wird jeder, der die Marke selbst erreicht."
               : "Belohnt wird jeder, der etwas beigetragen hat, sobald alle zusammen die Marke erreichen."}
@@ -165,7 +165,7 @@ export default function CommunityGoalEditor({
           </div>
 
           {needsEndHint && (
-            <p className="rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-[11px] text-amber-200">
+            <p className="rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-200">
               Das Event hat kein Ende. Dann wird {avg ? "das Durchschnitts-Ziel" : "der Endstand"} erst beim Abschluss des Events
               abgerechnet. Mit einem Enddatum (Grunddaten) passiert das automatisch zum Schluss des Zeitraums.
             </p>
@@ -184,7 +184,7 @@ export default function CommunityGoalEditor({
             {moreOpen && (
               <div className="space-y-3 border-t border-line p-3">
                 <div>
-                  <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Wer spielt aufs Ziel?</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Wer spielt aufs Ziel?</p>
                   <div className={`grid grid-cols-1 gap-2 ${scopes.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                     {scopes.map(s => (
                       <button key={s.value} type="button" onClick={() => set({ scope: s.value })} aria-pressed={value.scope === s.value}
@@ -192,19 +192,19 @@ export default function CommunityGoalEditor({
                           value.scope === s.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                         }`}>
                         <span className={`text-sm font-semibold ${value.scope === s.value ? "text-amber-300" : "text-gray-300"}`}>{s.label}</span>
-                        <span className="text-[11px] text-gray-500">{s.desc}</span>
+                        <span className="text-xs text-gray-500">{s.desc}</span>
                       </button>
                     ))}
                   </div>
                   {value.scope === "team" && (
-                    <p className="text-[10px] text-gray-500 mt-1.5">
+                    <p className="text-xs text-gray-500 mt-1.5">
                       Die Team-Zuordnung (Team A/B) setzt du pro Runde beim Eintragen der Stats im Reiter „Spielplan“.
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Berechnung</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Berechnung</p>
                   <div className="grid grid-cols-2 gap-2">
                     {COMMUNITY_GOAL_MODES.map(m => (
                       <button key={m.value} type="button" onClick={() => set({ mode: m.value })} aria-pressed={value.mode === m.value}
@@ -212,12 +212,12 @@ export default function CommunityGoalEditor({
                           value.mode === m.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                         }`}>
                         <span className={`text-sm font-semibold ${value.mode === m.value ? "text-amber-300" : "text-gray-300"}`}>{m.label}</span>
-                        <span className="text-[11px] text-gray-500">{m.desc}</span>
+                        <span className="text-xs text-gray-500">{m.desc}</span>
                       </button>
                     ))}
                   </div>
                   {avg && (
-                    <p className="text-[10px] text-gray-500 mt-1.5">
+                    <p className="text-xs text-gray-500 mt-1.5">
                       Je Teilnehmer zählt der Ø seiner Einträge, daraus wird der gemeinsame Ø gebildet. Jeder zählt gleich viel,
                       egal wie oft er meldet. Abgerechnet wird am Ende des Zeitraums.
                     </p>
@@ -235,7 +235,7 @@ export default function CommunityGoalEditor({
                       <label className="text-xs text-gray-500 mb-1 block">Mindestanzahl Teilnehmer mit Werten</label>
                       <NumberInput min={1} value={value.minParticipants}
                         onChange={e => set({ minParticipants: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} className={inputCls} />
-                      <p className="text-[10px] text-gray-500 mt-1">Damit nicht ein einzelner Spieler das Ziel allein entscheidet.</p>
+                      <p className="text-xs text-gray-500 mt-1">Damit nicht ein einzelner Spieler das Ziel allein entscheidet.</p>
                     </div>
                   )}
                 </div>
@@ -244,7 +244,7 @@ export default function CommunityGoalEditor({
                   <input type="checkbox" checked={value.announceResult} onChange={e => set({ announceResult: e.target.checked })} className="rounded mt-0.5" />
                   <span>
                     Endstand am Ende des Zeitraums melden
-                    <span className="block text-[10px] text-gray-500">Auch wenn das Ziel verfehlt wurde („Knapp verfehlt, uns fehlten 4 %“).</span>
+                    <span className="block text-xs text-gray-500">Auch wenn das Ziel verfehlt wurde („Knapp verfehlt, uns fehlten 4 %“).</span>
                   </span>
                 </label>
 
@@ -262,7 +262,7 @@ export default function CommunityGoalEditor({
                         <span>Bonus-Münzen</span>
                       </div>
                       <Limit value={value.streakCoins} max={rewardLimit} />
-                      <p className="text-[10px] text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Bei 3 z. B. nach 3, 6, 9 … geschafften Zyklen in Folge. Zyklen ohne Ziel unterbrechen die Serie nicht.
                         Mindestens 2 Zyklen, 0 = aus.
                       </p>
@@ -272,20 +272,20 @@ export default function CommunityGoalEditor({
                       <NumberInput min={0} value={value.rewardSeriesPoints}
                         onChange={e => set({ rewardSeriesPoints: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className={`${inputCls} w-28`} />
                       <Limit value={value.rewardSeriesPoints} max={seriesPointsLimit} />
-                      <p className="text-[10px] text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-1">
                         Für jeden, der beim Erreichen belohnt wird. Erscheint in der Reihentabelle als „Ziel-Bonus“. 0 = aus.
                       </p>
                     </div>
                   </>
                 ) : (
-                  <p className="text-[10px] text-gray-500">Serien-Bonus und Tabellenpunkte gibt es bei Terminen einer Eventreihe.</p>
+                  <p className="text-xs text-gray-500">Serien-Bonus und Tabellenpunkte gibt es bei Terminen einer Eventreihe.</p>
                 )}
               </div>
             )}
           </div>
 
           {incomplete && !resultMode && (
-            <p className="text-[11px] text-amber-400">
+            <p className="text-xs text-amber-400">
               Wähle mindestens ein Feld und eine Zielmarke über 0, sonst wird kein Ziel gespeichert.
             </p>
           )}

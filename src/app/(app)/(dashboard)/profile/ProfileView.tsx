@@ -11,7 +11,7 @@ import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import AccountDataSection from "@/components/AccountDataSection";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
-import { ChevronRight, Clock, MessageSquare, Trophy, Gamepad2, Users, Swords, Vote } from "@/components/icons";
+import { ChevronRight, Clock, MessageSquare, Trophy, Gamepad2, Users, Swords, Vote, ScrollText, ShoppingBag, Settings } from "@/components/icons";
 import { POINT_RULES } from "@/lib/points";
 import type { ProfileData, ProfileRelation } from "@/lib/profile-data";
 import PointsInfoModal from "./PointsInfoModal";
@@ -41,11 +41,37 @@ function EmptyInvite({ text, href, cta }: { text: string; href: string; cta: str
   );
 }
 
+/**
+ * "Ich" (eigenes Profil): Schnellzugriff auf Münzen, Quests, Shop und Einstellungen — am Handy
+ * sonst nur über das kleine Avatar-Menü erreichbar (Designentwurf: Reiter "Ich").
+ */
+function MeTiles({ coins }: { coins: number }) {
+  const tiles: { href: string; label: string; sub: ReactNode; icon: ReactNode; tone: string }[] = [
+    { href: "/points", label: "Münzen", sub: <span className="tabular-nums">{coins.toLocaleString("de-DE")} · Verlauf</span>, icon: <CoinIcon size={20} />, tone: "bg-coin-soft" },
+    { href: "/quests", label: "Quests", sub: "Monatsaufgaben", icon: <ScrollText className="size-5 text-primary-fg" />, tone: "bg-primary-soft" },
+    { href: "/shop", label: "Shop", sub: "Rahmen, Titel, Farben", icon: <ShoppingBag className="size-5 text-violet-300" />, tone: "bg-violet-500/15" },
+    { href: "/profile?tab=einstellungen", label: "Einstellungen", sub: "Benachrichtigungen, Konto", icon: <Settings className="size-5 text-muted" />, tone: "bg-surface-3" },
+  ];
+  return (
+    <nav aria-label="Ich" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {tiles.map((t) => (
+        <Link key={t.href} href={t.href} className="flex min-h-16 items-center gap-3 rounded-card border border-line bg-surface px-3.5 py-3 transition-colors hover:border-line-strong hover:bg-surface-2">
+          <span className={`grid size-10 shrink-0 place-items-center rounded-control ${t.tone}`}>{t.icon}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-fg">{t.label}</span>
+            <span className="block truncate text-xs text-muted">{t.sub}</span>
+          </span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 function Stat({ value, label, href, cls = "text-white" }: { value: ReactNode; label: string; href?: string; cls?: string }) {
   const inner = (
     <>
       <span className={`block text-lg sm:text-xl font-black tabular-nums leading-none ${cls}`}>{value}</span>
-      <span className="block text-[10px] text-gray-500 mt-1">{label}</span>
+      <span className="block text-xs text-gray-500 mt-1">{label}</span>
     </>
   );
   return href
@@ -76,14 +102,13 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
 
   // ── Kopf: Visitenkarte ──
   const hero = (
-    <section aria-label={displayName} className="glass relative overflow-hidden rounded-2xl p-4 sm:p-6">
-      <div className={`absolute inset-0 bg-gradient-to-br ${isOwn ? "from-teal-500/10 via-transparent to-teal-900/10" : "from-primary/10 via-transparent to-purple-500/8"} pointer-events-none`} />
+    <section aria-label={displayName} className="glass relative overflow-hidden rounded-card p-4 sm:p-6">
       {background && <div className="absolute inset-0 pointer-events-none" style={{ background: background.css }} />}
 
       <div className="relative flex items-start gap-4">
         <RankedAvatar userId={user.id} look={look} src={user.image} alt={displayName} size={72} rounded="2xl" />
         <div className="flex-1 min-w-0">
-          <CosmeticName as="h1" nameColor={look.nameColor} className="block text-xl sm:text-2xl font-bold text-white tracking-tight truncate">{displayName}</CosmeticName>
+          <CosmeticName as="h1" nameColor={look.nameColor} className="block text-2xl sm:text-3xl font-extrabold text-fg tracking-tight truncate">{displayName}</CosmeticName>
           <CosmeticTitle title={look.title} className="mt-0.5" />
           <p className="text-xs text-gray-500 mt-0.5">Mitglied seit {data.memberSince}</p>
           {user.bio && <p className="text-sm text-gray-300 mt-2 leading-relaxed max-w-xl">{user.bio}</p>}
@@ -159,7 +184,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
         ].map(s => (
           <div key={s.label} className="glass rounded-2xl px-4 py-3" title={s.title}>
             <div className="flex items-center gap-2">{s.icon}<span className="text-xl font-black text-white tabular-nums">{s.value}</span></div>
-            <p className="text-[11px] text-gray-500 mt-1">{s.label}</p>
+            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -271,6 +296,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
       {topBar}
       {hero}
+      {isOwn && <MeTiles coins={data.totalPoints} />}
       {isOwn && <ProfileCompletion done={data.profileCompletionDone} rewardPerItem={POINT_RULES.PROFILE_BIO.amount} />}
       <ProfileTabs initialTab={initialTab} panels={{
         overview,

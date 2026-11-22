@@ -92,7 +92,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
           Gemeldet von <span className="font-medium">{sub.user.name}</span>
           <span className="text-xs text-gray-500"> · {new Date(sub.createdAt).toLocaleString("de-DE")}</span>
         </p>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? sub.status}{sub.applied && !done ? " · vorläufig sichtbar" : ""}</span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? sub.status}{sub.applied && !done ? " · vorläufig sichtbar" : ""}</span>
       </div>
 
       <div className="flex flex-wrap gap-2">

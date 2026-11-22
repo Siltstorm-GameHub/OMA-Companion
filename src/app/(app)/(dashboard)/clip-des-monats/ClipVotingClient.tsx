@@ -148,9 +148,9 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
         return (
           <div
             key={nom.id}
-            className={`glass rounded-2xl overflow-hidden border transition-all ${
+            className={`rounded-card overflow-hidden border bg-surface transition-colors ${
               isMyVote
-                ? "border-[#9146ff]/50 bg-[#9146ff]/5"
+                ? "border-primary ring-1 ring-primary/40"
                 : "border-line hover:border-line-strong"
             }`}
           >
@@ -162,15 +162,15 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
               overlay={
                 <>
                   {isMyVote && (
-                    <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#9146ff] flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-primary-ink">
+                      <Check className="w-3.5 h-3.5" /> Deine Stimme
                     </div>
                   )}
                   {/* Vote bar overlay (only after voting) */}
                   {hasVoted && pct !== null && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-line">
                       <div
-                        className={`h-full transition-all duration-500 ${isMyVote ? "bg-[#9146ff]" : "bg-white/30"}`}
+                        className={`h-full transition-all duration-500 ${isMyVote ? "bg-primary" : "bg-fg/40"}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -179,7 +179,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
               }
             />
 
-            <div className="p-3 space-y-2">
+            <div className="p-4 space-y-2.5">
               {editingId === nom.id ? (
                 <div className="space-y-1">
                   <div className="flex items-center gap-1.5">
@@ -190,7 +190,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                       maxLength={100}
                       autoFocus
                       placeholder="Titel für die Community (leer = Original)"
-                      className="flex-1 min-w-0 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white outline-none focus:border-[#9146ff]/60"
+                      className="flex-1 min-w-0 bg-surface-2 border border-line rounded-control px-2 py-1 text-sm text-fg outline-none focus:border-[#9146ff]/60"
                     />
                     <button onClick={() => saveTitle(nom)} disabled={savingTitle} title="Speichern"
                       className="w-7 h-7 rounded-lg bg-[#9146ff]/20 text-purple-300 hover:bg-[#9146ff]/30 flex items-center justify-center disabled:opacity-50 shrink-0">
@@ -201,11 +201,11 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  {nom.originalTitle && <p className="text-[11px] text-gray-600 truncate">Original: {nom.originalTitle}</p>}
+                  {nom.originalTitle && <p className="text-xs text-gray-600 truncate">Original: {nom.originalTitle}</p>}
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <p className="text-sm font-semibold text-white leading-snug line-clamp-1 min-w-0">
+                  <p className="text-base font-bold text-fg leading-snug line-clamp-2 min-w-0">
                     {titles[nom.id] ?? "Clip"}
                   </p>
                   {isModerator && (
@@ -238,19 +238,21 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                     <span className="text-amber-300 truncate">· Clip von {credit.creator}</span>
                   )}
                 </div>
-                {hasVoted && <span className="text-xs text-gray-500 shrink-0">{pct}%</span>}
+                {hasVoted && <span className="text-sm font-bold tabular-nums text-fg shrink-0">{pct} %</span>}
               </div>
 
               <button
                 onClick={() => vote(nom.id)}
                 disabled={voting}
-                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`w-full flex min-h-10 items-center justify-center gap-1.5 rounded-control text-sm font-bold transition-colors ${
                   isMyVote
-                    ? "bg-[#9146ff]/20 border border-[#9146ff]/40 text-purple-300"
-                    : "bg-line border border-line text-gray-400 hover:bg-line hover:text-white"
+                    ? "bg-primary-soft border border-primary/40 text-primary-fg"
+                    : hasVoted
+                      ? "bg-surface-2 border border-line-strong text-fg hover:bg-surface-3"
+                      : "bg-primary text-primary-ink hover:bg-primary-hover"
                 } disabled:opacity-50`}
               >
-                {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : hasVoted ? "Stimme ändern" : "Wählen"}
+                {isMyVote ? <><Check className="w-4 h-4" /> Meine Stimme</> : hasVoted ? "Stimme ändern" : "Für diesen Clip stimmen"}
               </button>
             </div>
           </div>

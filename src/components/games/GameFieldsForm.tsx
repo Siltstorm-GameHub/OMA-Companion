@@ -28,7 +28,7 @@ export function Chip({ active, onClick, children, disabled }: { active: boolean;
 function SourceBadge({ source }: { source?: FieldSource }) {
   if (source !== "steam" && source !== "igdb") return null;
   return (
-    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
+    <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
       {source === "steam" ? "von Steam" : "von IGDB"}
     </span>
   );
@@ -173,7 +173,7 @@ export default function GameFieldsForm({
             onChange={e => set("description", e.target.value.slice(0, MAX_GAME_DESCRIPTION_LENGTH) || null)}
             rows={3}
             placeholder="Worum geht's? (optional)"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
           />
         </Section>
       )}

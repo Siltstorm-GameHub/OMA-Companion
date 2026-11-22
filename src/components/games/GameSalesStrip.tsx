@@ -34,19 +34,19 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
             >
               <div className="relative">
                 <GameCover game={g.name} coverUrl={g.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
-                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-[11px] font-black text-white tabular-nums">
+                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-black text-white tabular-nums">
                   −{g.discountPercent} %
                 </span>
               </div>
               <div className="p-2 space-y-0.5">
                 <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">{g.name}</p>
                 {price && (
-                  <p className="text-[11px] tabular-nums">
+                  <p className="text-xs tabular-nums">
                     <span className="text-white font-semibold">{price}</span>
                     {before && <span className="ml-1.5 text-gray-500 line-through">{before}</span>}
                   </p>
                 )}
-                <p className={`flex items-center gap-1 text-[10px] ${g.onMyList ? "text-rose-300" : "text-gray-500"}`}>
+                <p className={`flex items-center gap-1 text-xs ${g.onMyList ? "text-rose-300" : "text-gray-500"}`}>
                   <Heart className="w-2.5 h-2.5 shrink-0" />
                   {g.onMyList
                     ? "Auf deiner Wunschliste"

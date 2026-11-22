@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Home, Lightbulb, ScrollText, Server, ShoppingBag, Trophy, User, Users,
+  Bell, CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Home, Lightbulb, ScrollText, Server, ShoppingBag, Trophy, User, Users,
 } from "@/components/icons";
 
 /**
@@ -27,7 +27,7 @@ const COMMUNITY_BOARD_PATHS = ["/interviews"];
 export const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Übersicht", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true },
-  { href: "/games", label: "Games", icon: Gamepad2, alsoActiveOn: ["/spiele"] },
+  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games", "/shop"] },
   { href: "/leaderboard", label: "Rangliste", icon: Trophy },
 ];
 
@@ -44,19 +44,20 @@ export const ME_NAV: NavItem[] = [
   { href: "/quests", label: "Quests", icon: ScrollText },
   { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/points", label: "Münzen-Verlauf", icon: Coins },
+  { href: "/benachrichtigungen", label: "Benachrichtigungen", icon: Bell },
 ];
 
 export const MOBILE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Übersicht", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true },
-  { href: "/games", label: "Games", icon: Gamepad2, alsoActiveOn: ["/spiele"] },
+  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games"] },
   {
     href: "/community",
     label: "Community",
     icon: Handshake,
     alsoActiveOn: ["/leaderboard", "/community-board", "/squads", "/clip-galerie", "/servers", "/donations", ...CLIP_PATHS, ...COMMUNITY_BOARD_PATHS],
   },
-  { href: "/profile", label: "Ich", icon: User, alsoActiveOn: ["/quests", "/shop", "/points"] },
+  { href: "/profile", label: "Ich", icon: User, alsoActiveOn: ["/quests", "/shop", "/points", "/benachrichtigungen"] },
 ];
 
 function matches(pathname: string, href: string) {

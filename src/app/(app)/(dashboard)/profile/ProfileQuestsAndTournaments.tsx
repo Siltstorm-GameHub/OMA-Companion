@@ -41,7 +41,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
       {/* Quest-Fortschritt */}
       {questsWithProgress.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Monatliche Quests</h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Monatliche Quests</h2>
           <div className="space-y-2">
             {questsWithProgress.map(quest => {
               const meta    = QUEST_TYPE_META[quest.type as QuestType];
@@ -76,7 +76,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
       {/* Turnier-Ergebnisse */}
       {tournamentParticipations.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Swords className="w-3.5 h-3.5" /> Turnier-Ergebnisse
           </h2>
           <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-line">

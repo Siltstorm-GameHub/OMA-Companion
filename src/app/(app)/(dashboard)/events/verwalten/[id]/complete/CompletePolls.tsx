@@ -11,7 +11,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-umfrage" aria-label="Umfrage" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Umfrage")}</span>
+            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Umfrage")}</span>
             Umfrage
           </h2>
           {!isPollOnly && !isFinishedSummary && pollsConfig.length > 0 && (
@@ -51,9 +51,9 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                 <span className="text-xs font-semibold text-violet-300">
                   Umfrage (älteres Format): „{pollConfig.question}“
                 </span>
-                {isPollOnly && <span className="text-[10px] text-violet-400/60 ml-auto">ausstehend</span>}
+                {isPollOnly && <span className="text-xs text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
-              <p className="text-[10px] text-gray-600 -mt-1">
+              <p className="text-xs text-gray-600 -mt-1">
                 Diese Einzelumfrage stammt aus der alten Umfrage-Einstellung (Sieger wird hier von Hand gewählt). Sie läuft aus:
                 Speichere das Event bzw. die Reihe einmal im Reiter „Belohnungen“, dann wird sie zu einer normalen Abstimmung
                 nach dem Event (mit Stimmen in der App und automatischer Auswertung). Alternativ alle auf einmal umwandeln:
@@ -63,7 +63,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
               {!isFinishedSummary && (
                 <>
                   <div>
-                    <p className="text-[11px] text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
+                    <p className="text-xs text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
                     <div className="flex flex-wrap gap-2">
                       {registeredUsers.map(u => (
                         <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
@@ -91,7 +91,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
 
                   {pollEligible.length > 0 && (
                     <div>
-                      <p className="text-[11px] text-gray-500 mb-1.5">Stimmen eintragen:</p>
+                      <p className="text-xs text-gray-500 mb-1.5">Stimmen eintragen:</p>
                       <div className="space-y-1.5">
                         {pollEligible.map(u => (
                           <div key={u.id} className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
 
               {pollWinners.length > 0 ? (
                 <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
-                  <p className="text-[11px] text-violet-400 font-semibold">
+                  <p className="text-xs text-violet-400 font-semibold">
                     {pollWinners.length === 1 ? "Gewinner" : `Unentschieden – alle ${pollWinners.length} gewinnen`}
                   </p>
                   {pollWinners.map(id => {
@@ -131,7 +131,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                       </div>
                     );
                   })}
-                  <p className="text-[11px] text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Belohnung: {pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}
                     {pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}
                     {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}

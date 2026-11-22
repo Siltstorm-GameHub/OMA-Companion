@@ -50,7 +50,7 @@ export default function GameCoverPicker({ value, onChange }: { value: PickedGame
           <img src={value.url} alt={`Cover: ${value.name}`} className="w-full max-h-52 object-cover" />
         </div>
       ) : name.trim().length >= 2 && !resolving ? (
-        <p className="text-[11px] text-gray-500">Für dieses Spiel wurde kein Cover gefunden — bitte einen Treffer aus der Liste wählen.</p>
+        <p className="text-xs text-gray-500">Für dieses Spiel wurde kein Cover gefunden — bitte einen Treffer aus der Liste wählen.</p>
       ) : null}
     </div>
   );

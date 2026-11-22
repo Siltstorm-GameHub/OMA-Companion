@@ -10,7 +10,7 @@ import { MARKETING_TEMPLATES } from "@/lib/marketing-templates";
 
 /** Marketing-Büro: Auswertung und Kampagnen (Ankündigung → Erinnerung → Heute). */
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -89,7 +89,7 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
       </button>
       {open && (
         <div className="space-y-2">
-          {campaigns.length === 0 && <p className="text-[11px] text-gray-600">Eine Kampagne plant zu einem Event mehrere Posts: Ankündigung, Erinnerung 3 Tage vorher und „Heute geht’s los“.</p>}
+          {campaigns.length === 0 && <p className="text-xs text-gray-600">Eine Kampagne plant zu einem Event mehrere Posts: Ankündigung, Erinnerung 3 Tage vorher und „Heute geht’s los“.</p>}
           {campaigns.map(c => {
             const now = Date.now();
             return (
@@ -106,7 +106,7 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
                     const isDue = due.getTime() <= now;
                     const label = MARKETING_TEMPLATES.find(t => t.id === step.kind)?.label ?? step.label;
                     return (
-                      <div key={step.kind} className="flex items-center justify-between gap-2 text-[11px]">
+                      <div key={step.kind} className="flex items-center justify-between gap-2 text-xs">
                         <span className={`flex items-center gap-1.5 ${done ? "text-emerald-400" : isDue ? "text-amber-400" : "text-gray-500"}`}>
                           {done ? <Check className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-current inline-block" />}
                           {label}
@@ -161,7 +161,7 @@ export function PromotionRequestList({ onWrite }: { onWrite: (r: PromotionReques
         <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-0.5">
             <p className="text-xs text-gray-200">{r.session.title} <span className="text-gray-500">· {formatBerlinDate(r.session.startAt, { day: "2-digit", month: "2-digit" })}</span></p>
-            <p className="text-[10px] text-gray-600">von {r.requester.username ?? r.requester.name}{r.note ? ` · ${r.note}` : ""}</p>
+            <p className="text-xs text-gray-600">von {r.requester.username ?? r.requester.name}{r.note ? ` · ${r.note}` : ""}</p>
           </div>
           <Button size="sm" variant="outline" className="shrink-0" onClick={() => onWrite(r)}>Post schreiben</Button>
         </div>

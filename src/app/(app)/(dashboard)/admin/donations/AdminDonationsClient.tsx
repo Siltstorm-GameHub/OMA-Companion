@@ -201,7 +201,7 @@ export default function AdminDonationsClient({
           <Heart className="w-5 h-5 text-teal-400" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-white">Spendenpool verwalten</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Spendenpool verwalten</h1>
           <p className="text-xs text-gray-500">
             Einnahmen <span className="text-teal-400 font-semibold">{fmt(totalPool)} €</span>
             {" · "}Ausgaben <span className="text-red-400 font-semibold">{fmt(totalSpent)} €</span>

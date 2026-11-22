@@ -76,7 +76,7 @@ export default function ClipTrimmer({
             <div className="absolute inset-y-0 rounded-full bg-teal-400/60"
               style={{ left: `${(start / duration) * 100}%`, width: `${(Math.max(0, effectiveEnd - start) / duration) * 100}%` }} />
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400">
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
             <label className="space-y-0.5">
               Start {fmt(start)}
               <input type="range" min={0} max={duration} step={0.1} value={start} className="w-full"
@@ -93,7 +93,7 @@ export default function ClipTrimmer({
             <Button size="sm" variant="outline" onClick={() => setEnd(Math.max(now(), start + 0.5))}>Ende = jetzt</Button>
             <Button size="sm" variant="ghost" onClick={() => { seek(start); ref.current?.play().catch(() => {}); }}>Ausschnitt abspielen</Button>
             <Button size="sm" variant="ghost" onClick={() => { setStart(0); setEnd(null); }}>Zurücksetzen</Button>
-            <span className="text-[10px] text-gray-600">Länge {fmt(Math.max(0, effectiveEnd - start))}</span>
+            <span className="text-xs text-gray-600">Länge {fmt(Math.max(0, effectiveEnd - start))}</span>
           </div>
         </div>
       )}
@@ -101,7 +101,7 @@ export default function ClipTrimmer({
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" loading={busy} icon={<Camera className="w-3.5 h-3.5" />} onClick={capturePoster}>Aktuelles Bild als Vorschaubild</Button>
         {poster && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
+          <span className="inline-flex items-center gap-1 text-xs text-gray-400">
             {/* eslint-disable-next-line @next/next/no-img-element -- Upload-Vorschau, Blob-Host */}
             <img src={poster} alt="Vorschaubild" className="h-8 rounded" />
             <button type="button" aria-label="Vorschaubild entfernen" className="hover:text-red-400" onClick={() => setPoster(null)}><X className="w-3 h-3" /></button>

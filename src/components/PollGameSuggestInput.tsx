@@ -78,7 +78,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
       {!hideChips && value.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {value.map((g, i) => (
-            <span key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] bg-purple-500/10 border border-purple-500/25 text-purple-200">
+            <span key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-purple-500/10 border border-purple-500/25 text-purple-200">
               {g.appId && (
                 <img src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${g.appId}/capsule_sm_120.jpg`}
                   alt="" className="w-6 h-4 rounded object-cover" />
@@ -100,7 +100,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
             value={query}
             placeholder="Spieltitel suchen und hinzufügen …"
             autoComplete="off"
-            className="w-full bg-line border border-line-strong rounded-lg pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
+            className="w-full bg-surface-2 border border-line rounded-control pl-8 pr-8 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary transition-colors"
             onChange={e => { setQuery(e.target.value); onDraftChange?.(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => {

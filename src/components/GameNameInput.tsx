@@ -208,7 +208,7 @@ export default function GameNameInput({
 
       {/* Status-Zeile */}
       {value && (
-        <p className={`text-[10px] mt-0.5 ml-1 ${hasMatch ? "text-emerald-500" : "text-gray-600"}`}>
+        <p className={`text-xs mt-0.5 ml-1 ${hasMatch ? "text-emerald-500" : "text-gray-600"}`}>
           {hasMatch ? "✓ Cover wird gefunden" : "Kein Cover bekannt – Gradient-Fallback"}
         </p>
       )}
@@ -240,7 +240,7 @@ export default function GameNameInput({
             return (
               <li key={item.group + item.name + i} data-idx={i}>
                 {label && (
-                  <span className="block px-3 pt-2 pb-1 text-[10px] text-gray-600 uppercase tracking-widest">{label}</span>
+                  <span className="block px-3 pt-2 pb-1 text-xs text-gray-600 uppercase tracking-widest">{label}</span>
                 )}
                 <button
                   type="button"

@@ -34,7 +34,7 @@ export default function PhotoRequestButton({ eventId, defaultText = "", label = 
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-400 transition-colors">
         <Camera className="w-3 h-3" /> {label}
       </button>
     );
@@ -42,7 +42,7 @@ export default function PhotoRequestButton({ eventId, defaultText = "", label = 
   return (
     <div className="rounded-lg bg-surface-2 border border-line-strong p-2 space-y-1.5">
       <textarea value={text} onChange={e => setText(e.target.value)} rows={2} maxLength={300} placeholder="Welches Bild brauchst du?"
-        className="w-full resize-none bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full resize-none bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       <div className="flex justify-end gap-1.5">
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Abbrechen</Button>
         <Button size="sm" loading={busy} disabled={!text.trim()} onClick={send}>Anfragen</Button>

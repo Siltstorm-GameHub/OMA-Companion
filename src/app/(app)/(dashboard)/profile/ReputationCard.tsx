@@ -44,7 +44,7 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
           Dein Ansehen: <span className="font-semibold" style={{ color }}>{title}</span>
           <span className="text-gray-500 text-xs"> · Stufe {lvl}/{BADGE_MAX_LEVEL} · {points} Punkte</span>
         </p>
-        <span className="text-[11px] text-gray-400">
+        <span className="text-xs text-gray-400">
           {nextMin == null ? "Höchste Stufe erreicht 🎉" : <>Noch <span className="text-white font-medium">{nextMin - points}</span> Punkte bis {levelTitle(lvl + 1)}</>}
         </span>
       </div>
@@ -53,7 +53,7 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
       </div>
       {/* Community-Job-Titel: freigeschaltete zum Ausrüsten, die nächste als Ziel, der Rest gesperrt */}
       <div className="rounded-xl bg-surface-2 border border-line p-2.5 space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Deine Community-Job-Titel</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Deine Community-Job-Titel</p>
         <div className="flex flex-wrap items-center gap-2">
           {JOB_TITLES.map(t => {
             const unlocked = peak >= t.level;
@@ -61,7 +61,7 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
             return (
               <div key={t.id} className={`flex flex-col items-start gap-0.5 ${unlocked ? "" : "opacity-40 grayscale"}`}>
                 <CosmeticTitle title={t.id} />
-                <span className="text-[10px] text-gray-500 pl-1">
+                <span className="text-xs text-gray-500 pl-1">
                   {unlocked ? "✓ freigeschaltet" : isNext && t.level === lvl + 1 && nextMin != null ? `🔒 noch ${nextMin - points} Punkte` : `🔒 ab Stufe ${levelTitle(t.level)}`}
                 </span>
               </div>
@@ -69,10 +69,10 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
           })}
         </div>
         {peak >= 2 && (
-          <Link href="/shop" className="inline-block text-[11px] font-medium text-amber-300 hover:text-amber-200">Titel im Shop ausrüsten →</Link>
+          <Link href="/shop" className="inline-block text-xs font-medium text-amber-300 hover:text-amber-200">Titel im Shop ausrüsten →</Link>
         )}
       </div>
-      <p className="text-[11px] text-gray-500 leading-relaxed">
+      <p className="text-xs text-gray-500 leading-relaxed">
         Punkte gibt es jede Woche für deine Gehaltsstufen in den Community-Jobs (alle Jobs zusammen, höchstens 3 pro Woche)
         und für Daumen auf deine Kommentare. Gezählt werden die letzten {BADGE_WINDOW_WEEKS} Wochen, die Stufe kann also auch wieder sinken.
         Ab Silber schaltest du den Titel „Community-Job“ frei, den du im <Link href="/shop" className="text-amber-300 hover:text-amber-200">Shop</Link> unter

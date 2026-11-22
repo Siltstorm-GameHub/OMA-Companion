@@ -12,7 +12,7 @@ const SIZE_CLASSES: Record<"sm" | "md", string> = {
 export function Select({ size = "sm", className, children, ...rest }: SelectProps) {
   return (
     <select
-      className={`bg-gray-800 border border-gray-700 text-white rounded-lg outline-none cursor-pointer transition-colors focus:border-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed ${SIZE_CLASSES[size]} ${className ?? ""}`}
+      className={`bg-surface-2 border border-line text-fg rounded-control outline-none cursor-pointer transition-colors focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed ${SIZE_CLASSES[size]} ${className ?? ""}`}
       {...rest}
     >
       {children}

@@ -86,7 +86,7 @@ export function UserPickerSheet({
                   placeholder="User suchen..."
                   value={searchValue}
                   onChange={e => onSearchChange(e.target.value)}
-                  className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-2 placeholder:text-gray-600"
+                  className="w-full text-xs bg-surface-2 border border-line text-fg rounded-control pl-8 pr-3 py-2 placeholder:text-subtle"
                   autoFocus
                 />
               </div>
@@ -110,7 +110,7 @@ export function UserPickerSheet({
                       {u.image ? (
                         <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 ring-1 ring-white/10" />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
                           {uname(u)[0]?.toUpperCase()}
                         </div>
                       )}
@@ -161,7 +161,7 @@ function PickerGrid({
           placeholder="User suchen..."
           value={searchValue}
           onChange={e => onSearchChange(e.target.value)}
-          className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
+          className="w-full text-xs bg-surface-2 border border-line text-fg rounded-control pl-8 pr-3 py-1.5 placeholder:text-subtle"
         />
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto">

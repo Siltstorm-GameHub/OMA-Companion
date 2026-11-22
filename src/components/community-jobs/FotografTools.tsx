@@ -11,8 +11,8 @@ import { loadImage, LOGO_URL, renderCollageCanvas } from "@/lib/studio-templates
 
 /** Fotografen-Büro: Bildwünsche, Auswertung, Alben, Sammel-Upload, Monats-Collage und Mediathek-Suche. */
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const FIELD = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
+const FIELD = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
   const data = await res.json().catch(() => ({}));
@@ -53,15 +53,15 @@ export function PhotoRequestList({ onFulfill }: { onFulfill: (request: { id: str
   if (!items) return null;
   return (
     <div className="space-y-1.5">
-      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
         <Camera className="w-3 h-3" /> Bildwünsche von Journalisten{items.length > 0 ? ` (${items.length})` : ""}
       </p>
-      {items.length === 0 && <p className="text-[11px] text-gray-600">Aktuell keine offenen Wünsche.</p>}
+      {items.length === 0 && <p className="text-xs text-gray-600">Aktuell keine offenen Wünsche.</p>}
       {items.map(r => (
         <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-0.5">
             <p className="text-xs text-gray-200">{r.description}</p>
-            <p className="text-[10px] text-gray-600">
+            <p className="text-xs text-gray-600">
               von {r.requester.username ?? r.requester.name}{r.eventTitle ? ` · ${r.eventTitle}` : ""} · {formatBerlinDate(r.createdAt)}
             </p>
           </div>
@@ -145,7 +145,7 @@ export function AlbumsBlock({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <Section title="Meine Alben" count={albums.length}>
-      {albums.length === 0 && <p className="text-[11px] text-gray-600">Noch keine Alben. Ein Album fasst Bilder einer Serie zusammen und lässt sich als Ganzes verlinken.</p>}
+      {albums.length === 0 && <p className="text-xs text-gray-600">Noch keine Alben. Ein Album fasst Bilder einer Serie zusammen und lässt sich als Ganzes verlinken.</p>}
       {albums.map(a => (
         <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
           <a href={`/community-board/album/${a.id}`} className="min-w-0 truncate text-gray-200 hover:text-teal-400 transition-colors">
@@ -223,7 +223,7 @@ export function MediaLibraryBlock() {
         </Select>
       </div>
       {items === null && <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />}
-      {items?.length === 0 && <p className="text-[11px] text-gray-600">Nichts gefunden.</p>}
+      {items?.length === 0 && <p className="text-xs text-gray-600">Nichts gefunden.</p>}
       {items && items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
           {items.map(a => (
@@ -333,7 +333,7 @@ export function MonthCollageBuilder({ onExported }: { onExported: (url: string, 
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-gray-500">Die beliebtesten Bilder der letzten 30 Tage, automatisch zu einer Collage zusammengestellt.</p>
+      <p className="text-xs text-gray-500">Die beliebtesten Bilder der letzten 30 Tage, automatisch zu einer Collage zusammengestellt.</p>
       <div className="rounded-xl overflow-hidden border border-line-strong">
         <canvas ref={setCanvasEl} width={1280} height={720} className="w-full h-auto block" />
       </div>

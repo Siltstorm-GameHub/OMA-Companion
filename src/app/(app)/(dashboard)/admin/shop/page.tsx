@@ -18,13 +18,13 @@ export default async function AdminShopPage() {
   return (
     <div className="space-y-10 max-w-3xl">
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           ✨ Kosmetik-Shop
         </h2>
         <CosmeticsConfigPanel initial={cosmeticsConfig} initialSettings={shopSettings} ownerCounts={ownerCounts} />
       </section>
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🎰 Glücksrad
         </h2>
         <ShopConfigPanel initial={config} />

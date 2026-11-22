@@ -20,7 +20,7 @@ export function SourceRow({ s }: { s: CoinSourceRow }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm text-white">{s.title}</span>
-          <span className="block text-[11px] text-gray-500 truncate">{s.hint}</span>
+          <span className="block text-xs text-gray-500 truncate">{s.hint}</span>
         </span>
         <span className={`shrink-0 text-xs font-semibold tabular-nums ${s.done ? "text-gray-500" : "text-amber-300"}`}>{s.value}</span>
         <ChevronRight className="w-3.5 h-3.5 shrink-0 text-gray-600 group-hover:text-gray-300" />
@@ -38,7 +38,7 @@ export function DayBlock({ day }: { day: LedgerDay }) {
   ].filter(Boolean);
   return (
     <li>
-      <p className="flex items-center justify-between gap-2 pt-3 pb-1 text-[11px] font-semibold text-gray-500">
+      <p className="flex items-center justify-between gap-2 pt-3 pb-1 text-xs font-semibold text-gray-500">
         <span>{day.label}</span>
         <span className="flex gap-2 tabular-nums">{sums}</span>
       </p>
@@ -47,7 +47,7 @@ export function DayBlock({ day }: { day: LedgerDay }) {
           <li key={i.id} className="flex items-center gap-3 py-2">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm text-gray-200" title={i.label}>{i.label}</span>
-              <span className="block text-[10px] text-gray-600">
+              <span className="block text-xs text-gray-600">
                 {SOURCE_LABELS[i.source]} · {formatBerlinDateTime(i.createdAt, { hour: "2-digit", minute: "2-digit" })}
               </span>
             </span>

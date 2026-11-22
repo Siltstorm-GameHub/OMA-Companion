@@ -9,7 +9,7 @@ export default async function PayoutsPage() {
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs — Auszahlungen</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs — Auszahlungen</h1>
         <p className="text-xs text-gray-500 mt-0.5">Was pro Woche ausgezahlt wurde, was der nächste Lauf auszahlen würde und ob der tägliche Lauf sauber durchgelaufen ist.</p>
       </div>
       <AdminJobsNav />

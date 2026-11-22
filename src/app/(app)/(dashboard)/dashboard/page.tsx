@@ -4,14 +4,7 @@ import { isEventRunning } from "@/lib/event-display";
 import { participationRewardOf } from "@/lib/event-placement";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
-import { Circle } from "@/components/icons";
-import { ChevronRight } from "@/components/icons";
-import { Repeat, Server } from "@/components/icons";
-import { Scroll, Newspaper, Trophy } from "@/components/icons";
-import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
-import { AnimatedBar } from "@/components/AnimatedBar";
-import GameCover from "@/components/GameCover";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import WatchTogetherTeaser from "@/components/watch/WatchTogetherTeaser";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
@@ -37,14 +30,13 @@ import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { eventPayout } from "@/lib/placement-rewards";
 import { homeRows, pickHomeFeature, runningPeriodEvents, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
-import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
 import CommunityBoardWidget from "./CommunityBoardWidget";
 import EventChatModule from "./EventChatModule";
 import {
-  MyMatchModule, RankingModule, SquadsModule, UpcomingEventsModule,
-  type HomeMatch, type HomeRankRow, type HomeSquad, type HomeUpcoming,
+  ModuleHeader, MyMatchModule, QuestsModule, RankingModule, SeriesModule, SquadsModule, UpcomingEventsModule,
+  type HomeMatch, type HomeRankRow, type HomeSeriesRow, type HomeSquad, type HomeUpcoming,
 } from "./HomeModules";
 import { getScopeTitle } from "@/lib/wanderpocal";
 
@@ -623,8 +615,26 @@ export default async function DashboardPage() {
     .sort((a, b) => Number(b.mine) - Number(a.mine) || (a.place || 999) - (b.place || 999));
 
   const rankTrend = rankGainThisMonth > rankGainLastMonth ? "up" : rankGainThisMonth < rankGainLastMonth ? "down" : "same";
-  const SECTION_H = "text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5";
-  const ALL_LINK = "text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors";
+  const homeSeriesRows: HomeSeriesRow[] = shownSeries.map(({ s, place, registered }) => {
+    const nextEv = s.nextEvent;
+    const leader = s.leaderUserId ? leaderMap.get(s.leaderUserId) : null;
+    return {
+      id: s.id,
+      name: s.name,
+      color: resolveSeriesColor(s.icon),
+      game: nextEv?.game ?? s.fixedGame,
+      coverUrl: nextEv?.coverImageUrl ?? s.coverImageUrl ?? null,
+      omaOriginal: s.omaOriginal,
+      status: nextEv
+        ? isEventRunning(nextEv)
+          ? { kind: "live" as const, label: "läuft gerade" }
+          : { kind: "next" as const, label: `nächster Termin ${startsInLabel(new Date(nextEv.startAt), now) ?? "bald"}` }
+        : { kind: "none" as const, label: "keine Termine geplant" },
+      registered,
+      place,
+      leaderName: leader ? leader.username ?? leader.name : null,
+    };
+  });
 
   return (
     <div className="animate-fade-in">
@@ -705,8 +715,8 @@ export default async function DashboardPage() {
 
         <WatchTogetherTeaser />
 
-        {/* ── Clip des Monats | Deine Reihen | Quests | Gameserver ──────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ── Clip des Monats | rechts daneben Reihen, Quests, Gameserver (nur wenn es welche gibt) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <ClipOfMonthTile
             winners={winnerClips}
             monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
@@ -720,135 +730,41 @@ export default async function DashboardPage() {
             ranking={clipRanking}
             nowIso={now.toISOString()}
           />
-
-          {/* Deine Reihen (bzw. aktive Reihen, solange du in keiner mitspielst) */}
-          <section aria-label="Eventreihen" className="animate-slide-up stagger-3 min-w-0">
-            <div className="flex items-center justify-between mb-2.5">
-              <h2 className={SECTION_H}>
-                <Repeat className="w-3.5 h-3.5 text-teal-500/70" /> {mySeriesRows.length > 0 ? "Deine Reihen" : "Eventreihen"}
-              </h2>
-              <Link href="/events" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
-            </div>
-            <div className="surface rounded-card overflow-hidden divide-y divide-line shadow-card">
-              {shownSeries.length === 0 ? (
-                <div className="p-6 text-center">
-                  <p className="text-xs text-gray-500">Gerade läuft keine Eventreihe.</p>
-                  <Link href="/events" className="text-[11px] text-teal-500 hover:text-teal-300">Events entdecken →</Link>
-                </div>
-              ) : shownSeries.map(({ s, place, registered }) => {
-                const nextEv = s.nextEvent;
-                const seriesColor = resolveSeriesColor(s.icon);
-                const leader = s.leaderUserId ? leaderMap.get(s.leaderUserId) : null;
-                const nextIn = nextEv ? startsInLabel(new Date(nextEv.startAt), now) : null;
-                return (
-                  <Link key={s.id} href={`/events/series/${s.id}`}
-                    className="relative flex items-center gap-3 pl-4 pr-3 py-2.5 transition-colors group hover:bg-surface-2">
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
-                    <GameCover game={nextEv?.game ?? s.fixedGame} coverUrl={nextEv?.coverImageUrl ?? s.coverImageUrl ?? null} className="w-9 h-9 shrink-0" rounded="rounded-md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{ color: seriesColor }}>
-                        {s.omaOriginal && <OmaTitlePrefix title={s.name} />}{s.name}
-                      </p>
-                      <p className="text-[11px] text-gray-500 truncate">
-                        {nextEv
-                          ? isEventRunning(nextEv) ? <span className="text-red-400">läuft gerade</span> : <>nächster Termin {nextIn ?? "bald"}</>
-                          : "keine Termine geplant"}
-                        {registered && <span className="text-teal-300"> · dabei</span>}
-                        {!place && leader && <> · <Trophy className="inline w-2.5 h-2.5 text-amber-500/80" /> {leader.username ?? leader.name}</>}
-                      </p>
-                    </div>
-                    {place > 0 && (
-                      <span className={`shrink-0 text-xs font-bold tabular-nums ${place === 1 ? "text-yellow-300" : "text-teal-300"}`}>Platz {place}</span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* Quests: Fortschritt + die zwei, die am nächsten am Ziel sind */}
-          {userId && (
-            <section aria-label="Quests" className="animate-slide-up stagger-4 min-w-0">
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className={SECTION_H}>
-                  <Scroll className="w-3.5 h-3.5 text-teal-500/70" /> Quests
-                  <span className="normal-case tracking-normal font-normal text-gray-600">· Monat endet {startsInLabel(startOfNextMonth, now)}</span>
-                </h2>
-                <Link href="/quests" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
-              </div>
-              <div className="surface rounded-card overflow-hidden shadow-card">
-                <div className="px-3.5 py-3 flex items-center gap-3 border-b border-line">
-                  <div className="flex-1">
-                    <div className="flex justify-between text-[11px] text-gray-500 mb-1.5">
-                      <span>Abgeschlossen</span>
-                      <span className="text-white font-semibold tabular-nums">{myQuestsDone} / {totalMonthQuests}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden bg-line">
-                      <AnimatedBar pct={totalMonthQuests > 0 ? Math.round((myQuestsDone / totalMonthQuests) * 100) : 0} className="h-full rounded-full bg-teal-400" />
-                    </div>
-                  </div>
-                  <span className="shrink-0 flex items-center gap-1 text-xs font-bold text-amber-400 tabular-nums" title="Diesen Monat mit Quests verdient">
-                    <CoinIcon size={12} />{questCoinsEarned.toLocaleString("de-DE")}
-                  </span>
-                </div>
-                {nextQuests.length === 0 ? (
-                  <p className="px-3.5 py-4 text-xs text-gray-500">
-                    {totalMonthQuests > 0 ? "Alle Quests erledigt. Stark!" : "Diesen Monat gibt es keine Quests."}
-                  </p>
-                ) : nextQuests.map(q => {
-                  const pct = q.target ? Math.min(100, Math.round((q.current / q.target) * 100)) : 0;
-                  return (
-                    <Link key={q.id} href="/quests" className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-line last:border-b-0 hover:bg-surface-2 transition-colors">
-                      <Circle className="w-4 h-4 text-gray-600 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-white truncate">{q.title}</p>
-                        <div className="mt-1 h-1 rounded-full overflow-hidden bg-line">
-                          <AnimatedBar pct={pct} className="h-full rounded-full bg-teal-500/70" />
-                        </div>
-                      </div>
-                      <span className="text-[11px] text-gray-500 tabular-nums shrink-0">{q.current}/{q.target}</span>
-                      <span className="text-[11px] font-semibold text-amber-400/90 shrink-0 flex items-center gap-0.5 tabular-nums">+{q.reward}<CoinIcon size={10} /></span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Community-Gameserver */}
-          {userId && (
-            <section aria-label="Gameserver" className="animate-slide-up stagger-5 min-w-0">
-              <div className="flex items-center justify-between mb-2.5">
-                <h2 className={SECTION_H}><Server className="w-3.5 h-3.5 text-teal-500/70" /> Gameserver</h2>
-                <Link href="/servers" className={ALL_LINK}>Alle <ChevronRight className="w-3 h-3" /></Link>
-              </div>
-              <div className="surface rounded-card overflow-hidden relative shadow-card">
-                {servers.length === 0 ? (
-                  <div className="p-6 text-center">
-                    <p className="text-xs text-gray-500">Gerade sind keine Gameserver verfügbar.</p>
-                    <Link href="/servers" className="text-[11px] text-teal-500 hover:text-teal-300">Server ansehen →</Link>
-                  </div>
-                ) : (
+          <div className="min-w-0 space-y-6">
+            <SeriesModule rows={homeSeriesRows} mine={mySeriesRows.length > 0} />
+            {userId && (
+              <QuestsModule
+                done={myQuestsDone}
+                total={totalMonthQuests}
+                coinsEarned={questCoinsEarned}
+                monthEndsIn={startsInLabel(startOfNextMonth, now)}
+                quests={nextQuests.map(q => ({ id: q.id, title: q.title, current: q.current, target: q.target, reward: q.reward }))}
+              />
+            )}
+            {userId && servers.length > 0 && (
+              <section aria-label="Gameserver">
+                <ModuleHeader title="Gameserver" href="/servers" />
+                <div className="rounded-card border border-line bg-surface overflow-hidden">
                   <GameserverWidget servers={servers} />
-                )}
-              </div>
-            </section>
-          )}
+                </div>
+              </section>
+            )}
+          </div>
         </div>
 
         {/* ── Aus der Community: Feed, neueste Berichte, WhatsApp ───────── */}
-        <section aria-label="Aus der Community" className="space-y-4">
-          <h2 className={SECTION_H}><Newspaper className="w-3.5 h-3.5 text-teal-500/70" /> Aus der Community</h2>
+        <section aria-label="Aus der Community" className="space-y-3">
+          <ModuleHeader title="Aus der Community" href="/community-board" />
           <CommunityBoardWidget />
           {recentSummaries.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {recentSummaries.map(ev => (
                 <Link key={ev.id} href={`/tournament/${ev.id}`}
-                  className="surface rounded-card group block p-4 hover:border-teal-500/20 transition-colors">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-400/80 mb-1">Eventbericht</p>
-                  <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors leading-snug line-clamp-2">{ev.title}</p>
-                  <p className="text-[11px] text-gray-500 line-clamp-3 leading-relaxed mt-1.5">{ev.summary}</p>
-                  <p className="text-[10px] text-gray-600 mt-2">
+                  className="rounded-card border border-line bg-surface card-hover group block p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary-fg mb-1">Eventbericht</p>
+                  <p className="text-sm font-bold text-fg leading-snug line-clamp-2">{ev.title}</p>
+                  <p className="text-sm text-muted line-clamp-3 leading-relaxed mt-1.5">{ev.summary}</p>
+                  <p className="text-xs text-subtle mt-2">
                     {formatBerlinDate(ev.startAt, { day: "numeric", month: "short", year: "numeric" })}
                     {ev.game ? ` · ${ev.game}` : ""}
                   </p>

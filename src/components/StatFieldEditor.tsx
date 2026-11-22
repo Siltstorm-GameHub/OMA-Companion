@@ -51,7 +51,7 @@ export default function StatFieldEditor({
           onChange={e => setInput(e.target.value)}
           onKeyDown={onKey}
           placeholder="Feldname eingeben…"
-          className="flex-1 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:border-rose-500 outline-none"
+          className="flex-1 text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2 focus:border-primary outline-none"
         />
         <button type="button" onClick={add} disabled={!input.trim()}
           className="flex items-center gap-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg px-3 py-2 transition-colors">
@@ -59,12 +59,12 @@ export default function StatFieldEditor({
         </button>
       </div>
       {isAvg && fields.length > 0 && (
-        <p className="text-[11px] text-blue-400/80">
+        <p className="text-xs text-blue-400/80">
           Alle Felder werden pro Runde gemittelt und zu einem Gesamtdurchschnitt zusammengerechnet. Nicht eingetragene Felder zählen nicht als 0, sondern werden ausgelassen.
         </p>
       )}
       {fields.length === 0 && (
-        <p className="text-[11px] text-gray-600">Noch keine Felder — gib mindestens einen Wert ein (z.B. Kills).</p>
+        <p className="text-xs text-gray-600">Noch keine Felder — gib mindestens einen Wert ein (z.B. Kills).</p>
       )}
     </div>
   );

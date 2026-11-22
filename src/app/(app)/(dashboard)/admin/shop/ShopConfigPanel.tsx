@@ -93,7 +93,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                 <select
                   value={prize.type}
                   onChange={(e) => updatePrize(prize.id, "type", e.target.value as WheelPrize["type"])}
-                  className="px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="px-2 py-1.5 rounded-control bg-surface-2 border border-line text-fg text-xs focus:outline-none focus:border-primary"
                 >
                   {(Object.keys(TYPE_LABEL) as WheelPrize["type"][]).map((t) => (
                     <option key={t} value={t}>{TYPE_LABEL[t]}</option>
@@ -105,7 +105,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   value={prize.label}
                   onChange={(e) => updatePrize(prize.id, "label", e.target.value)}
                   placeholder="Beschriftung"
-                  className="flex-1 min-w-[100px] px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="flex-1 min-w-[100px] px-2 py-1.5 rounded-control bg-surface-2 border border-line text-fg text-xs focus:outline-none focus:border-primary"
                 />
 
                 {prize.type === "points" && (
@@ -125,7 +125,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   title="Gewichtung"
                   className="w-16 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
                 />
-                <span className="text-[10px] text-gray-500 w-12 tabular-nums shrink-0">{chance}%</span>
+                <span className="text-xs text-gray-500 w-12 tabular-nums shrink-0">{chance}%</span>
 
                 <button
                   onClick={() => removePrize(prize.id)}
@@ -137,7 +137,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
             );
           })}
         </div>
-        <p className="text-[10px] text-gray-600">
+        <p className="text-xs text-gray-600">
           Gewichtung bestimmt die Gewinnchance relativ zu den anderen Preisen. Beschriftungen müssen eindeutig sein.
         </p>
       </div>

@@ -41,7 +41,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
 
           {/* Sofort wirksam (eigene Knöpfe, nicht über die Speicherleiste) */}
           <Section title="Sichtbarkeit und Anmeldung">
-            <p className="text-[11px] text-gray-500 -mt-1">Diese Schalter gelten sofort für die Reihe und alle Termine.</p>
+            <p className="text-xs text-gray-500 -mt-1">Diese Schalter gelten sofort für die Reihe und alle Termine.</p>
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
@@ -60,7 +60,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
               {squads.length > 0 && (
                 <select value={squadId} disabled={squadIdBusy} onChange={e => saveSquadId(e.target.value)}
                   aria-label="Anmeldung auf ein Squad beschränken"
-                  className="text-xs rounded-lg px-2.5 py-1.5 border outline-none bg-gray-800 border-gray-700 text-gray-200 disabled:opacity-50">
+                  className="text-xs rounded-control px-2.5 py-1.5 border outline-none bg-surface-2 border-line text-gray-200 disabled:opacity-50">
                   <option value="">Für alle offen</option>
                   {squads.map(s => <option key={s.id} value={s.id}>Nur Squad: {s.name}</option>)}
                 </select>
@@ -124,7 +124,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                       genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                     }`}>
                     <AppIcon kind="genre" name={g.value} size={32} />
-                    <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                    <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
                   </button>
                 ))}
               </div>
@@ -151,12 +151,12 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
           {/* Turniervorlage für neue Termine */}
           {isTournamentSeries && (
             <Section title="Turniervorlage für neue Termine">
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 Jeder neu angelegte Termin der Reihe übernimmt diese Einstellungen — bestehende Termine bleiben unverändert.
                 Eine neue Saison übernimmt die Vorlage automatisch.
               </p>
               <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} hideGoal />
-              <button type="button" onClick={() => setActiveSettingsTab("goal")} className="mt-2 text-[11px] font-semibold text-teal-300 hover:text-teal-200">
+              <button type="button" onClick={() => setActiveSettingsTab("goal")} className="mt-2 text-xs font-semibold text-teal-300 hover:text-teal-200">
                 🎯 Community-Ziel der Reihe einstellen →
               </button>
             </Section>
@@ -168,7 +168,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
             {isModerator && (
               <Field label={<><Hash className="w-3 h-3" /> Discord-Kanal</>}>
                 <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (News-Kanal)" />
-                <p className="text-[11px] text-gray-600 mt-1">Wird auf alle Events der Reihe angewendet</p>
+                <p className="text-xs text-gray-600 mt-1">Wird auf alle Events der Reihe angewendet</p>
               </Field>
             )}
             <Field label={<><RefreshCw className="w-3 h-3" /> Wiederholung</>}>
@@ -203,7 +203,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                     onChange={e => setCycleConfig(c => ({ ...c, enabled: e.target.checked }))} />
                   <span>
                     Reihe läuft dauerhaft — neue Zyklen legt das System selbst an
-                    <span className="block text-[11px] text-gray-500">
+                    <span className="block text-xs text-gray-500">
                       Jeder Zyklus bleibt ein eigener Termin mit Anmeldung, Meldungen, Sieger und Abschluss. Startzeit und
                       Dauer folgen dem letzten Termin und der Wiederholung. Abschließen musst du die Zyklen weiterhin selbst.
                     </span>
@@ -219,7 +219,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                           <option key={n} value={n}>{n === 1 ? "Immer der nächste Zyklus" : `Immer die nächsten ${n} Zyklen`}</option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-1">
                         So lange vorher können sich User anmelden und das Ziel des Zyklus sehen. In der Events-Übersicht
                         erscheint trotzdem nur der nächste Zyklus der Reihe.
                       </p>
@@ -229,7 +229,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                         onChange={e => setCycleConfig(c => ({ ...c, carryParticipants: e.target.checked }))} />
                       <span>
                         Teilnehmer automatisch übernehmen
-                        <span className="block text-[11px] text-gray-500">Wer im laufenden oder einem kommenden Zyklus angemeldet ist, ist im neuen Zyklus direkt dabei.</span>
+                        <span className="block text-xs text-gray-500">Wer im laufenden oder einem kommenden Zyklus angemeldet ist, ist im neuen Zyklus direkt dabei.</span>
                       </span>
                     </label>
                     <div>
@@ -241,10 +241,10 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                           void _drop;
                           return e.target.value ? { ...rest, endsAt: new Date(`${e.target.value}T23:59:59`).toISOString() } : rest;
                         })} />
-                      <p className="text-[11px] text-gray-600 mt-1">Danach entstehen keine neuen Zyklen mehr.</p>
+                      <p className="text-xs text-gray-600 mt-1">Danach entstehen keine neuen Zyklen mehr.</p>
                     </div>
                     {series.events.length === 0 && (
-                      <p className="text-[11px] text-amber-400">Lege den ersten Zyklus einmal selbst an — Start, Ende und Einstellungen werden dann übernommen.</p>
+                      <p className="text-xs text-amber-400">Lege den ersten Zyklus einmal selbst an — Start, Ende und Einstellungen werden dann übernommen.</p>
                     )}
                   </div>
                 )}

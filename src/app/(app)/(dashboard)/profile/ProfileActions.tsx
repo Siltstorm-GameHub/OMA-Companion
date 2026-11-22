@@ -76,7 +76,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
           <textarea value={message} onChange={e => setMessage(e.target.value)} maxLength={HELP_MAX} rows={4} className={TEXTAREA}
             placeholder={`Wobei brauchst du Hilfe? ${displayName} bekommt eine Benachrichtigung.`} />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-gray-600">{message.length}/{HELP_MAX} · höchstens 3 Anfragen pro Tag</span>
+            <span className="text-xs text-gray-600">{message.length}/{HELP_MAX} · höchstens 3 Anfragen pro Tag</span>
             <Button size="sm" loading={busy} disabled={!message.trim()}
               onClick={async () => {
                 if (await run(() => api("/api/community-jobs/coach/help-requests", { method: "POST", body: JSON.stringify({ coachId: userId, message }) }),
@@ -92,12 +92,12 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
 
       <Modal open={dialog === "interview"} onClose={close} title={`Interview mit ${displayName}`}>
         <div className="space-y-2">
-          <p className="text-[11px] text-gray-500">Die Antworten landen in deinem Büro (Journalist) und lassen sich als Q&amp;A in einen Bericht einfügen.</p>
+          <p className="text-xs text-gray-500">Die Antworten landen in deinem Büro (Journalist) und lassen sich als Q&amp;A in einen Bericht einfügen.</p>
           {questions.map((q, i) => (
             <div key={i} className="flex items-center gap-2">
               <input value={q} onChange={e => setQuestions(qs => qs.map((x, j) => (j === i ? e.target.value : x)))}
                 placeholder={`Frage ${i + 1}`} aria-label={`Frage ${i + 1}`}
-                className="flex-1 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600" />
+                className="flex-1 bg-surface-2 border border-line rounded-control px-3 py-1.5 text-xs text-fg placeholder:text-subtle" />
               {questions.length > 1 && (
                 <button type="button" aria-label="Frage entfernen" onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))}
                   className="text-gray-600 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -119,7 +119,7 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
       <Modal open={dialog === "squad"} onClose={close} title={`${displayName} zu einem Squad hinzufügen`}>
         <div className="space-y-3">
           <select value={squadId} onChange={e => setSquadId(e.target.value)} aria-label="Squad auswählen"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white">
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-xs text-fg">
             {captainSquads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <div className="flex justify-end">

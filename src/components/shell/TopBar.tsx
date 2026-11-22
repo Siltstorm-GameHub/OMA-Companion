@@ -32,7 +32,7 @@ export function TopBar() {
 
         {!isGuest && (
           <div className="hidden lg:block">
-            <GlobalSearch />
+            <GlobalSearch mode="desktop" />
           </div>
         )}
 
@@ -48,7 +48,7 @@ export function TopBar() {
           ) : (
             <>
               {/* Handy/Tablet: Lupe (das Feld klappt unter der Kopfzeile auf) */}
-              <div className="lg:hidden"><GlobalSearch /></div>
+              <div className="lg:hidden"><GlobalSearch mode="mobile" /></div>
               {/* Jedes Mitglied darf Community-Events anlegen (Limits: lib/community-event-limits.ts) */}
               <Link
                 href="/events/verwalten/neu"

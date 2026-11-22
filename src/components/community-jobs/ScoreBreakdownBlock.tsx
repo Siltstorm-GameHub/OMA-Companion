@@ -40,10 +40,10 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   return (
     <div className="p-4 border-b border-line space-y-2.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
-        <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
+        <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
           <Scale className="w-3.5 h-3.5 text-teal-400" /> Wie setzt sich dein Score zusammen?
         </span>
-        <span className="flex items-center gap-2 text-[11px] text-gray-500">
+        <span className="flex items-center gap-2 text-xs text-gray-500">
           {weeks[0].breakdown.total > 0 ? `${fmt(weeks[0].breakdown.total)} Punkte diese Woche` : "diese Woche noch 0 Punkte"}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
         </span>
@@ -54,7 +54,7 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
           <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Woche">
             {weeks.map((w, i) => (
               <button key={w.breakdown.weekStart} role="tab" aria-selected={selected === i} onClick={() => setSelected(i)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors ${selected === i ? TAB_ON : TAB_OFF}`}>
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${selected === i ? TAB_ON : TAB_OFF}`}>
                 {w.isCurrent ? "Diese Woche" : `Woche ab ${formatBerlinDate(w.breakdown.weekStart, { day: "2-digit", month: "2-digit" })}`}
               </button>
             ))}
@@ -82,7 +82,7 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
           </ul>
 
           {trimmed !== 0 && (
-            <p className="text-[11px] text-amber-400/90">
+            <p className="text-xs text-amber-400/90">
               {fmt(Math.abs(trimmed))} {Math.abs(trimmed) === 1 ? "Punkt zählt" : "Punkte zählen"} nicht:{" "}
               {b.trimmedByVoter !== 0 && `von derselben Person zählen pro Woche höchstens ${b.caps.maxVotesPerVoter} Stimmen`}
               {b.trimmedByVoter !== 0 && b.trimmedByItems !== 0 && ", "}
@@ -90,11 +90,11 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
             </p>
           )}
           {week.next
-            ? <p className="text-[11px] text-gray-500">Noch {fmt(week.next.missing)} {week.next.missing === 1 ? "Punkt" : "Punkte"} bis „{week.next.label}“.</p>
-            : week.tierLabel && <p className="text-[11px] text-emerald-400">Höchste Stufe erreicht.</p>}
-          {week.paid && <p className="text-[11px] text-gray-500">Ausgezahlt: {week.paid.coins} Münzen{week.paid.tierLabel ? ` (${week.paid.tierLabel})` : ""}.</p>}
+            ? <p className="text-xs text-gray-500">Noch {fmt(week.next.missing)} {week.next.missing === 1 ? "Punkt" : "Punkte"} bis „{week.next.label}“.</p>
+            : week.tierLabel && <p className="text-xs text-emerald-400">Höchste Stufe erreicht.</p>}
+          {week.paid && <p className="text-xs text-gray-500">Ausgezahlt: {week.paid.coins} Münzen{week.paid.tierLabel ? ` (${week.paid.tierLabel})` : ""}.</p>}
 
-          <p className="text-[10px] text-gray-600 leading-relaxed">
+          <p className="text-xs text-gray-600 leading-relaxed">
             Daumen zählen 1 Punkt. Sterne werden umgerechnet: 4–5 Sterne = +1, 3 = 0, 1–2 = −1. Der Wert wird nie kleiner als 0.
             {!week.isCurrent && " Frühere Wochen sind mit dem heutigen Stand neu gerechnet."}
           </p>

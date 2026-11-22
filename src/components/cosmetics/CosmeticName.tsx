@@ -86,7 +86,7 @@ function JobTitleBadge({ tier, className = "" }: { tier: JobBadgeTier; className
       <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/70 whitespace-nowrap">Community-Job</span>
       <span className="w-px h-2.5 bg-white/25 shrink-0" />
       <span
-        className="text-[10px] font-black uppercase tracking-[0.16em] whitespace-nowrap"
+        className="text-xs font-black uppercase tracking-[0.16em] whitespace-nowrap"
         style={{ backgroundImage: s.metal, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}
       >
         {s.stage}
@@ -103,7 +103,7 @@ export function CosmeticTitle({ title, className = "" }: { title?: string | null
   if (t.jobBadge) return <JobTitleBadge tier={t.jobBadge} className={className} />;
   return (
     <span
-      className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.12em] ${className}`}
+      className={`inline-flex items-center text-xs font-semibold uppercase tracking-[0.12em] ${className}`}
       style={{ color: t.color, textShadow: `0 0 10px ${t.color}55` }}
     >
       {t.text}

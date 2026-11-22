@@ -18,7 +18,7 @@ export default async function AdminCommunityJobsPage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs</h1>
         <p className="text-xs text-gray-500 mt-0.5">Offene Jobs für alle: Anfechtungen, Tageslimit, Ansehen und Einstellungen für Journalist, Fotograf, Marketing Manager, Coach und Visionär.</p>
       </div>
       <AdminJobsNav />

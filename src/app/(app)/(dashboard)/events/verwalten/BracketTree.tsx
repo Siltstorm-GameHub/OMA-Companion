@@ -24,7 +24,7 @@ function PlayerRow({ uid, total, legs, won, decided, bye, nameOf }: {
       <span className="min-w-0 flex-1 truncate">{name}</span>
       {won && <Check className="w-3 h-3 shrink-0 text-teal-300" />}
       {legs.length > 1 && legs.some(l => l != null) && (
-        <span className="shrink-0 text-[10px] font-normal text-gray-500 tabular-nums">{legs.map(l => l ?? "–").join(" · ")}</span>
+        <span className="shrink-0 text-xs font-normal text-gray-500 tabular-nums">{legs.map(l => l ?? "–").join(" · ")}</span>
       )}
       <span className={`w-5 shrink-0 text-right tabular-nums ${won ? "text-teal-200" : ""}`}>{total ?? ""}</span>
     </span>
@@ -76,7 +76,7 @@ export default function BracketTree({ columns, thirdPlace, nameOf, selectedKey, 
             const last = ci === columns.length - 1;
             return (
               <div key={col.round} className="flex w-48 flex-col">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">{col.label}</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">{col.label}</p>
                 <div className="flex flex-1 flex-col" style={{ minHeight: `${maxSlots * 4.25}rem` }}>
                   {pairs(col.slots).map((pair, pi) => (
                     <div key={pi} className="relative flex flex-1 flex-col">
@@ -103,7 +103,7 @@ export default function BracketTree({ columns, thirdPlace, nameOf, selectedKey, 
       </div>
       {thirdPlace && (
         <div className="w-48">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Spiel um Platz 3</p>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Spiel um Platz 3</p>
           <SlotBox slot={thirdPlace} nameOf={nameOf} selected={selectedKey === thirdPlace.key} onSelect={onSelect} />
         </div>
       )}

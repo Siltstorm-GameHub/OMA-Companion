@@ -14,7 +14,7 @@ interface Anomalies {
   concentration: { owner: Person; total: number; topShare: number; topVoters: Person[] }[];
 }
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 
 function P({ p }: { p: Person }) {
   return <Link href={`/profile/${p.id}`} className="text-teal-300 hover:text-teal-200 transition-colors">{p.name}</Link>;
@@ -24,7 +24,7 @@ function Block({ title, hint, empty, count, children }: { title: string; hint: s
   return (
     <section className="space-y-1.5">
       <h2 className={LABEL}>{title} ({count})</h2>
-      <p className="text-[11px] text-gray-600">{hint}</p>
+      <p className="text-xs text-gray-600">{hint}</p>
       <div className="glass rounded-card overflow-hidden divide-y divide-line">
         {count === 0 ? <p className="p-3 text-xs text-gray-600">{empty}</p> : children}
       </div>
@@ -45,13 +45,13 @@ export default function AnomaliesClient() {
 
   return (
     <div className="space-y-6">
-      <p className="text-[11px] text-gray-500">{data.totalVotes} Bewertungen der letzten {data.days} Tage ausgewertet.</p>
+      <p className="text-xs text-gray-500">{data.totalVotes} Bewertungen der letzten {data.days} Tage ausgewertet.</p>
 
       <Block title="Auffällige Paare" hint="Eine Person hat dieselbe andere Person mindestens 8-mal bewertet. „Gegenseitig“ heißt: die andere hat mindestens 5-mal zurückbewertet." empty="Keine auffälligen Paare." count={data.pairs.length}>
         {data.pairs.map((p, i) => (
           <div key={i} className="p-3 text-xs text-gray-300 flex flex-wrap items-center gap-2">
             <P p={p.voter} /> → <P p={p.owner} /> <span className="text-gray-500">{p.count}× bewertet</span>
-            {p.mutual ? <Badge tone="warning">gegenseitig ({p.reverse}×)</Badge> : p.reverse > 0 ? <span className="text-[10px] text-gray-600">zurück {p.reverse}×</span> : null}
+            {p.mutual ? <Badge tone="warning">gegenseitig ({p.reverse}×)</Badge> : p.reverse > 0 ? <span className="text-xs text-gray-600">zurück {p.reverse}×</span> : null}
           </div>
         ))}
       </Block>

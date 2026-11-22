@@ -17,7 +17,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
   const notReadyNames = event.checkInEnabled ? bracketRegisteredUsers.filter(u => !ctx.checkedInIds.has(u.id)).map(ctx.userName) : null;
   return (
     <div className="space-y-4">
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             Den Check-in speichert die Leiste unten. Format und Wertung haben eigene Knöpfe, weil sie den Spielplan anlegen oder ändern.
           </p>
           {/* Check-in vor Turnierstart — nur Bereite werden ausgelost */}
@@ -33,7 +33,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                     tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
                   }`}>
                   <p className="text-xs font-medium leading-tight">{f.label}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
                 </button>
               ))}
             </div>
@@ -70,7 +70,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
           )}
 
           {/* Belohnungen pro Platzierung werden zentral im Reiter "Belohnungen" gepflegt */}
-          <p className="text-[11px] text-gray-500">
+          <p className="text-xs text-gray-500">
             Platzierungsbelohnungen (Münzen/Rang-Punkte je Platz) kommen ausschließlich aus dem Reiter
             {event.series ? " der Eventreihe" : " „Belohnungen“"} und werden beim Abschluss des Events ausgezahlt.
             {usesMatchResultPoints && " Die Münzen pro Match-Ergebnis unten kommen zusätzlich, direkt beim Eintragen."}
@@ -104,7 +104,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                         </span>
                       ))}
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Werden in jedem Event der Reihe erfasst und zählen für die Eventpunkte und die Reihentabelle.
                       Ändern kannst du sie in den Einstellungen der Eventreihe.
                     </p>
@@ -116,7 +116,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                       onChange={extra => setTmtStatFields([...seriesStatRows.map(r => r.field), ...extra.filter(f => !seriesStatFieldSet.has(f))])}
                       isAvg={tmtFormat === "avg_stats"}
                     />
-                    <p className="text-[10px] text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Zählen nur für die Eventpunkte dieses Events, nicht für die Reihentabelle.
                     </p>
                   </div>
@@ -140,7 +140,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
 
           {/* Community-Ziel: Kurzfassung, eingestellt wird es im Reiter "Ziel" */}
           {hasTournament ? <GoalSummaryLink ctx={ctx} /> : supportsCommunityGoal(tmtFormat) && (
-            <p className="text-[11px] text-teal-300/80">🎯 Mit diesem Format ist ein Community-Ziel möglich. Du richtest es nach dem Anlegen im Reiter „Ziel“ ein.</p>
+            <p className="text-xs text-teal-300/80">🎯 Mit diesem Format ist ein Community-Ziel möglich. Du richtest es nach dem Anlegen im Reiter „Ziel“ ein.</p>
           )}
 
           {/* Event-eigene Stat-Punkte-Konfiguration (Eventpunkte) — für alle Stats-Formate (ffa,
@@ -151,7 +151,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-4">
               <div>
                 <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
-                <p className="text-[11px] text-gray-500 -mt-1 mb-2">
+                <p className="text-xs text-gray-500 -mt-1 mb-2">
                   {seriesStatRows.length > 0
                     ? "Punkte für die Zusatz-Stats dieses Events. Die Statistiken der Reihe bringen ihre Punkte aus der Reihe mit."
                     : "Wie viele Punkte gibt jede Einheit einer Statistik in diesem Event (Eventpunkte)?"}
@@ -160,7 +160,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
 
               {(seriesStatRows.length === 0 || tmtExtraStatFields.length > 0) && (
               <div className="space-y-2">
-                <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Statistik</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Punkte pro Statistik</p>
                 <StatPointsTable
                   fields={seriesStatRows.length > 0 ? tmtExtraStatFields : tmtStatFields}
                   values={tmtStatConfig.pointsByField}
@@ -176,7 +176,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                     className="rounded" />
                   <span>Endplatzierung tracken</span>
                 </label>
-                <p className="text-[10px] text-gray-500 -mt-2">
+                <p className="text-xs text-gray-500 -mt-2">
                   Im Reiter „Spielplan“ kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
                   hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
                   Eventpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses

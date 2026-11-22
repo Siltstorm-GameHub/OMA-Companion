@@ -42,10 +42,10 @@ export default function PostPollCard({ poll: initial, isAuthor, canVote }: { pol
     <div className="rounded-lg border border-line-strong bg-surface-2 p-3 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-white flex items-start gap-1.5"><Vote className="w-4 h-4 mt-0.5 text-teal-300 shrink-0" />{poll.question}</p>
-        <span className="text-[10px] uppercase tracking-wider text-gray-500 shrink-0">{kindLabel}</span>
+        <span className="text-xs uppercase tracking-wider text-gray-500 shrink-0">{kindLabel}</span>
       </div>
       {(poll.participationReward > 0 || poll.correctReward > 0) && (
-        <p className="text-[11px] text-amber-300/90 inline-flex items-center gap-1">
+        <p className="text-xs text-amber-300/90 inline-flex items-center gap-1">
           <Coins className="w-3.5 h-3.5" />
           {[poll.participationReward > 0 ? `${poll.participationReward} fürs Mitmachen` : "", poll.correctReward > 0 ? `${poll.correctReward} fürs Richtigliegen` : ""].filter(Boolean).join(" · ")}
         </p>
@@ -78,7 +78,7 @@ export default function PostPollCard({ poll: initial, isAuthor, canVote }: { pol
         })}
       </div>
 
-      <p className="text-[10px] text-gray-500">
+      <p className="text-xs text-gray-500">
         {poll.totalVotes} {poll.totalVotes === 1 ? "Stimme" : "Stimmen"}
         {poll.resolved
           ? poll.kind !== "opinion" ? (poll.correctOptionId ? " · aufgelöst" : " · aufgelöst, ohne Gewinner") : " · beendet"

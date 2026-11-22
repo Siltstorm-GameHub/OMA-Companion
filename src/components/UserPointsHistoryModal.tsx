@@ -197,7 +197,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             ].map(s => (
               <div key={s.label} className="bg-gray-950 px-3 py-4 text-center">
                 <p className={`text-xl font-black tabular-nums ${s.color}`}>{s.value}</p>
-                <p className="text-[10px] text-gray-600 mt-1 flex items-center justify-center gap-1">
+                <p className="text-xs text-gray-600 mt-1 flex items-center justify-center gap-1">
                   {s.coin && <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />}
                   {s.label}
                 </p>
@@ -257,9 +257,9 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
               {!loading && grouped.map(([month, txs]) => (
                 <div key={month}>
                   <div className="flex items-center gap-3 px-4 py-2 sticky top-0 bg-gray-950/95 z-10">
-                    <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{month}</span>
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{month}</span>
                     <div className="flex-1 h-px bg-line" />
-                    <span className="text-[10px] text-gray-600 tabular-nums">
+                    <span className="text-xs text-gray-600 tabular-nums">
                       {txs.reduce((s, t) => s + t.amount, 0) > 0 ? "+" : ""}
                       {txs.reduce((s, t) => s + t.amount, 0).toLocaleString("de-DE")}
                     </span>
@@ -297,7 +297,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                                 {isRank ? "Punkte" : "Münzen"}
                               </span>
                             </div>
-                            <p className="text-[10px] text-gray-600 mt-0.5">
+                            <p className="text-xs text-gray-600 mt-0.5">
                               {formatBerlinDate(d, { day: "2-digit", month: "2-digit", year: "numeric" })}
                               {" · "}
                               {formatBerlinTime(d, { hour: "2-digit", minute: "2-digit" })}
@@ -318,7 +318,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
 
             {!loading && transactions.length > 0 && (
               <div className="px-4 py-3 border-t border-line shrink-0">
-                <p className="text-[10px] text-gray-600 text-center">
+                <p className="text-xs text-gray-600 text-center">
                   {transactions.length} Transaktionen · max. 200 angezeigt
                 </p>
               </div>
@@ -350,7 +350,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                 type="text"
                 value={reasonCoins}
                 onChange={e => setReasonCoins(e.target.value)}
-                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/20"
+                className="w-full text-sm bg-surface-2 border border-line rounded-control px-3 py-2.5 text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
                 placeholder="Grund (optional) – z.B. LUL Season 1 Münzen"
               />
             </div>
@@ -375,7 +375,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                 type="text"
                 value={reasonRank}
                 onChange={e => setReasonRank(e.target.value)}
-                className="w-full text-sm bg-line border border-line-strong rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-primary/40"
+                className="w-full text-sm bg-surface-2 border border-line rounded-control px-3 py-2.5 text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
                 placeholder="Grund (optional) – z.B. LUL Season 1 Platz 3"
               />
             </div>

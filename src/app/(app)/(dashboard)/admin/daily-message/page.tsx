@@ -53,13 +53,13 @@ export default async function DailyMessageAdminPage() {
   return (
     <div className="space-y-10 max-w-3xl">
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           📢 Mitteilungen (Banner)
         </h2>
         <DailyMessagePanel messages={serialized} />
       </section>
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🗳️ Umfragen (Banner)
         </h2>
         <DailyPollPanel polls={serializedPolls} events={events.map(e => ({ ...e, startAt: e.startAt.toISOString() }))} />

@@ -36,7 +36,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
               }`}>
               <span className={`text-sm font-semibold ${format === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
               <span className="text-xs text-gray-500">{f.desc}</span>
-              {supportsCommunityGoal(f.value) && <span className="text-[10px] font-medium text-teal-300">🎯 Ziel möglich</span>}
+              {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-teal-300">🎯 Ziel möglich</span>}
             </button>
           ))}
         </div>
@@ -55,7 +55,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           {statFields.length > 0 && (
             <div className="mt-4 space-y-2">
               <p className="text-sm font-medium text-amber-300">Punkte pro Statistik</p>
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 Wie viele Punkte gibt jede Einheit einer Statistik? Lässt sich später im Reiter „Spielplan“ des Events ändern.
               </p>
               <StatPointsTable
@@ -129,7 +129,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           <input type="checkbox" checked={checkInEnabled} onChange={e => setCheckInEnabled(e.target.checked)} className="w-4 h-4 mt-0.5 rounded shrink-0" />
           <div>
             <p className="text-sm text-white">Check-in vor Turnierstart</p>
-            <p className="text-[11px] text-gray-500 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Angemeldete Spieler bestätigen ab 30 Minuten vor dem Start ihre Teilnahme („Bin bereit“). Ausgelost
               werden dann nur Eingecheckte — wer nicht erscheint, landet nicht im Turnierbaum.
             </p>

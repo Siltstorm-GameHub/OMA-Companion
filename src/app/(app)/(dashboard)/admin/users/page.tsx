@@ -44,7 +44,7 @@ export default async function AdminUsersPage() {
       users={users}
       meId={me.id}
       syncTools={<>
-        <p className="text-[11px] text-gray-500">Mitglieder und Ansehens-Rollen mit dem Discord-Server abgleichen.</p>
+        <p className="text-xs text-gray-500">Mitglieder und Ansehens-Rollen mit dem Discord-Server abgleichen.</p>
         <SyncMembersButton />
         <SyncDiscordRolesButton />
       </>}

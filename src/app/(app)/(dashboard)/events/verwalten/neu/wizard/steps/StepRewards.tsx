@@ -27,7 +27,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           <Image src="/Muenze Icon.png" alt="Münzen" width={20} height={20} />
           <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
         </div>
-        <p className="text-[11px] text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
+        <p className="text-xs text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
         <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
           {!belongsToSeries && (
             <div>
@@ -49,15 +49,15 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
         </div>
         {isSeriesMode && (
-          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+          <p className="text-xs text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
         )}
         {isEventMode && seriesMode !== "none" && (
-          <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
+          <p className="text-xs text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
         )}
       </div>
 
       {eventType === "community" ? (
-        <p className="text-[11px] text-gray-500 -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
+        <p className="text-xs text-gray-500 -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
       ) : (
       <div className="rounded-xl p-4 border border-line bg-surface-2">
         <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
@@ -88,7 +88,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           ))}
         </div>
         {isSeriesMode && lim && (
-          <p className="mt-2 text-[11px] text-gray-500">
+          <p className="mt-2 text-xs text-gray-500">
             Die Grenzen der Endwertung richten sich nach der Zahl der Termine. Zu hohe Werte werden beim Abschluss der Saison gekürzt.
           </p>
         )}
@@ -102,9 +102,9 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             rewardLimit={lim?.goalRewardCoins ?? null} hasEnd={!!w.endAt} />
           {w.communityGoal.enabled && (
             <div>
-              <p className="text-[11px] text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
               <StatFieldEditor fields={w.statFields} onChange={w.setStatFields} isAvg={false} />
-              <p className="text-[10px] text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Diese Werte trägst du (oder tragen die Teilnehmer per Screenshot) im Reiter „Spielplan“ ein. Eine Platzierung gibt es weiterhin nicht.
               </p>
             </div>
@@ -112,7 +112,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
         </div>
       )}
       {isEventMode && eventType === "community" && seriesMode !== "none" && (
-        <p className="text-[11px] text-gray-500 -mt-3 px-1">🎯 Ein Community-Ziel kommt bei Terminen einer Reihe aus der Reihe (Reiter „Ziel“ der Reihe).</p>
+        <p className="text-xs text-gray-500 -mt-3 px-1">🎯 Ein Community-Ziel kommt bei Terminen einer Reihe aus der Reihe (Reiter „Ziel“ der Reihe).</p>
       )}
 
       {spectatorMode && (
@@ -137,10 +137,10 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             </div>
           </div>
           {isSeriesMode && (
-            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+            <p className="text-xs text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
           )}
           {isEventMode && seriesMode !== "none" && (
-            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
+            <p className="text-xs text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
           )}
         </div>
       )}
@@ -148,7 +148,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
       {isSeriesMode && (
         <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
           <p className="text-sm font-medium text-indigo-300">📊 Reihentabelle</p>
-          <p className="text-[11px] text-gray-500 -mt-1">
+          <p className="text-xs text-gray-500 -mt-1">
             Die Reihentabelle der ganzen Reihe (Tabellenpunkte, über alle Events aufsummiert): Teilnahme plus
             die Punkte aus den Statistiken des vorigen Schritts.
           </p>
@@ -191,7 +191,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf die Rangliste übertragen</span>
           </label>
           {statRows.some(r => r.field.trim()) && (
-            <p className="text-[11px] text-gray-500">
+            <p className="text-xs text-gray-500">
               Punkte aus Statistiken (aus „Statistiken &amp; Events“):{" "}
               {statRows.filter(r => r.field.trim()).map(r => `${r.field} ×${r.pointsPer}`).join(" · ")}
             </p>
@@ -268,7 +268,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                 <NumberInput min="1" value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
                   onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })}
                   className={inputCls} style={inputStyle} />
-                <p className="text-[11px] text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-1">
                   Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
                   einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
                   Gleichplatzierten die volle Sieger-Belohnung.

@@ -265,7 +265,7 @@ export default function SwipeDeck({
           <Flame className="w-5 h-5 text-orange-300 shrink-0" />
           <span className="flex-1 min-w-0">
             <span className="block text-sm font-bold text-white">Drop der Woche</span>
-            <span className="block text-[11px] text-gray-400">
+            <span className="block text-xs text-gray-400">
               {drop.open > 0 ? `${drop.open} von ${drop.total} Karten offen` : `Alle ${drop.total} Karten entschieden`} ·{" "}
               {daysLeftLabel(drop.daysLeft)}
             </span>
@@ -273,7 +273,7 @@ export default function SwipeDeck({
           {drop.open === 0 && <Check className="w-5 h-5 text-emerald-300 shrink-0" />}
         </div>
       )}
-      <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
         <span>{remaining > 0 ? `Noch ${remaining} ${remaining === 1 ? "Spiel" : "Spiele"} zu entscheiden` : "Alles entschieden"}</span>
         <span className="hidden sm:inline">← nicht meins · ↑ würde ich holen · → am Start · I Details · Z rückgängig</span>
       </div>
@@ -414,16 +414,16 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         <GameCover game={card.name} coverUrl={card.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
         <span className="absolute top-3 left-3 flex flex-col items-start gap-1">
           {card.drop && (
-            <span className="flex items-center gap-1 rounded-full bg-orange-600/90 px-2.5 py-1 text-[11px] font-bold text-white">
+            <span className="flex items-center gap-1 rounded-full bg-orange-600/90 px-2.5 py-1 text-xs font-bold text-white">
               <Flame className="w-3 h-3" /> Drop der Woche
             </span>
           )}
-          <span className="rounded-full bg-black/70 border border-line-strong px-2.5 py-1 text-[11px] font-semibold text-white">
+          <span className="rounded-full bg-black/70 border border-line-strong px-2.5 py-1 text-xs font-semibold text-white">
             {reasonLabel(card)}
           </span>
         </span>
         {card.discountPercent > 0 && (
-          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-[11px] font-black text-white">−{card.discountPercent} %</span>
+          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-black text-white">−{card.discountPercent} %</span>
         )}
         {hint && (
           <span className={`absolute top-1/2 -translate-y-1/2 border-4 rounded-xl px-3 py-1 font-display text-2xl font-black tracking-wider bg-black/40 ${STAMP[hint].cls}`}>
@@ -432,13 +432,13 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         )}
       </div>
       <div className="flex-1 p-4 flex flex-col gap-2.5 min-h-0">
-        <p className="font-display text-xl font-black text-white leading-tight line-clamp-2">{card.name}</p>
+        <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg leading-tight line-clamp-2">{card.name}</p>
         <div className="flex flex-wrap gap-1.5">
           {f.genres.slice(0, 3).map(g => (
-            <span key={g} className="text-[11px] px-2 py-0.5 rounded-full bg-line text-gray-300">{GAME_GENRES[g]}</span>
+            <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-line text-gray-300">{GAME_GENRES[g]}</span>
           ))}
           {f.modes.map(m => (
-            <span key={m} className="text-[11px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-200">{GAME_MODES[m]}</span>
+            <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-200">{GAME_MODES[m]}</span>
           ))}
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
@@ -455,7 +455,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         {link && (card.kind === "game" || card.source === "free") && (
           <a href={link.href} target="_blank" rel="noreferrer"
             onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
-            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-[11px] font-semibold text-teal-200">
+            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-xs font-semibold text-teal-200">
             {link.label} <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -467,10 +467,10 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
                   <PersonAvatar key={p.id} name={p.name} image={p.image} />
                 ))}
               </span>
-              <span className="text-[11px] text-emerald-300">{card.inCount} am Start</span>
+              <span className="text-xs text-emerald-300">{card.inCount} am Start</span>
             </>
           ) : (
-            <span className="text-[11px] text-gray-500">
+            <span className="text-xs text-gray-500">
               {card.kind !== "discover"
                 ? "Noch niemand am Start"
                 : card.source === "steam_soon" || card.source === "upcoming"
@@ -489,7 +489,7 @@ function PersonAvatar({ name, image }: { name: string; image: string | null }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={image} alt={name} title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] object-cover" />
   ) : (
-    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-line flex items-center justify-center text-[10px] text-gray-300">
+    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-line flex items-center justify-center text-xs text-gray-300">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -619,7 +619,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl bg-surface-2 border border-line px-3 py-2">
-      <dt className="text-[10px] uppercase tracking-wider text-gray-500">{label}</dt>
+      <dt className="text-xs uppercase tracking-wider text-gray-500">{label}</dt>
       <dd className="text-white mt-0.5">{children}</dd>
     </div>
   );

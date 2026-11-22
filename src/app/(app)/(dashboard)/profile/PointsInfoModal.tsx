@@ -50,14 +50,14 @@ export default function PointsInfoModal() {
                     <CoinIcon size={16} />
                     <p className="text-sm font-bold text-amber-400">Münzen</p>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">Shop-Währung. Damit kaufst du Figuren und Items im Shop.</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">Shop-Währung. Damit kaufst du Figuren und Items im Shop.</p>
                 </div>
                 <div className="rounded-xl bg-primary-soft border border-primary/40 p-3">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Trophy className="w-4 h-4 text-primary-fg shrink-0" />
                     <p className="text-sm font-bold text-primary-fg">Rang-Punkte</p>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">Prestige-Währung. Bestimmt deinen Platz in der Rangliste.</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">Prestige-Währung. Bestimmt deinen Platz in der Rangliste.</p>
                 </div>
               </div>
 
@@ -70,13 +70,13 @@ export default function PointsInfoModal() {
                 <div className="space-y-2">
                   {COIN_SOURCES.map(group => (
                     <div key={group.group}>
-                      <p className="text-[10px] text-gray-600 font-medium mb-1 ml-1">{group.group}</p>
+                      <p className="text-xs text-gray-600 font-medium mb-1 ml-1">{group.group}</p>
                       <div className="rounded-xl bg-surface-2 border border-line divide-y divide-line">
                         {group.items.map(s => (
                           <div key={s.label} className="flex items-center justify-between px-3 py-2.5 gap-3">
                             <div className="min-w-0">
                               <p className="text-xs text-gray-200">{s.label}</p>
-                              <p className="text-[10px] text-gray-600">{s.note}</p>
+                              <p className="text-xs text-gray-600">{s.note}</p>
                             </div>
                             <span className="text-xs font-bold text-amber-400 shrink-0 tabular-nums">+{s.value}</span>
                           </div>

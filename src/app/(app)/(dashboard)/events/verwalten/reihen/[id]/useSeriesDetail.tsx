@@ -394,7 +394,7 @@ export function useSeriesDetail({
   const lockedNotice = isArchived ? (
     <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 border border-amber-500/20 bg-amber-500/[0.06]">
       <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-      <p className="text-[11px] text-amber-200/80">
+      <p className="text-xs text-amber-200/80">
         Diese Saison ist abgeschlossen. Punkteregeln, Belohnungen, Umfragen, Spiel und Format sind gesperrt, damit Endtabelle und
         Auszahlung stimmen. Korrekturen laufen über „Abschluss bearbeiten“.
       </p>
@@ -404,7 +404,7 @@ export function useSeriesDetail({
   // All-Time-Tabelle: Stat-Felder verschiedener Saisons zusammenführen (gilt für die ganze Saison-Gruppe)
   const aliasSection = seasonCount > 1 && groupStatFields.length > 1 ? (
     <Section title="All-Time: Stat-Felder zusammenführen">
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         Wurde ein Stat zwischen den Saisons umbenannt, kannst du hier festlegen, dass er in der All-Time-Tabelle als ein Feld zählt.
         Gilt für alle Saisons dieser Reihe.
       </p>
@@ -419,7 +419,7 @@ export function useSeriesDetail({
                 if (e.target.value) next[field] = e.target.value; else delete next[field];
                 return next;
               })}
-              className="w-40 rounded-lg px-2 py-1 text-xs text-white outline-none bg-gray-800 border border-gray-700">
+              className="w-40 rounded-control px-2 py-1 text-xs text-fg outline-none bg-surface-2 border border-line">
               <option value="">– eigenes Feld –</option>
               {groupStatFields.filter(o => o !== field && statAliases[o] !== field).map(o => <option key={o} value={o}>{o}</option>)}
             </select>

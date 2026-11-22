@@ -34,10 +34,10 @@ export default function EventThreadsPanel({
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">{selected?.title ?? "Absprachen"}</p>
-            {selected && <p className="text-[11px] text-gray-500 truncate">{whenLabel(selected)}</p>}
+            {selected && <p className="text-xs text-gray-500 truncate">{whenLabel(selected)}</p>}
           </div>
           <Link href={`/tournament/${selectedId}`} onClick={onNavigate}
-            className="shrink-0 flex items-center gap-0.5 text-[11px] text-teal-300 hover:text-teal-200 px-2 py-1 rounded-lg hover:bg-teal-500/10">
+            className="shrink-0 flex items-center gap-0.5 text-xs text-teal-300 hover:text-teal-200 px-2 py-1 rounded-lg hover:bg-teal-500/10">
             Zum Event <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
@@ -82,7 +82,7 @@ export default function EventThreadsPanel({
       {finished.length > 0 && (
         // Beendete Events: nur noch kurz beschreibbar → eingeklappt, außer dort ist etwas Neues
         <details open={finishedUnread || undefined} className="group/fin">
-          <summary className="list-none cursor-pointer select-none flex items-center gap-1.5 px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-wider font-semibold text-gray-500 hover:text-gray-300 [&::-webkit-details-marker]:hidden">
+          <summary className="list-none cursor-pointer select-none flex items-center gap-1.5 px-4 pt-3 pb-1.5 text-xs uppercase tracking-wider font-semibold text-gray-500 hover:text-gray-300 [&::-webkit-details-marker]:hidden">
             <ChevronRight className="w-3 h-3 transition-transform group-open/fin:rotate-90" />
             Beendet ({finished.length})
           </summary>
@@ -105,15 +105,15 @@ function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
       <button type="button" onClick={() => onSelect(t.eventId)}
         className="w-full text-left px-3 pt-2.5 pb-2 hover:bg-surface-2 transition-colors">
         <div className="flex items-center gap-2">
-          <p className="flex-1 min-w-0 text-[10px] uppercase tracking-wider text-teal-300/80 font-semibold">Dein nächstes Event</p>
+          <p className="flex-1 min-w-0 text-xs uppercase tracking-wider text-teal-300/80 font-semibold">Dein nächstes Event</p>
           <UnreadCount n={t.unread} />
         </div>
         <p className="flex items-center gap-2 min-w-0 mt-0.5">
           <PhaseBadge t={t} />
           <span className="text-sm font-semibold text-white truncate">{t.title}</span>
-          {t.pinned && <span className="shrink-0 text-[11px]" title={`Angepinnt: ${t.pinned}`}>📌</span>}
+          {t.pinned && <span className="shrink-0 text-xs" title={`Angepinnt: ${t.pinned}`}>📌</span>}
         </p>
-        <p className="text-[11px] text-gray-400">
+        <p className="text-xs text-gray-400">
           {whenLabel(t)}
           {badge && <span className={`ml-2 px-1.5 py-px rounded-full ${badge.className}`}>{badge.label}</span>}
         </p>
@@ -138,7 +138,7 @@ function ThreadGroup({ label, threads, onSelect }: { label: string; threads: Eve
   if (threads.length === 0) return null;
   return (
     <section>
-      <h3 className="px-4 pt-3 pb-1.5 text-[10px] uppercase tracking-wider font-semibold text-gray-500">{label}</h3>
+      <h3 className="px-4 pt-3 pb-1.5 text-xs uppercase tracking-wider font-semibold text-gray-500">{label}</h3>
       <ThreadList threads={threads} onSelect={onSelect} />
     </section>
   );
@@ -158,10 +158,10 @@ function ThreadList({ threads, onSelect }: { threads: EventThreadDTO[]; onSelect
               <span className="flex items-center gap-2 min-w-0">
                 <PhaseBadge t={t} />
                 <span className={`text-sm truncate ${unread ? "font-semibold text-white" : "text-gray-300"}`}>{t.title}</span>
-                {t.phase === "upcoming" && <span className="shrink-0 text-[10px] text-gray-500">{shortWhen(t.startAt)}</span>}
-                {t.pinned && <span className="shrink-0 text-[11px]" title={`Angepinnt: ${t.pinned}`}>📌</span>}
+                {t.phase === "upcoming" && <span className="shrink-0 text-xs text-gray-500">{shortWhen(t.startAt)}</span>}
+                {t.pinned && <span className="shrink-0 text-xs" title={`Angepinnt: ${t.pinned}`}>📌</span>}
                 <span className="flex-1" />
-                {t.last && <span className={`shrink-0 text-[10px] ${unread ? "text-teal-300" : "text-gray-600"}`}>{shortTime(t.last.createdAt)}</span>}
+                {t.last && <span className={`shrink-0 text-xs ${unread ? "text-teal-300" : "text-gray-600"}`}>{shortTime(t.last.createdAt)}</span>}
               </span>
               <span className="flex items-center gap-2 min-w-0">
                 <LastMessage t={t} />
@@ -192,7 +192,7 @@ function LastMessage({ t }: { t: EventThreadDTO }) {
 function UnreadCount({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-teal-950 text-[10px] font-bold flex items-center justify-center">
+    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-teal-950 text-xs font-bold flex items-center justify-center">
       {n > 99 ? "99+" : n}
     </span>
   );

@@ -35,7 +35,7 @@ export default function AnnouncementPreview({ w }: { w: EventWizard }) {
 
   return (
     <div className="rounded-xl border border-indigo-500/25 bg-[#2b2d31] p-4 space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-300">
+      <p className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
         Vorschau Discord-Ankündigung
         {publishMode === "hidden" && " · wird erst beim Sichtbarschalten gesendet"}
         {publishMode === "scheduled" && " · wird zum geplanten Zeitpunkt gesendet"}
@@ -49,8 +49,8 @@ export default function AnnouncementPreview({ w }: { w: EventWizard }) {
           <div className="grid grid-cols-2 gap-2">
             {preview.fields.map(f => (
               <div key={f.name}>
-                <p className="text-[11px] font-semibold text-gray-200">{f.name}</p>
-                <p className="text-[11px] text-gray-400">{f.value}</p>
+                <p className="text-xs font-semibold text-gray-200">{f.name}</p>
+                <p className="text-xs text-gray-400">{f.value}</p>
               </div>
             ))}
           </div>

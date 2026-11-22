@@ -25,7 +25,7 @@ export default function OmaOriginalMark({ variant = "chip", className = "" }: { 
   }
   return (
     <span
-      className={`inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 border border-teal-500/30 bg-teal-500/10 text-[10px] font-bold uppercase leading-none tracking-[0.12em] whitespace-nowrap ${className}`}
+      className={`inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 border border-teal-500/30 bg-teal-500/10 text-xs font-bold uppercase leading-none tracking-[0.12em] whitespace-nowrap ${className}`}
       title="Eigenes Event der Old Masters Allies"
     >
       <OmaHex className="w-2.5 h-3" />
@@ -52,7 +52,7 @@ export function OmaOriginalSeal({ className = "" }: { className?: string }) {
         className="w-7 h-7 rounded-full bg-black p-px"
         style={{ boxShadow: "0 0 0 1.5px rgba(45,212,191,0.8)" }}
       />
-      <span className="text-[10px] font-extrabold uppercase leading-none tracking-[0.16em]">
+      <span className="text-xs font-extrabold uppercase leading-none tracking-[0.16em]">
         <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
       </span>
     </span>

@@ -33,7 +33,7 @@ function deadlineLabel(iso: string): string {
 /** Pott-Regeln zum Aufklappen */
 function PotRules() {
   return (
-    <details className="text-[11px] text-gray-500">
+    <details className="text-xs text-gray-500">
       <summary className="cursor-pointer select-none hover:text-gray-300">So funktioniert der Pott</summary>
       <ul className="mt-1.5 space-y-1 list-disc pl-4">
         <li>Dein Einsatz wird sofort abgebucht. Ändern oder löschen geht bis zum Start, dann gibt es ihn zurück.</li>
@@ -177,7 +177,7 @@ export default function EventWinnerPredictionWidget({
             {!locked && lockAt && <span>· ändern bis {deadlineLabel(lockAt)}</span>}
           </p>
           {players.length > 0 && !isPlayer(prediction.predictedUserId) && (
-            <p className="text-[11px] text-amber-300">{uname(prediction.predictedUser)} ist nicht (mehr) angemeldet. Ohne Teilnahme bekommst du den Einsatz zurück.</p>
+            <p className="text-xs text-amber-300">{uname(prediction.predictedUser)} ist nicht (mehr) angemeldet. Ohne Teilnahme bekommst du den Einsatz zurück.</p>
           )}
         </div>
         {!locked && (
@@ -202,7 +202,7 @@ export default function EventWinnerPredictionWidget({
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4 text-violet-400 shrink-0" />
         <p className="text-sm font-semibold text-white">Wer gewinnt dieses Event?</p>
-        {lockAt && !editing && <span className="ml-auto text-[11px] text-gray-500">Tippen bis {deadlineLabel(lockAt)}</span>}
+        {lockAt && !editing && <span className="ml-auto text-xs text-gray-500">Tippen bis {deadlineLabel(lockAt)}</span>}
         {editing && (
           <button onClick={() => { setEditing(false); setSelected(null); }} className="ml-auto text-gray-500 hover:text-white">
             <X className="w-4 h-4" />
@@ -232,7 +232,7 @@ export default function EventWinnerPredictionWidget({
           </label>
 
           {players.length > 0 && !isPlayer(selected.id) && (
-            <p className="text-[11px] text-amber-300">{uname(selected)} ist bisher nicht angemeldet. Ohne Teilnahme bekommst du den Einsatz beim Abschluss zurück.</p>
+            <p className="text-xs text-amber-300">{uname(selected)} ist bisher nicht angemeldet. Ohne Teilnahme bekommst du den Einsatz beim Abschluss zurück.</p>
           )}
           <button
             onClick={submit}
@@ -261,7 +261,7 @@ export default function EventWinnerPredictionWidget({
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={players.length > 0 ? "Oder anderes Mitglied suchen…" : "Mitglied suchen…"}
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-violet-500/50"
+            className="w-full pl-9 pr-3 py-2 rounded-control bg-surface-2 border border-line text-fg text-sm focus:outline-none focus:border-primary"
           />
           {results.length > 0 && (
             <div className="absolute z-10 mt-1 w-full glass-heavy rounded-card overflow-hidden border border-line-strong">

@@ -125,10 +125,10 @@ export default function CommunityJobsPanel() {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
           <Briefcase className="w-3 h-3" /> Community-Jobs
         </h2>
-        <span className={`text-[11px] ${daily.remaining > 0 ? "text-gray-400" : "text-amber-400"}`}
+        <span className={`text-xs ${daily.remaining > 0 ? "text-gray-400" : "text-amber-400"}`}
           title="Pro Tag zählen so viele Beiträge über alle Jobs zusammen fürs Gehalt. Weitere Beiträge sind erlaubt, zählen aber nicht.">
           Heute gezählt: {daily.used}/{daily.limit} Beiträge
         </span>
@@ -340,7 +340,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white">Büro · {COMMUNITY_JOBS.find(j => j.key === jobKey)?.label ?? jobKey}</p>
-          {description && <p className="text-[11px] text-gray-500">{description}</p>}
+          {description && <p className="text-xs text-gray-500">{description}</p>}
         </div>
       </div>
 
@@ -368,7 +368,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         <div className="border-b border-line">
           <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
             className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-surface-2 transition-colors">
-            <span className="flex items-center gap-2 text-[11px] font-semibold text-gray-300 uppercase tracking-widest">
+            <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
               <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dieser Job
             </span>
             <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
@@ -376,7 +376,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
           {guideOpen && (
             <div className="px-4 pb-4 space-y-2 text-xs text-gray-400 leading-relaxed">
               <MarkdownLite text={jobGuide} className="text-xs text-gray-400" />
-              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500">
+              <ul className="list-disc pl-4 space-y-0.5 text-xs text-gray-500">
                 <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
                 <li>Du kannst alle Jobs gleichzeitig ausüben, ohne Bewerbung oder Vertrag. Jeder Job zahlt sein eigenes Wochengehalt.</li>
@@ -396,10 +396,10 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       <div className="flex border-b border-line" role="tablist">
         {([["work", "Arbeit", recCount], ["pay", "Gehalt", 0]] as const).map(([key, label, count]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-            className={`flex-1 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest transition-colors border-b-2 ${
+            className={`flex-1 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors border-b-2 ${
               tab === key ? "text-teal-300 border-teal-400" : "text-gray-500 border-transparent hover:text-gray-300"
             }`}>
-            {label}{count > 0 && <span className="ml-1.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-0.5">{count}</span>}
+            {label}{count > 0 && <span className="ml-1.5 text-xs rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-0.5">{count}</span>}
           </button>
         ))}
       </div>
@@ -422,12 +422,12 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
+                <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
                 <div className="space-y-1.5">
                   {visibleEvents.map(e => (
                     <div key={e.eventId} className="flex items-center gap-3 rounded-xl bg-surface-2 border border-line px-3 py-2.5">
                       {e.urgency && (
-                        <span className={`shrink-0 min-w-[3.25rem] text-center text-[10px] font-semibold rounded-lg px-2 py-1 border ${
+                        <span className={`shrink-0 min-w-[3.25rem] text-center text-xs font-semibold rounded-lg px-2 py-1 border ${
                           e.urgent ? URGENT_CHIP : CALM_CHIP
                         }`}>{e.urgency}</span>
                       )}
@@ -435,7 +435,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                         <p className="text-sm text-gray-200 truncate">
                           {e.url ? <Link href={e.url} className="hover:text-teal-300 transition-colors">{e.title}</Link> : e.title}
                         </p>
-                        <p className="text-[11px] text-amber-400/90">{e.reason}</p>
+                        <p className="text-xs text-amber-400/90">{e.reason}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!e.noCreate && (
@@ -463,7 +463,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                   ))}
                 </div>
                 {hiddenCount > 0 && (
-                  <button onClick={() => setShowAllEvents(true)} className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+                  <button onClick={() => setShowAllEvents(true)} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
                     +{hiddenCount} weitere anzeigen
                   </button>
                 )}
@@ -484,7 +484,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             return (
               <div className="space-y-2">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
                     {activeTab === "steam-sales" || activeTab === "xbox-deals"
                       ? <Tag className="w-3.5 h-3.5 text-emerald-400" />
                       : <Rocket className="w-3.5 h-3.5 text-blue-400" />} {activeDef.title}
@@ -511,13 +511,13 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                             <img src={s.headerImage} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                           )}
                           {s.discountPercent ? (
-                            <span className="absolute top-1.5 right-1.5 text-[11px] font-bold text-emerald-950 bg-emerald-400 rounded-md px-1.5 py-0.5">
+                            <span className="absolute top-1.5 right-1.5 text-xs font-bold text-emerald-950 bg-emerald-400 rounded-md px-1.5 py-0.5">
                               -{s.discountPercent}%
                             </span>
                           ) : null}
                         </div>
                         <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
-                        {s.price && <p className="px-2.5 text-[11px] text-gray-500">{s.price}</p>}
+                        {s.price && <p className="px-2.5 text-xs text-gray-500">{s.price}</p>}
                       </a>
                       {canPostAboutSteam && (
                         <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
@@ -547,9 +547,9 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-300 truncate">{s.name}</p>
-                  <p className="text-[10px] text-gray-600 truncate">{s.game}</p>
+                  <p className="text-xs text-gray-600 truncate">{s.game}</p>
                 </div>
-                <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
+                <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
                   <span className="w-1 h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" />
                   Online
                 </span>
@@ -585,7 +585,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         return (
           <div className="p-4 border-b border-line bg-amber-500/[0.025] space-y-2.5">
             <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
-            <p className="text-[11px] text-gray-500 leading-relaxed">
+            <p className="text-xs text-gray-500 leading-relaxed">
               Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
               Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
             </p>
@@ -614,7 +614,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                               ? "w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full bg-white border-2 border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.3)]"
                               : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-gray-900 border-2 border-gray-400"
                           } />
-                          <span className={`absolute top-3 whitespace-nowrap text-[10px] ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
+                          <span className={`absolute top-3 whitespace-nowrap text-xs ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
                             style={{ transform: `translateX(${labelAnchor})` }}>
                             ×{formatFixed(t.multiplier, 1)}
                           </span>
@@ -623,7 +623,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                     })}
                   </div>
                 )}
-                <p className="text-[10px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {nextTier
                     ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{formatFixed(nextTier.multiplier, 1)})</>
                     : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
@@ -638,7 +638,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       <div className="p-4 space-y-2">
         <SectionHeader tone="emerald" icon={<Wallet className="w-3.5 h-3.5" />} title="Gehaltshistorie" />
         {payouts.length === 0 ? (
-          <p className="text-[11px] text-gray-600">Noch keine Auszahlung. Das Gehalt wird jeweils montags für die abgeschlossene Vorwoche gebucht.</p>
+          <p className="text-xs text-gray-600">Noch keine Auszahlung. Das Gehalt wird jeweils montags für die abgeschlossene Vorwoche gebucht.</p>
         ) : (
           <div className="space-y-1">
             {payouts.map((p, i) => {
@@ -649,7 +649,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                     <span className="text-gray-500">{weekLabel}</span>
                     <span className={`font-medium ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
                   </div>
-                  <p className="text-[10px] text-gray-600">
+                  <p className="text-xs text-gray-600">
                     {p.tierLabel ?? "Keine Bewertung"} · Score {p.rawScore}
                     {p.baseCoins > 0 && <> · Basis {p.baseCoins}</>}
                     {" · "}Bonus ×{formatFixed(p.voteBonusMultiplier, 1)}
@@ -684,7 +684,7 @@ function DashTile({
   return (
     <div className="p-2 sm:p-3 text-center min-w-0">
       <div className={`flex items-center justify-center gap-1 mb-1 ${DASH_TILE_TONE_CLASSES[tone]}`}>{icon}</div>
-      <p className={`text-[11px] sm:text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
+      <p className={`text-xs sm:text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
       <p className="text-[9px] text-gray-600 truncate">{label}</p>
       {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
     </div>
@@ -708,7 +708,7 @@ function SectionHeader({
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
         <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${SECTION_TONE_CLASSES[tone]}`}>{icon}</div>
-        <p className="text-[11px] font-semibold text-gray-300 uppercase tracking-widest">{title}</p>
+        <p className="text-xs font-semibold text-gray-300 uppercase tracking-widest">{title}</p>
       </div>
       {action}
     </div>
@@ -768,7 +768,7 @@ function JobToolContent({ jobKey, coachSelf, onDuplicate, onCompose }: {
 
 function VoteRow({ upvotes, votedByMe }: { upvotes: number; votedByMe: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] ${votedByMe ? "text-teal-400" : "text-gray-500"}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${votedByMe ? "text-teal-400" : "text-gray-500"}`}>
       <ThumbsUp className="w-3 h-3" /> {upvotes}
     </span>
   );
@@ -780,8 +780,8 @@ function EditDeleteBar({
 }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <span className="flex items-center gap-1.5 shrink-0">
-      <button onClick={onEdit} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
-      <button onClick={onDelete} className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
+      <button onClick={onEdit} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+      <button onClick={onDelete} className="text-xs text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
     </span>
   );
 }
@@ -923,7 +923,7 @@ function defaultTrainingStart(): string {
   return toLocalInput(d);
 }
 
-const INPUT_CLS = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
+const INPUT_CLS = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg focus:outline-none focus:border-primary";
 
 function MeetingLink({ url }: { url?: string | null }) {
   if (!url) return null;
@@ -1022,13 +1022,13 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
     <div className="space-y-3">
       {mine.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Termine</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Meine Termine</p>
           {mine.map(s => editing === s.id ? (
             <div key={s.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" className={`w-full ${INPUT_CLS}`} />
               <div className="flex flex-wrap items-center gap-2">
                 <input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} className={INPUT_CLS} />
-                <label className="flex items-center gap-1 text-[10px] text-gray-500">
+                <label className="flex items-center gap-1 text-xs text-gray-500">
                   Plätze
                   <NumberInput min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
                 </label>
@@ -1036,7 +1036,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
               <input value={form.meetingUrl} onChange={e => setForm(f => ({ ...f, meetingUrl: e.target.value }))} placeholder="Treffpunkt-Link (z.B. Discord-Voice-Kanal)" className={`w-full ${INPUT_CLS}`} />
               <input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} maxLength={200} placeholder="Hinweis an die Teilnehmer (optional)" className={`w-full ${INPUT_CLS}`} />
               {s.seriesId && (
-                <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                <label className="flex items-center gap-1.5 text-xs text-gray-400">
                   <input type="checkbox" checked={form.wholeSeries} onChange={e => setForm(f => ({ ...f, wholeSeries: e.target.checked }))} />
                   Für diesen und alle folgenden Termine der Serie übernehmen (Zeit wird um dieselbe Differenz verschoben)
                 </label>
@@ -1083,15 +1083,15 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                     </button>
                   )}
                   {promo.promoted.includes(s.id)
-                    ? <span className="text-[10px] text-emerald-400">✓ beworben</span>
+                    ? <span className="text-xs text-emerald-400">✓ beworben</span>
                     : promo.requested.includes(s.id)
-                      ? <span className="text-[10px] text-amber-400">Werbung angefragt</span>
-                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Werbung anfragen</button>}
+                      ? <span className="text-xs text-amber-400">Werbung angefragt</span>
+                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Werbung anfragen</button>}
                   <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
                 </span>
               </div>
               {openParticipants === s.id && (
-                <p className="pl-3 text-[11px] text-gray-500">
+                <p className="pl-3 text-xs text-gray-500">
                   {s.participants && s.participants.length > 0
                     ? s.participants.map(p => p.username ?? p.name ?? "?").join(", ")
                     : "Noch keine Anmeldungen."}
@@ -1104,7 +1104,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
 
       {others.length > 0 && (
         <div className="space-y-1.5">
-          {mine.length > 0 && <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Weitere Termine</p>}
+          {mine.length > 0 && <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Weitere Termine</p>}
           {others.map(s => {
             const full = s.capacity != null && s._count.signups >= s.capacity;
             return (
@@ -1158,7 +1158,7 @@ function CoachRatingsReceived() {
   return (
     <div className="pt-3 mt-3 border-t border-line space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Bewertungen</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Meine Bewertungen</p>
         {items.length > 0 && <Button size="sm" variant="ghost" onClick={() => setDisputeOpen(true)}>Ansehen/Anfechten</Button>}
       </div>
       {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Bewertungen erhalten.</p>}
@@ -1171,7 +1171,7 @@ function CoachRatingsReceived() {
           </p>
           <div className="space-y-1">
             {items.slice(0, 5).map(r => (
-              <div key={r.id} className="text-[11px] text-gray-500 flex items-start gap-2">
+              <div key={r.id} className="text-xs text-gray-500 flex items-start gap-2">
                 <span className="text-amber-400 shrink-0">{"★".repeat(r.stars)}<span className="text-gray-700">{"★".repeat(5 - r.stars)}</span></span>
                 <span className="min-w-0">
                   <span className="text-gray-400">{r.rater.username ?? r.rater.name ?? "?"}:</span> {r.reason}
@@ -1179,7 +1179,7 @@ function CoachRatingsReceived() {
                 </span>
               </div>
             ))}
-            {items.length > 5 && <p className="text-[10px] text-gray-600">+{items.length - 5} weitere unter „Ansehen/Anfechten“</p>}
+            {items.length > 5 && <p className="text-xs text-gray-600">+{items.length - 5} weitere unter „Ansehen/Anfechten“</p>}
           </div>
         </>
       )}
@@ -1227,12 +1227,12 @@ function IdeaList() {
       {items.map(i => editing === i.id ? (
         <div key={i.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
           <input value={title} onChange={e => setTitle(e.target.value)}
-            className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
+            className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg" />
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
-            className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white resize-none" />
+            className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg resize-none" />
           {i._count.votes > 0 && (
             <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200} placeholder="Was hast du geändert? (alle Bewerter werden informiert und dürfen neu bewerten)"
-              className="w-full bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600" />
+              className="w-full bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg placeholder:text-subtle" />
           )}
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
@@ -1242,9 +1242,9 @@ function IdeaList() {
       ) : (
         <div key={i.id} className="flex items-center justify-between text-xs">
           <span className="min-w-0">
-            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-teal-300 transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-[10px] text-gray-600">v{i.version}</span>}</Link>
+            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-teal-300 transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-xs text-gray-600">v{i.version}</span>}</Link>
             {(i.category || (i.lifecycle && i.lifecycle !== "OPEN")) && (
-              <span className="block text-[10px] text-gray-600 truncate">
+              <span className="block text-xs text-gray-600 truncate">
                 {ideaCategoryLabel(i.category)}
                 {i.lifecycle && i.lifecycle !== "OPEN" && <span className={`${i.category ? "ml-1.5 " : ""}${i.lifecycle === "DONE" ? "text-emerald-400" : "text-amber-400/90"}`}>{ideaLifecycleMeta(i.lifecycle).label}</span>}
               </span>
@@ -1253,7 +1253,7 @@ function IdeaList() {
           <span className="flex items-center gap-2 shrink-0 ml-2">
             {i.status === "CLOSED"
               ? <Badge tone="neutral">Beendet</Badge>
-              : <button onClick={() => close(i.id)} className="text-[10px] text-gray-600 hover:text-amber-400 transition-colors">Beenden</button>}
+              : <button onClick={() => close(i.id)} className="text-xs text-gray-600 hover:text-amber-400 transition-colors">Beenden</button>}
             <VoteRow upvotes={i._count.votes} votedByMe={false} />
             <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); setEditNote(""); }} onDelete={() => remove(i.id)} />
           </span>
@@ -1320,15 +1320,15 @@ function GuideForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-3">
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Titel, z.B. „Erste Schritte in R6 Siege“"
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       <div className="space-y-1">
         <GameNameInput value={game} onChange={v => setGame(v.slice(0, 40))} placeholder="Spiel (optional) — sein Cover erscheint bei deiner Anleitung"
           className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       </div>
       <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-400 transition-colors">
           <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
         </button>
         <PhotoRequestButton requesterJob="coach" defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
@@ -1395,30 +1395,30 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
   return (
     <div className="space-y-3">
       <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titel"
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Text" rows={5}
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       {prefill?.link && (
-        <p className="text-[11px] text-gray-500 flex items-center gap-1">
+        <p className="text-xs text-gray-500 flex items-center gap-1">
           <Tag className="w-3 h-3" /> Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.
         </p>
       )}
       {jobKey === "coach" && (
         <>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="space-y-1 text-[11px] text-gray-500">
+            <label className="space-y-1 text-xs text-gray-500">
               Beginn
               <input type="datetime-local" value={startAt} min={toLocalInput(new Date())} onChange={e => setStartAt(e.target.value)}
-                className="block bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
+                className="block bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg focus:outline-none focus:border-primary" />
             </label>
-            <label className="space-y-1 text-[11px] text-gray-500">
+            <label className="space-y-1 text-xs text-gray-500">
               Plätze (optional)
               <NumberInput min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
                 className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
             </label>
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="space-y-1 text-[11px] text-gray-500 flex-1 min-w-[200px]">
+            <label className="space-y-1 text-xs text-gray-500 flex-1 min-w-[200px]">
               Vorbereitung für Event (optional)
               <Select value={coachEventId} className="w-full" onChange={e => {
                 setCoachEventId(e.target.value);
@@ -1429,7 +1429,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
                 {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title} — {formatBerlinDate(ev.startAt)}</option>)}
               </Select>
             </label>
-            <label className="space-y-1 text-[11px] text-gray-500">
+            <label className="space-y-1 text-xs text-gray-500">
               Wiederholung
               <Select value={String(repeatWeeks)} className="w-full" onChange={e => setRepeatWeeks(Number(e.target.value))}>
                 <option value="1">Einmalig</option>
@@ -1439,7 +1439,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             </label>
           </div>
           <input value={meetingUrl} onChange={e => setMeetingUrl(e.target.value)} maxLength={300} placeholder="Treffpunkt-Link (optional, z.B. Discord-Voice-Kanal)"
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
           {channels.length > 0 && (
             <Select value={channelId} onChange={e => setChannelId(e.target.value)} className="w-full">
               <option value="">Keine Discord-Ankündigung</option>

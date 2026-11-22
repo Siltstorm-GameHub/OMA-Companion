@@ -17,7 +17,7 @@ export default function GameCard({ game }: { game: GameListItem }) {
   return (
     <Link
       href={`/spiele/${game.slug}`}
-      className="group surface rounded-2xl overflow-hidden flex flex-col hover:ring-1 hover:ring-teal-500/30 transition-all active:scale-[0.99]"
+      className="group rounded-card border border-line bg-surface overflow-hidden flex flex-col hover:border-line-strong hover:bg-surface-2 transition-colors"
     >
       <div className="relative">
         <GameCover
@@ -26,41 +26,41 @@ export default function GameCard({ game }: { game: GameListItem }) {
           className="w-full aspect-[46/21]"
           rounded="rounded-none"
           fallbackVariant="plain"
-          imgClassName="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          imgClassName="w-full h-full object-cover"
         />
         {/* Store: kostenlos / Rabatt / Abo */}
         <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1">
           {game.isFree && (
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white">Kostenlos</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/90 text-white">Kostenlos</span>
           )}
           {game.discountPercent > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-400 text-gray-950" title="Gerade im Angebot auf Steam">
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400 text-gray-950" title="Gerade im Angebot auf Steam">
               −{game.discountPercent} %
             </span>
           )}
           {subscriptionBadges(game.subscriptions).map(b => (
-            <span key={b} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gray-950/80 text-lime-300 border border-lime-400/30">{b}</span>
+            <span key={b} className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-950/80 text-lime-300 border border-lime-400/30">{b}</span>
           ))}
         </div>
         {/* Eigene Markierung */}
         {(game.myStatus === "in" || game.myStatus === "wish") && (
           <div className="absolute bottom-2 left-2 flex gap-1">
             {game.myStatus === "in" ? (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-emerald-500/90 text-white flex items-center gap-1">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/90 text-white flex items-center gap-1">
                 <Check className="w-2.5 h-2.5" /> Am Start
               </span>
             ) : (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-rose-500/90 text-white flex items-center gap-1">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500/90 text-white flex items-center gap-1">
                 <Heart className="w-2.5 h-2.5" /> Würde ich holen
               </span>
             )}
           </div>
         )}
       </div>
-      <div className="p-3 flex-1 flex flex-col gap-1.5">
-        <p className="font-semibold text-sm text-white leading-tight line-clamp-2 group-hover:text-teal-200 transition-colors">{game.name}</p>
-        {facts.length > 0 && <p className="text-[11px] text-gray-500 truncate">{facts.join(" · ")}</p>}
-        <div className="mt-auto pt-1 flex items-center justify-between gap-2 text-[11px]">
+      <div className="p-3.5 flex-1 flex flex-col gap-1.5">
+        <p className="font-bold text-[15px] text-fg leading-tight line-clamp-2 group-hover:text-primary-fg transition-colors">{game.name}</p>
+        {facts.length > 0 && <p className="text-xs text-gray-500 truncate">{facts.join(" · ")}</p>}
+        <div className="mt-auto pt-1 flex items-center justify-between gap-2 text-xs">
           {avg !== null && game.ratingCount >= MIN_RATINGS_FOR_AVERAGE ? (
             <span className="flex items-center gap-1.5 text-gray-300">
               <StarDisplay value={avg} className="w-3 h-3" />

@@ -86,8 +86,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const CHIP_ON = "bg-teal-500 text-black border-teal-500";
-const CHIP_OFF = "bg-line text-gray-300 border-line-strong hover:text-white";
+const CHIP_ON = "bg-primary-soft text-primary-fg border-primary/40";
+const CHIP_OFF = "bg-surface text-gray-300 border-line hover:border-line-strong hover:text-fg";
 
 function authorLabel(a: Author): string {
   return a.username ?? a.name ?? "Unbekannt";
@@ -126,20 +126,21 @@ export default function CommunityBoardClient() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <a href="/community-board/roadmap" className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">🚀 Roadmap &amp; Top-Ideen</a>
+        <a href="/community-board/roadmap" className="text-sm font-semibold text-primary-fg hover:text-fg transition-colors">🚀 Roadmap &amp; Top-Ideen</a>
       </div>
       {usedCategories.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Berichte nach Kategorie filtern">
           <button role="tab" aria-selected={category === null} onClick={() => setCategory(null)}
-            className={`text-[11px] font-semibold rounded-full px-3 py-1 border transition-colors ${category === null ? CHIP_ON : CHIP_OFF}`}>Alle</button>
+            className={`inline-flex min-h-9 items-center text-sm font-semibold rounded-full px-3.5 border transition-colors ${category === null ? CHIP_ON : CHIP_OFF}`}>Alle</button>
           {usedCategories.map(c => (
             <button key={c.key} role="tab" aria-selected={category === c.key} onClick={() => setCategory(category === c.key ? null : c.key)}
-              className={`text-[11px] font-semibold rounded-full px-3 py-1 border transition-colors ${category === c.key ? CHIP_ON : CHIP_OFF}`}>{c.label}</button>
+              className={`inline-flex min-h-9 items-center text-sm font-semibold rounded-full px-3.5 border transition-colors ${category === c.key ? CHIP_ON : CHIP_OFF}`}>{c.label}</button>
           ))}
         </div>
       )}
-      {/* Eine Spalte: streng von oben nach unten, neu → alt (mehrere CSS-Spalten würden die Reihenfolge spaltenweise mischen). */}
-      <div className="max-w-2xl mx-auto">
+      {/* Karten-Raster: zeilenweise von links nach rechts, neu → alt (CSS-Grid statt CSS-Spalten — Spalten würden
+          die Reihenfolge spaltenweise mischen). Am Handy eine Spalte. */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} />)}
       </div>
 
@@ -165,7 +166,7 @@ function MediaGallery({ media }: { media: NonNullable<FeedEntry["media"]> }) {
               <img src={m.url} alt={m.caption ?? ""} loading="lazy" className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
             </a>
           )}
-          {single && m.caption && <figcaption className="text-[11px] text-gray-500">{m.caption}</figcaption>}
+          {single && m.caption && <figcaption className="text-xs text-gray-500">{m.caption}</figcaption>}
         </figure>
       ))}
     </div>
@@ -211,10 +212,10 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
   return (
     <>
       {entry.hasOwnTitle !== false && (onReportPage
-        ? <h1 className="text-lg font-bold text-white">{entry.title}</h1>
-        : <a href={`/community-board/report/${entry.id}`} className="block text-sm font-semibold text-white hover:text-teal-300 transition-colors">{entry.title}</a>)}
+        ? <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">{entry.title}</h1>
+        : <a href={`/community-board/report/${entry.id}`} className="block text-base font-extrabold leading-snug text-fg hover:text-primary-fg transition-colors">{entry.title}</a>)}
       {(categoryLabel || entry.series || entry.event || entry.readingMinutes) && (
-        <div className="flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
+        <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
           {categoryLabel && <Badge tone="info">{categoryLabel}</Badge>}
           {entry.series && <Badge tone="neutral"><BookOpen className="w-2.5 h-2.5" /> Reihe: {entry.series.title}</Badge>}
           {entry.event && (
@@ -226,15 +227,15 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
         </div>
       )}
       {entry.editedAt && (
-        <p className="text-[10px] text-gray-500">Korrigiert am {formatBerlinDate(entry.editedAt)}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}</p>
+        <p className="text-xs text-gray-500">Korrigiert am {formatBerlinDate(entry.editedAt)}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}</p>
       )}
       {entry.coverAsset && (
         // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-        <img src={entry.coverAsset.url} alt="" className="w-full h-auto rounded-lg" />
+        <img src={entry.coverAsset.url} alt="" className="w-full aspect-video object-cover rounded-control" />
       )}
       {!entry.coverAsset && entry.gameCover && (
         // eslint-disable-next-line @next/next/no-img-element -- Spiel-Cover (bekannte Cover-Hosts)
-        <img src={entry.gameCover.url} alt={entry.gameCover.name ? `Cover: ${entry.gameCover.name}` : ""} className="w-full h-auto rounded-lg" />
+        <img src={entry.gameCover.url} alt={entry.gameCover.name ? `Cover: ${entry.gameCover.name}` : ""} className="w-full aspect-video object-cover rounded-control" />
       )}
 
       {open && full !== null
@@ -246,17 +247,17 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
         {/* Kurze Texte stehen schon vollständig im Auszug — "weiterlesen" nur bei längeren. */}
         {(onReportPage || (entry.excerpt?.length ?? 0) >= 300) && (
           <button onClick={toggleRead} disabled={loading} aria-expanded={open}
-            className="mr-3 text-[11px] text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+            className="mr-3 text-xs text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
             {loading && <Loader2 className="w-3 h-3 animate-spin" />}
             {open ? "Einklappen" : "Ganzen Beitrag lesen"}
           </button>
         )}
-        <button onClick={copyLink} className="text-[11px] text-gray-500 hover:text-teal-300 transition-colors">Link kopieren</button>
+        <button onClick={copyLink} className="text-xs text-gray-500 hover:text-teal-300 transition-colors">Link kopieren</button>
       </div>
 
       {entry.seriesParts && entry.seriesParts.length > 1 && (
         <div className="rounded-lg bg-surface-2 p-2.5 space-y-1">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Reihe: {entry.series?.title}</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Reihe: {entry.series?.title}</p>
           <ol className="list-decimal pl-5 text-xs space-y-0.5">
             {entry.seriesParts.map(part => (
               <li key={part.id} className={part.id === entry.id ? "text-white font-medium" : "text-gray-400"}>
@@ -320,11 +321,11 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
 
   return (
     <div className="space-y-1">
-      <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}</p>
+      <p className="text-xs text-gray-500">Ergänzung von {authorLabel(c.author)}</p>
       {editing ? (
         <div className="space-y-1.5">
           <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={5000}
-            className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40 resize-y" />
+            className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-xs text-fg focus:outline-none focus:border-primary resize-y" />
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setDraft(c.bodyMarkdown); }}>Abbrechen</Button>
             <Button size="sm" loading={busy} disabled={!draft.trim()} onClick={save}>Speichern</Button>
@@ -342,7 +343,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
             <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${reportId}/contributions/${c.id}/votes`} listKey="votes" />
             {!editing && (
               <>
-                <button onClick={() => setEditing(true)} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
                 <button onClick={remove} aria-label="Ergänzung löschen" className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
               </>
             )}
@@ -385,7 +386,7 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+      <button onClick={() => setOpen(true)} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
         + Bericht ergänzen
       </button>
     );
@@ -394,7 +395,7 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
     <div className="space-y-1.5">
       <textarea ref={areaRef} value={text} onChange={e => setText(e.target.value)} rows={4} maxLength={5000} autoFocus
         placeholder="Deine Ergänzung (Markdown möglich: **fett**, - Liste, [Link](https://…))"
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-y" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-y" />
       {emojiOpen && <EmojiPanel onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
       <div className="flex items-center justify-between gap-1.5">
         <button onClick={() => setEmojiOpen(v => !v)} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={emojiOpen}
@@ -414,13 +415,13 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
   entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void; expandReport?: boolean;
 }) {
   return (
-    <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
+    <div className="rounded-card border border-line bg-surface p-4 sm:p-5 space-y-3">
       <div className="flex items-center justify-between">
         <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
           <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
           <div className="min-w-0">
-            <span className="flex items-center gap-1.5 min-w-0"><StyledUserName userId={entry.author.id} name={authorLabel(entry.author)} className="text-xs font-semibold text-white truncate" /><StyledUserTitle userId={entry.author.id} className="shrink-0 !text-[8px]" /></span>
-            <span className="text-[10px] text-gray-600">{formatBerlinDate(entry.publishedAt)}</span>
+            <span className="flex items-center gap-1.5 min-w-0"><StyledUserName userId={entry.author.id} name={authorLabel(entry.author)} className="text-sm font-bold text-fg truncate" /><StyledUserTitle userId={entry.author.id} className="shrink-0" /></span>
+            <span className="text-xs text-subtle">{formatBerlinDate(entry.publishedAt)}</span>
           </div>
         </a>
         {entry.kind === "report" && entry.adminConfirmedPosted && <Badge tone="success">Extern gepostet</Badge>}
@@ -507,7 +508,7 @@ function CommentSection({
   return (
     <div className="pt-2 border-t border-line-strong">
       <button onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white transition-colors">
+        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
         <MessageCircle className="w-3.5 h-3.5" />
         {comments ? `${comments.length} Kommentar${comments.length === 1 ? "" : "e"}` : "Kommentare"}
       </button>
@@ -522,9 +523,9 @@ function CommentSection({
                 <div className="flex items-center justify-between gap-2">
                   <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
                     <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={16} />
-                    <StyledUserName userId={c.author.id} name={authorLabel(c.author)} className="text-[11px] font-medium text-white truncate" />
+                    <StyledUserName userId={c.author.id} name={authorLabel(c.author)} className="text-xs font-medium text-white truncate" />
                   </a>
-                  <span className="text-[10px] text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
+                  <span className="text-xs text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
                 </div>
                 <p className="text-xs text-gray-300 whitespace-pre-wrap">{c.bodyMarkdown}</p>
                 <div className="flex items-center gap-2">
@@ -535,7 +536,7 @@ function CommentSection({
                     <>
                       <DisputeTrigger kind="communityBoardCommentVote" fetchUrl={`/api/community-board/comments/${c.id}/votes`} listKey="votes" />
                       <button onClick={() => remove(c.id)} title="Kommentar löschen"
-                        className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors">
+                        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-red-400 transition-colors">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </>
@@ -548,7 +549,7 @@ function CommentSection({
           <div className="flex items-center gap-2">
             <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Kommentar schreiben…"
               onKeyDown={e => { if (e.key === "Enter") submit(); }}
-              className="flex-1 min-w-0 bg-line border border-line-strong rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+              className="flex-1 min-w-0 bg-surface-2 border border-line rounded-control px-3 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
             <Button size="sm" loading={busy} disabled={!draft.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Senden</Button>
           </div>
         </div>
@@ -572,7 +573,7 @@ function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; curr
         ? <p className="text-xs text-gray-400 whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>
         : <MarkdownLite text={text} className="text-xs text-gray-400" />}
       {long && (
-        <button onClick={() => setExpanded(v => !v)} className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
+        <button onClick={() => setExpanded(v => !v)} className="text-xs text-teal-400 hover:text-teal-300 transition-colors">
           {expanded ? "Weniger anzeigen" : "Ganze Anleitung lesen"}
         </button>
       )}
@@ -593,7 +594,7 @@ function DisputeTrigger({ kind, fetchUrl, listKey }: { kind: DisputeKind; fetchU
   return (
     <>
       <button onClick={() => setOpen(true)} title="Bewertungen ansehen/anfechten"
-        className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-amber-400 transition-colors">
+        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-amber-400 transition-colors">
         <Flag className="w-3 h-3" />
       </button>
       <DisputeVotesModal open={open} onClose={() => setOpen(false)} kind={kind} fetchUrl={fetchUrl} listKey={listKey} />
@@ -669,7 +670,7 @@ function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { i
         ))}
       </div>
       <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Begründung (privat, nur Autor + Admin sehen sie)" rows={2}
-        className="w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Abbrechen</Button>
         <Button size="sm" loading={busy} disabled={!reason.trim()} onClick={submit}>Absenden</Button>

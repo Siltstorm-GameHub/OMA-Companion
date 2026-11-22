@@ -25,9 +25,9 @@ interface Stats {
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-2.5 py-2">
-      <p className="text-[10px] text-gray-500">{label}</p>
+      <p className="text-xs text-gray-500">{label}</p>
       <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-[10px] text-gray-600 truncate">{sub}</p>}
+      {sub && <p className="text-xs text-gray-600 truncate">{sub}</p>}
     </div>
   );
 }
@@ -50,7 +50,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.published} {stats.published === 1 ? "Beitrag" : "Beiträge"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -70,19 +70,19 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
             <Tile label="Meine Ergänzungen" value={String(stats.contributionsWritten)} sub={`${stats.contributionVotes} 👍 darauf`} />
           </div>
           {stats.overDailyLimit > 0 && (
-            <p className="text-[11px] text-amber-400/90">{stats.overDailyLimit} {stats.overDailyLimit === 1 ? "Beitrag lag" : "Beiträge lagen"} über dem Tageslimit und {stats.overDailyLimit === 1 ? "zählt" : "zählen"} nicht fürs Gehalt.</p>
+            <p className="text-xs text-amber-400/90">{stats.overDailyLimit} {stats.overDailyLimit === 1 ? "Beitrag lag" : "Beiträge lagen"} über dem Tageslimit und {stats.overDailyLimit === 1 ? "zählt" : "zählen"} nicht fürs Gehalt.</p>
           )}
 
           {stats.top && (
-            <p className="text-[11px] text-gray-400">
+            <p className="text-xs text-gray-400">
               Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-gray-200 hover:text-teal-300">{stats.top.title}</a> <span className="text-gray-600">({stats.top.votes} 👍)</span>
             </p>
           )}
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Daumen pro Woche</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Daumen pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-[11px] text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
@@ -99,7 +99,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {stats.categories.map(c => (
-                <span key={c.category} className="text-[10px] text-gray-400 bg-line rounded-full px-2 py-0.5">
+                <span key={c.category} className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">
                   {c.category === "ohne" ? "Ohne Kategorie" : reportCategoryLabel(c.category) ?? c.category}: {c.count}
                 </span>
               ))}
@@ -113,8 +113,8 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
 // ── Rückblick, Bildwünsche, Interviews ───────────────────────────────────────
 
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const FIELD = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
+const FIELD = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -160,7 +160,7 @@ export function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
   const open = items.filter(i => i.status === "OPEN").length;
   return (
     <Section title="Meine Bildwünsche" count={open}>
-      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine. Bildwünsche stellst du im Editor (Titelbild) bzw. bei Bildern in Werbe-Posts, Anleitungen und Ideen.</p>}
+      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine. Bildwünsche stellst du im Editor (Titelbild) bzw. bei Bildern in Werbe-Posts, Anleitungen und Ideen.</p>}
       {items.map(i => (
         <div key={i.id} className="flex items-center justify-between gap-2 text-xs">
           <span className="min-w-0 flex items-center gap-2">
@@ -232,7 +232,7 @@ function InterviewsBlock() {
           </span>
         </div>
       ))}
-      {items.length === 0 && !composing && <p className="text-[11px] text-gray-600">Noch keine Interviews. Frage jemanden aus der Community — die Antworten landen als Q&A in deinem Bericht.</p>}
+      {items.length === 0 && !composing && <p className="text-xs text-gray-600">Noch keine Interviews. Frage jemanden aus der Community — die Antworten landen als Q&A in deinem Bericht.</p>}
 
       {!composing ? (
         <Button size="sm" variant="outline" onClick={() => setComposing(true)}>Neues Interview anfragen</Button>
@@ -241,7 +241,7 @@ function InterviewsBlock() {
           {person ? (
             <p className="text-xs text-gray-200 flex items-center justify-between">
               Interview mit {person.username ?? person.name}
-              <button onClick={() => { setPerson(null); setQuery(""); }} className="text-gray-600 hover:text-red-400 text-[11px]">Ändern</button>
+              <button onClick={() => { setPerson(null); setQuery(""); }} className="text-gray-600 hover:text-red-400 text-xs">Ändern</button>
             </p>
           ) : (
             <div className="space-y-1">
@@ -259,7 +259,7 @@ function InterviewsBlock() {
                 {questions.length > 1 && <button onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))} aria-label="Frage entfernen" className="text-gray-600 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>}
               </div>
             ))}
-            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-[11px] text-gray-500 hover:text-teal-300">+ Weitere Frage</button>}
+            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-xs text-gray-500 hover:text-teal-300">+ Weitere Frage</button>}
           </div>
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setComposing(false)}>Abbrechen</Button>

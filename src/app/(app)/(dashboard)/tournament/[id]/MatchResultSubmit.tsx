@@ -144,7 +144,7 @@ export function MatchForm({
         s && (
           <p className="flex items-center gap-2 text-xs text-gray-400">
             Deine Meldung{m.isDuel && s.score1 != null && <> {s.score1} : {s.score2}</>}
-            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${STATUS[s.status]?.cls ?? ""}`}>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS[s.status]?.cls ?? ""}`}>
               {STATUS[s.status]?.label ?? s.status}
             </span>
           </p>
@@ -156,7 +156,7 @@ export function MatchForm({
             {!m.isDuel && subject && <span className="text-gray-400 font-normal"> · {uname(subject)}</span>}
           </p>
           {s && (
-            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
               {STATUS[s.status]?.label ?? s.status}
             </span>
           )}
@@ -178,7 +178,7 @@ export function MatchForm({
               className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium disabled:opacity-50">
               Seins stimmt — übernehmen
             </button>
-            <span className="text-[11px] text-amber-200/70">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
+            <span className="text-xs text-amber-200/70">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
           </div>
         </div>
       )}
@@ -195,7 +195,7 @@ export function MatchForm({
               className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium disabled:opacity-50">
               Stimmt — bestätigen
             </button>
-            <span className="text-[11px] text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Verwalter entscheidet.</span>
+            <span className="text-xs text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Verwalter entscheidet.</span>
           </div>
         </div>
       )}
@@ -364,14 +364,14 @@ function MultiForm({
   return (
     <div className="rounded-xl border border-line p-3 space-y-3">
       <p className="text-sm font-medium text-white">{m.label} · Sammelmeldung</p>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         Ein Screenshot zeigt die Ergebnisse mehrerer Spieler? Trag hier die Werte aller sichtbaren Spieler ein —
         leere Zeilen werden übersprungen. Jeder Spieler bekommt eine eigene Meldung mit diesem Nachweis.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-[10px] text-gray-500 uppercase tracking-wider">
+            <tr className="text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left py-1 pr-2 font-medium">Spieler</th>
               {statFields.map(f => <th key={f} className="text-left py-1 px-1 font-medium">{f}</th>)}
             </tr>
@@ -463,7 +463,7 @@ export default function MatchResultSubmit({
         <span className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">Ergebnis melden</span>
           {pendingCount > 0 && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-300">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-300">
               {pendingCount} in Prüfung
             </span>
           )}

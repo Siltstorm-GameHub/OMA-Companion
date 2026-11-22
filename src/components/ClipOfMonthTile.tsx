@@ -29,7 +29,7 @@ interface Props {
   nowIso: string;
 }
 
-const BTN = "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors";
+const BTN = "shrink-0 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-control px-4 text-sm font-bold transition-colors";
 
 function TwitchIcon({ className }: { className?: string }) {
   return (
@@ -42,7 +42,7 @@ function TwitchIcon({ className }: { className?: string }) {
 
 function Pill({ children }: { children: ReactNode }) {
   return (
-    <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 rounded-md bg-canvas px-2 py-1 text-[11px] font-semibold text-violet-300 shadow-card">
+    <span className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-canvas/90 px-2.5 py-1 text-xs font-bold text-violet-300 shadow-card">
       {children}
     </span>
   );
@@ -112,7 +112,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
     <>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-white leading-tight">Welcher Clip gewinnt den {active!.monthLabel}?</p>
-        <p className="truncate text-[11px] text-gray-400">{active!.nominationCount} Clips im Rennen · {daysLeftLabel(new Date(active!.votingEndsAt), now)}</p>
+        <p className="truncate text-xs text-muted">{active!.nominationCount} Clips im Rennen · {daysLeftLabel(new Date(active!.votingEndsAt), now)}</p>
       </div>
       <Link href="/clip-des-monats" className={`${BTN} bg-violet-500 text-white hover:bg-violet-400`}>Abstimmen</Link>
     </>
@@ -120,7 +120,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
     <>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-white leading-tight">{winner.clipTitle ?? "Clip des Monats"}</p>
-        <p className="truncate text-[11px] text-gray-400">
+        <p className="truncate text-xs text-muted">
           {creator}{winnerVotes != null && <> · {winnerVotes} {winnerVotes === 1 ? "Stimme" : "Stimmen"}</>}
           {winners.length > 1 && <> · Gleichstand mit {winners.length - 1}</>}
         </p>
@@ -133,7 +133,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
     <>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-white leading-tight">Noch keine Clips</p>
-        <p className="truncate text-[11px] text-gray-400">Reich deinen besten Moment ein.</p>
+        <p className="truncate text-xs text-muted">Reich deinen besten Moment ein.</p>
       </div>
       <Link href="/clip-des-monats" className={`${BTN} border border-line bg-line text-gray-300 hover:bg-line`}>Ansehen</Link>
     </>

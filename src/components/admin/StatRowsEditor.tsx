@@ -72,7 +72,7 @@ export default function StatRowsEditor({
   return (
     <div className="space-y-1.5">
       {rows.length > 0 && (
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           Feldname → Punkte pro Einheit
           {showWinnerToggle && " — 🏆 = +1 bei Event-Sieg"}
           {showMatchWinToggle && " — ⚔️ = +1 pro Match Win aus einzelnen Runden"}
@@ -149,14 +149,14 @@ export default function StatRowsEditor({
             </button>
           </div>
           {showLatestToggle && row.latest && (
-            <p className="pl-3 text-[11px] text-amber-300/80">
+            <p className="pl-3 text-xs text-amber-300/80">
               ⟳ Reihentabelle: neuester Wert statt Summe — es zählt der Wert aus dem jüngsten Event (im Event der höchste
               gemeldete), Tabellenpunkte nur einmal darauf.
             </p>
           )}
           {showLeagueOverride && isDivergent(row) && (
             <div className="flex items-center gap-2 pl-3">
-              <span className="flex-1 text-[11px] text-indigo-300/80 text-right">
+              <span className="flex-1 text-xs text-indigo-300/80 text-right">
                 Punkte in der Reihentabelle
               </span>
               <div className="w-20 shrink-0">

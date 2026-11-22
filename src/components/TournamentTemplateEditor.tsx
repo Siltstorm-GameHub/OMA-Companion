@@ -56,12 +56,12 @@ export default function TournamentTemplateEditor({
           {gs && (
             <div className="pl-6 space-y-2">
               <div className="flex flex-wrap gap-4">
-                <label className="text-[11px] text-gray-500 space-y-1">
+                <label className="text-xs text-gray-500 space-y-1">
                   <span className="block">Anzahl Gruppen</span>
                   <NumberInput min={1} max={16} value={gs.groupCount} className={numCls}
                     onChange={e => setGs({ groupCount: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
                 </label>
-                <label className="text-[11px] text-gray-500 space-y-1">
+                <label className="text-xs text-gray-500 space-y-1">
                   <span className="block">Weiter pro Gruppe</span>
                   <NumberInput min={1} max={8} value={gs.advancePerGroup} className={numCls}
                     onChange={e => setGs({ advancePerGroup: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
@@ -99,7 +99,7 @@ export default function TournamentTemplateEditor({
           <input type="checkbox" className="accent-teal-500" checked={value.checkInEnabled === true}
             onChange={e => onChange({ ...value, checkInEnabled: e.target.checked })} />
           Check-in vor Turnierstart
-          {value.checkInEnabled && <span className="text-[11px] text-gray-500">(öffnet {CHECK_IN_MINUTES} Min. vor Start)</span>}
+          {value.checkInEnabled && <span className="text-xs text-gray-500">(öffnet {CHECK_IN_MINUTES} Min. vor Start)</span>}
         </label>
       </div>
 
@@ -112,12 +112,12 @@ export default function TournamentTemplateEditor({
           </label>
           {value.matchResultPoints && (
             <div className="pl-6 flex flex-wrap gap-4">
-              <label className="text-[11px] text-gray-500 space-y-1">
+              <label className="text-xs text-gray-500 space-y-1">
                 <span className="block">Münzen je Sieg</span>
                 <NumberInput min={0} value={value.matchResultPoints.win} className={numCls}
                   onChange={e => onChange({ ...value, matchResultPoints: { ...value.matchResultPoints!, win: Math.max(0, Math.floor(Number(e.target.value) || 0)) } })} />
               </label>
-              <label className="text-[11px] text-gray-500 space-y-1">
+              <label className="text-xs text-gray-500 space-y-1">
                 <span className="block">Münzen je Unentschieden</span>
                 <NumberInput min={0} value={value.matchResultPoints.draw} className={numCls}
                   onChange={e => onChange({ ...value, matchResultPoints: { ...value.matchResultPoints!, draw: Math.max(0, Math.floor(Number(e.target.value) || 0)) } })} />

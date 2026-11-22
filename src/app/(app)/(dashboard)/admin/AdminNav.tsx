@@ -26,7 +26,7 @@ function Icon({ name, className }: { name: string; className?: string }) {
 function Count({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-[10px] font-bold text-black flex items-center justify-center tabular-nums">
+    <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-xs font-bold text-black flex items-center justify-center tabular-nums">
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -102,8 +102,8 @@ function SearchBox({ groups, counts, inputRef, onNavigate }: {
             if (e.key === "Escape") { setQ(""); (e.target as HTMLInputElement).blur(); }
           }}
           placeholder="Seite suchen" aria-label="Admin-Seite suchen"
-          className="w-full min-h-10 rounded-control bg-surface border border-line pl-8 pr-12 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
-        <kbd className="hidden lg:block absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-600">Strg K</kbd>
+          className="w-full min-h-10 rounded-control bg-surface-2 border border-line pl-8 pr-12 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
+        <kbd className="hidden lg:block absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600">Strg K</kbd>
       </div>
       {q.trim() && (
         <ul className="rounded-control border border-line bg-surface-2 p-1 space-y-0.5">
@@ -192,7 +192,7 @@ export default function AdminNav({ role, placement = "page" }: {
           className="w-full min-h-11 flex items-center gap-2.5 rounded-control border border-line bg-surface px-3 py-2.5 text-sm text-fg">
           <Icon name={active?.icon ?? "LayoutDashboard"} className="w-4 h-4 text-primary-fg" />
           <span className="flex-1 text-left truncate">{active?.label ?? "Admin"}</span>
-          {total > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-black tabular-nums">{total}</span>}
+          {total > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-black tabular-nums">{total}</span>}
           {open ? <X className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
         </button>
         {open && (

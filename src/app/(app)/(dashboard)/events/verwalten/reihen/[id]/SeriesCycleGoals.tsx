@@ -61,7 +61,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
   return (
     <div className="space-y-5">
     <div className="space-y-2">
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-gray-500">
         Jeder Zyklus übernimmt das Ziel der Reihe. Für einzelne Zyklen kannst du hier ein eigenes Ziel setzen
         (z. B. diese Woche „Ø mind. 2 Kills“, nächste Woche „5.000 Tore zusammen“) oder es abschalten.
       </p>
@@ -86,7 +86,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
                       {" · "}{formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric" })}
                       {ev.endAt && <>–{formatBerlinDate(ev.endAt, { day: "numeric", month: "numeric" })}</>}
                     </span>
-                    {running && <span className="ml-2 text-[10px] text-teal-300 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5">läuft</span>}
+                    {running && <span className="ml-2 text-xs text-teal-300 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5">läuft</span>}
                   </p>
                   <p className="text-xs truncate">
                     <span className={resolved.goal ? "text-teal-300/90" : "text-gray-600"}>
@@ -101,7 +101,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
                     )}
                   </p>
                 </div>
-                <Link href={`/tournament/${ev.id}`} className="text-[11px] text-gray-500 hover:text-white shrink-0" title="Turnierseite öffnen">
+                <Link href={`/tournament/${ev.id}`} className="text-xs text-gray-500 hover:text-white shrink-0" title="Turnierseite öffnen">
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
                 {!disabled && !ended && (
@@ -122,7 +122,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
         })}
       </div>
       {past.length > 0 && (
-        <button type="button" onClick={() => setShowPast(v => !v)} className="text-[11px] text-gray-500 hover:text-gray-300">
+        <button type="button" onClick={() => setShowPast(v => !v)} className="text-xs text-gray-500 hover:text-gray-300">
           {showPast ? "Vergangene Zyklen ausblenden" : `${past.length} vergangene Zyklen anzeigen`}
         </button>
       )}

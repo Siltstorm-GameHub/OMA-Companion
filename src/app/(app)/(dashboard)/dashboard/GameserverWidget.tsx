@@ -29,10 +29,10 @@ function ServerRow({ server, isLast }: { server: Server; isLast: boolean }) {
           <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
             {server.name}
           </p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{server.game}</p>
+          <p className="text-xs text-gray-600 mt-0.5">{server.game}</p>
         </div>
         <span
-          className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0"
+          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border shrink-0"
           style={{
             color: server.online ? PRESENCE_ONLINE : PRESENCE_OFFLINE,
             background: server.online ? "rgba(20,184,166,0.1)" : "rgba(82,82,91,0.1)",

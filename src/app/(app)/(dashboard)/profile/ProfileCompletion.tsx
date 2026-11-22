@@ -102,7 +102,7 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
                   {item.label}
                 </span>
                 {!item.done && (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 shrink-0">
+                  <span className="flex items-center gap-1 text-xs font-semibold text-amber-400 shrink-0">
                     <CoinIcon size={11} /> +{rewardPerItem}
                   </span>
                 )}

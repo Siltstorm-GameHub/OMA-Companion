@@ -24,7 +24,7 @@ export default function SeriesCompleteWinnerPreview({ ctx }: { ctx: SeriesComple
                         <div key={uid} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
                           <Avatar u={u} size={5} />
                           <span className="text-sm text-amber-200 font-semibold">{userName(u)}</span>
-                          <span className="text-[10px] text-amber-400/70 tabular-nums">
+                          <span className="text-xs text-amber-400/70 tabular-nums">
                             {formatDecimal(userStats[uid]?.totalPoints ?? 0)} Pkt.
                           </span>
                         </div>

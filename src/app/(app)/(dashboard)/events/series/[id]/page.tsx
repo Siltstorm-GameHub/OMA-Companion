@@ -70,9 +70,9 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
                 {s.name}
-                {s.id === currentId && <span className="ml-2 text-[10px] text-gray-600">(diese Saison)</span>}
+                {s.id === currentId && <span className="ml-2 text-xs text-gray-600">(diese Saison)</span>}
               </p>
-              <p className="text-[10px] text-gray-600 mt-0.5">
+              <p className="text-xs text-gray-600 mt-0.5">
                 {s.firstEventAt
                   ? new Date(s.firstEventAt).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
                   : "–"}
@@ -85,7 +85,7 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
               {s.podium.length > 0 && (
                 <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
                   {s.podium.map(({ place, user }) => (
-                    <span key={user.id} className={`flex items-center gap-1 text-[11px] ${place === 1 ? "text-amber-300 font-semibold" : "text-gray-400"}`}>
+                    <span key={user.id} className={`flex items-center gap-1 text-xs ${place === 1 ? "text-amber-300 font-semibold" : "text-gray-400"}`}>
                       {place === 1 && <Crown className="w-3 h-3 text-amber-400" />}
                       {user.image
                         ? <img src={user.image} alt="" className={`w-4 h-4 rounded-full object-cover ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />
@@ -97,7 +97,7 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
+              <span className="text-xs px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
                 Saison {s.seasonNumber ?? "–"}
               </span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
@@ -670,7 +670,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const seasonTable = (
     <div className="space-y-3">
       {hasDelta && gamePhaseCompleteEvents[0] && (
-        <p className="flex items-center gap-1 text-[11px] text-emerald-500/80">
+        <p className="flex items-center gap-1 text-xs text-emerald-500/80">
           <TrendingUp className="w-3 h-3" /> Veränderung nach {gamePhaseCompleteEvents[0].title}
         </p>
       )}
@@ -721,7 +721,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       label: <span className="inline-flex items-center gap-1"><Crown className="w-3 h-3" /> All-Time</span>,
       panel: (
         <div id="all-time" className="space-y-2 scroll-mt-24">
-          <p className="text-[11px] text-gray-500">{groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</p>
+          <p className="text-xs text-gray-500">{groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</p>
           <FullStandingsToggle
             rows={allTimeStandings}
             users={allTimeUsers}
@@ -750,7 +750,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.05] px-3 py-2.5 space-y-2">
       {finalTop.length > 0 && (
         <div>
-          <p className="text-[11px] font-semibold text-amber-300">Belohnung der Eventreihe <span className="font-normal text-gray-500">· zum Abschluss</span></p>
+          <p className="text-xs font-semibold text-amber-300">Belohnung der Eventreihe <span className="font-normal text-gray-500">· zum Abschluss</span></p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {finalTop.map(r => (
               <span key={r.place} className="flex items-center gap-1 text-sm font-semibold text-white tabular-nums">
@@ -823,29 +823,29 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             brandBadge
             omaOriginal={seriesIsOriginal}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d12]/95 via-[#0b0d12]/40 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/50 to-transparent pointer-events-none" />
           <div className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full" style={{ background: seriesColor }} />
           <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}>
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest" style={{ color: seriesColor }}>
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest" style={{ color: seriesColor }}>
               <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
               Eventreihe{series.seasonNumber ? ` · Saison ${series.seasonNumber}` : ""}
             </p>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight !text-white leading-tight mt-0.5">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight !text-fg leading-tight mt-1">
               {seriesIsOriginal && <OmaTitlePrefix title={series.name} />}
               {series.name}
             </h1>
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {series.fixedGame && (
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200">
+                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-canvas/80 text-fg">
                   <Gamepad2 className="w-3 h-3" /> {series.fixedGame}
                 </span>
               )}
               {series.fixedFormat && (
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200">
+                <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-canvas/80 text-fg">
                   <Swords className="w-3 h-3" /> {FORMAT_LABELS[series.fixedFormat] ?? series.fixedFormat}
                 </span>
               )}
-              <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-black/50 text-gray-200 tabular-nums">
+              <span className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-canvas/80 text-fg tabular-nums">
                 <Users className="w-3 h-3" /> {participantCount} {participantCount === 1 ? "Teilnehmer" : "Teilnehmende"}
               </span>
             </div>
@@ -855,7 +855,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         <div className="flex flex-col gap-2 p-4 sm:p-5 border-t lg:border-t-0 lg:border-l border-line">
           {isArchived ? (
             <>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-400">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
                 <Archive className="w-3.5 h-3.5" /> Saison abgeschlossen
                 {series.archivedAt && <span className="normal-case tracking-normal font-normal text-amber-400/60">· {formatBerlinDate(series.archivedAt, { day: "2-digit", month: "long", year: "numeric" })}</span>}
               </p>
@@ -875,7 +875,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             </>
           ) : nextCard && nextSource ? (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 {nextCard.phase.phase === "live" || nextCard.phase.phase === "period" ? "Läuft gerade" : "Nächster Termin"}
               </p>
               <Link href={nextCard.href} className="text-lg font-bold text-white leading-snug hover:underline line-clamp-2">
@@ -902,7 +902,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             </>
           ) : (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Nächster Termin</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Nächster Termin</p>
               <p className="text-sm text-gray-400">Gerade ist kein Termin geplant. Schau bald wieder vorbei.</p>
               {rewardsBlock && <div className="mt-auto pt-2">{rewardsBlock}</div>}
             </>
@@ -920,8 +920,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           {activePollGroups.map(group => (
             <div key={group.eventId} className="glass rounded-2xl p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] text-gray-500 uppercase tracking-widest">{group.eventTitle}</span>
-                <Link href={`/tournament/${group.eventId}`} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">
+                <span className="text-xs text-gray-500 uppercase tracking-widest">{group.eventTitle}</span>
+                <Link href={`/tournament/${group.eventId}`} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">
                   Zum Event →
                 </Link>
               </div>
@@ -971,7 +971,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           </h2>
           {punkteItems.length > 0 && (
             <div className="glass rounded-2xl p-4">
-              <p className="text-[11px] font-semibold text-gray-500 mb-2.5">Punktesystem</p>
+              <p className="text-xs font-semibold text-gray-500 mb-2.5">Punktesystem</p>
               <div className="flex flex-wrap gap-2">
                 {punkteItems.map((p, i) => (
                   <span key={i} className="flex items-center gap-2 glass-heavy rounded-card px-2.5 py-1.5" title={p.who}>

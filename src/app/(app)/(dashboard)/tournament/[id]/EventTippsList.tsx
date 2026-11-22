@@ -47,7 +47,7 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
               <span className="text-xs text-white font-medium truncate">{uname(t.predictedUser)}</span>
             </Link>
             {/* Erstattet (kein Sieger / Spieler hat nicht mitgespielt) */}
-            {t.resolved && t.correct === null && <span className="text-[10px] text-gray-500 shrink-0">zurück</span>}
+            {t.resolved && t.correct === null && <span className="text-xs text-gray-500 shrink-0">zurück</span>}
             {t.resolved && t.correct !== null && (
               t.correct ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -59,7 +59,7 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
         ))}
       </div>
 
-      <p className="text-[10px] text-gray-600 leading-relaxed">
+      <p className="text-xs text-gray-600 leading-relaxed">
         Die Einsätze der anderen Tipper bleiben geheim — nur wer auf wen tippt ist sichtbar.
       </p>
     </div>

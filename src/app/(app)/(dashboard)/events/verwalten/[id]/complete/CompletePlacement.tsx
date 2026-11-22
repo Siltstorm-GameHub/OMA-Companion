@@ -16,7 +16,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-platzierung" aria-label="Platzierung" className="space-y-3 scroll-mt-20">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-          <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-[11px] flex items-center justify-center">{stepNo("Platzierung")}</span>
+          <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Platzierung")}</span>
           Platzierung festlegen
         </h2>
 
@@ -27,9 +27,9 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
               <Trophy className="w-4 h-4 text-amber-400" />
               <span className="text-sm font-semibold text-white">Gewinner-Stat</span>
               {winnerLocked ? (
-                <span className="flex items-center gap-1 text-[11px] text-gray-500"><Lock className="w-3 h-3" /> steht fest</span>
+                <span className="flex items-center gap-1 text-xs text-gray-500"><Lock className="w-3 h-3" /> steht fest</span>
               ) : (
-                <span className="text-[11px] text-gray-500">{winnerSourceText}</span>
+                <span className="text-xs text-gray-500">{winnerSourceText}</span>
               )}
             </div>
 
@@ -44,11 +44,11 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                       if (!rankingManuallyEdited) autoSort(winnerStatField, v);
                     }}
                   />
-                  <p className="text-[10px] text-gray-600 mt-1">Bewertet wird der Durchschnitt pro Runde über alle Stats.</p>
+                  <p className="text-xs text-gray-600 mt-1">Bewertet wird der Durchschnitt pro Runde über alle Stats.</p>
                 </div>
               ) : (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">Wer am meisten hiervon hat, gewinnt</label>
+                  <label className="text-xs text-gray-500 block mb-1">Wer am meisten hiervon hat, gewinnt</label>
                   <select
                     value={winnerStatField}
                     disabled={winnerLocked}
@@ -65,7 +65,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
               )}
               {seriesStatFields.length > 0 && (
                 <div>
-                  <label className="text-[11px] text-gray-500 block mb-1">Sieg in der Reihen-Tabelle zählen als</label>
+                  <label className="text-xs text-gray-500 block mb-1">Sieg in der Reihen-Tabelle zählen als</label>
                   <select
                     value={seriesWinnerTargetField}
                     disabled={winnerLocked}
@@ -129,19 +129,19 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold text-blue-300">Reihenfolge</span>
               {!rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
-                <span className="text-[10px] text-gray-600">
+                <span className="text-xs text-gray-600">
                   — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : statDisplayName(winnerStatField)}“
                 </span>
               )}
               {rankingManuallyEdited && (
-                <span className="flex items-center gap-1 text-[10px] text-amber-400">
+                <span className="flex items-center gap-1 text-xs text-amber-400">
                   <AlertTriangle className="w-3 h-3" /> manuell geändert
                 </span>
               )}
               {rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
                 <button
                   onClick={() => { autoSort(); setRankingDirty(true); }}
-                  className="ml-auto flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors"
+                  className="ml-auto flex items-center gap-1 text-xs text-blue-400/60 hover:text-blue-300 transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" /> Auto-Sortierung zurücksetzen
                 </button>
@@ -149,14 +149,14 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
             </div>
 
             {tiedAbove.size > 0 && (
-              <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
+              <p className="text-xs text-blue-400/60 flex items-center gap-1">
                 <Equal className="w-3 h-3" />
                 {tiedAbove.size} Gleichstand{tiedAbove.size > 1 ? "s" : ""} – beide erhalten dieselbe Platzierung
               </p>
             )}
 
             {seriesId && (
-              <p className="text-[10px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 Fließt in die Tabelle der Eventreihe ein. Die großen Platzierungs-Belohnungen der Reihe gibt es erst
                 zum Abschluss der ganzen Reihe, hier nur den Bonus je Termin (falls eingestellt).
               </p>
@@ -235,24 +235,24 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                         {!isExcluded && dominionCfg?.enabled && (currentDominionStreaks[uid] ?? 0) > 0 && (
                           <span
                             title={`Dominion-Streak: ${currentDominionStreaks[uid]}x in Folge „${dominionTriggerLabel}" — noch ${Math.max(dominionCfg.threshold - currentDominionStreaks[uid], 0)}x bis zum Bonus`}
-                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[10px] font-semibold text-orange-400 shrink-0"
+                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-xs font-semibold text-orange-400 shrink-0"
                           >
                             <Flame className="w-2.5 h-2.5" /> {currentDominionStreaks[uid]}
                           </span>
                         )}
                         {isExcluded && (
-                          <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>
+                          <span className="text-xs text-red-400 shrink-0">Disqualifiziert</span>
                         )}
                         {isAbsent && !isExcluded && (
-                          <span className="text-[10px] text-gray-500 shrink-0">nicht da</span>
+                          <span className="text-xs text-gray-500 shrink-0">nicht da</span>
                         )}
                         {isAvgFormat && userAvgScore[uid] != null && (
-                          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
+                          <span className="text-xs text-gray-500 tabular-nums shrink-0">
                             Ø {formatFixed(userAvgScore[uid], 2)}
                           </span>
                         )}
                         {!isAvgFormat && winnerStatField && (
-                          <span className="text-[10px] text-gray-400 tabular-nums shrink-0">
+                          <span className="text-xs text-gray-400 tabular-nums shrink-0">
                             {formatDecimal(userStats[uid]?.[winnerStatField] ?? 0)} {statDisplayName(winnerStatField)}
                             {winnerCheck.compareField && (
                               <span className="text-gray-600"> · {formatDecimal(userStats[uid]?.[winnerCheck.compareField] ?? 0)} {statDisplayName(winnerCheck.compareField)}</span>
@@ -261,17 +261,17 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                         )}
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
                           {!isExcluded && !isAbsent && effectiveParticipationCoins > 0 && (
-                            <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
+                            <span className="text-xs text-amber-400 tabular-nums leading-tight">
                               +{(reward?.coins ?? 0) + effectiveParticipationCoins} <CoinIcon size={11} />
                             </span>
                           )}
                           {!isExcluded && reward && reward.rankPoints > 0 && (
-                            <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
+                            <span className="text-xs text-teal-400 tabular-nums leading-tight">
                               +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}
                           {!isExcluded && reward?.tablePoints ? (
-                            <span className="text-[10px] text-indigo-300 tabular-nums leading-tight" title="Tabellenpunkte für die Reihentabelle">
+                            <span className="text-xs text-indigo-300 tabular-nums leading-tight" title="Tabellenpunkte für die Reihentabelle">
                               +{reward.tablePoints} Tab.
                             </span>
                           ) : null}
@@ -306,7 +306,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
 
             {/* Ranking note */}
             <div>
-                <label className="text-[11px] text-gray-500 block mb-1">
+                <label className="text-xs text-gray-500 block mb-1">
                   Begründung / Notiz (optional)
                 </label>
                 <textarea
@@ -317,7 +317,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                   className={`${inputCls} resize-none ${rankingManuallyEdited && rankingNote ? "border-amber-600/50" : ""}`}
                 />
                 {(rankingManuallyEdited || excludedUsers.size > 0) && !rankingNote && (
-                  <p className="text-[10px] text-amber-500/70 mt-1">
+                  <p className="text-xs text-amber-500/70 mt-1">
                     Empfohlen: Begründung für manuelle Änderung{excludedUsers.size > 0 ? " / Disqualifikation" : ""} eintragen.
                   </p>
                 )}

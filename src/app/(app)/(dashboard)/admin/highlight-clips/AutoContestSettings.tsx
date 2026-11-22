@@ -64,13 +64,13 @@ export default function AutoContestSettings({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && dirty && save()}
-            className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-purple-500/40"
+            className="w-28 rounded-lg px-2 py-1.5 text-sm text-white bg-line border border-line-strong outline-none focus:border-primary"
           />
         </div>
         <button
           onClick={save}
           disabled={!dirty || saving}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary hover:bg-primary-hover text-primary-ink disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           Speichern

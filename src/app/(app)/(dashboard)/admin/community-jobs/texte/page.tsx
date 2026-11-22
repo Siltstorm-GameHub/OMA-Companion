@@ -9,7 +9,7 @@ export default async function TextsPage() {
   return (
     <div className="space-y-4 max-w-4xl">
       <div>
-        <h1 className="text-lg font-bold text-white">Community-Jobs — Job-Texte</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Community-Jobs — Job-Texte</h1>
         <p className="text-xs text-gray-500 mt-0.5">Beschreibung (Job-Übersicht) und Büro-Anleitung („So funktioniert dieser Job“) je Job — ohne Deploy änderbar. Leer lassen = Standardtext.</p>
       </div>
       <AdminJobsNav />

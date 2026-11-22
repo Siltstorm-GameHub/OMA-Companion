@@ -58,13 +58,13 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm text-gray-200 truncate">{postDisplayTitle({ ...p, mediaCount: p.media.length })}</span>
-                    <span className="block text-[11px] text-gray-500 truncate">
+                    <span className="block text-xs text-gray-500 truncate">
                       {p.author.username ?? p.author.name ?? "?"}
                       {images.length > 0 ? ` · ${images.length} ${images.length === 1 ? "Bild" : "Bilder"}` : ""}
                       {clips > 0 ? ` · ${clips} ${clips === 1 ? "Clip" : "Clips"}` : ""}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[11px] text-gray-400 tabular-nums">{p._count.votes} 👍</span>
+                  <span className="shrink-0 text-xs text-gray-400 tabular-nums">{p._count.votes} 👍</span>
                 </Link>
               </li>
             );

@@ -39,7 +39,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
               filter === f
                 ? f === "rank"
                   ? "text-teal-300 bg-teal-500/15 border-teal-500/30"
@@ -54,7 +54,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
             {f === "rank"  && <><RankPointsIcon size={10} /> Rang-Punkte</>}
           </button>
         ))}
-        <span className="ml-auto text-[10px] text-gray-600">{filtered.length} Einträge</span>
+        <span className="ml-auto text-xs text-gray-600">{filtered.length} Einträge</span>
       </div>
 
       <div className="glass card-shine rounded-2xl">
@@ -75,18 +75,18 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {type === "coins" ? (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                    <span className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded border text-amber-400 bg-amber-500/10 border-amber-500/20">
                       <CoinIcon size={10} /> Münzen
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
+                    <span className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
                       <RankPointsIcon size={10} /> Rang-Punkte
                     </span>
                   )}
                   <span className={`text-sm font-bold tabular-nums w-14 text-right ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
                     {isPositive ? "+" : ""}{tx.amount}
                   </span>
-                  <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 w-16 text-right" />
+                  <RelativeTime date={tx.createdAt} className="text-xs text-gray-600 w-16 text-right" />
                 </div>
               </div>
             );

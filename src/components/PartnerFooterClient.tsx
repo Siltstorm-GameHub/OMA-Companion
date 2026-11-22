@@ -19,7 +19,7 @@ export default function PartnerFooterClient({ partners }: { partners: Partner[] 
   return (
     <footer className="relative z-10 px-4 sm:px-6 py-4 mt-4 mb-2">
       <div className="max-w-7xl mx-auto flex items-center gap-4 flex-wrap">
-        <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest flex-shrink-0">
+        <span className="text-xs font-semibold text-gray-600 uppercase tracking-widest flex-shrink-0">
           Partner
         </span>
         <div className="flex items-center gap-3 flex-wrap">

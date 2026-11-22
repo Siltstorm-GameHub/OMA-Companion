@@ -48,7 +48,7 @@ export default function OmaOriginalToggle({
             <span className="font-semibold tracking-[0.12em] text-teal-300">OMA</span>{" "}
             <span className="font-semibold uppercase tracking-[0.12em]">Original</span>
           </p>
-          <p className="text-[11px] text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5">
             {blocksGame
               ? "OMA Blocks ist das eigene Spiel der Old Masters Allies, deshalb ist das immer ein OMA Original."
               : inheritedFromSeries

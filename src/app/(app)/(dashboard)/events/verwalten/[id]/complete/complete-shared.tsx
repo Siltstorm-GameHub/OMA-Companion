@@ -107,7 +107,7 @@ export function Avatar({ u, size = 6 }: { u: User; size?: number }) {
   const cls = `w-${size} h-${size} rounded-full shrink-0`;
   if (u.image) return <img src={u.image} alt="" className={`${cls} object-cover`} />;
   return (
-    <div className={`${cls} bg-gray-700 flex items-center justify-center text-[10px] font-semibold text-gray-400`}>
+    <div className={`${cls} bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400`}>
       {userName(u)[0]?.toUpperCase()}
     </div>
   );

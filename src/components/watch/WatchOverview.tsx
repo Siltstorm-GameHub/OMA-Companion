@@ -54,7 +54,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
                     }`}
                   >
                     <MemberLine m={m} />
-                    {m.title && <span className="block text-[11px] text-gray-500 truncate mt-0.5">{m.title}</span>}
+                    {m.title && <span className="block text-xs text-gray-500 truncate mt-0.5">{m.title}</span>}
                   </button>
                 );
               })}

@@ -53,7 +53,7 @@ export default function StepCategory({ w }: { w: EventWizard }) {
               }`}>
               <AppIcon kind="category" name={cat.value} size={28} className="text-2xl" />
               <span className={`text-sm font-semibold ${category === cat.value ? cat.color : "text-gray-300"}`}>{cat.label}</span>
-              <span className="text-[11px] leading-snug text-gray-500">{cat.desc}</span>
+              <span className="text-xs leading-snug text-gray-500">{cat.desc}</span>
             </button>
           ))}
         </div>

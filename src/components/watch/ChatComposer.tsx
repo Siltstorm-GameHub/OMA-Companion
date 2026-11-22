@@ -93,7 +93,7 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
               key={c.login}
               onClick={() => setPicked(c.login)}
               aria-pressed={target === c.login}
-              className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-colors ${
+              className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border transition-colors ${
                 target === c.login ? "border-white/30 text-white" : "border-line text-gray-500 hover:text-gray-300"
               }`}
               style={target === c.login ? { background: `${c.color}33` } : undefined}
@@ -120,8 +120,8 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </form>
-      {error && <p className="text-[11px] text-rose-300">{error}</p>}
-      <p className="text-[11px] text-gray-500">
+      {error && <p className="text-xs text-rose-300">{error}</p>}
+      <p className="text-xs text-gray-500">
         Angemeldet als <span className="text-[#c4a3ff]">{me.displayName}</span> ·{" "}
         <button onClick={logout} className="hover:text-gray-300 underline-offset-2 hover:underline">Abmelden</button>
       </p>

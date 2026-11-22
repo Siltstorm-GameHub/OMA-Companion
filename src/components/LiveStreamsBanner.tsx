@@ -156,7 +156,7 @@ export default function LiveStreamsBanner({
                     {kindStyle.label}
                   </span>
                   {/* Viewer count */}
-                  <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 text-[10px] text-white font-medium px-1.5 py-0.5 rounded" style={{ background: "rgba(0,0,0,0.6)" }}>
+                  <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 text-xs text-white font-medium px-1.5 py-0.5 rounded" style={{ background: "rgba(0,0,0,0.6)" }}>
                     <Eye className="w-2.5 h-2.5" />
                     {s.viewer_count.toLocaleString("de-DE")}
                   </span>
@@ -180,9 +180,9 @@ export default function LiveStreamsBanner({
                     />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold text-white truncate">{s.name}</p>
-                    <p className="text-[10px] text-gray-400 truncate leading-tight">{s.title}</p>
-                    <p className="text-[10px] text-gray-600 truncate">{s.game_name}</p>
+                    <p className="text-xs font-semibold text-white truncate">{s.name}</p>
+                    <p className="text-xs text-gray-400 truncate leading-tight">{s.title}</p>
+                    <p className="text-xs text-gray-600 truncate">{s.game_name}</p>
                   </div>
                   <a
                     href={`https://twitch.tv/${s.user_login}`}

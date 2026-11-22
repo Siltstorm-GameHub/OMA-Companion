@@ -74,7 +74,7 @@ function CapacityBar({ occupied, maxSlots, light, isOffline }: { occupied: numbe
     <div className="flex flex-col items-end gap-1 shrink-0 w-24" style={{ opacity: isOffline ? 0.5 : 1 }}>
       <div className="flex items-baseline gap-1">
         <span className="text-xs font-semibold text-white tabular-nums">{occupied}</span>
-        <span className="text-[10px] text-gray-500 tabular-nums">/ {maxSlots} Plätze</span>
+        <span className="text-xs text-gray-500 tabular-nums">/ {maxSlots} Plätze</span>
       </div>
       <div className="w-full h-1.5 rounded-full bg-line overflow-hidden">
         <div
@@ -82,7 +82,7 @@ function CapacityBar({ occupied, maxSlots, light, isOffline }: { occupied: numbe
           style={{ width: `${percent}%`, background: isOffline ? "#71717a" : LIGHT_COLOR[light] }}
         />
       </div>
-      <span className="text-[10px] font-medium" style={{ color: isOffline ? "#71717a" : LIGHT_COLOR[light] }}>
+      <span className="text-xs font-medium" style={{ color: isOffline ? "#71717a" : LIGHT_COLOR[light] }}>
         {isOffline ? "Zuletzt bekannt" : LIGHT_LABEL[light]}
       </span>
     </div>

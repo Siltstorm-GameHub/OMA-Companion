@@ -13,13 +13,13 @@ export default function SeriesCompletePlayedOpen({ ctx }: { ctx: SeriesComplete 
                   {playedOpenEvents.length === 1 ? "1 gespielter Termin ist noch nicht abgeschlossen" : `${playedOpenEvents.length} gespielte Termine sind noch nicht abgeschlossen`}
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-xs text-gray-400">
                 Ihre Punkte fehlen sonst in der Endtabelle. Schließ sie zuerst ab, danach diese Seite neu laden. Sie bleiben in
                 jedem Fall in dieser Saison und werden weder verschoben noch gelöscht.
               </p>
               <ul className="space-y-1">
                 {playedOpenEvents.map(ev => (
-                  <li key={ev.id} className="text-[11px] text-gray-300 flex items-center gap-2">
+                  <li key={ev.id} className="text-xs text-gray-300 flex items-center gap-2">
                     <span className="truncate flex-1">{ev.title}</span>
                     <span className="text-gray-500 shrink-0">
                       {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}

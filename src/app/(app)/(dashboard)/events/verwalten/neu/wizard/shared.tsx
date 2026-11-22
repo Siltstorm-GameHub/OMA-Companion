@@ -171,7 +171,7 @@ export function LimitHint({ value, max }: { value: number; max: number | null | 
   if (max == null) return null;
   const over = value > max;
   return (
-    <p className={`mt-1 text-[10px] ${over ? "text-amber-300" : "text-gray-500"}`}>
+    <p className={`mt-1 text-xs ${over ? "text-amber-300" : "text-gray-500"}`}>
       {over ? `Höchstens ${max}, wird beim Speichern auf ${max} gekürzt` : `max. ${max}`}
     </p>
   );

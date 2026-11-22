@@ -1,50 +1,31 @@
-﻿import { SkeletonHero, SkeletonStatCards, SkeletonList } from "@/components/Skeleton";
 import { Skeleton } from "@/components/Skeleton";
 
+/** Platzhalter im Aufbau der Übersicht: Begrüßung · Aufgaben · Bühne + Seitenspalte · kommende Events */
 export default function DashboardLoading() {
   return (
-    <div className="animate-fade-in">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden border-b border-line px-5 pt-8 pb-6">
-        <SkeletonHero />
+    <div className="px-4 sm:px-6 pb-6 max-w-7xl mx-auto space-y-6" aria-busy="true" aria-label="Übersicht lädt">
+      <Skeleton className="h-9 w-56" />
+      <div className="flex gap-2.5 overflow-hidden">
+        {[0, 1, 2].map(i => <Skeleton key={i} className="h-16 w-64 shrink-0 rounded-card lg:flex-1" />)}
       </div>
-
-      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-6">
-        {/* Stats */}
-        <SkeletonStatCards count={4} />
-
-        {/* Quick Actions */}
-        <div>
-          <Skeleton className="h-3 w-24 mb-3" />
-          <div className="flex gap-2.5 overflow-hidden">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="w-[72px] h-[88px] rounded-2xl shrink-0" />
-            ))}
-          </div>
-        </div>
-
-        {/* Events + Top Players */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-          <div className="lg:col-span-3 space-y-3">
-            <Skeleton className="h-4 w-32" />
-            <SkeletonList rows={4} />
-          </div>
-          <div className="lg:col-span-2 space-y-3">
-            <Skeleton className="h-4 w-24" />
-            <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="w-6 h-4 rounded" />
-                  <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-24" />
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                  <Skeleton className="h-4 w-14" />
-                </div>
-              ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="rounded-card border border-line bg-surface overflow-hidden lg:flex">
+            <Skeleton className="aspect-video lg:aspect-auto lg:min-h-[19rem] lg:w-1/2 rounded-none" />
+            <div className="flex-1 p-5 space-y-3">
+              <Skeleton className="h-7 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-10 w-full rounded-control" />
+              <Skeleton className="h-10 w-full rounded-control" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[0, 1].map(i => <Skeleton key={i} className="h-48 rounded-card" />)}
+          </div>
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-40 rounded-card" />
+          <Skeleton className="h-72 rounded-card" />
         </div>
       </div>
     </div>

@@ -27,8 +27,8 @@ const PRESENT_ON = "bg-emerald-500/20 text-emerald-300";
 const PRESENT_OFF = "text-gray-600 hover:text-emerald-300";
 const ABSENT_ON = "bg-red-500/20 text-red-300";
 const ABSENT_OFF = "text-gray-600 hover:text-red-300";
-const LABEL = "text-[10px] font-semibold text-gray-500 uppercase tracking-widest";
-const INPUT = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
+const INPUT = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 
 function nameOf(u: { username: string | null; name: string | null }): string {
   return u.username ?? u.name ?? "?";
@@ -92,7 +92,7 @@ export function CoachAvailability({ initialUntil }: { initialUntil?: string | nu
           <Button size="sm" loading={busy} onClick={() => set(minutes)}>Jetzt verfügbar</Button>
         </div>
       )}
-      {!active && <p className="text-[10px] text-gray-600">Andere sehen dich im Community-Board als „verfügbar“ und können dich direkt ansprechen.</p>}
+      {!active && <p className="text-xs text-gray-600">Andere sehen dich im Community-Board als „verfügbar“ und können dich direkt ansprechen.</p>}
     </div>
   );
 }
@@ -124,7 +124,7 @@ export function CoachStatsBlock() {
           {goalReached && <Check className="w-3.5 h-3.5" />}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -134,7 +134,7 @@ export function CoachStatsBlock() {
           <div className="space-y-1.5">
             <p className={LABEL}>Ø Bewertung pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-[11px] text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
@@ -151,9 +151,9 @@ export function CoachStatsBlock() {
 
           <div className="space-y-1">
             <p className={LABEL}>Letzte Termine</p>
-            {stats.sessions.length === 0 && <p className="text-[11px] text-gray-600">Noch keine vergangenen Termine.</p>}
+            {stats.sessions.length === 0 && <p className="text-xs text-gray-600">Noch keine vergangenen Termine.</p>}
             {stats.sessions.map(s => (
-              <div key={s.id} className="flex items-center justify-between gap-2 text-[11px]">
+              <div key={s.id} className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-gray-300 truncate">{s.title} <span className="text-gray-600">· {formatBerlinDate(s.startAt)}</span></span>
                 <span className="text-gray-500 shrink-0">
                   {s.unmarked > 0 ? <span className="text-amber-400">{s.unmarked} offen · </span> : null}
@@ -261,7 +261,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
                     rows={3} maxLength={1500} placeholder="Zusammenfassung/Tipps für die Teilnehmer (wird als Benachrichtigung gesendet)"
                     className={`w-full resize-none ${INPUT}`} />
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-gray-600">{s.summary ? "Bereits gesendet — erneutes Senden benachrichtigt nochmal." : "Noch nicht gesendet."}</span>
+                    <span className="text-xs text-gray-600">{s.summary ? "Bereits gesendet — erneutes Senden benachrichtigt nochmal." : "Noch nicht gesendet."}</span>
                     <Button size="sm" variant="outline" loading={sending === s.id} disabled={!(summaries[s.id] ?? s.summary ?? "").trim()} onClick={() => sendSummary(s.id)}>Senden</Button>
                   </div>
                 </div>
@@ -342,7 +342,7 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
   return (
     <div className="space-y-1.5">
       <p className={LABEL}>Meine Mentees ({items.length})</p>
-      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch niemand — füge Spieler hinzu, die du persönlich begleitest. Die Liste ist nur für dich sichtbar.</p>}
+      {items.length === 0 && <p className="text-xs text-gray-600">Noch niemand — füge Spieler hinzu, die du persönlich begleitest. Die Liste ist nur für dich sichtbar.</p>}
       {items.map(m => (
         <div key={m.id} className="rounded-lg bg-surface-2 px-2.5 py-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
@@ -417,7 +417,7 @@ export function CoachHelpInbox() {
     return (
       <div className="space-y-1">
         <p className={LABEL}>Hilfe-Anfragen</p>
-        <p className="text-[11px] text-gray-600">Noch keine Anfragen. Spieler können dich im Community-Board jederzeit um Hilfe bitten — auch wenn du nicht als „verfügbar“ markiert bist.</p>
+        <p className="text-xs text-gray-600">Noch keine Anfragen. Spieler können dich im Community-Board jederzeit um Hilfe bitten — auch wenn du nicht als „verfügbar“ markiert bist.</p>
       </div>
     );
   }
@@ -426,7 +426,7 @@ export function CoachHelpInbox() {
       <p className={LABEL}>Hilfe-Anfragen {open.length > 0 && <span className="ml-1 text-amber-400 normal-case tracking-normal">({open.length} offen)</span>}</p>
       {open.map(r => (
         <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 space-y-1.5">
-          <div className="flex items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center justify-between gap-2 text-xs">
             <span className="text-gray-200 font-medium">{nameOf(r.requester)}</span>
             <span className="text-gray-600">{formatBerlinDateTime(r.createdAt, { dateStyle: "short", timeStyle: "short" })}</span>
           </div>
@@ -440,7 +440,7 @@ export function CoachHelpInbox() {
         </div>
       ))}
       {answered.length > 0 && (
-        <p className="text-[10px] text-gray-600">Zuletzt beantwortet: {answered.map(r => nameOf(r.requester)).join(", ")}</p>
+        <p className="text-xs text-gray-600">Zuletzt beantwortet: {answered.map(r => nameOf(r.requester)).join(", ")}</p>
       )}
     </div>
   );
@@ -473,7 +473,7 @@ export function CoachSpecialties({ initial }: { initial?: string[] }) {
       <p className={LABEL}>Meine Spezialgebiete</p>
       <div className="flex flex-wrap items-center gap-1.5">
         {tags.map(t => (
-          <span key={t} className="inline-flex items-center gap-1 text-[11px] text-teal-200 bg-teal-500/10 border border-teal-500/25 rounded-full pl-2.5 pr-1.5 py-0.5">
+          <span key={t} className="inline-flex items-center gap-1 text-xs text-teal-200 bg-teal-500/10 border border-teal-500/25 rounded-full pl-2.5 pr-1.5 py-0.5">
             {t}
             <button onClick={() => save(tags.filter(x => x !== t))} disabled={busy} aria-label={`${t} entfernen`} className="text-teal-400/70 hover:text-red-300">
               <X className="w-3 h-3" />
@@ -486,7 +486,7 @@ export function CoachSpecialties({ initial }: { initial?: string[] }) {
             placeholder="Spiel/Sprache + Enter" className={`w-44 ${INPUT}`} />
         )}
       </div>
-      <p className="text-[10px] text-gray-600">Bis zu 6 Tags (z.B. „R6 Siege“, „Deutsch“). Neulinge finden dich damit im Community-Board über die Coach-Suche.</p>
+      <p className="text-xs text-gray-600">Bis zu 6 Tags (z.B. „R6 Siege“, „Deutsch“). Neulinge finden dich damit im Community-Board über die Coach-Suche.</p>
     </div>
   );
 }
@@ -541,7 +541,7 @@ export function CoachNewcomers({ onMenteeAdded }: { onMenteeAdded?: () => void }
         <div key={n.id} className="rounded-lg bg-surface-2 px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-xs text-gray-200 truncate">{nameOf(n)}</p>
-            <p className="text-[10px] text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
+            <p className="text-xs text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Button size="sm" variant="outline" disabled={n.welcomed || busy !== null} loading={busy === `${n.id}:welcome`} onClick={() => act(n.id, "welcome")}>
@@ -602,7 +602,7 @@ export function CoachGuideList() {
   return (
     <div className="space-y-1.5">
       <p className={LABEL}>Meine Anleitungen ({items.length})</p>
-      {items.length === 0 && <p className="text-[11px] text-gray-600">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
+      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
       {items.map(g => editing === g.id ? (
         <div key={g.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" maxLength={120} className={`w-full ${INPUT}`} />

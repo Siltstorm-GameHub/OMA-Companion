@@ -137,18 +137,18 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
         {!readOnly && (editing ? (
           <div className="flex items-center gap-2">
             <button onClick={() => { setDraft(games); setEditing(false); setSteamOpen(false); }}
-              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg border border-line text-gray-400 hover:text-white transition-colors">
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-400 hover:text-white transition-colors">
               <X className="w-3 h-3" /> Abbrechen
             </button>
             <button onClick={save} disabled={saving}
-              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 font-semibold transition-colors disabled:opacity-50">
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 font-semibold transition-colors disabled:opacity-50">
               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
               Speichern
             </button>
           </div>
         ) : (
           <button onClick={() => { setDraft(games); setEditing(true); }}
-            className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-lg border border-line-strong text-gray-400 hover:text-white hover:border-line-strong transition-colors">
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line-strong text-gray-400 hover:text-white hover:border-line-strong transition-colors">
             <Pencil className="w-3 h-3" /> Ändern
           </button>
         ))}
@@ -156,7 +156,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
 
       <div className="glass rounded-2xl p-3 sm:p-4 flex flex-col gap-3">
         {(tiles.length > 0 || editing || !readOnly) && (
-          <p className="text-[11px] font-semibold text-gray-500 -mb-1">Zockt gerade</p>
+          <p className="text-xs font-semibold text-gray-500 -mb-1">Zockt gerade</p>
         )}
         {tiles.length === 0 && !editing ? (
           !readOnly && (
@@ -174,7 +174,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                     imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" fallbackVariant="plain" />
                   <div className="absolute inset-x-0 bottom-0 px-2 pt-6 pb-1.5 pointer-events-none"
                     style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88), transparent)" }}>
-                    <p className="text-[11px] font-medium text-white truncate">{t.name}</p>
+                    <p className="text-xs font-medium text-white truncate">{t.name}</p>
                   </div>
                 </>
               );
@@ -207,7 +207,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
           <div className="pt-3 border-t border-line space-y-3">
             {quickPicks.length > 0 && (
               <div>
-                <p className="text-[11px] font-semibold text-gray-500 mb-1.5">Aus deinen „Am Start“-Spielen</p>
+                <p className="text-xs font-semibold text-gray-500 mb-1.5">Aus deinen „Am Start“-Spielen</p>
                 <div className="flex flex-wrap gap-1.5">
                   {quickPicks.slice(0, 16).map(g => {
                     const picked = inDraft(g.name);
@@ -226,13 +226,13 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
             )}
 
             <div>
-              <p className="text-[11px] font-semibold text-gray-500 mb-1.5">In der Spieleliste suchen</p>
+              <p className="text-xs font-semibold text-gray-500 mb-1.5">In der Spieleliste suchen</p>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
                 <input value={query} onChange={e => setQuery(e.target.value)} disabled={full}
                   placeholder={full ? `Maximal ${MAX_FAVORITE_GAMES} Spiele` : "z.B. Rocket League"}
                   aria-label="Spiel suchen"
-                  className="w-full rounded-lg bg-line border border-line pl-8 pr-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-400/50 disabled:opacity-50" />
+                  className="w-full rounded-control bg-surface-2 border border-line pl-8 pr-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary disabled:opacity-50" />
               </div>
               {shownSuggestions.length > 0 && (
                 <div className="mt-1.5 rounded-lg border border-line divide-y divide-line overflow-hidden">
@@ -247,12 +247,12 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                 </div>
               )}
               {query.trim().length >= 2 && shownSuggestions.length === 0 && (
-                <p className="text-[11px] text-gray-600 mt-1.5">Nichts in der Spieleliste gefunden.</p>
+                <p className="text-xs text-gray-600 mt-1.5">Nichts in der Spieleliste gefunden.</p>
               )}
             </div>
 
             <div>
-              <button type="button" onClick={() => setSteamOpen(o => !o)} className="text-[11px] text-teal-400 hover:text-teal-300">
+              <button type="button" onClick={() => setSteamOpen(o => !o)} className="text-xs text-teal-400 hover:text-teal-300">
                 {steamOpen ? "Steam-Suche schließen" : "Spiel nicht in der Liste? Auf Steam suchen"}
               </button>
               {steamOpen && (
@@ -273,10 +273,10 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
         {!editing && (inGames.length > 0 || !readOnly) && (
           <div className={tiles.length > 0 || !readOnly ? "pt-3 border-t border-line" : ""}>
             <div className="flex items-center justify-between gap-2 mb-1.5">
-              <p className="text-[11px] font-semibold text-gray-500">
+              <p className="text-xs font-semibold text-gray-500">
                 Am Start <span className="font-normal text-gray-600">· {inGames.length} {inGames.length === 1 ? "Spiel" : "Spiele"}</span>
               </p>
-              <Link href={readOnly ? "/spiele/gruppe" : "/spiele"} className="text-[11px] text-teal-500 hover:text-teal-300">
+              <Link href={readOnly ? "/spiele/gruppe" : "/spiele"} className="text-xs text-teal-500 hover:text-teal-300">
                 {readOnly ? "Gemeinsam finden" : "GameSwipe"} →
               </Link>
             </div>

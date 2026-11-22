@@ -67,7 +67,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
             {/* Name, Beschreibung und Regeln bearbeitest du im Reiter "Allgemein" */}
             <h1 className="text-2xl font-bold break-words" style={{ color: seriesColor }}>{name || series.name}</h1>
             {description && <p className="text-sm text-gray-500">{description}</p>}
-            <p className="text-[11px] text-gray-500">
+            <p className="text-xs text-gray-500">
               {hidden ? "Ausgeblendet" : "Sichtbar"} · {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
             </p>
           </div>
@@ -144,7 +144,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               Events dieser Reihe
             </h2>
             {isArchived ? (
-              <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">
                 <Lock className="w-3 h-3" /> Saison abgeschlossen — keine neuen Termine
               </span>
             ) : (
@@ -186,7 +186,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                         {ev.title}
                         <span className="text-gray-500 font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
-                          <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                          <span className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
                             <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
                           </span>
                         )}
@@ -195,7 +195,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                     </Link>
                     {attention && (
                       <Link href={attention.href} title={attention.label}
-                        className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 hover:bg-amber-500/20">
+                        className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 hover:bg-amber-500/20">
                         <Clock className="w-2.5 h-2.5" /> {attention.label}
                       </Link>
                     )}
@@ -203,7 +203,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       <span className="text-xs text-gray-600">
                         {ev._count.registrations}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""} Spieler
                       </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${st.cls}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${st.cls}`}>
                         {st.label}
                       </span>
                       <EventHiddenToggle id={ev.id} hidden={ev.hidden} />
@@ -288,7 +288,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               Anmeldungen, Turniere &amp; Matches) werden unwiderruflich gelöscht.
             </p>
             {isModerator && <div className="space-y-2 rounded-lg border border-line bg-black/20 p-3">
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 Bereits vergebene Belohnungen aus abgeschlossenen Events dieser Reihe:
               </p>
               <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
@@ -311,7 +311,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 <RankPointsIcon size={12} />
                 Vergebene Rang-Punkte den Usern wieder abziehen
               </label>
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 Unangeklickt behalten User ihre bisher erhaltenen Münzen/Rang-Punkte aus dieser Reihe.
               </p>
             </div>}

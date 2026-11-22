@@ -9,7 +9,7 @@ export default function SquadsSection({ squads }: { squads: ProfileSquad[] }) {
 
   return (
     <section>
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5 mb-3">
         <Shield className="w-3.5 h-3.5" /> Squads
       </h2>
       <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">

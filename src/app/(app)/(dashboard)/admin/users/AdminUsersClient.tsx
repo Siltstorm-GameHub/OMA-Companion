@@ -42,7 +42,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <span className="sr-only">Mitglieder suchen</span>
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Name, Discord-ID oder E-Mail"
-            className="w-full rounded-xl bg-surface-2 border border-line-strong pl-8 pr-8 py-2 text-sm text-white focus:border-teal-500/40 focus:outline-none" />
+            className="w-full rounded-control bg-surface-2 border border-line pl-8 pr-8 py-2 text-sm text-fg focus:border-primary focus:outline-none" />
           {query && (
             <button type="button" onClick={() => setQuery("")} aria-label="Suche leeren"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
@@ -70,7 +70,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
         <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
           Sortieren
           <select value={sort} onChange={e => setSort(e.target.value as UserSort)}
-            className="rounded-lg bg-surface-2 border border-line-strong px-2 py-1 text-xs text-white">
+            className="rounded-control bg-surface-2 border border-line px-2 py-1 text-xs text-fg">
             {USER_SORTS.map(s => <option key={s.key} value={s.key} className="bg-gray-900">{s.label}</option>)}
           </select>
         </label>
@@ -95,17 +95,17 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
                       className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-teal-500/[0.08]" : "hover:bg-surface-2"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
                       {u.image
                         ? <img src={u.image} alt="" loading="lazy" width={28} height={28} className="w-7 h-7 rounded-full ring-1 ring-white/10 shrink-0" />
-                        : <span className="w-7 h-7 shrink-0 rounded-full bg-rose-600/40 flex items-center justify-center text-[11px] font-semibold text-rose-300">{name[0]?.toUpperCase()}</span>}
+                        : <span className="w-7 h-7 shrink-0 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300">{name[0]?.toUpperCase()}</span>}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-white">{name}{u.id === meId && <span className="font-normal text-gray-500"> (du)</span>}</span>
-                        <span className="block truncate text-[11px] text-gray-500">{sub}</span>
+                        <span className="block truncate text-xs text-gray-500">{sub}</span>
                       </span>
                       {ROLE_TONE[u.role] && (
-                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${ROLE_TONE[u.role]}`}>
+                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold ${ROLE_TONE[u.role]}`}>
                           {u.role === "moderator" ? "Mod" : ROLE_INFO[u.role].label}
                         </span>
                       )}
-                      {u.leftServerAt && <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">Ausgetreten</span>}
+                      {u.leftServerAt && <span className="shrink-0 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-300">Ausgetreten</span>}
                       <span className="w-14 shrink-0 text-right text-xs tabular-nums text-gray-300">{u.points.toLocaleString("de-DE")}</span>
                     </button>
                   </li>
@@ -116,7 +116,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
         </section>
 
         {selected ? (
-          <div className="lg:sticky lg:top-4">
+          <div className="lg:sticky lg:top-[5.5rem]">
             <UserDetail key={selected.id} user={selected} meId={meId} now={now}
               onBack={() => setSelectedId(null)}
               onRoleChanged={role => setRoleOverride(r => ({ ...r, [selected.id]: role }))} />

@@ -64,7 +64,7 @@ export default function CommunityJobsAdminPanel({
   return (
     <div className="space-y-8">
       <section className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
           <AlertTriangle className="w-3 h-3 text-amber-500" /> Anfechtungen ({disputes.length})
         </h2>
         <div className="glass rounded-card overflow-hidden divide-y divide-line">
@@ -72,7 +72,7 @@ export default function CommunityJobsAdminPanel({
           {disputes.map(d => (
             <div key={`${d.kind}-${d.id}`} className="p-3 space-y-1.5">
               <p className="text-xs text-white">{d.context}</p>
-              <p className="text-[11px] text-gray-500">Bewerter: {d.voter.username ?? d.voter.name} — Grund: {d.reason ?? "–"}</p>
+              <p className="text-xs text-gray-500">Bewerter: {d.voter.username ?? d.voter.name} — Grund: {d.reason ?? "–"}</p>
               <div className="flex gap-1.5">
                 <Button size="sm" variant="outline" onClick={() => resolveDispute(d.kind, d.id, "UPHELD")}>Bewertung bestätigen</Button>
                 <Button size="sm" variant="danger" onClick={() => resolveDispute(d.kind, d.id, "OVERTURNED")}>Bewertung streichen</Button>
@@ -130,13 +130,13 @@ function JobSettingsSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Job-Einstellungen</h2>
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Job-Einstellungen</h2>
 
       <div className="glass rounded-card overflow-hidden divide-y divide-line">
         {jobs.map(job => (
           <div key={job.key} className="p-3 flex items-center gap-3 flex-wrap">
             <span className="text-xs text-white w-40 shrink-0"><JobIcon jobKey={job.key} className="w-4 h-4 mr-1.5 align-text-bottom" />{job.label}</span>
-            <label className="flex items-center gap-1.5 text-[11px] text-gray-500 flex-1 min-w-[180px]">
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 flex-1 min-w-[180px]">
               Discord-Kanal
               {discordChannels.length > 0 ? (
                 <Select size="sm" value={channels[job.key] ?? ""} onChange={e => setChannels(c => ({ ...c, [job.key]: e.target.value }))} className="flex-1">
@@ -146,7 +146,7 @@ function JobSettingsSection({
               ) : (
                 <input type="text" value={channels[job.key] ?? ""} placeholder="Kanal-ID (Bot offline/ohne Rechte?)"
                   onChange={e => setChannels(c => ({ ...c, [job.key]: e.target.value }))}
-                  className="flex-1 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-700" />
+                  className="flex-1 bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg placeholder:text-subtle" />
               )}
             </label>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => saveChannel(job.key)}>Speichern</Button>
@@ -156,22 +156,22 @@ function JobSettingsSection({
 
       <div className="glass rounded-card p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-gray-500">Gehaltsstufen für</span>
+          <span className="text-xs text-gray-500">Gehaltsstufen für</span>
           <select value={selectedJob} onChange={e => setSelectedJob(e.target.value)}
-            className="bg-line border border-line-strong rounded px-2 py-1 text-xs text-white">
+            className="bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg">
             {jobs.map(j => <option key={j.key} value={j.key}>{j.emoji} {j.label}</option>)}
           </select>
         </div>
         {tiers.map((t, i) => (
           <div key={i} className="flex items-center gap-2">
             <input value={t.label} placeholder="Label" onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-              className="w-28 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
-            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+              className="w-28 bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg" />
+            <label className="flex items-center gap-1 text-xs text-gray-600">
               ab Score
               <NumberInput value={t.minScore} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minScore: Number(e.target.value) } : x))}
                 className="w-16 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
             </label>
-            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+            <label className="flex items-center gap-1 text-xs text-gray-600">
               Münzen
               <NumberInput value={t.coinsAwarded} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, coinsAwarded: Number(e.target.value) } : x))}
                 className="w-20 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
@@ -207,8 +207,8 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Aktivitäts-Bonus (jobübergreifend)</h2>
-      <p className="text-[11px] text-gray-600">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Aktivitäts-Bonus (jobübergreifend)</h2>
+      <p className="text-xs text-gray-600">
         Gestaffelter Multiplikator auf das Wochengehalt jedes Jobs, abhängig davon, wie viele fremde Beiträge der User diese Woche selbst bewertet hat.
         Der Multiplikator kann auch unter 1× fallen (Abzug bei Nicht-Mitmachen) und ist nach oben auf 2× gedeckelt.
       </p>
@@ -216,13 +216,13 @@ function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
         {tiers.map((t, i) => (
           <div key={i} className="flex items-center gap-2">
             <input value={t.label} placeholder="Label" onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-              className="w-32 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
-            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+              className="w-32 bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg" />
+            <label className="flex items-center gap-1 text-xs text-gray-600">
               ab Bewertungen
               <NumberInput min={0} value={t.minVotes} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minVotes: Number(e.target.value) } : x))}
                 className="w-16 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
             </label>
-            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+            <label className="flex items-center gap-1 text-xs text-gray-600">
               Multiplikator
               <NumberInput step={0.1} value={t.multiplier} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, multiplier: Number(e.target.value) } : x))}
                 className="w-16 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
@@ -258,9 +258,9 @@ function DailyLimitSection({ initial }: { initial: number }) {
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Tageslimit</h2>
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Tageslimit</h2>
       <div className="glass rounded-card p-4 space-y-2">
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           So viele Beiträge pro Tag (Berliner Zeit, über alle Jobs zusammen) zählen fürs Gehalt. Weitere Beiträge
           werden veröffentlicht, Stimmen darauf zählen aber nicht. Ein Mehrfach-Upload oder eine Termin-Serie zählt als ein Beitrag.
         </p>
@@ -268,7 +268,7 @@ function DailyLimitSection({ initial }: { initial: number }) {
           <NumberInput min={0} max={50} value={limit} onChange={e => setLimit(Number(e.target.value))}
             aria-label="Gezählte Beiträge pro Tag"
             className="w-20 bg-line border border-line-strong rounded px-2 py-1 text-xs text-white" />
-          <span className="text-[11px] text-gray-500">Beiträge pro Tag</span>
+          <span className="text-xs text-gray-500">Beiträge pro Tag</span>
           <Button size="sm" disabled={busy || !Number.isInteger(limit) || limit < 0 || limit > 50} onClick={save}>Speichern</Button>
         </div>
       </div>
@@ -306,8 +306,8 @@ function ReputationSection() {
 
   return (
     <section className="space-y-2">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Ansehen</h2>
-      <p className="text-[11px] text-gray-600">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Ansehen</h2>
+      <p className="text-xs text-gray-600">
         Stufe 1–4 (Bronze, Silber, Gold, Platin) aus der Gesamtleistung aller Jobs der letzten 8 Wochen plus Kommentar-Daumen.
         Steuert Ansehens-Titel und Discord-Rolle. Ohne Suche: User mit Ansehen bzw. manuell gesetzter Stufe.
       </p>
@@ -315,7 +315,7 @@ function ReputationSection() {
         <div className="relative flex-1">
           <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="User suchen…" aria-label="User suchen"
-            className="w-full bg-line border border-line-strong rounded pl-7 pr-2 py-1 text-xs text-white placeholder:text-gray-600" />
+            className="w-full bg-surface-2 border border-line rounded pl-7 pr-2 py-1 text-xs text-fg placeholder:text-subtle" />
         </div>
         <Button size="sm" variant="outline" type="submit">Suchen</Button>
       </form>
@@ -328,7 +328,7 @@ function ReputationSection() {
             <div key={u.id} className="p-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs text-white truncate">{u.username ?? u.name ?? u.id}</p>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-500">
                   {levelTitle(u.reputationLevel)} (Stufe {u.reputationLevel}) · {u.reputationPoints} Punkte · höchste Stufe {u.reputationPeakLevel}
                 </p>
               </div>

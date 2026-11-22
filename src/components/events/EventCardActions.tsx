@@ -58,7 +58,7 @@ export default function EventCardActions({
     );
   }
   if ((live && !period) || deadlinePassed) {
-    return <span className="text-[11px] text-gray-500">{deadlinePassed && !live ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span>;
+    return <span className="text-xs text-gray-500">{deadlinePassed && !live ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span>;
   }
   if (!isLocked && isSquadMember) {
     return (
@@ -75,11 +75,11 @@ export default function EventCardActions({
   }
   // Gesperrt bzw. nur für ein Squad: sagen, wie man trotzdem dabei sein kann
   return isLocked ? (
-    <span className="flex items-center gap-1 text-[11px] text-gray-500" title="Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.">
+    <span className="flex items-center gap-1 text-xs text-gray-500" title="Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.">
       <Lock className="w-3 h-3" /> Veranstalter trägt ein
     </span>
   ) : (
-    <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white" title="Nur für Mitglieder dieses Squads. Zum Squad und Beitritt anfragen.">
+    <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white" title="Nur für Mitglieder dieses Squads. Zum Squad und Beitritt anfragen.">
       <Lock className="w-3 h-3" /> Nur Squad · ansehen
     </Link>
   );

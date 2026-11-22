@@ -33,7 +33,7 @@ function Avatar({ u, size, ring }: { u: PodiumUser; size: number; ring: string }
   return u.image ? (
     <Image src={u.image} alt={label} title={label} width={size} height={size} className={`rounded-full ring-2 ${ring} object-cover`} style={{ width: size, height: size }} />
   ) : (
-    <span title={label} className={`rounded-full ring-2 ${ring} bg-line text-[10px] font-bold text-gray-300 flex items-center justify-center`} style={{ width: size, height: size }}>
+    <span title={label} className={`rounded-full ring-2 ${ring} bg-line text-xs font-bold text-gray-300 flex items-center justify-center`} style={{ width: size, height: size }}>
       {label.charAt(0).toUpperCase()}
     </span>
   );
@@ -65,7 +65,7 @@ export default function RecentResultCard({ r }: { r: RecentResultData }) {
           {r.title}
           {winner && <span className="font-normal text-gray-400"> · Sieg: <span className="text-yellow-300">{winner.username ?? winner.name}</span></span>}
         </p>
-        <p className="text-[11px] text-gray-500 truncate">
+        <p className="text-xs text-gray-500 truncate">
           {r.dateLabel}{r.seriesName && <> · {r.seriesName}</>} · {r.playerCount} dabei
           {r.myPlace && <> · <span className="font-semibold text-teal-300">Du: Platz {r.myPlace}</span></>}
         </p>

@@ -355,7 +355,7 @@ function DiscordPreview({ rule, title, body }: { rule: NotificationRuleRow; titl
         <p className="text-[13px] leading-tight">
           <span className="font-semibold text-white">OMA Companion</span>
           <span className="ml-1.5 px-1 py-px rounded bg-[#5865f2] text-white text-[9px] font-semibold align-middle">BOT</span>
-          <span className="ml-1.5 text-[10px] text-[#949ba4]">Heute um 20:00</span>
+          <span className="ml-1.5 text-xs text-[#949ba4]">Heute um 20:00</span>
         </p>
         {content && (
           <p className="text-[13px] mt-0.5">
@@ -377,7 +377,7 @@ function DiscordPreview({ rule, title, body }: { rule: NotificationRuleRow; titl
               ))}
             </div>
           )}
-          <p className="text-[10px] text-[#949ba4] mt-2">OMA Companion</p>
+          <p className="text-xs text-[#949ba4] mt-2">OMA Companion</p>
         </div>
       </div>
     </div>
@@ -415,7 +415,7 @@ function Toggle({ on, onClick, label, icon: Icon }: { on: boolean; onClick: () =
     <button
       onClick={onClick}
       title={label}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
         on
           ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
           : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
@@ -590,7 +590,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
             <Bell className="w-4 h-4 text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Benachrichtigungen</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Benachrichtigungen</h1>
             <p className="text-xs text-gray-500">Push, In-App, Discord-DM und Discord-Kanal je Ereignis steuern</p>
           </div>
         </div>
@@ -604,7 +604,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
         </button>
       </div>
       {dirtyKeys.size > 0 && (
-        <p className="text-[11px] text-amber-400/80 -mt-4">
+        <p className="text-xs text-amber-400/80 -mt-4">
           Ungespeicherte Änderungen — erst mit &bdquo;Speichern&ldquo; oben werden sie wirksam.
         </p>
       )}
@@ -616,7 +616,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Suchen in ${rules.length} Benachrichtigungen (Name, Text, Schlüssel …)`}
-            className="flex-1 min-w-0 rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors placeholder:text-gray-600"
+            className="flex-1 min-w-0 rounded-control px-3 py-2 text-sm text-fg bg-surface-2 border border-line focus:border-primary outline-none transition-colors placeholder:text-subtle"
           />
           {query && (
             <button onClick={() => setQuery("")} title="Suche leeren" className="p-2 rounded-xl text-gray-500 hover:text-white border border-line">
@@ -631,7 +631,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
               <button
                 key={f.id}
                 onClick={() => setChannelFilter(f.id)}
-                className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${
                   channelFilter === f.id
                     ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                     : "bg-surface-2 text-gray-500 border-line hover:border-line-strong"
@@ -644,13 +644,13 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
           <span className="flex-1" />
           <button
             onClick={() => setOpenRules(new Set(visible.map((r) => r.key)))}
-            className="text-[11px] text-gray-500 hover:text-gray-300 px-1"
+            className="text-xs text-gray-500 hover:text-gray-300 px-1"
           >
             Alle aufklappen
           </button>
           <button
             onClick={() => { setOpenRules(new Set()); setCollapsedCats(new Set()); }}
-            className="text-[11px] text-gray-500 hover:text-gray-300 px-1"
+            className="text-xs text-gray-500 hover:text-gray-300 px-1"
           >
             Alle zuklappen
           </button>
@@ -662,7 +662,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
               <a
                 key={cat}
                 href={`#notif-cat-${cat}`}
-                className="px-2 py-0.5 rounded-md bg-surface-2 border border-line text-[11px] text-gray-400 hover:text-white hover:border-line-strong transition-colors"
+                className="px-2 py-0.5 rounded-md bg-surface-2 border border-line text-xs text-gray-400 hover:text-white hover:border-line-strong transition-colors"
               >
                 {CATEGORY_LABELS[cat] ?? cat} <span className="opacity-50">{total}</span>
               </a>
@@ -685,13 +685,13 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
             className="w-full flex items-center gap-2 px-1 py-1 text-left group"
           >
             <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${catOpen ? "" : "-rotate-90"}`} />
-            <h3 className="text-[11px] font-bold text-gray-400 group-hover:text-gray-200 uppercase tracking-widest">
+            <h3 className="text-xs font-bold text-gray-400 group-hover:text-gray-200 uppercase tracking-widest">
               {CATEGORY_LABELS[cat] ?? cat}
             </h3>
-            <span className="text-[10px] text-gray-600">
+            <span className="text-xs text-gray-600">
               {filtering ? `${rows.length} von ${total}` : total}
             </span>
-            {dirtyInCat > 0 && <span className="text-[10px] text-amber-400">● {dirtyInCat} ungespeichert</span>}
+            {dirtyInCat > 0 && <span className="text-xs text-amber-400">● {dirtyInCat} ungespeichert</span>}
             <span className="flex-1 h-px bg-line ml-2" />
           </button>
           {catOpen && rows.map((r) => {
@@ -723,12 +723,12 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         {dirtyKeys.has(r.key) && <span className="text-amber-400 mr-1" title="Ungespeichert">●</span>}
                         {r.label}
                       </p>
-                      <p className={`text-[11px] text-gray-500 mt-0.5 ${isOpen ? "" : "truncate"}`}>{r.description}</p>
+                      <p className={`text-xs text-gray-500 mt-0.5 ${isOpen ? "" : "truncate"}`}>{r.description}</p>
                     </div>
                   </button>
                   <div className="flex items-center gap-1 shrink-0">
                     {allOff ? (
-                      <span className="text-[10px] text-gray-500 px-1.5 py-0.5 rounded-md border border-line">aus</span>
+                      <span className="text-xs text-gray-500 px-1.5 py-0.5 rounded-md border border-line">aus</span>
                     ) : badges.map((b) => (
                       <span
                         key={b.label}
@@ -745,7 +745,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         onClick={() => deleteRule(r)}
                         disabled={deletingKey === r.key}
                         title="Regel löschen"
-                        className="ml-1 flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-line hover:border-red-500/20 transition-colors disabled:opacity-40"
+                        className="ml-1 flex items-center gap-1 text-xs px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-line hover:border-red-500/20 transition-colors disabled:opacity-40"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -755,7 +755,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
 
                 {isOpen && (
                 <div className="px-4 py-3 space-y-3">
-                  <p className="text-[10px] text-gray-600 font-mono">Schlüssel: {r.key}</p>
+                  <p className="text-xs text-gray-600 font-mono">Schlüssel: {r.key}</p>
                   {/* Kanal-Toggles */}
                   <div className="flex flex-wrap gap-1.5">
                     <Toggle on={r.pushEnabled} onClick={() => update(r.key, { pushEnabled: !r.pushEnabled })} label="Push" icon={Smartphone} />
@@ -776,7 +776,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       <div className="flex flex-wrap gap-1.5 pl-1">
                         <button
                           onClick={() => update(r.key, { eventAudience: "all" })}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                             r.eventAudience === "all"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                               : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
@@ -787,7 +787,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         </button>
                         <button
                           onClick={() => update(r.key, { eventAudience: "participants" })}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                             r.eventAudience === "participants"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                               : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
@@ -796,7 +796,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                           <UserCheck className="w-3.5 h-3.5" />
                           Nur angemeldete Teilnehmer
                         </button>
-                        <p className="w-full text-[10px] text-gray-600 pl-0.5">
+                        <p className="w-full text-xs text-gray-600 pl-0.5">
                           {r.eventAudience === "participants"
                             ? "Nur Mitspieler, Zuschauer und Streamer, die für das jeweilige Event angemeldet sind."
                             : "Geht an alle User, unabhängig von einer Event-Anmeldung."}
@@ -822,17 +822,17 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       hier ist nur der (optionale) Ersatz, siehe dispatchEventNotification */}
                   {r.discordChanEnabled && r.isEventNotification && (
                     <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.04] px-3 py-2.5 space-y-2">
-                      <p className="text-[11px] font-semibold text-indigo-200 flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-indigo-200 flex items-center gap-1.5">
                         <Hash className="w-3.5 h-3.5" /> Gepostet wird in diesem Kanal:
                       </p>
-                      <ol className="text-[11px] text-gray-400 space-y-0.5 list-decimal pl-5">
+                      <ol className="text-xs text-gray-400 space-y-0.5 list-decimal pl-5">
                         <li><span className="text-white">Kanal des jeweiligen Events</span> — falls dort einer eingestellt ist</li>
                         <li><span className="text-white">sonst Kanal der Eventreihe</span> — falls dort einer eingestellt ist</li>
                         <li>sonst der Ersatz-Kanal unten{r.discordChannelId ? "" : " (nicht gesetzt)"}</li>
                         <li>sonst der News-Kanal{newsChannelName ? ` (${newsChannelName})` : ""}</li>
                       </ol>
                       <div className="pt-1">
-                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
                           Ersatz-Kanal (optional)
                         </label>
                         <div className="mt-1">
@@ -842,7 +842,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             emptyLabel={`Kein Ersatz — dann News-Kanal${newsChannelName ? ` (${newsChannelName})` : ""}`}
                           />
                         </div>
-                        <p className="text-[10px] text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 mt-1">
                           Gilt nur für Events, bei denen weder das Event noch seine Reihe einen eigenen Kanal hat.
                         </p>
                       </div>
@@ -852,7 +852,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   {/* Stunden vorher (nur event_reminder) */}
                   {r.key === "event_reminder" && (
                     <div className="flex items-center gap-2">
-                      <label className="text-[11px] text-gray-500 shrink-0">Stunden vorher:</label>
+                      <label className="text-xs text-gray-500 shrink-0">Stunden vorher:</label>
                       <NumberInput
                         min={1}
                         value={r.reminderHoursBefore ?? 24}
@@ -864,26 +864,26 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
 
                   {/* Titel */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Titel</label>
+                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Titel</label>
                     <input
                       ref={(el) => { fieldRefs.current[`${r.key}:title`] = el; }}
                       value={r.titleTemplate}
                       onChange={(e) => update(r.key, { titleTemplate: e.target.value })}
                       onFocus={() => setLastField((s) => ({ ...s, [r.key]: "title" }))}
-                      className="w-full rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none transition-colors"
+                      className="w-full rounded-control px-3 py-2 text-sm text-fg bg-surface-2 border border-line focus:border-primary outline-none transition-colors"
                     />
                   </div>
 
                   {/* Text */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Text</label>
+                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Text</label>
                     <textarea
                       ref={(el) => { fieldRefs.current[`${r.key}:body`] = el; }}
                       value={r.bodyTemplate}
                       onChange={(e) => update(r.key, { bodyTemplate: e.target.value })}
                       onFocus={() => setLastField((s) => ({ ...s, [r.key]: "body" }))}
                       rows={r.bodyTemplate.includes("\n") ? 3 : 2}
-                      className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-line focus:border-indigo-500/40 outline-none resize-none transition-colors"
+                      className="w-full rounded-control px-3 py-2.5 text-sm text-fg bg-surface-2 border border-line focus:border-primary outline-none resize-none transition-colors"
                     />
                   </div>
 
@@ -891,11 +891,11 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   {(r.discordChanEnabled || r.discordDmEnabled) && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                        <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">
                           Vorschau Discord{r.discordChanEnabled && r.discordDmEnabled ? " (Kanal & DM)" : r.discordDmEnabled ? " (DM)" : ""}
                         </label>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-gray-600">Randfarbe</span>
+                          <span className="text-xs text-gray-600">Randfarbe</span>
                           <input
                             type="color"
                             value={toHex(r.discordColor ?? defaultColor(r.key))}
@@ -904,11 +904,11 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             className="w-7 h-6 rounded cursor-pointer bg-transparent border border-line"
                           />
                           {r.discordColor != null ? (
-                            <button onClick={() => update(r.key, { discordColor: null })} className="text-[10px] text-gray-500 hover:text-gray-300">
+                            <button onClick={() => update(r.key, { discordColor: null })} className="text-xs text-gray-500 hover:text-gray-300">
                               Standard
                             </button>
                           ) : (
-                            <span className="text-[10px] text-gray-700">Standard</span>
+                            <span className="text-xs text-gray-700">Standard</span>
                           )}
                         </div>
                       </div>
@@ -917,7 +917,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   )}
                   {(r.pushEnabled || r.inAppEnabled) && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">
                         Vorschau {r.pushEnabled && r.inAppEnabled ? "Push & In-App" : r.pushEnabled ? "Push" : "In-App"}
                       </label>
                       <PushPreview title={fillSample(r.titleTemplate, r.key)} body={fillSample(r.bodyTemplate, r.key)} />
@@ -927,13 +927,13 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                   {/* Toolbar: Emoji-Picker + Platzhalter-Legende */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">
                         Platzhalter (fügt in &bdquo;{activeField === "title" ? "Titel" : "Text"}&ldquo; ein)
                       </label>
                       {emojis.length > 0 && (
                         <button
                           onClick={() => setPickerFor(pickerFor?.key === r.key ? null : { key: r.key, field: activeField })}
-                          className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg transition-colors ${
+                          className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-lg transition-colors ${
                             pickerFor?.key === r.key
                               ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                               : "text-gray-600 hover:text-gray-400 border border-transparent"
@@ -949,7 +949,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                     {pickerFor?.key === r.key && (
                       <div className="rounded-xl border border-line bg-gray-900/80 p-2">
                         <div className="flex items-center justify-between mb-2 px-1">
-                          <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+                          <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
                             Server-Emojis ({emojis.length})
                           </span>
                           <button onClick={() => setPickerFor(null)} className="text-gray-600 hover:text-gray-400 transition-colors">
@@ -983,7 +983,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             key={ph.key}
                             onClick={() => insertAtCursor(r.key, activeField, ph.key)}
                             title={`${ph.description} – Klicken zum Einfügen in „${activeField === "title" ? "Titel" : "Text"}"`}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-300 text-[11px] font-mono transition-colors"
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-300 text-xs font-mono transition-colors"
                           >
                             {ph.key}
                             <span className="text-[9px] text-indigo-500 font-sans non-mono ml-0.5 hidden sm:inline">
@@ -997,7 +997,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
 
                   {/* Ziel-Link Dropdown (als Portal gerendert, s.u. — sonst schneidet card-shine's overflow-hidden die Liste ab) */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Ziel-Link (optional)</label>
+                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Ziel-Link (optional)</label>
                     <button
                       type="button"
                       ref={(el) => { linkBtnRefs.current[r.key] = el; }}
@@ -1010,7 +1010,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                     </button>
                     {r.isEventNotification && (
-                      <p className="flex items-center gap-1 text-[10px] text-teal-400/80">
+                      <p className="flex items-center gap-1 text-xs text-teal-400/80">
                         <Link2 className="w-3 h-3 shrink-0" />
                         Führt automatisch zum jeweiligen Event/Turnier — dieser Link ist nur ein Fallback, falls ausnahmsweise keine Zuordnung vorliegt.
                       </p>

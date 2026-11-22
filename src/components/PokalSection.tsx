@@ -25,7 +25,7 @@ export default function PokalSection({ pokale, ownerName }: Props) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
         Pokale
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -68,7 +68,7 @@ export default function PokalSection({ pokale, ownerName }: Props) {
                   {p.title}
                 </p>
                 <p
-                  className="font-serif text-[10px] text-gray-500 mt-0.5"
+                  className="font-serif text-xs text-gray-500 mt-0.5"
                   style={{ fontVariant: "small-caps" }}
                 >
                   {ownerName}

@@ -47,21 +47,24 @@ export default function HubTile({
   return (
     <section aria-label={ariaLabel}
       className={`surface flex h-full flex-col overflow-hidden rounded-card border ${stage ? "lg:flex-row" : ""} ${highlighted ? a.borderStrong : a.border} shadow-card ${className}`}>
-      <div className={`relative aspect-video shrink-0 overflow-hidden ${stage ? "lg:aspect-auto lg:min-h-[17rem] lg:w-[58%]" : ""}`}>{media}</div>
+      <div className={`relative aspect-video shrink-0 overflow-hidden ${stage ? "lg:aspect-auto lg:min-h-[19rem] lg:w-1/2" : ""}`}>{media}</div>
 
       <div className="flex min-w-0 flex-1 flex-col">
 
-      <div className="flex h-[64px] shrink-0 items-center gap-3 px-3.5">{main}</div>
+      {/* Bühne ab lg: Titel groß über der Hauptaktion (volle Breite) statt alles in einer Zeile */}
+      <div className={stage
+        ? "flex shrink-0 items-center gap-3 px-4 py-3.5 lg:flex-1 lg:flex-col lg:items-stretch lg:justify-center lg:gap-4 lg:px-5 lg:py-5"
+        : "flex h-[68px] shrink-0 items-center gap-3 px-3.5"}>{main}</div>
 
       <ul className="shrink-0">
         {filled.map(r => (
-          <li key={r.key} className="h-[34px] border-t border-line">
+          <li key={r.key} className="h-10 border-t border-line">
             <RowInner row={r} hover={a.hover} />
           </li>
         ))}
         {filled.length < 2 && (
-          <li className={`border-t border-line ${filled.length === 0 ? "h-[68px]" : "h-[34px]"}`}>
-            <Link href={placeholderRow.href} className={`flex h-full items-center px-3.5 text-[11px] text-gray-500 transition-colors ${a.hover} hover:text-gray-300`}>
+          <li className={`border-t border-line ${filled.length === 0 ? "h-20" : "h-10"}`}>
+            <Link href={placeholderRow.href} className={`flex h-full items-center px-3.5 text-xs text-subtle transition-colors ${a.hover} hover:text-fg`}>
               {placeholderRow.label}
             </Link>
           </li>
@@ -69,7 +72,7 @@ export default function HubTile({
       </ul>
 
       <Link href={footer.href}
-        className={`mt-auto flex h-[38px] shrink-0 items-center justify-between border-t border-line px-3.5 text-[11px] font-semibold ${a.footer} transition-colors ${a.hover}`}>
+        className={`${stage ? "" : "mt-auto"} flex h-11 shrink-0 items-center justify-between border-t border-line px-3.5 text-xs font-semibold ${a.footer} transition-colors ${a.hover}`}>
         <span>{footer.label}</span>
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
@@ -81,9 +84,9 @@ export default function HubTile({
 function RowInner({ row, hover }: { row: HubRow; hover: string }) {
   const inner = (
     <>
-      <span className="w-12 shrink-0 text-[11px] font-medium text-gray-500 tabular-nums">{row.lead}</span>
-      <span className="min-w-0 flex-1 truncate text-xs text-gray-200">{row.label}</span>
-      {row.hint && <span className="shrink-0 text-[11px]">{row.hint}</span>}
+      <span className="w-14 shrink-0 text-xs font-medium text-subtle tabular-nums">{row.lead}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-gray-200">{row.label}</span>
+      {row.hint && <span className="shrink-0 text-xs">{row.hint}</span>}
     </>
   );
   return row.href

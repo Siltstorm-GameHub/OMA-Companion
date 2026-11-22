@@ -14,19 +14,19 @@ export default async function AdminMinigamesPage() {
   return (
     <div className="space-y-10 max-w-2xl">
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🎮 Minigames
         </h2>
         <MinigamesConfigPanel initial={config} />
       </section>
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🧱 OMA Blocks · Monatssieger-Belohnung
         </h2>
         <BlocksRewardsPanel initial={blocksRewards} />
       </section>
       <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           🎯 OMA Blocks · Monatsziele
         </h2>
         <BlocksGoalsPanel initial={blocksGoals} max={MAX_GOALS} />

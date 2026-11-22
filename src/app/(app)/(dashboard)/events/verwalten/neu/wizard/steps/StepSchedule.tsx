@@ -23,7 +23,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                 }`}>
                 <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
                 <span className="text-xs text-gray-500">{f.desc}</span>
-                {supportsCommunityGoal(f.value) && <span className="text-[10px] font-medium text-teal-300">🎯 Ziel möglich</span>}
+                {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-teal-300">🎯 Ziel möglich</span>}
               </button>
             ))}
           </div>
@@ -40,13 +40,13 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
           <label className={labelCls}>Startdatum (optional)</label>
           <input type="datetime-local" value={seriesStartDate} onChange={e => setSeriesStartDate(e.target.value)}
             className={inputCls} style={inputStyle} />
-          <p className="text-[10px] text-gray-600 mt-1">Datum des ersten Events</p>
+          <p className="text-xs text-gray-600 mt-1">Datum des ersten Events</p>
         </div>
         <div>
           <label className={labelCls}>Enddatum (optional)</label>
           <input type="date" value={seriesEndDate} onChange={e => setSeriesEndDate(e.target.value)}
             className={inputCls} style={inputStyle} />
-          <p className="text-[10px] text-gray-600 mt-1">Alle Termine bis hierhin werden direkt erstellt</p>
+          <p className="text-xs text-gray-600 mt-1">Alle Termine bis hierhin werden direkt erstellt</p>
         </div>
       </div>
 
@@ -55,7 +55,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
           <label className={labelCls}>Ende des ersten Termins (optional)</label>
           <input type="datetime-local" value={seriesFirstEventEndAt} onChange={e => setSeriesFirstEventEndAt(e.target.value)}
             className={inputCls} style={inputStyle} />
-          <p className="text-[10px] text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1">
             Die Spanne (z.B. „Mo 18:00–So 23:59&quot;) wird auf alle automatisch generierten Folgetermine übertragen.
           </p>
         </div>
@@ -73,7 +73,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                   : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <span className={`text-sm font-semibold ${recurrenceType === r.value ? "text-teal-300" : "text-gray-300"}`}>{r.label}</span>
-              <span className="text-[10px] text-gray-500">{r.desc}</span>
+              <span className="text-xs text-gray-500">{r.desc}</span>
             </button>
           ))}
         </div>
@@ -107,7 +107,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                 : `Vorschau (nächste ${previewDates.length})`}
             </p>
             {!seriesEndDate && recurrenceType !== "none" && (
-              <span className="text-[10px] text-gray-600 ml-auto">ohne Enddatum: nur Reihe, keine Events</span>
+              <span className="text-xs text-gray-600 ml-auto">ohne Enddatum: nur Reihe, keine Events</span>
             )}
           </div>
           <div className="space-y-1.5 max-h-56 overflow-y-auto">

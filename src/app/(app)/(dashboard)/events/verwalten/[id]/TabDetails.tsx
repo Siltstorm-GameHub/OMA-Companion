@@ -47,7 +47,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                         tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
                       }`}>
                       <p className="text-xs font-medium leading-tight">{f.label}</p>
-                      <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -77,7 +77,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                       <label className={`${labelCls} flex items-center justify-between`}>
                         <span>Spiel</span>
                         {seriesGame && game && seriesGame !== game && (
-                          <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                          <span className="flex items-center gap-1 text-amber-400 text-xs">
                             <AlertCircle className="w-3 h-3" /> Abweichend von Reihe ({seriesGame})
                           </span>
                         )}
@@ -94,9 +94,9 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                         ))}
                       </select>
                       {eventKind === "community" && !kindLocked && (
-                        <p className="mt-1 text-[11px] text-violet-300/80">Keine Platzierung — alle Teilnehmer bekommen nur die Teilnahme-Belohnung.</p>
+                        <p className="mt-1 text-xs text-violet-300/80">Keine Platzierung — alle Teilnehmer bekommen nur die Teilnahme-Belohnung.</p>
                       )}
-                      {kindLocked && <p className="mt-1 text-[11px] text-gray-500">Nach dem Abschluss nicht mehr änderbar.</p>}
+                      {kindLocked && <p className="mt-1 text-xs text-gray-500">Nach dem Abschluss nicht mehr änderbar.</p>}
                     </div>
                     <div>
                       <label className={labelCls}>Kategorie</label>
@@ -119,7 +119,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                               genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                             }`}>
                             <AppIcon kind="genre" name={g.value} size={28} />
-                            <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                            <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
                           </button>
                         ))}
                       </div>
@@ -171,9 +171,9 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 <div>
                   <label className={labelCls}>Anmeldeschluss (optional)</label>
                   <input type="datetime-local" value={registrationClosesAt} onChange={e => setRegistrationClosesAt(e.target.value)} className={inputCls} />
-                  <p className="text-[11px] text-gray-500 mt-1">Leer = Anmeldung bis zum Start. Praktisch bei Turnieren, damit vor der Auslosung niemand mehr dazukommt.</p>
+                  <p className="text-xs text-gray-500 mt-1">Leer = Anmeldung bis zum Start. Praktisch bei Turnieren, damit vor der Auslosung niemand mehr dazukommt.</p>
                   {registrationClosesAt && startAt && registrationClosesAt > startAt && (
-                    <p className="text-[11px] text-amber-300 mt-1">Liegt nach dem Start, die Anmeldung schließt trotzdem schon beim Start.</p>
+                    <p className="text-xs text-amber-300 mt-1">Liegt nach dem Start, die Anmeldung schließt trotzdem schon beim Start.</p>
                   )}
                 </div>
               )}
@@ -187,7 +187,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm text-gray-300">Nur für ein Squad</span>
                   <select value={squadId} onChange={e => setSquadId(e.target.value)}
-                    className="rounded-lg px-2.5 py-1.5 text-xs text-white outline-none bg-gray-800 border border-gray-700 max-w-[55%]">
+                    className="rounded-control px-2.5 py-1.5 text-xs text-fg outline-none bg-surface-2 border border-line max-w-[55%]">
                     <option value="">Für alle offen</option>
                     {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
@@ -264,13 +264,13 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                     <p className="truncate text-sm font-semibold text-white">{title || "Ohne Titel"}</p>
                   </div>
                 </div>
-                <p className="px-2.5 py-2 text-[11px] text-gray-400">
+                <p className="px-2.5 py-2 text-xs text-gray-400">
                   {startAt ? formatBerlinDate(fromDatetimeLocalBerlin(startAt), { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "kein Termin"}
                   {" · "}{playerCount}{maxPlayers ? `/${maxPlayers}` : ""} Spieler
                   {!event.series && participationCoins > 0 && <> · +{participationCoins} Münzen</>}
                 </p>
               </div>
-              {!coverImageUrl && <p className="text-[11px] text-gray-600">Ohne eigenes Bild zeigt die App das Spiel-Cover.</p>}
+              {!coverImageUrl && <p className="text-xs text-gray-600">Ohne eigenes Bild zeigt die App das Spiel-Cover.</p>}
             </Panel>
 
             <Panel title="Sichtbarkeit">
@@ -299,7 +299,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 // Abgeschlossen: der Status kommt aus dem Abschluss — zurück geht es nur über "Abschluss aufheben"
                 <div className="space-y-1.5">
                   <p className="text-xs text-gray-500">Abschluss aufheben</p>
-                  <p className="text-[11px] text-gray-600">
+                  <p className="text-xs text-gray-600">
                     Bucht alle Belohnungen dieses Abschlusses zurück (Teilnahme, Platzierung, Zuschauer, Umfragen, Reihentabelle).
                     Danach kannst du das Event neu abschließen.
                   </p>
@@ -321,7 +321,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-600">Normalerweise nicht nötig: Der Ablauf oben ergibt sich aus Startzeit und Abschluss. Beendet wird ein Event über „Event abschließen“.</p>
+                <p className="text-xs text-gray-600">Normalerweise nicht nötig: Der Ablauf oben ergibt sich aus Startzeit und Abschluss. Beendet wird ein Event über „Event abschließen“.</p>
               </div>
               )}
               {isModerator && !isSeriesEvent && (
@@ -329,7 +329,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   <label className={`${labelCls} flex items-center justify-between`}>
                     <span>Discord-Kanal</span>
                     {seriesDiscord && discordChannelId && seriesDiscord !== discordChannelId && (
-                      <span className="flex items-center gap-1 text-amber-400 text-[10px]">
+                      <span className="flex items-center gap-1 text-amber-400 text-xs">
                         <AlertCircle className="w-3 h-3" /> Abweichend von Reihe
                       </span>
                     )}
@@ -338,7 +338,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                     emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"} />
                 </div>
               )}
-              <p className="text-[11px] text-gray-600">Duplizieren und {isUpcoming ? "Absagen" : "Löschen"} findest du oben im ⋯-Menü.</p>
+              <p className="text-xs text-gray-600">Duplizieren und {isUpcoming ? "Absagen" : "Löschen"} findest du oben im ⋯-Menü.</p>
             </Panel>
           </aside>
         </div>

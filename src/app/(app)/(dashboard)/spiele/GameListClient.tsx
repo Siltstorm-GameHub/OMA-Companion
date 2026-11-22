@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
@@ -68,18 +69,9 @@ export default function GameListClient({
       {tabs}
       {/* Kopf */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)" }}>
-              <Gamepad2 className="w-4.5 h-4.5 text-teal-400" />
-            </div>
-            <h1 className="font-display text-2xl font-black text-white tracking-tight">Spieleliste</h1>
-          </div>
-          <p className="text-xs text-gray-500 ml-11">Was zocken wir heute? Spiele für eure Runde finden — bewertet von der Community.</p>
-        </div>
+        <PageHeader title="Spieleliste" description="Was zocken wir heute? Spiele für eure Runde finden — bewertet von der Community." />
         <button type="button" onClick={() => setAddOpen(true)}
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors">
+          className="hidden sm:inline-flex min-h-10 items-center gap-1.5 rounded-control px-4 text-sm font-bold bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
           <Plus className="w-4 h-4" /> Spiel hinzufügen
         </button>
       </div>
@@ -143,7 +135,7 @@ export default function GameListClient({
             onChange={e => set("q", e.target.value)}
             placeholder="Spiel suchen …"
             aria-label="Spiel suchen"
-            className="w-full bg-line border border-line-strong rounded-xl pl-9 pr-8 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40"
+            className="w-full bg-surface-2 border border-line rounded-control pl-9 pr-8 py-2.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
           />
           {filters.q && (
             <button type="button" onClick={() => set("q", "")} aria-label="Suche leeren"
@@ -155,7 +147,7 @@ export default function GameListClient({
         <label className="relative">
           <span className="sr-only">Sortierung</span>
           <select value={sort} onChange={e => setSort(e.target.value as GameSort)}
-            className="input-glass h-full appearance-none rounded-xl pl-3 pr-8 text-sm text-white">
+            className="input-glass h-full appearance-none rounded-control pl-3 pr-8 text-sm text-fg">
             {(Object.keys(GAME_SORTS) as GameSort[]).map(s => <option key={s} value={s}>{GAME_SORTS[s]}</option>)}
           </select>
           <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -275,7 +267,7 @@ export default function GameListClient({
       ) : (
         <>
           <p className="text-xs text-gray-500">{visible.length} {visible.length === 1 ? "Spiel" : "Spiele"}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {visible.map(g => <GameCard key={g.id} game={g} />)}
           </div>
         </>

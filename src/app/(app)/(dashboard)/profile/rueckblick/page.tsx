@@ -104,7 +104,7 @@ export default async function YearReviewPage({
       {/* ── Rang-Reise & Münzen ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-          <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5" /> Punkte-Reise
           </p>
           <div className="relative flex items-center gap-2 flex-wrap">
@@ -123,7 +123,7 @@ export default async function YearReviewPage({
         </div>
 
         <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-          <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <CoinIcon size={13} /> Münzen
           </p>
           <div className="relative flex items-end gap-6">
@@ -146,7 +146,7 @@ export default async function YearReviewPage({
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
             <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
             <p className="relative text-lg font-black text-white leading-tight truncate" title={s.value}>{s.value}</p>
-            {s.sub && <p className="relative text-[10px] text-gray-500 mt-0.5 truncate">{s.sub}</p>}
+            {s.sub && <p className="relative text-xs text-gray-500 mt-0.5 truncate">{s.sub}</p>}
             <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
         ))}
@@ -157,7 +157,7 @@ export default async function YearReviewPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {review.biggestWin && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">🏆 Größter Gewinn</p>
+              <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">🏆 Größter Gewinn</p>
               <p className="relative text-lg font-black text-amber-400 tabular-nums flex items-center gap-1.5">
                 +{review.biggestWin.amount.toLocaleString("de-DE")} <CoinIcon size={14} />
               </p>
@@ -166,7 +166,7 @@ export default async function YearReviewPage({
           )}
           {review.busiestMonth && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <p className="relative text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">📈 Aktivster Monat</p>
+              <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">📈 Aktivster Monat</p>
               <p className="relative text-lg font-black text-white">{MONTH_NAMES[review.busiestMonth.month - 1]}</p>
               <p className="relative text-xs text-gray-400 mt-1">{review.busiestMonth.count} Aktivitäten</p>
             </div>
@@ -177,7 +177,7 @@ export default async function YearReviewPage({
       {/* ── Neue Pokale ──────────────────────────────────────────────── */}
       {review.newPokale.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
             <Medal className="w-3.5 h-3.5" /> {review.newPokale.length} neue Pokale
           </h2>
           <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">

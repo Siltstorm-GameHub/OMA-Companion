@@ -19,7 +19,7 @@ export default async function ServerApplicationsPage({ params }: { params: Promi
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-black text-white">Bewerbungen — {server.name}</h1>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Bewerbungen — {server.name}</h1>
         <p className="text-sm text-gray-400 mt-1">{server.game} · max. {server.maxSlots} Plätze</p>
       </div>
       <ApplicationsManager

@@ -40,12 +40,12 @@ export default function NextMatches({
   return (
     <div className="space-y-3 mb-6">
       {mine && (
-        <div className={`rounded-2xl p-4 border ${mine.live ? "border-red-500/50 bg-red-950/20" : "border-primary/40 bg-primary-soft/60"}`}>
+        <div className={`rounded-2xl p-4 border ${mine.live ? "border-red-500/50 bg-red-950/20" : "border-primary/40 bg-surface"}`}>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary-fg flex items-center gap-1.5">
+            <p className="text-sm font-extrabold text-primary-fg flex items-center gap-1.5">
               <Swords className="w-3.5 h-3.5" /> Dein nächstes Match
             </p>
-            {mine.live && <span className="text-[10px] font-bold text-red-400 animate-pulse">● LÄUFT GERADE</span>}
+            {mine.live && <span className="text-xs font-bold text-red-400 animate-pulse">● LÄUFT GERADE</span>}
           </div>
           <p className="text-sm text-white font-semibold">{mine.players.map(uname).join(" vs. ")}</p>
           <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -61,7 +61,7 @@ export default function NextMatches({
       )}
       {others.length > 0 && (
         <div className="glass rounded-2xl overflow-hidden">
-          <p className="px-4 py-2.5 border-b border-line text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+          <p className="px-4 py-2.5 border-b border-line text-xs font-semibold uppercase tracking-widest text-gray-500">
             Nächste Spiele
           </p>
           <div className="divide-y divide-line">
@@ -76,9 +76,9 @@ export default function NextMatches({
                   <p className="text-xs text-white truncate">
                     {m.players.length <= 2 ? m.players.map(uname).join(" vs. ") : `${m.players.length} Spieler`}
                   </p>
-                  <p className="text-[10px] text-gray-500 truncate">{m.label}</p>
+                  <p className="text-xs text-gray-500 truncate">{m.label}</p>
                 </div>
-                <span className={`text-[10px] shrink-0 ${m.live ? "text-red-400 font-bold animate-pulse" : "text-gray-500"}`}>
+                <span className={`text-xs shrink-0 ${m.live ? "text-red-400 font-bold animate-pulse" : "text-gray-500"}`}>
                   {m.live ? "LIVE" : when(m.scheduledAt) ?? ""}
                 </span>
               </div>
