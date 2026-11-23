@@ -44,6 +44,11 @@ import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import EventPokalWinners from "@/components/EventPokalWinners";
 import PokalPreview from "@/components/PokalPreview";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
+import { buttonClasses } from "@/components/ui/button-styles";
+import RankedAvatar from "@/components/RankedAvatar";
+import { MEDAL, Podium, type PodiumEntry } from "@/components/ui/Podium";
+import EventJumpBar from "@/app/(app)/(dashboard)/tournament/[id]/EventJumpBar";
+import StandingsHeader from "./StandingsHeader";
 
 type ArchivedSeason = {
   id: string; name: string; seasonNumber: number | null; archivedAt: Date | null;
@@ -88,9 +93,7 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
                   {s.podium.map(({ place, user }) => (
                     <span key={user.id} className={`flex items-center gap-1 text-xs ${place === 1 ? "text-coin font-bold" : "text-muted"}`}>
                       {place === 1 && <Crown className="size-3.5 text-coin" />}
-                      {user.image
-                        ? <img src={user.image} alt="" className={`w-4 h-4 rounded-full object-cover ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />
-                        : <span className={`w-4 h-4 rounded-full bg-gray-700 ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />}
+                      <span className={`rounded-full ring-1 ${PODIUM_RING[place - 1] ?? ""}`}><RankedAvatar userId={user.id} src={user.image} alt={user.username ?? user.name ?? ""} size={16} className="w-4 h-4" /></span>
                       <span className="text-subtle">{place}.</span> {user.username ?? user.name ?? "?"}
                     </span>
                   ))}
@@ -668,8 +671,22 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   } : null;
 
   // ── Tabellen-Reiter ───────────────────────────────────────────────────────
+  const userById = new Map(standingUsers.map(u => [u.id, u]));
+  const podiumEntries: PodiumEntry[] = standings.slice(0, 3).flatMap(r => {
+    const u = userById.get(r.userId);
+    if (!u) return [];
+    const name = u.username ?? u.name ?? "?";
+    return [{
+      id: u.id, name, image: u.image, isMe: u.id === userId,
+      href: u.id === userId ? "/profile" : `/profile/${u.id}`,
+      value: showPoints ? `${r.totalPoints.toLocaleString("de-DE")} Punkte` : `${r.participations} ${r.participations === 1 ? "Teilnahme" : "Teilnahmen"}`,
+    }];
+  });
   const seasonTable = (
     <div className="space-y-3">
+      {podiumEntries.length === 3 && (
+        <Podium entries={podiumEntries} size="md" className="rounded-card border border-line bg-surface shadow-card px-3 pt-6 sm:px-6" />
+      )}
       {hasDelta && gamePhaseCompleteEvents[0] && (
         <p className="flex items-center gap-1 text-xs font-semibold text-success">
           <TrendingUp className="size-3.5" /> Veränderung nach {gamePhaseCompleteEvents[0].title}
@@ -744,6 +761,22 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   ];
 
   const participantCount = totalParticipantIds.size;
+
+  const scoringInfo = punkteItems.length > 0 ? (
+    <>
+      <p>So sammelst du Tabellenpunkte für diese Eventreihe. Wer am Ende der Saison vorn liegt, bekommt die Belohnung der Reihe.</p>
+      <div className="flex flex-wrap gap-1.5">
+        {punkteItems.map((p, i) => (
+          <span key={i} className="flex min-h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-3" title={p.who}>
+            <span className="text-sm">{p.emoji}</span>
+            <span className="text-xs font-semibold text-fg">{p.label}</span>
+            <span className="text-xs font-extrabold text-primary-fg">{p.pts}</span>
+          </span>
+        ))}
+      </div>
+      <p className="text-xs text-muted">Tabellenpunkte gelten nur für diese Reihe. Rang-Punkte für die Rangliste gibt es zusätzlich für gute Platzierungen.</p>
+    </>
+  ) : null;
 
   // Belohnungen im Kopf: Endwertung der Reihe (zum Abschluss) + Bonus je Termin (direkt nach jedem Event)
   const finalTop = (seriesPayout.seriesFinal ?? []).slice().sort((a, b) => a.place - b.place).slice(0, 3);
@@ -914,9 +947,22 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         )}
       </section>
 
+      {/* ── Dein Stand am Handy direkt unter dem Kopf ── */}
+      <div className="lg:hidden">
+        <MyStandingCard me={myStanding} loggedIn={!!userId} pointsLabel={showPoints ? "Punkte" : "Teilnahmen"} />
+      </div>
+
+      {/* ── Sprungleiste ── */}
+      <EventJumpBar links={[
+        ...(activePollGroups.length > 0 ? [{ target: "umfrage", label: "Umfrage", badge: { text: "läuft", tone: "alert" as const } }] : []),
+        { target: "tabelle", label: "Tabelle", badge: standings.length > 0 ? { text: String(standings.length), tone: "count" as const } : undefined },
+        ...(!isArchived ? [{ target: "termine", label: "Termine", badge: upcomingEventIds.length > 0 ? { text: String(upcomingEventIds.length), tone: "count" as const } : undefined }] : []),
+        ...(series.rules || (isTournamentSeries && seriesPokale.length === 0 && !isArchived) ? [{ target: "regeln", label: "Regeln" }] : []),
+      ]} />
+
       {/* ── Umfragen (nur die aktuell aktive) — direkt hier abstimmbar ───────── */}
       {activePollGroups.length > 0 && (
-        <div className="space-y-3">
+        <div id="umfrage" className="space-y-3 scroll-mt-36">
           {activePollGroups.map(group => (
             <div key={group.eventId} className="rounded-card border border-line bg-surface shadow-card p-4 sm:p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -945,45 +991,32 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
       {/* ── Tabelle (Reiter) | Dein Stand + Termine ───────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-        <section aria-label="Tabelle" className="lg:col-span-3 space-y-3 min-w-0">
-          <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
-            <Trophy className="size-4 text-coin" /> Tabelle
-          </h2>
+        <section id="tabelle" aria-label="Tabelle" className="lg:col-span-3 space-y-3 min-w-0 scroll-mt-36">
+          <StandingsHeader info={scoringInfo} />
           <SectionTabs ariaLabel="Tabelle" tabs={tableTabs} />
         </section>
 
         <div className="lg:col-span-2 space-y-5 min-w-0">
-          <MyStandingCard me={myStanding} loggedIn={!!userId} pointsLabel={showPoints ? "Punkte" : "Teilnahmen"} />
+          <div className="hidden lg:block">
+            <MyStandingCard me={myStanding} loggedIn={!!userId} pointsLabel={showPoints ? "Punkte" : "Teilnahmen"} />
+          </div>
           {!isArchived && (
+            <div id="termine" className="scroll-mt-36">
             <SeriesEventList
               upcoming={upcomingEventIds.map(renderSeriesCard)}
               past={pastEventIds.map(renderSeriesCard)}
             />
+            </div>
           )}
         </div>
       </div>
 
       {/* ── So funktioniert's: Regeln, Punktesystem, Pokal ────────────────────── */}
-      {(series.rules || punkteItems.length > 0 || (isTournamentSeries && seriesPokale.length === 0 && !isArchived)) && (
-        <section id="regeln" aria-label="So funktioniert's" className="space-y-3 scroll-mt-24">
+      {(series.rules || (isTournamentSeries && seriesPokale.length === 0 && !isArchived)) && (
+        <section id="regeln" aria-label="So funktioniert's" className="space-y-3 scroll-mt-36">
           <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
             <Zap className="size-4 text-primary-fg" /> So funktioniert&apos;s
           </h2>
-          {punkteItems.length > 0 && (
-            <div className="rounded-card border border-line bg-surface shadow-card p-4 sm:p-5">
-              <p className="text-base font-extrabold text-fg mb-1">Punktesystem</p>
-              <p className="text-xs text-muted mb-3">So sammelst du Tabellenpunkte für diese Eventreihe. Wer am Ende vorn liegt, bekommt die Belohnung der Reihe.</p>
-              <div className="flex flex-wrap gap-2">
-                {punkteItems.map((p, i) => (
-                  <span key={i} className="flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface-2 px-3" title={p.who}>
-                    <span className="text-sm">{p.emoji}</span>
-                    <span className="text-xs font-semibold text-fg">{p.label}</span>
-                    <span className="text-xs font-extrabold text-primary-fg">{p.pts}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
           <RulesSection rules={series.rules} preview={4} />
           {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
             <PokalPreview category={series.category} isSeries={true} />
