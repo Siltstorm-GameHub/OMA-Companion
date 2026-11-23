@@ -159,7 +159,7 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
                 </Link>
                 {canManage && (
                   <Link href={`/events/verwalten/${e.id}`} title="Bearbeiten"
-                    className="p-1.5 rounded text-gray-600 hover:text-teal-400 transition-colors shrink-0">
+                    className="p-1.5 rounded text-gray-600 hover:text-primary transition-colors shrink-0">
                     <Pencil className="w-3.5 h-3.5" />
                   </Link>
                 )}

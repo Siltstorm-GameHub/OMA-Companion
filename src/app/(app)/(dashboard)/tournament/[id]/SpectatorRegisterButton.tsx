@@ -54,7 +54,7 @@ export default function SpectatorRegisterButton({ eventId, isSpectator, reward }
         onClick={toggle}
         disabled={loading}
         title="Abmelden als Zuschauer"
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-400 transition-colors border border-line hover:border-red-500/30 px-3 py-1.5 rounded-xl"
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-400 transition-colors border border-line hover:border-red-500/30 px-3 py-1.5 rounded-xl max-lg:min-h-10"
       >
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-400" />}
         Als Zuschauer angemeldet
@@ -66,7 +66,7 @@ export default function SpectatorRegisterButton({ eventId, isSpectator, reward }
     <button
       onClick={toggle}
       disabled={loading}
-      className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors border border-line hover:border-line-strong px-3 py-1.5 rounded-xl"
+      className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors border border-line hover:border-line-strong px-3 py-1.5 rounded-xl max-lg:min-h-10"
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
       Als Zuschauer anmelden

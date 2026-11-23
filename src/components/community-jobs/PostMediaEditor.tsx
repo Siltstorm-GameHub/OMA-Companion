@@ -65,12 +65,12 @@ export function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => v
   }
 
   return (
-    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-6 cursor-pointer hover:border-teal-500/30 transition-colors">
+    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-6 cursor-pointer hover:border-primary/30 transition-colors">
       {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
       <span className="text-xs text-gray-500">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
       {uploading && (
         <div className="w-40 h-1 rounded-full bg-line overflow-hidden">
-          <div className="h-full bg-teal-400 transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
         </div>
       )}
       <span className="text-xs text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
@@ -158,7 +158,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
                 className={`w-full ${SMALL_INPUT}`} />
               {isVideoUrl(m.url) && (
                 <button type="button" onClick={() => setTrimming(trimming === m.url ? null : m.url)}
-                  className="w-full text-xs text-gray-400 hover:text-teal-300 text-left">
+                  className="w-full text-xs text-gray-400 hover:text-primary-fg text-left">
                   ✂ {m.clipStart != null || m.clipEnd != null || m.posterUrl ? "Schnitt/Vorschaubild ändern" : "Schneiden & Vorschaubild"}
                 </button>
               )}
@@ -182,7 +182,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
 
       {free > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-teal-500/30 ${progress ? "opacity-50 pointer-events-none" : "text-gray-300"}`}>
+          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-primary/30 ${progress ? "opacity-50 pointer-events-none" : "text-gray-300"}`}>
             {progress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {progress ? `Lädt ${progress.done}/${progress.total}…` : "Bilder hochladen"}
             <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden"

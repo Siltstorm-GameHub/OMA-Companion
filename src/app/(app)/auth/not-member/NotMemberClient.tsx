@@ -60,7 +60,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
           </div>
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
-            <h1 className="text-xl font-black text-white">Kein Serverzugang</h1>
+            <h1 className="text-xl font-extrabold text-white">Kein Serverzugang</h1>
           </div>
           <p className="text-sm text-gray-400 max-w-sm leading-relaxed">
             Dein Discord-Account ist noch kein Mitglied des <span className="text-white font-semibold">Old Masters Ally</span> Discord-Servers.
@@ -93,10 +93,10 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
             className="w-full flex items-center gap-3 px-5 py-4 border-t border-line hover:bg-surface-2 transition-colors text-left"
           >
             {accepted
-              ? <CheckSquare className="w-5 h-5 text-teal-400 shrink-0" />
+              ? <CheckSquare className="w-5 h-5 text-primary shrink-0" />
               : <Square className="w-5 h-5 text-gray-600 shrink-0" />
             }
-            <span className={`text-sm font-medium transition-colors ${accepted ? "text-teal-300" : "text-gray-400"}`}>
+            <span className={`text-sm font-medium transition-colors ${accepted ? "text-primary-fg" : "text-gray-400"}`}>
               Ich habe die Serverregeln gelesen und akzeptiere sie.
             </span>
           </button>

@@ -21,7 +21,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
     <div className="max-w-5xl mx-auto w-full p-4 sm:p-8 space-y-6">
       <div>
         <div className="flex items-center gap-2.5 mb-1">
-          <Users className="w-5 h-5 text-teal-400" />
+          <Users className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-semibold text-white">Zusammen ansehen</h1>
         </div>
         <p className="text-sm text-gray-500">
@@ -50,7 +50,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
                     aria-pressed={on}
                     disabled={!on && picked.length >= MAX}
                     className={`text-left rounded-xl border px-3 py-2.5 transition-all disabled:opacity-40 ${
-                      on ? "border-teal-400/60 bg-teal-500/15" : "border-line hover:border-white/25"
+                      on ? "border-primary/60 bg-primary/15" : "border-line hover:border-white/25"
                     }`}
                   >
                     <MemberLine m={m} />
@@ -64,7 +64,7 @@ export default function WatchOverview({ data }: { data: Overview }) {
                 href={picked.length ? `/zusammen?c=${picked.join(",")}` : "#"}
                 aria-disabled={picked.length === 0}
                 className={`text-sm px-4 py-2 rounded-xl border font-medium ${
-                  picked.length ? "bg-teal-500/20 border-teal-400/50 text-teal-100 hover:bg-teal-500/30" : "pointer-events-none border-line text-gray-500"
+                  picked.length ? "bg-primary/20 border-primary/50 text-teal-100 hover:bg-primary/30" : "pointer-events-none border-line text-gray-500"
                 }`}
               >
                 {picked.length ? `${picked.length} ${picked.length === 1 ? "Stream" : "Streams"} ansehen` : "Streams auswählen"}
@@ -88,7 +88,7 @@ function GroupList({ icon: Icon, title, groups }: { icon: typeof Users; title: s
           <Link
             key={g.key}
             href={watchGroupHref(g)}
-            className="glass rounded-2xl p-4 hover:border-teal-500/40 border border-line transition-all"
+            className="glass rounded-2xl p-4 hover:border-primary/40 border border-line transition-all"
           >
             <span className="block text-sm font-semibold text-white truncate">{g.label}</span>
             <span className="block text-xs text-gray-500 mb-2">{g.members.length} Streams · Zusammen ansehen →</span>

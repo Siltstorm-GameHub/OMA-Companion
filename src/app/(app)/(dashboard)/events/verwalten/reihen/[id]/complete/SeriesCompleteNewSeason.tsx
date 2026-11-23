@@ -6,12 +6,12 @@ import type { SeriesComplete } from "./useSeriesComplete";
 export default function SeriesCompleteNewSeason({ ctx }: { ctx: SeriesComplete }) {
   const { startNewSeason, setStartNewSeason } = ctx;
   return (
-    <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
+    <div className="rounded-xl p-4 space-y-3" style={{ background: "color-mix(in srgb, var(--color-primary) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={startNewSeason} onChange={e => setStartNewSeason(e.target.checked)}
-                  className="rounded accent-teal-500" />
-                <Repeat className="w-3.5 h-3.5 text-teal-400" />
-                <span className="text-xs font-semibold text-teal-300">Neue Saison starten</span>
+                  className="rounded accent-primary" />
+                <Repeat className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-primary-fg">Neue Saison starten</span>
               </label>
               {startNewSeason && (
                 <p className="text-xs text-gray-600">

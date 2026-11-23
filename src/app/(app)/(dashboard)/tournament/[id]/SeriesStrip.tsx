@@ -33,13 +33,13 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
             const dot = current
               ? <span className="block h-3.5 w-3.5 rounded-full border-2 bg-line" style={{ borderColor: ctx.color }} />
               : e.state === "done"
-                ? <span className="block h-2.5 w-2.5 rounded-full bg-teal-500" />
+                ? <span className="block h-2.5 w-2.5 rounded-full bg-primary" />
                 : e.state === "live"
                   ? <span className="block h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
                   : <span className="block h-2.5 w-2.5 rounded-full bg-white/20" />;
             return (
               <li key={e.id} className="flex items-center">
-                {i > 0 && <span className={`h-0.5 w-2.5 sm:w-3.5 ${e.state === "done" ? "bg-teal-500/60" : "bg-line"}`} />}
+                {i > 0 && <span className={`h-0.5 w-2.5 sm:w-3.5 ${e.state === "done" ? "bg-primary/60" : "bg-line"}`} />}
                 {current ? dot : (
                   <Link href={`/tournament/${e.id}`} className="p-0.5 hover:opacity-80" title={`${e.title} · ${formatBerlinDate(e.startAt, { day: "2-digit", month: "2-digit" })}`}>
                     {dot}
@@ -61,7 +61,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
       {/* Dein Stand + Endwertung */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 min-w-0">
         {ctx.myPlace ? (
-          <span>Du: <span className="font-semibold text-teal-300">Platz {ctx.myPlace}</span> von {ctx.tableSize} · {ctx.myPoints} Punkte</span>
+          <span>Du: <span className="font-semibold text-primary-fg">Platz {ctx.myPlace}</span> von {ctx.tableSize} · {ctx.myPoints} Punkte</span>
         ) : (
           <span>Dieses Event zählt für die Reihentabelle</span>
         )}
@@ -69,13 +69,13 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
           <span className="flex items-center gap-1" title="Belohnung für Platz 1 der Endwertung — zum Abschluss der Reihe">
             Endwertung 1. Platz:
             {ctx.finalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{ctx.finalFirst.coins.toLocaleString("de-DE")}</span>}
-            {ctx.finalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{ctx.finalFirst.rankPoints}</span>}
+            {ctx.finalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{ctx.finalFirst.rankPoints}</span>}
           </span>
         )}
       </div>
 
       <Link href={`/events/series/${ctx.id}`}
-        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-black hover:brightness-110 transition"
+        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-black hover:brightness-110 transition max-lg:min-h-10"
         style={{ background: ctx.color }}>
         Zur Reihe <ChevronRight className="w-3.5 h-3.5" />
       </Link>

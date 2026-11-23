@@ -34,7 +34,7 @@ export default function PointsInfoModal() {
       <button
         onClick={() => setOpen(true)}
         title="Punktesystem erklären"
-        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white border border-line-strong hover:border-line-strong px-2.5 py-1.5 rounded-lg transition-all"
+        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white border border-line-strong hover:border-line-strong px-2.5 py-1.5 rounded-lg transition-all max-lg:min-h-10"
       >
         <Info className="w-3.5 h-3.5" />
         Info

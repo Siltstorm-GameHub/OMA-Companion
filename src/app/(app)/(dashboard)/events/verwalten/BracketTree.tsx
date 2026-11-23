@@ -22,7 +22,7 @@ function PlayerRow({ uid, total, legs, won, decided, bye, nameOf }: {
   return (
     <span className={`flex items-center gap-1.5 px-2 py-1 text-xs ${won ? "text-white font-semibold" : decided ? "text-gray-500" : uid ? "text-gray-200" : "text-gray-600 italic"}`}>
       <span className="min-w-0 flex-1 truncate">{name}</span>
-      {won && <Check className="w-3 h-3 shrink-0 text-teal-300" />}
+      {won && <Check className="w-3 h-3 shrink-0 text-primary-fg" />}
       {legs.length > 1 && legs.some(l => l != null) && (
         <span className="shrink-0 text-xs font-normal text-gray-500 tabular-nums">{legs.map(l => l ?? "–").join(" · ")}</span>
       )}
@@ -42,7 +42,7 @@ function SlotBox({ slot, nameOf, selected, onSelect }: { slot: BracketSlot; name
   return (
     <button type="button" onClick={() => onSelect(slot.key)} aria-pressed={selected} aria-label={label}
       className={`relative w-full overflow-hidden rounded-lg border text-left transition-colors divide-y divide-line ${
-        selected ? "border-teal-400/60 bg-teal-500/[0.08] ring-1 ring-teal-400/40"
+        selected ? "border-primary/60 bg-primary/[0.08] ring-1 ring-primary/40"
           : slot.live ? "border-amber-400/50 bg-amber-500/[0.06]"
           : "border-line bg-surface-2 hover:bg-line"
       } ${slot.bye ? "opacity-60" : ""}`}>

@@ -30,7 +30,7 @@ export default function MediaPickerPanel({ onPick, onClose }: { onPick: (asset: 
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-40 overflow-y-auto">
         {assets.map(a => (
-          <button key={a.id} title={a.caption ?? undefined} onClick={() => onPick(a)} className="rounded overflow-hidden border-2 border-transparent hover:border-teal-400">
+          <button key={a.id} title={a.caption ?? undefined} onClick={() => onPick(a)} className="rounded overflow-hidden border-2 border-transparent hover:border-primary">
             {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau */}
             <img src={a.url} alt="" className="w-full h-14 object-cover" />
           </button>

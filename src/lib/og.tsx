@@ -77,7 +77,7 @@ export function OgFrame({
         style={{
           position: "absolute", top: 0, left: 0, width: "48%", height: "100%",
           display: "flex",
-          background: `linear-gradient(to right, rgba(20,184,166,0.20), rgba(20,184,166,0))`,
+          background: `linear-gradient(to right, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-primary) 0%, transparent))`,
         }}
       />
       {/* Rot-Wash rechts */}
@@ -93,7 +93,7 @@ export function OgFrame({
         style={{
           position: "absolute", top: 0, left: 0, width: "100%", height: 4,
           display: "flex",
-          background: `linear-gradient(to right, rgba(20,184,166,0), ${BRAND.teal}, rgba(139,32,32,0.8), rgba(139,32,32,0))`,
+          background: `linear-gradient(to right, color-mix(in srgb, var(--color-primary) 0%, transparent), ${BRAND.teal}, rgba(139,32,32,0.8), rgba(139,32,32,0))`,
         }}
       />
       {/* Seitenmarker */}
@@ -117,7 +117,7 @@ export function OgFrame({
           justifyContent: "center", gap: 18, paddingBottom: 34,
         }}
       >
-        <div style={{ display: "flex", width: 150, height: 1, background: `linear-gradient(to right, rgba(20,184,166,0), ${BRAND.teal})` }} />
+        <div style={{ display: "flex", width: 150, height: 1, background: `linear-gradient(to right, color-mix(in srgb, var(--color-primary) 0%, transparent), ${BRAND.teal})` }} />
         <div style={{ display: "flex", width: 6, height: 6, borderRadius: 3, background: BRAND.teal }} />
         <div style={{ display: "flex", fontSize: 17, fontWeight: 700, letterSpacing: 7, color: BRAND.textFaint }}>
           {footer}
@@ -150,9 +150,9 @@ export function OgBrandRow({ logo, subtitle }: { logo: string; subtitle?: string
 /** Kleines Label-Pill, z.B. für Genre, Format oder Status. */
 export function OgPill({ text, tone = "teal" }: { text: string; tone?: "teal" | "red" | "neutral" }) {
   const map = {
-    teal:    { bg: "rgba(20,184,166,0.14)",  border: "rgba(20,184,166,0.42)",  fg: BRAND.tealLight },
+    teal:    { bg: "color-mix(in srgb, var(--color-primary) 14%, transparent)",  border: "color-mix(in srgb, var(--color-primary) 42%, transparent)",  fg: BRAND.tealLight },
     red:     { bg: "rgba(139,32,32,0.20)",   border: "rgba(139,32,32,0.55)",   fg: "#f87171" },
-    neutral: { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.16)", fg: BRAND.textDim },
+    neutral: { bg: "rgba(255,255,255,0.06)", border: "var(--color-line-strong)", fg: BRAND.textDim },
   }[tone];
   return (
     <div

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useHubValue } from "@/lib/useHubValue";
 import Link from "next/link";
 import { MessageCircle } from "@/components/icons";
 import { RelativeTime } from "@/components/RelativeTime";
-import { usePolling } from "@/lib/usePolling";
+import { HUB_THREADS_EVENT, readHubThreads } from "@/lib/hub-events";
 import type { EventThreadDTO } from "@/lib/event-comments-shared";
 import { CARD, ModuleHeader } from "./HomeModules";
 
@@ -17,17 +17,9 @@ const PHASE_LABEL: Record<EventThreadDTO["phase"], string> = {
  * (gleiche Quelle wie der Community-Hub, /api/me/event-threads). Ungelesene zuerst.
  */
 export default function EventChatModule() {
-  const [threads, setThreads] = useState<EventThreadDTO[] | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/me/event-threads", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = (await res.json()) as { threads: EventThreadDTO[] };
-      setThreads(data.threads);
-    } catch { /* Netzwerkfehler ignorieren */ }
-  }, []);
-  usePolling(load, 60_000);
+  // Kein eigenes Polling: der Community-Hub lädt die Absprachen ohnehin (/api/me/pulse) und reicht
+  // sie hierher durch — spart einen Function-Aufruf pro Minute und offenem Tab.
+  const threads = useHubValue(HUB_THREADS_EVENT, readHubThreads<EventThreadDTO[]>, null);
 
   const shown = (threads ?? [])
     .filter((t) => t.last && t.phase !== "finished")

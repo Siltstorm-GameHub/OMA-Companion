@@ -60,7 +60,7 @@ export default function WhatsAppCommunityBanner({
         <p style={{ fontSize: 13, fontWeight: 700, color: "#4ade80", margin: 0 }}>
           WhatsApp Community
         </p>
-        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", margin: "2px 0 0" }}>
+        <p style={{ fontSize: 12, color: "var(--color-muted)", margin: "2px 0 0" }}>
           Tritt unserer WhatsApp Community bei und bleib immer auf dem Laufenden!
         </p>
       </div>
@@ -91,7 +91,7 @@ export default function WhatsAppCommunityBanner({
         style={{
           width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center",
           borderRadius: 6, background: "none", border: "none", cursor: "pointer",
-          color: "rgba(255,255,255,0.3)", flexShrink: 0, transition: "color 150ms",
+          color: "var(--color-subtle)", flexShrink: 0, transition: "color 150ms",
         }}
         onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.7)")}
         onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}

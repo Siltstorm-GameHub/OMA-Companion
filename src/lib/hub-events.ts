@@ -38,3 +38,34 @@ export function publishHubOnline(count: number) {
 export function readHubOnline(): number {
   return typeof window === "undefined" ? 0 : window.__omaHubOnline ?? 0;
 }
+
+/**
+ * Weitere Werte aus dem gemeinsamen Hintergrund-Abruf des Hubs (/api/me/pulse), damit andere
+ * Komponenten nicht selbst pollen (jeder Abruf = ein Vercel-Function-Aufruf):
+ * - Zahl offener Umfragen ohne eigene Stimme (PollBadge in Seitenleiste/BottomNav)
+ * - Absprachen-Liste (EventChatModule auf der Übersicht)
+ */
+export const HUB_POLLS_EVENT = "oma:hub-polls";
+export const HUB_THREADS_EVENT = "oma:hub-threads";
+
+declare global {
+  interface Window { __omaHubPolls?: number; __omaHubThreads?: unknown }
+}
+
+export function publishHubPolls(count: number) {
+  window.__omaHubPolls = count;
+  window.dispatchEvent(new CustomEvent<number>(HUB_POLLS_EVENT, { detail: count }));
+}
+
+export function readHubPolls(): number {
+  return typeof window === "undefined" ? 0 : window.__omaHubPolls ?? 0;
+}
+
+export function publishHubThreads<T>(threads: T) {
+  window.__omaHubThreads = threads;
+  window.dispatchEvent(new CustomEvent<T>(HUB_THREADS_EVENT, { detail: threads }));
+}
+
+export function readHubThreads<T>(): T | null {
+  return typeof window === "undefined" ? null : ((window.__omaHubThreads as T | undefined) ?? null);
+}

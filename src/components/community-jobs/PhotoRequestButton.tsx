@@ -34,7 +34,7 @@ export default function PhotoRequestButton({ eventId, defaultText = "", label = 
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-400 transition-colors">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary transition-colors">
         <Camera className="w-3 h-3" /> {label}
       </button>
     );

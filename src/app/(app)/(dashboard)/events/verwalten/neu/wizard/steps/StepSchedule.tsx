@@ -23,7 +23,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                 }`}>
                 <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
                 <span className="text-xs text-gray-500">{f.desc}</span>
-                {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-teal-300">🎯 Ziel möglich</span>}
+                {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-primary-fg">🎯 Ziel möglich</span>}
               </button>
             ))}
           </div>
@@ -69,10 +69,10 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
               onClick={() => setRecurrenceType(r.value as "none" | RecurrenceType)}
               className={`flex flex-col items-start gap-0.5 rounded-xl p-3 border-2 transition-all text-left ${
                 recurrenceType === r.value
-                  ? "border-teal-500/60 bg-teal-500/10"
+                  ? "border-primary/60 bg-primary/10"
                   : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
-              <span className={`text-sm font-semibold ${recurrenceType === r.value ? "text-teal-300" : "text-gray-300"}`}>{r.label}</span>
+              <span className={`text-sm font-semibold ${recurrenceType === r.value ? "text-primary-fg" : "text-gray-300"}`}>{r.label}</span>
               <span className="text-xs text-gray-500">{r.desc}</span>
             </button>
           ))}
@@ -80,8 +80,8 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
       </div>
 
       {recurrenceType === "monthly" && monthlyDescriptions && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
-          <p className="text-sm font-medium text-teal-300">Monatlicher Rhythmus</p>
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-3">
+          <p className="text-sm font-medium text-primary-fg">Monatlicher Rhythmus</p>
           <p className="text-xs text-gray-500">Aus dem Startdatum erkannte Optionen:</p>
           <div className="space-y-2">
             {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
@@ -89,7 +89,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
                 <input type="radio" name="monthlyMode" value={mode}
                   checked={recurrenceMonthlyMode === mode}
                   onChange={() => setRecurrenceMonthlyMode(mode)}
-                  className="accent-teal-500" />
+                  className="accent-primary" />
                 <span className="text-sm text-gray-200">{monthlyDescriptions[mode]}</span>
               </label>
             ))}
@@ -100,7 +100,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
       {previewDates.length > 0 && (
         <div className="rounded-xl p-4 border border-line bg-surface-2">
           <div className="flex items-center gap-2 mb-3">
-            <CalendarDays className="w-4 h-4 text-teal-400" />
+            <CalendarDays className="w-4 h-4 text-primary" />
             <p className="text-sm font-medium text-gray-200">
               {seriesEndDate
                 ? `${previewDates.length} Termine werden erstellt`
@@ -113,7 +113,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
           <div className="space-y-1.5 max-h-56 overflow-y-auto">
             {previewDates.map((d, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
-                <span className="text-teal-500 text-xs w-5 text-right shrink-0">#{i + 1}</span>
+                <span className="text-primary text-xs w-5 text-right shrink-0">#{i + 1}</span>
                 <span>{formatBerlinDateTime(d, { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             ))}

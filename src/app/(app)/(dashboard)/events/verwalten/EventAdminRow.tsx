@@ -79,7 +79,7 @@ const STATUS_STYLES: Record<string, string> = {
   open: "bg-blue-900/50 text-blue-300", active: "bg-green-900/50 text-green-300",
   closed: "bg-amber-900/50 text-amber-300", finished: "bg-gray-800 text-gray-500",
 };
-const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 
 type Tab = "settings" | "participants" | "bracket";
 
@@ -110,11 +110,11 @@ function ScopeModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Repeat className="w-4 h-4 text-teal-400" />
+              <Repeat className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-semibold text-white">Änderungsbereich</h3>
             </div>
             <p className="text-xs text-gray-400">
-              Dieses Event gehört zur Reihe <span className="text-teal-400 font-medium">{seriesName}</span>.
+              Dieses Event gehört zur Reihe <span className="text-primary font-medium">{seriesName}</span>.
               Sollen Titel und Beschreibung für alle Events der Reihe übernommen werden?
             </p>
           </div>
@@ -133,9 +133,9 @@ function ScopeModal({
           </button>
           <button
             onClick={onAll}
-            className="w-full text-left px-4 py-3 rounded-xl border border-teal-500/30 hover:border-teal-500/60 bg-teal-500/5 hover:bg-teal-500/10 transition-all group"
+            className="w-full text-left px-4 py-3 rounded-xl border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 transition-all group"
           >
-            <p className="text-sm font-medium text-teal-300 group-hover:text-teal-200 transition-colors flex items-center gap-2">
+            <p className="text-sm font-medium text-primary-fg group-hover:text-teal-200 transition-colors flex items-center gap-2">
               <GitBranch className="w-3.5 h-3.5" /> Gesamte Reihe
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Titel und Beschreibung werden für alle Events in „{seriesName}" aktualisiert.</p>
@@ -561,7 +561,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         <div className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-gray-800/30" onClick={() => setExpanded(!expanded)}>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              {event.series && <Repeat className="w-3 h-3 text-teal-600 shrink-0" />}
+              {event.series && <Repeat className="w-3 h-3 text-primary shrink-0" />}
               <p className="font-medium text-white truncate">{event.title}</p>
               {event.type === "tournament" && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
             </div>
@@ -658,12 +658,12 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                   </div>
 
                   {/* ── Eventreihe ── */}
-                  {!hideSeries && <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.12)" }}>
+                  {!hideSeries && <div className="rounded-xl p-3 space-y-3" style={{ background: "color-mix(in srgb, var(--color-primary) 4%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 12%, transparent)" }}>
                     <div className="flex items-center gap-2">
-                      <Repeat className="w-3.5 h-3.5 text-teal-500" />
+                      <Repeat className="w-3.5 h-3.5 text-primary" />
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Eventreihe</span>
                       {event.series && seriesMode === "keep" && (
-                        <span className="text-xs text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                           {event.series.name}
                         </span>
                       )}
@@ -675,8 +675,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         <button type="button" onClick={() => setSeriesMode("keep")}
                           className="text-xs px-3 py-1.5 rounded-lg transition-colors"
                           style={seriesMode === "keep"
-                            ? { background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                            : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                            ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                            : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
                           Behalten
                         </button>
                       )}
@@ -684,21 +684,21 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         className="text-xs px-3 py-1.5 rounded-lg transition-colors"
                         style={seriesMode === "none"
                           ? { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.30)", color: "#f87171" }
-                          : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                          : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
                         {event.series ? "Aus Reihe entfernen" : "Kein (Einzelevent)"}
                       </button>
                       <button type="button" onClick={() => setSeriesMode("existing")}
                         className="text-xs px-3 py-1.5 rounded-lg transition-colors"
                         style={seriesMode === "existing"
-                          ? { background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                          : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                          ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                          : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
                         {event.series ? "Reihe wechseln" : "Zu Reihe hinzufügen"}
                       </button>
                       <button type="button" onClick={() => setSeriesMode("new")}
                         className="text-xs px-3 py-1.5 rounded-lg transition-colors"
                         style={seriesMode === "new"
-                          ? { background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                          : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                          ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                          : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
                         Neue Reihe erstellen
                       </button>
                     </div>
@@ -730,13 +730,13 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
                     {/* ── Reihen-Einstellungen (nur wenn in Reihe & behalten) ── */}
                     {seriesMode === "keep" && event.seriesId && (
-                      <div className="border-t border-teal-500/10 pt-3 mt-1 space-y-3">
+                      <div className="border-t border-primary/10 pt-3 mt-1 space-y-3">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
                             Reihen-Konfiguration
                           </p>
                           <Link href={`/events/series/${event.seriesId}`}
-                            className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-400 transition-colors">
+                            className="flex items-center gap-1 text-xs text-primary hover:text-primary transition-colors">
                             <ExternalLink className="w-2.5 h-2.5" /> Reihe ansehen
                           </Link>
                         </div>
@@ -756,7 +756,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                             <input type="checkbox" checked={propagateGame}
                               onChange={e => setPropagateGame(e.target.checked)}
-                              className="rounded accent-teal-500" />
+                              className="rounded accent-primary" />
                             <span className="text-xs text-gray-500">
                               Spiel auf alle Events der Reihe übertragen
                             </span>
@@ -778,7 +778,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                             <input type="checkbox" checked={propagateFormat}
                               onChange={e => setPropagateFormat(e.target.checked)}
-                              className="rounded accent-teal-500" />
+                              className="rounded accent-primary" />
                             <span className="text-xs text-gray-500">
                               Format auf alle Turniere der Reihe übertragen
                             </span>
@@ -830,8 +830,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                     onClick={() => setRecurrenceMonthlyMode(mode)}
                                     className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all"
                                     style={recurrenceMonthlyMode === mode
-                                      ? { background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                                      : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }
+                                      ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                                      : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }
                                     }
                                   >
                                     {labels[mode]}
@@ -883,7 +883,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                     setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r));
                                   }}
                                   placeholder="Pkt./Einheit"
-                                  className="w-24 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
+                                  className="w-24 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors"
                                 />
                                 <button
                                   type="button"
@@ -897,7 +897,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <button
                               type="button"
                               onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1 }])}
-                              className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors"
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors"
                             >
                               <Plus className="w-3 h-3" /> Statistik hinzufügen
                             </button>
@@ -999,9 +999,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                                         </label>
                                       ))}
                                       {/* Auto-berechnete Punkte */}
-                                      <label className="flex items-center gap-1.5 text-xs text-teal-500">
+                                      <label className="flex items-center gap-1.5 text-xs text-primary">
                                         Punkte (auto)
-                                        <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                                        <span className="w-16 rounded px-1.5 py-0.5 text-xs text-primary-fg bg-primary-soft border border-primary/30 tabular-nums">
                                           {row.points}
                                         </span>
                                       </label>
@@ -1056,7 +1056,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         <div className="flex gap-2 flex-wrap items-center">
                           <button onClick={saveSeriesSettings}
                             disabled={seriesSettingsSaving || loading}
-                            className="text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                            className="text-xs bg-teal-700 hover:bg-primary-hover text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
                             {seriesSettingsSaving ? "Speichert…" : "Reihe speichern"}
                           </button>
 
@@ -1064,7 +1064,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <button
                               onClick={generateNextEvent}
                               disabled={generatingNext || loading}
-                              className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+                              className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-white border border-primary/40 hover:bg-primary-hover rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10"
                             >
                               <CalendarPlus className="w-3.5 h-3.5" />
                               {generatingNext ? "Erstellt…" : "Nächsten Termin erstellen"}
@@ -1077,7 +1077,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
                   {/* Save hint für series + content change */}
                   {needsScopeDialog && (
-                    <p className="text-xs text-teal-400/70 flex items-center gap-1.5">
+                    <p className="text-xs text-primary/70 flex items-center gap-1.5">
                       <GitBranch className="w-3 h-3" />
                       Beim Speichern wird gefragt, ob Titel/Beschreibung für die gesamte Reihe gelten sollen.
                     </p>
@@ -1253,11 +1253,11 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       nicht mehr editierbar, wenn das Event bereits beendet ist; dafür muss der
                       Status erst wieder auf aktiv gesetzt werden (Status-Dropdown oben) */}
                   {event.seriesId && (status !== "finished" || !!event.completionData) && (
-                    <div className="border border-teal-800/40 rounded-lg p-3 bg-teal-950/10">
+                    <div className="border border-primary/30 rounded-lg p-3 bg-primary-soft">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
                           <p className="text-sm font-medium text-white flex items-center gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                             {status === "finished" ? "Ergebnisse" : event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">
@@ -1270,7 +1270,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         </div>
                         <Link
                           href={`/events/verwalten/${event.id}/complete`}
-                          className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors shrink-0"
+                          className="flex items-center gap-1.5 text-sm text-primary-fg hover:text-white hover:bg-primary-hover border border-primary/50 hover:border-primary/30 rounded-lg px-3 py-2 transition-colors shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           {status === "finished" ? "Ergebnisse" : event.completionData ? "Bearbeiten" : "Abschließen"}
@@ -1319,7 +1319,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       </div>
                       {bulkSelected.length > 0 && (
                         <button onClick={bulkAdd} disabled={loading}
-                          className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-3 py-1.5 whitespace-nowrap">
+                          className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-3 py-1.5 whitespace-nowrap max-lg:min-h-10">
                           <UserPlus className="w-3.5 h-3.5" />
                           {bulkSelected.length} hinzufügen
                         </button>

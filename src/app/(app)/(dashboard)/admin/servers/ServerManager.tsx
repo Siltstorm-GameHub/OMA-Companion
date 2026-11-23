@@ -109,7 +109,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   return (
     <div className="space-y-6">
       {/* ── Neuen Server anlegen ─────────────────────────────── */}
-      <div className="glass rounded-2xl p-5 space-y-3" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="glass rounded-2xl p-5 space-y-3" style={{ border: "1px solid var(--color-line)" }}>
         <h2 className="text-sm font-semibold text-white">Server anlegen</h2>
         <ServerForm value={form} onChange={setForm} variant="create" submitLabel="Server anlegen"
           submitIcon={<Plus className="w-3.5 h-3.5" />} saving={creating} onSubmit={createServer} />
@@ -125,7 +125,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       ) : (
         <div className="space-y-2">
           {servers.map((server) => (
-            <div key={server.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: server.isOnline ? 1 : 0.6 }}>
+            <div key={server.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid var(--color-line)", opacity: server.isOnline ? 1 : 0.6 }}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <GameCover game={server.game} className="w-9 h-9" rounded="rounded-lg" />
                 <div className="flex-1 min-w-0">
@@ -133,7 +133,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     <span className="w-2 h-2 shrink-0 rounded-full" style={{ backgroundColor: server.isOnline ? ONLINE_COLOR : OFFLINE_COLOR }} />
                     {server.name}
                     {server.openAccess && (
-                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-semibold bg-primary/15 border border-primary/25 text-primary-fg shrink-0">
                         <Globe className="w-2.5 h-2.5" /> Offen für alle
                       </span>
                     )}

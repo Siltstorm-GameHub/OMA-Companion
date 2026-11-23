@@ -34,7 +34,7 @@ export default function OmaOriginalToggle({
           checked={on}
           disabled={locked}
           onChange={e => onChange(e.target.checked)}
-          className="w-4 h-4 mt-1 rounded accent-teal-500 shrink-0 disabled:opacity-60"
+          className="w-4 h-4 mt-1 rounded accent-primary shrink-0 disabled:opacity-60"
         />
         {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
         <img
@@ -45,7 +45,7 @@ export default function OmaOriginalToggle({
         />
         <div className="min-w-0">
           <p className="text-sm text-gray-200">
-            <span className="font-semibold tracking-[0.12em] text-teal-300">OMA</span>{" "}
+            <span className="font-semibold tracking-[0.12em] text-primary-fg">OMA</span>{" "}
             <span className="font-semibold uppercase tracking-[0.12em]">Original</span>
           </p>
           <p className="text-xs text-gray-500 mt-0.5">

@@ -40,7 +40,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const inputCls =
-  "w-full px-2.5 py-1.5 rounded-lg bg-surface-2 border border-line-strong text-sm text-white focus:border-teal-500/40 focus:outline-none";
+  "w-full px-2.5 py-1.5 rounded-lg bg-surface-2 border border-line-strong text-sm text-white focus:border-primary/40 focus:outline-none";
 
 function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; match: ReviewMatch; sub: Sub; statFields: string[] }) {
   const router = useRouter();
@@ -153,7 +153,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
           <input value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} maxLength={500} placeholder="Notiz an den Spieler (optional)" className={inputCls} />
           <div className="flex flex-wrap gap-2">
             <button disabled={busy} onClick={() => act(changed ? "correct" : "approve")}
-              className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium disabled:opacity-50">
+              className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
               {changed ? "Korrigiert übernehmen" : "Übernehmen"}
             </button>
             <button disabled={busy} onClick={() => act("reject")}
@@ -223,14 +223,14 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
       <div className="flex flex-wrap items-center gap-2">
         {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
             {label}
           </button>
         ))}
         {bulkSubs.length > 0 && (
           <button type="button" onClick={approveAll} disabled={bulkBusy}
             title="Übernimmt jede offene Meldung so, wie sie gemeldet wurde. Matches mit Widerspruch bleiben offen."
-            className="ml-auto rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-white">
+            className="ml-auto rounded-lg bg-primary hover:bg-primary-hover disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-primary-ink">
             {bulkBusy ? "Übernehme …" : `Alle offenen ohne Widerspruch übernehmen (${bulkSubs.length})`}
           </button>
         )}

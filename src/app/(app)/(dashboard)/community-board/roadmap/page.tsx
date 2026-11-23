@@ -14,7 +14,7 @@ type Item = Awaited<ReturnType<typeof getRoadmap>>["planned"][number];
 function IdeaRow({ item }: { item: Item }) {
   return (
     <li>
-      <Link href={`/community-board/idea/${item.id}`} className="flex items-start justify-between gap-3 hover:text-teal-300 transition-colors">
+      <Link href={`/community-board/idea/${item.id}`} className="flex items-start justify-between gap-3 hover:text-primary-fg transition-colors">
         <span className="min-w-0">
           <span className="block text-sm text-gray-100 truncate">{item.title}</span>
           <span className="block text-xs text-gray-500 truncate">
@@ -46,11 +46,11 @@ export default async function RoadmapPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 px-4 py-6">
-      <Link href="/community-board" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-300 transition-colors">
+      <Link href="/community-board" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-fg transition-colors">
         <ChevronLeft className="w-3.5 h-3.5" /> Zurück zum Community-Board
       </Link>
       <div>
-        <h1 className="text-lg font-bold text-white flex items-center gap-2"><Rocket className="w-5 h-5 text-teal-400" /> Roadmap</h1>
+        <h1 className="text-lg font-bold text-white flex items-center gap-2"><Rocket className="w-5 h-5 text-primary" /> Roadmap</h1>
         <p className="text-xs text-gray-500 mt-0.5">Ihr habt gewünscht — das wird daraus.</p>
       </div>
 
@@ -67,7 +67,7 @@ export default async function RoadmapPage() {
           <ol className="space-y-1.5">
             {wishlist.map((g, i) => (
               <li key={g.appId} className="flex items-center justify-between gap-3 text-sm">
-                <a href={`https://store.steampowered.com/app/${g.appId}`} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-gray-100 hover:text-teal-300 transition-colors">
+                <a href={`https://store.steampowered.com/app/${g.appId}`} target="_blank" rel="noopener noreferrer" className="min-w-0 truncate text-gray-100 hover:text-primary-fg transition-colors">
                   <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{g.name}
                 </a>
                 <span className="shrink-0 text-xs text-gray-500">
@@ -87,7 +87,7 @@ export default async function RoadmapPage() {
               <ol className="space-y-1.5">
                 {block.items.map((t, i) => (
                   <li key={t.id}>
-                    <Link href={`/community-board/idea/${t.id}`} className="block text-sm text-gray-100 hover:text-teal-300 transition-colors truncate">
+                    <Link href={`/community-board/idea/${t.id}`} className="block text-sm text-gray-100 hover:text-primary-fg transition-colors truncate">
                       <span className="text-gray-600 mr-2 tabular-nums">{i + 1}.</span>{t.title}
                     </Link>
                     <span className="block text-xs text-gray-500 pl-5">Ø {formatFixed(t.average, 1)} ★ · {t.votes} Stimmen · {t.author}</span>

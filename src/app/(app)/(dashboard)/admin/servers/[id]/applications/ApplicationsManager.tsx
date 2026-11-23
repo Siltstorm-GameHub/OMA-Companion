@@ -71,7 +71,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Keine offenen Bewerbungen.</p>
         ) : (
           pending.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid var(--color-line)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">
@@ -82,11 +82,11 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
               </Link>
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => act(app.id, "approve")} disabled={actingId === app.id}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors">
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors max-lg:min-h-10">
                   {actingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Annehmen
                 </button>
                 <button onClick={() => act(app.id, "deny")} disabled={actingId === app.id}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors">
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors max-lg:min-h-10">
                   <X className="w-3.5 h-3.5" /> Ablehnen
                 </button>
               </div>
@@ -101,7 +101,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Niemand auf der Warteliste.</p>
         ) : (
           waitlisted.map((app, i) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid var(--color-line)" }}>
               <span className="text-xs font-semibold text-violet-300 w-5 shrink-0 text-center">{i + 1}</span>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
@@ -112,7 +112,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
                 </div>
               </Link>
               <button onClick={() => act(app.id, "deny")} disabled={actingId === app.id}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0 max-lg:min-h-10">
                 {actingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />} Ablehnen
               </button>
             </div>
@@ -126,7 +126,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <p className="text-xs text-gray-500">Noch niemand freigeschaltet.</p>
         ) : (
           approved.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3" style={{ border: "1px solid var(--color-line)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">
@@ -137,7 +137,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
                 </div>
               </Link>
               <button onClick={() => act(app.id, "revoke")} disabled={actingId === app.id}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0 max-lg:min-h-10">
                 {actingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />} Entziehen
               </button>
             </div>
@@ -149,7 +149,7 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-white">Verlauf</h2>
           {others.map((app) => (
-            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3 opacity-60" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div key={app.id} className="flex items-center gap-3 rounded-card glass px-4 py-3 opacity-60" style={{ border: "1px solid var(--color-line)" }}>
               <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 {app.user.image ? <Image src={app.user.image} alt="" width={28} height={28} className="rounded-full shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gray-700 shrink-0" />}
                 <div className="flex-1 min-w-0">

@@ -77,16 +77,16 @@ export default function GameListClient({
       </div>
 
       <Link href="/spiele/gruppe"
-        className="group flex items-center gap-3 rounded-2xl p-3 border border-teal-500/25 hover:border-teal-400/50 transition-colors"
-        style={{ background: "linear-gradient(110deg, rgba(20,184,166,0.12), rgba(20,184,166,0.02) 65%)" }}>
-        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-teal-500/15 border border-teal-500/30">
-          <Users className="w-4.5 h-4.5 text-teal-300" />
+        className="group flex items-center gap-3 rounded-2xl p-3 border border-primary/25 hover:border-primary/50 transition-colors"
+        style={{ background: "linear-gradient(110deg, color-mix(in srgb, var(--color-primary) 12%, transparent), color-mix(in srgb, var(--color-primary) 2%, transparent) 65%)" }}>
+        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary/15 border border-primary/30">
+          <Users className="w-4.5 h-4.5 text-primary-fg" />
         </span>
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-semibold text-white">Was zocken wir?</span>
           <span className="block text-xs text-gray-400 truncate">Wähle, wer mitzockt — wir zeigen Spiele, die alle haben.</span>
         </span>
-        <ChevronRight className="w-4 h-4 text-teal-300 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        <ChevronRight className="w-4 h-4 text-primary-fg shrink-0 transition-transform group-hover:translate-x-0.5" />
       </Link>
 
       {isModerator && pendingCount > 0 && (
@@ -102,7 +102,7 @@ export default function GameListClient({
           {([["swipe", "GameSwipe", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => setView(key)} aria-pressed={view === key}
               className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
-                view === key ? "bg-teal-500/15 text-white ring-1 ring-teal-400/40" : "text-gray-400 hover:text-white"
+                view === key ? "bg-primary/15 text-white ring-1 ring-primary/40" : "text-gray-400 hover:text-white"
               }`}>
               <Icon className="w-3.5 h-3.5" /> {label}
             </button>
@@ -154,7 +154,7 @@ export default function GameListClient({
         </label>
         <button type="button" onClick={pickRandom} disabled={visible.length === 0} title="Zufälliges Spiel aus den Treffern"
           aria-label="Zufälliges Spiel aus den Treffern"
-          className="shrink-0 w-11 rounded-xl border border-line-strong text-gray-300 hover:text-teal-200 hover:border-teal-500/40 flex items-center justify-center disabled:opacity-40 transition-colors">
+          className="shrink-0 w-11 rounded-xl border border-line-strong text-gray-300 hover:text-teal-200 hover:border-primary/40 flex items-center justify-center disabled:opacity-40 transition-colors">
           <Dices className="w-4.5 h-4.5" />
         </button>
       </div>
@@ -178,7 +178,7 @@ export default function GameListClient({
           <Chip active={filters.mineOnly} onClick={() => set("mineOnly", !filters.mineOnly)}>Meine</Chip>
           <button type="button" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              moreCount > 0 ? "border-teal-400/60 text-teal-100 bg-teal-500/10" : "border-line text-gray-300 hover:border-line-strong"}`}>
+              moreCount > 0 ? "border-primary/60 text-teal-100 bg-primary/10" : "border-line text-gray-300 hover:border-line-strong"} max-lg:min-h-10`}>
             <Settings2 className="w-3.5 h-3.5" /> Mehr Filter{moreCount > 0 ? ` (${moreCount})` : ""}
           </button>
           {filterCount > 0 && (
@@ -237,7 +237,7 @@ export default function GameListClient({
           <p className="text-sm text-gray-500">Füge das erste Spiel hinzu{isModerator ? " – oder übernimm alle Spiele aus Events & Profilen im Admin-Bereich" : ""}.</p>
           <div className="flex justify-center gap-2 flex-wrap">
             <button type="button" onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white">
+              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
               <Plus className="w-4 h-4" /> Spiel hinzufügen
             </button>
             {isModerator && (
@@ -258,7 +258,7 @@ export default function GameListClient({
             )}
             {filters.q.trim().length >= 2 && (
               <button type="button" onClick={() => setAddOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white">
+                className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
                 <Plus className="w-4 h-4" /> „{filters.q.trim()}“ hinzufügen
               </button>
             )}
@@ -277,7 +277,7 @@ export default function GameListClient({
 
       {/* Mobil: schwebender Button über der Navigation */}
       <button type="button" onClick={() => setAddOpen(true)} aria-label="Spiel hinzufügen"
-        className="sm:hidden fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-teal-600 hover:bg-teal-500 text-white shadow-[0_8px_24px_rgba(20,184,166,0.35)] flex items-center justify-center active:scale-95 transition-transform">
+        className="sm:hidden fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-primary-ink shadow-[0_8px_24px_rgba(20,184,166,0.35)] flex items-center justify-center active:scale-95 transition-transform">
         <Plus className="w-6 h-6" />
       </button>
 

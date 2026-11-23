@@ -50,7 +50,7 @@ export default function GameEditsLog({ edits }: { edits: GameEditRow[] }) {
             <div key={e.id} className={`flex items-center gap-3 px-3 py-2.5 text-xs ${e.reverted ? "opacity-50" : ""}`}>
               <div className="flex-1 min-w-0">
                 <p className="text-gray-200 truncate">
-                  <Link href={`/spiele/${e.game.slug}`} className="font-semibold text-white hover:text-teal-300">{e.game.name}</Link>
+                  <Link href={`/spiele/${e.game.slug}`} className="font-semibold text-white hover:text-primary-fg">{e.game.name}</Link>
                   {" · "}{FIELD_LABELS[e.field as FillableField] ?? e.field}: <span className="text-teal-200">{formatFieldValue(e.field, e.newValue)}</span>
                 </p>
                 <p className="text-xs text-gray-500">

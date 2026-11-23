@@ -63,7 +63,7 @@ export default function StreamRegisterButton({
         active
           ? "bg-[#9146ff]/20 border-[#9146ff]/40 text-[#c4a3ff] hover:bg-[#9146ff]/10"
           : "border-line text-gray-400 hover:text-[#c4a3ff] hover:border-[#9146ff]/30"
-      }`}
+      } max-lg:min-h-10`}
     >
       {loading
         ? <Loader2 className="w-3.5 h-3.5 animate-spin" />

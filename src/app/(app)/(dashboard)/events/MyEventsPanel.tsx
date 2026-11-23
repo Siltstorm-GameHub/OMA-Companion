@@ -54,14 +54,14 @@ export default async function MyEventsPanel({ userId }: { userId: string; isMode
       ) : (
         <div className="glass rounded-2xl p-6 text-center">
           <p className="text-sm text-gray-400">Du bist gerade für kein Event angemeldet.</p>
-          <Link href="/events" className="mt-1 inline-block text-xs text-teal-400 hover:text-teal-300">Events ansehen →</Link>
+          <Link href="/events" className="mt-1 inline-block text-xs text-primary hover:text-primary-fg">Events ansehen →</Link>
         </div>
       )}
 
       {/* ── Hinweis: eigene Events verwalten ── */}
       <Link href="/events/verwalten"
         className="group glass rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-surface-2 transition-colors">
-        <Settings className="w-4 h-4 text-teal-400 shrink-0" />
+        <Settings className="w-4 h-4 text-primary shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-medium text-white">Eigene Events veranstalten</span>
           <span className="block text-xs text-gray-500 truncate">
@@ -70,7 +70,7 @@ export default async function MyEventsPanel({ userId }: { userId: string; isMode
               : "Leg ein Event oder eine Eventreihe für die Community an"}
           </span>
         </span>
-        <span className="flex items-center gap-0.5 text-xs font-semibold text-teal-300 shrink-0">Verwalten <ChevronRight className="w-3.5 h-3.5" /></span>
+        <span className="flex items-center gap-0.5 text-xs font-semibold text-primary-fg shrink-0">Verwalten <ChevronRight className="w-3.5 h-3.5" /></span>
       </Link>
     </div>
   );

@@ -20,7 +20,7 @@ export default function JobHealthBlock() {
       .then((d: { jobs: Health[] }) => setJobs(d.jobs)).catch(() => setJobs([]));
   }, []);
 
-  if (!jobs) return <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+  if (!jobs) return <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
   const warnCount = jobs.reduce((n, j) => n + j.hints.filter(h => h.level === "warn").length, 0);
 
   return (

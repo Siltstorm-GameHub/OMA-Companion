@@ -213,7 +213,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
             )}
             {showEventLink && poll.event && (
               <Link href={`/tournament/${poll.event.id}`}
-                className="inline-flex items-center gap-0.5 text-teal-300 hover:text-teal-200 transition-colors min-w-0">
+                className="inline-flex items-center gap-0.5 text-primary-fg hover:text-teal-200 transition-colors min-w-0">
                 <span className="truncate">Zum Event: {poll.event.title}</span>
                 <ChevronRight className="w-3 h-3 shrink-0" />
               </Link>
@@ -339,7 +339,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
           {!poll.ended && (
             !loggedIn ? (
               <Link href={`/login?callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`}
-                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#5865F2] hover:bg-[#4752c4] text-white transition-colors">
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#5865F2] hover:bg-[#4752c4] text-white transition-colors max-lg:min-h-10">
                 Mit Discord anmelden zum Abstimmen
               </Link>
             ) : poll.hasVoted ? (
@@ -347,7 +347,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
                 type="button"
                 onClick={resetVote}
                 disabled={resetting}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-line hover:bg-line border border-line-strong disabled:opacity-50 text-gray-300 transition-colors"
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-line hover:bg-line border border-line-strong disabled:opacity-50 text-gray-300 transition-colors max-lg:min-h-10"
               >
                 {resetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Undo2 className="w-3 h-3" />}
                 Stimme zurückziehen
@@ -357,7 +357,7 @@ function PollCard({ poll, onVoted, onDismiss, loggedIn, showEventLink }: {
                 type="button"
                 onClick={submit}
                 disabled={submitting}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white transition-colors"
+                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white transition-colors max-lg:min-h-10"
               >
                 {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <VoteIcon className="w-3 h-3" />}
                 Abstimmen

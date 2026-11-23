@@ -7,7 +7,7 @@ import type { EventViewerContext } from "@/lib/event-viewer";
 import type { EventCardData } from "./EventCard";
 
 const VIOLET = "rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors";
-const TEAL = "rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400 transition-colors";
+const TEAL = "rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover transition-colors";
 
 /**
  * Die EINE Aktion einer Event-Kachel je nach Zustand — gleich auf Events-Seite, Eventreihe und

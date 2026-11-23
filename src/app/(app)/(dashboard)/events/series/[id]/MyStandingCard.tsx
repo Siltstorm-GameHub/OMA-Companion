@@ -37,8 +37,8 @@ export default function MyStandingCard({ me, pointsLabel = "Punkte", loggedIn }:
             {me.gapUp === null
               ? <span className="text-yellow-300 font-medium">Du führst die Tabelle an</span>
               : me.gapUp === 0
-                ? <span className="text-teal-300">Punktgleich mit Platz {me.rank - 1}</span>
-                : <><span className="text-teal-300 font-medium">{plural(me.gapUp, "Punkt", "Punkte")}</span> bis Platz {me.rank - 1}</>}
+                ? <span className="text-primary-fg">Punktgleich mit Platz {me.rank - 1}</span>
+                : <><span className="text-primary-fg font-medium">{plural(me.gapUp, "Punkt", "Punkte")}</span> bis Platz {me.rank - 1}</>}
             {me.gapDown !== null && <> · {me.gapDown === 0 ? "punktgleich mit dem Platz dahinter" : `${me.gapDown} Vorsprung auf Platz ${me.rank + 1}`}</>}
           </p>
           <p className="text-xs text-gray-500">{plural(me.participations, "Teilnahme", "Teilnahmen")}</p>

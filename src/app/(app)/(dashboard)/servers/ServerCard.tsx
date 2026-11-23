@@ -99,7 +99,7 @@ export default function ServerCard({ server }: { server: Server }) {
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
       className="rounded-card glass p-4 space-y-3 transition-[opacity,filter,box-shadow] duration-300 hover:shadow-[var(--shadow-card-hover)]"
       style={{
-        border: "1px solid rgba(255,255,255,0.06)",
+        border: "1px solid var(--color-line)",
         opacity: isOffline ? 0.55 : 1,
         filter: isOffline ? "grayscale(0.6)" : "none",
       }}
@@ -111,7 +111,7 @@ export default function ServerCard({ server }: { server: Server }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{server.name}</p>
-          <Link href={`/spiele/finde?name=${encodeURIComponent(server.game)}`} className="block w-fit text-xs text-gray-500 hover:text-teal-300 transition-colors" title="In der Spieleliste ansehen">
+          <Link href={`/spiele/finde?name=${encodeURIComponent(server.game)}`} className="block w-fit text-xs text-gray-500 hover:text-primary-fg transition-colors" title="In der Spieleliste ansehen">
             {server.game}
           </Link>
           {server.online ? (

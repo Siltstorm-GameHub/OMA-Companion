@@ -11,7 +11,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-umfrage" aria-label="Umfrage" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Umfrage")}</span>
+            <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-fg text-xs flex items-center justify-center">{stepNo("Umfrage")}</span>
             Umfrage
           </h2>
           {!isPollOnly && !isFinishedSummary && pollsConfig.length > 0 && (

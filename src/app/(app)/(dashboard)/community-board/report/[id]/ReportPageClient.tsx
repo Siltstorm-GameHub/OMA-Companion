@@ -14,7 +14,7 @@ export default function ReportPageClient({ entry, isDraft }: { entry: FeedEntry;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4 px-4 py-6">
-      <Link href="/community-board" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-300 transition-colors">
+      <Link href="/community-board" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-fg transition-colors">
         <ChevronLeft className="w-3.5 h-3.5" /> Zurück zum Community-Board
       </Link>
       {isDraft && <p className="text-xs text-amber-400">Entwurf — nur für dich sichtbar, noch nicht veröffentlicht.</p>}

@@ -67,12 +67,12 @@ export default function EventHowTo({ steps }: { steps: HowToStep[] }) {
       <ol className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
         {steps.map((s, i) => (
           <li key={s.key} className={`flex items-start gap-2 rounded-xl px-3 py-2 sm:flex-1 sm:min-w-[10rem] border ${
-            s.state === "current" ? "border-teal-400/40 bg-teal-400/[0.07]"
+            s.state === "current" ? "border-primary/40 bg-primary/[0.07]"
               : s.state === "done" ? "border-line bg-surface-2 opacity-75"
                 : "border-line"
           }`}>
             <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              s.state === "done" ? "bg-teal-400/20 text-teal-300" : s.state === "current" ? "bg-teal-400 text-teal-950" : "bg-line text-gray-400"
+              s.state === "done" ? "bg-primary/20 text-primary-fg" : s.state === "current" ? "bg-primary text-primary-ink" : "bg-line text-gray-400"
             }`}>
               {s.state === "done" ? <Check className="w-3 h-3" /> : i + 1}
             </span>

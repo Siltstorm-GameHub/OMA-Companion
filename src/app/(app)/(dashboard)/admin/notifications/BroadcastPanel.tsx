@@ -119,9 +119,9 @@ export default function BroadcastPanel() {
 
   return (
     <div className="surface p-5 space-y-4"
-      style={{ border: "1px solid rgba(20,184,166,0.15)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+      style={{ border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
       <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-        <Send className="w-4 h-4 text-teal-400" />
+        <Send className="w-4 h-4 text-primary" />
         Nachricht senden
       </h2>
 
@@ -155,7 +155,7 @@ export default function BroadcastPanel() {
             <div className="flex flex-wrap gap-1.5 mb-2">
               {selectedUsers.map(u => (
                 <div key={u.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs"
-                  style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)", color: "#2dd4bf" }}>
+                  style={{ background: "color-mix(in srgb, var(--color-primary) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)", color: "#2dd4bf" }}>
                   {u.image && <Image src={u.image} alt="" width={16} height={16} className="rounded-full" />}
                   <span>{u.username ?? u.name ?? u.id.slice(0, 8)}</span>
                   <button type="button" onClick={() => removeUser(u.id)} className="hover:text-white transition-colors ml-0.5">
@@ -174,7 +174,7 @@ export default function BroadcastPanel() {
             />
             {showSuggestions && (query || suggestions.length > 0) && (
               <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl"
-                style={{ background: "rgba(10,18,16,0.98)", border: "1px solid rgba(20,184,166,0.15)" }}>
+                style={{ background: "rgba(10,18,16,0.98)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
                 {loadingSearch && <div className="px-3 py-2 text-xs text-gray-500">Suche…</div>}
                 {!loadingSearch && suggestions.length === 0 && query.trim() && (
                   <div className="px-3 py-2 text-xs text-gray-500">Keine User gefunden</div>
@@ -225,14 +225,14 @@ export default function BroadcastPanel() {
         <label className="text-xs text-gray-400 mb-1.5 block">Seite verlinken (optional)</label>
         <div ref={linkDropRef} className="relative">
           <button type="button" onClick={() => setShowLinkDrop(v => !v)}
-            className="w-full flex items-center justify-between bg-line border border-line-strong rounded-lg px-3 py-2 text-sm transition-colors hover:border-teal-500/30"
+            className="w-full flex items-center justify-between bg-line border border-line-strong rounded-lg px-3 py-2 text-sm transition-colors hover:border-primary/30"
             style={{ color: selectedLink ? "#e2e8f0" : "#4b5563" }}>
             <span>{selectedLink ? `${selectedLink.label} (${selectedLink.url})` : "Keine Verlinkung"}</span>
             <ChevronDown style={{ width: 14, height: 14, flexShrink: 0 }} />
           </button>
           {showLinkDrop && (
             <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl"
-              style={{ background: "rgba(10,18,16,0.98)", border: "1px solid rgba(20,184,166,0.15)" }}>
+              style={{ background: "rgba(10,18,16,0.98)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
               <button type="button" onClick={() => selectLink("")}
                 className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-line transition-colors">
                 <span>Keine Verlinkung</span>
@@ -263,7 +263,7 @@ export default function BroadcastPanel() {
             ["discordChannel", "Discord-Kanal", MessageSquare],
           ] as const).map(([key, label, Icon]) => (
             <button key={key} type="button" onClick={() => toggleChannel(key)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors max-lg:min-h-10"
               style={{
                 background: channels[key] ? "rgba(20,184,166,0.15)" : "rgba(255,255,255,0.02)",
                 color: channels[key] ? "#2dd4bf" : "#6b7280",
@@ -287,7 +287,7 @@ export default function BroadcastPanel() {
       <button type="button" onClick={send} disabled={loading || !canSend}
         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
         style={{
-          background: "rgba(20,184,166,0.2)", color: "#2dd4bf", border: "1px solid rgba(20,184,166,0.3)",
+          background: "color-mix(in srgb, var(--color-primary) 20%, transparent)", color: "#2dd4bf", border: "1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)",
           opacity: (loading || !canSend) ? 0.5 : 1,
           cursor: (loading || !canSend) ? "not-allowed" : "pointer",
         }}>

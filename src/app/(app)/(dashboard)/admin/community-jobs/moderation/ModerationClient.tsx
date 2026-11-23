@@ -75,14 +75,14 @@ export default function ModerationClient() {
         </span>
       </div>
 
-      {items === null ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div> : (
+      {items === null ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div> : (
         <div className="glass rounded-card overflow-hidden divide-y divide-line">
           {items.length === 0 && <p className="p-4 text-xs text-gray-600">Nichts gefunden.</p>}
           {items.map(item => (
             <div key={`${item.type}-${item.id}`} className="p-3 flex items-start gap-3">
               <div className="min-w-0 flex-1 space-y-0.5">
                 <p className="text-xs text-gray-200 break-words">
-                  {item.url ? <Link href={item.url} className="hover:text-teal-300 transition-colors">{item.title}</Link> : item.title}
+                  {item.url ? <Link href={item.url} className="hover:text-primary-fg transition-colors">{item.title}</Link> : item.title}
                 </p>
                 <p className="text-xs text-gray-500">
                   {item.authorName} · {formatBerlinDate(item.createdAt)}

@@ -66,7 +66,7 @@ export default async function AdminPage() {
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <Panel title="Nächste 48 Stunden" right={<Link href="/events/verwalten" className="text-xs text-teal-400 hover:text-teal-300">Alle Events →</Link>}>
+        <Panel title="Nächste 48 Stunden" right={<Link href="/events/verwalten" className="text-xs text-primary hover:text-primary-fg">Alle Events →</Link>}>
           <UpcomingList events={upcoming} now={now} />
         </Panel>
         <Panel title={<>Puls der Community <span className="font-normal text-gray-500">· 7 Tage, ggü. Vorwoche</span></>}>
@@ -87,7 +87,7 @@ export default async function AdminPage() {
       <div className="flex flex-wrap gap-2">
         {quick.map((q) => (
           <Link key={q.href} href={q.href}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface-2 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line hover:text-white">
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface-2 px-3 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line hover:text-white max-lg:min-h-10">
             <q.icon className="w-3.5 h-3.5 text-primary-fg" /> {q.label}
           </Link>
         ))}

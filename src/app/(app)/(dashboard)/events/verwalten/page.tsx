@@ -214,7 +214,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
         <div className="flex items-center gap-2 flex-wrap">
           {canCreateEvent ? (
             <Link href="/events/verwalten/neu?mode=event"
-              className="flex items-center gap-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 transition-colors px-3 py-1.5 rounded-lg">
+              className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg max-lg:min-h-10">
               <Plus className="w-4 h-4" /> Neues Event
             </Link>
           ) : (
@@ -224,7 +224,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
           )}
           {canCreateSeries ? (
             <Link href="/events/verwalten/neu?mode=series"
-              className="flex items-center gap-1.5 text-sm font-medium text-violet-200 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 transition-colors px-3 py-1.5 rounded-lg">
+              className="flex items-center gap-1.5 text-sm font-medium text-violet-200 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 transition-colors px-3 py-1.5 rounded-lg max-lg:min-h-10">
               <Plus className="w-4 h-4" /> Neue Eventreihe
             </Link>
           ) : (
@@ -238,7 +238,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
             {VIEWS.map((v) => (
               <Link key={v.key} href={v.href} aria-current={v.key === view ? "true" : undefined}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  v.key === view ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+                  v.key === view ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                 }`}>
                 {v.label}
               </Link>

@@ -25,11 +25,11 @@ export default function OmaOriginalMark({ variant = "chip", className = "" }: { 
   }
   return (
     <span
-      className={`inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 border border-teal-500/30 bg-teal-500/10 text-xs font-bold uppercase leading-none tracking-[0.12em] whitespace-nowrap ${className}`}
+      className={`inline-flex items-center gap-1 shrink-0 rounded px-1.5 py-0.5 border border-primary/30 bg-primary/10 text-xs font-bold uppercase leading-none tracking-[0.12em] whitespace-nowrap ${className}`}
       title="Eigenes Event der Old Masters Allies"
     >
       <OmaHex className="w-2.5 h-3" />
-      <span><span className="text-teal-300">OMA</span> <span className="text-gray-200">Original</span></span>
+      <span><span className="text-primary-fg">OMA</span> <span className="text-gray-200">Original</span></span>
     </span>
   );
 }
@@ -42,7 +42,7 @@ export default function OmaOriginalMark({ variant = "chip", className = "" }: { 
 export function OmaOriginalSeal({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 shrink-0 rounded-full pl-0.5 pr-3 py-0.5 border border-teal-400/60 bg-black/70 shadow-card whitespace-nowrap ${className}`}
+      className={`inline-flex items-center gap-2 shrink-0 rounded-full pl-0.5 pr-3 py-0.5 border border-primary/60 bg-black/70 shadow-card whitespace-nowrap ${className}`}
       title="Eigenes Event der Old Masters Allies"
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
@@ -53,7 +53,7 @@ export function OmaOriginalSeal({ className = "" }: { className?: string }) {
         style={{ boxShadow: "0 0 0 1.5px rgba(45,212,191,0.8)" }}
       />
       <span className="text-xs font-extrabold uppercase leading-none tracking-[0.16em]">
-        <span className="text-teal-300">OMA</span> <span className="text-white">Original</span>
+        <span className="text-primary-fg">OMA</span> <span className="text-white">Original</span>
       </span>
     </span>
   );
@@ -68,6 +68,6 @@ export function titleHasOmaPrefix(title: string): boolean {
 export function OmaTitlePrefix({ title, className = "" }: { title: string; className?: string }) {
   if (titleHasOmaPrefix(title)) return null;
   return (
-    <span className={`font-semibold tracking-[0.18em] text-teal-300 text-[0.68em] align-[0.12em] mr-[0.4em] ${className}`}>OMA</span>
+    <span className={`font-semibold tracking-[0.18em] text-primary-fg text-[0.68em] align-[0.12em] mr-[0.4em] ${className}`}>OMA</span>
   );
 }

@@ -19,7 +19,7 @@ type Squad = {
   icon: string | null; coverImageUrl: string | null; hidden: boolean; memberships: Membership[];
 };
 
-const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 
 export default function SquadDetailClient({
   squad, allUsers, isAdmin,
@@ -77,7 +77,7 @@ export default function SquadDetailClient({
         </Link>
         {isAdmin && (
           <button onClick={deleteSquad} disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50 max-lg:min-h-10">
             <Trash2 className="w-3.5 h-3.5" /> Squad löschen
           </button>
         )}
@@ -137,7 +137,7 @@ export default function SquadDetailClient({
             </span>
           </label>
           <button onClick={saveSquad} disabled={saving || !name.trim()}
-            className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white bg-teal-700 hover:bg-primary-hover transition-colors disabled:opacity-50">
             <Save className="w-4 h-4" /> {saving ? "Wird gespeichert…" : "Speichern"}
           </button>
         </div>

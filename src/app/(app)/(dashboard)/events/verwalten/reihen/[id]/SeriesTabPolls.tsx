@@ -89,7 +89,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
                           ))}
                           <button type="button"
                             onClick={() => setPolls(prev => prev.map((x, j) => j !== i ? x : { ...x, customAnswers: [...x.customAnswers, ""] }))}
-                            className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300">
+                            className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg">
                             <Plus className="w-3 h-3" /> Antwort hinzufügen
                           </button>
                         </div>
@@ -143,7 +143,7 @@ export default function SeriesTabPolls({ ctx }: { ctx: SeriesDetail }) {
               {polls.length < 5 && (
                 <button type="button"
                   onClick={() => { setPolls(prev => [...prev, { ...DEFAULT_POLL_ITEM }]); setExpandedPoll(polls.length); }}
-                  className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
                   <Plus className="w-3 h-3" /> Umfrage hinzufügen
                 </button>
               )}

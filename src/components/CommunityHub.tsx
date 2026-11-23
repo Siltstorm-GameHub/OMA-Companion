@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { HUB_TOGGLE_EVENT, publishHubBadge, publishHubOnline } from "@/lib/hub-events";
+import { NotificationGlyph } from "@/components/ui/Glyph";
+import { HUB_TOGGLE_EVENT, publishHubBadge, publishHubOnline, publishHubPolls, publishHubThreads } from "@/lib/hub-events";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Bell, Settings } from "@/components/icons";
@@ -32,18 +33,6 @@ type Notification = {
   createdAt: string;
 };
 
-const NOTIF_ICONS: Record<string, string> = {
-  badge:        "🏅",
-  quest:        "⭐",
-  event_result: "✅",
-  event_start:  "⏰",
-  points:       "⭐",
-  coins:        "💰",
-  clip:         "🎬",
-  admin:        "📢",
-  game:         "🎮",
-  event_comment: "💬",
-};
 
 function displayName(u: { name: string | null; username: string | null }) {
   return u.username ?? u.name ?? "User";
@@ -76,20 +65,11 @@ export function CommunityHub() {
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const threadsEtagRef = useRef<string | null>(null);
+  const notifVersionRef = useRef<string | null>(null);
+  const threadsVersionRef = useRef<string | null>(null);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifUnread, setNotifUnread] = useState(0);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json() as { notifications: Notification[]; unreadCount: number };
-      setNotifications(data.notifications);
-      setNotifUnread(data.unreadCount);
-    } catch { /* Netzwerkfehler ignorieren */ }
-  }, []);
 
 
   async function markRead(id: string) {
@@ -143,48 +123,54 @@ export function CommunityHub() {
     if (n.url) router.push(n.url);
   }
 
-  // Eingeloggt: POST = Heartbeat + Online-Liste in einem Aufruf. Gäste lesen nur (GET).
-  const isLoggedIn = !!session;
-  const fetchPresence = useCallback(async () => {
+  // EIN Hintergrund-Abruf für alles (/api/me/pulse): Heartbeat + Online-Liste, Benachrichtigungen,
+  // Absprachen und offene Umfragen (für PollBadge / EventChatModule, per hub-events weitergereicht).
+  // Früher vier getrennt gepollte Routen = vier Vercel-Function-Aufrufe pro Minute und Tab.
+  // nv/tv: Versionen der letzten Benachrichtigungen/Absprachen — unverändert → Teil fehlt in der Antwort.
+  const pulse = useCallback(async () => {
     try {
-      const res = await fetch("/api/presence", isLoggedIn ? { method: "POST" } : { cache: "no-store" });
-      if (!res.ok) return;
-      const data: { count: number; users: PresenceUser[] } = await res.json();
-      setOnlineCount(data.count);
-      setOnlineUsers(data.users);
-    } catch {
-      // Netzwerkfehler ignorieren
-    }
-  }, [isLoggedIn]);
-
-  const fetchThreads = useCallback(async () => {
-    try {
-      // ETag: unverändert → 304 ohne Inhalt
-      const res = await fetch("/api/me/event-threads", {
+      const res = await fetch("/api/me/pulse", {
+        method: "POST",
         cache: "no-store",
-        headers: threadsEtagRef.current ? { "If-None-Match": threadsEtagRef.current } : undefined,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nv: notifVersionRef.current, tv: threadsVersionRef.current }),
       });
-      if (res.status === 304) { setThreadsLoaded(true); return; }
       if (!res.ok) return;
-      threadsEtagRef.current = res.headers.get("ETag");
-      const data = await res.json() as { threads: EventThreadDTO[]; unreadTotal: number };
-      setThreads(data.threads);
-      setThreadsUnread(data.unreadTotal);
+      const data = await res.json() as {
+        loggedIn: boolean;
+        presence: { count: number; users: PresenceUser[] };
+        pendingPolls?: number;
+        nv?: string; tv?: string;
+        notifications?: { notifications: Notification[]; unreadCount: number };
+        threads?: { threads: EventThreadDTO[]; unreadTotal: number };
+      };
+      setOnlineCount(data.presence.count);
+      setOnlineUsers(data.presence.users);
+      if (!data.loggedIn) return;
+      publishHubPolls(data.pendingPolls ?? 0);
+      notifVersionRef.current = data.nv ?? null;
+      threadsVersionRef.current = data.tv ?? null;
+      if (data.notifications) {
+        setNotifications(data.notifications.notifications);
+        setNotifUnread(data.notifications.unreadCount);
+      }
+      if (data.threads) {
+        setThreads(data.threads.threads);
+        setThreadsUnread(data.threads.unreadTotal);
+        publishHubThreads(data.threads.threads);
+      }
       setThreadsLoaded(true);
     } catch { /* Netzwerkfehler ignorieren */ }
   }, []);
 
   // Nach dem Lesen eines Verlaufs: Zähler und (automatisch erledigte) Benachrichtigungen neu laden
-  const refreshAfterRead = useCallback(() => { fetchThreads(); fetchNotifications(); }, [fetchThreads, fetchNotifications]);
+  const refreshAfterRead = useCallback(() => { void pulse(); }, [pulse]);
 
   // Polling nur bei sichtbarem Tab (usePolling), bei geschlossenem Fenster seltener — jede Abfrage ist
   // ein Vercel-Function-Aufruf. Wechselt `open`, startet das Intervall neu und lädt sofort.
-  // Absprachen-Übersicht: 30 s offen, 60 s geschlossen (dann nur für den Zähler am Knopf).
-  usePolling(fetchThreads, session ? (open ? 30_000 : 60_000) : null);
-  // Benachrichtigungen: 30 s offen, 60 s geschlossen.
-  usePolling(fetchNotifications, open ? 30_000 : 60_000);
-  // Presence + Heartbeat: 20 s offen, 60 s geschlossen (Aktiv-Fenster serverseitig 2 min).
-  usePolling(fetchPresence, open ? 20_000 : 60_000);
+  // 30 s offen, 60 s geschlossen (Presence-Aktiv-Fenster serverseitig 2 min). Ob eingeloggt,
+  // entscheidet der Server anhand des Cookies — der Client-Session-Status spielt dafür keine Rolle.
+  usePolling(pulse, open ? 30_000 : 60_000);
 
 
   function handleToggle() {
@@ -247,7 +233,7 @@ export function CommunityHub() {
         }}
       >
         {/* Tabs (ersetzen den früheren Fensterkopf) + Schließen */}
-        <div className="flex-shrink-0 flex items-center gap-1 pl-2 pr-2 pt-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="flex-shrink-0 flex items-center gap-1 pl-2 pr-2 pt-1" style={{ borderBottom: "1px solid var(--color-line)" }}>
           <Tabs
             variant="underline"
             className="flex-1 min-w-0 !border-b-0"
@@ -259,13 +245,13 @@ export function CommunityHub() {
                 // Absprachen-Benachrichtigungen zählen schon beim Absprachen-Tab mit
                 label: otherNotifUnread > 0 ? `Benachrichtigungen (${otherNotifUnread})` : "Benachrichtigungen",
                 icon: Bell,
-                activeClassName: "border-teal-500 text-white",
+                activeClassName: "border-primary text-white",
               },
               {
                 key: "threads",
                 label: threadsUnread > 0 ? `Absprachen (${threadsUnread})` : "Absprachen",
                 icon: MessageCircle,
-                activeClassName: "border-teal-500 text-white",
+                activeClassName: "border-primary text-white",
               },
             ]}
           />
@@ -289,7 +275,7 @@ export function CommunityHub() {
             {notifications.length > 0 && (<>
                 {notifUnread > 0 && (
                   <button onClick={markAllRead}
-                    className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+                    className="text-xs text-gray-500 hover:text-primary transition-colors">
                     Alle lesen
                   </button>
                 )}
@@ -311,20 +297,20 @@ export function CommunityHub() {
                   <div
                     key={n.id}
                     className="group flex gap-2.5 items-start px-4 py-2.5 hover:bg-surface-2 transition-colors"
-                    style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
+                    style={!n.read ? { background: "color-mix(in srgb, var(--color-primary) 4%, transparent)" } : undefined}
                   >
                     <button
                       onClick={() => handleNotifClick(n)}
                       className="flex gap-2.5 items-start flex-1 min-w-0 text-left"
                     >
-                      <span className="text-base mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
+                      <span className="grid size-8 mt-0.5 shrink-0 place-items-center rounded-control bg-primary-soft text-primary-fg"><NotificationGlyph type={n.type} /></span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate"
                           style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
                           {n.title}
                         </p>
                         <p className="text-xs text-gray-500 truncate">{n.body}</p>
-                        <p className="text-xs mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
+                        <p className="text-xs mt-0.5" style={{ color: "color-mix(in srgb, var(--color-primary) 50%, transparent)" }}>
                           {timeAgo(n.createdAt)}
                         </p>
                       </div>
@@ -351,11 +337,11 @@ export function CommunityHub() {
               </div>
             )}
 
-            <div className="flex-shrink-0 p-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex-shrink-0 p-1" style={{ borderTop: "1px solid var(--color-line)" }}>
               <Link
                 href="/profile?tab=settings#notifications"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-primary hover:bg-primary/8 transition-colors"
               >
                 <Settings style={{ width: 11, height: 11 }} />
                 Einstellungen
@@ -371,7 +357,7 @@ export function CommunityHub() {
             {onlineUsers.length > 0 && !selectedThread && (
               <div
                 className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ borderBottom: "1px solid var(--color-line)" }}
               >
                 <span className="text-xs text-gray-500 flex-shrink-0">
                   {onlineCount} online
@@ -382,13 +368,13 @@ export function CommunityHub() {
                       key={u.id}
                       href={`/profile/${u.id}`}
                       onClick={() => setOpen(false)}
-                      className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
+                      className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-primary/60 transition-shadow"
                       title={displayName(u)}
                     >
                       <RankedAvatar userId={u.id} src={u.image} alt={displayName(u)} size={24} />
                       <span
                         className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
-                        style={{ background: "#14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
+                        style={{ background: "var(--color-primary)", border: "1px solid var(--color-surface)" }}
                       />
                     </Link>
                   ))}

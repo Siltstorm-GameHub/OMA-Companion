@@ -15,7 +15,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none";
+const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40 resize-none";
 const HELP_MAX = 500;
 const QUESTIONS_MAX = 10;
 
@@ -53,14 +53,14 @@ export default function ProfileActions({ userId, displayName, isCoach, captainSq
     }
   }
 
-  const BTN = "inline-flex items-center gap-1.5 text-xs glass border border-line text-gray-300 hover:text-white hover:border-teal-500/30 px-3 py-2 rounded-card transition-all";
+  const BTN = "inline-flex items-center gap-1.5 text-xs glass border border-line text-gray-300 hover:text-white hover:border-primary/30 px-3 py-2 rounded-card transition-all";
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
         {isCoach && (
           <>
-            <button type="button" className={BTN} onClick={() => setDialog("help")}><LifeBuoy className="w-3.5 h-3.5 text-teal-400" /> Um Hilfe bitten</button>
+            <button type="button" className={BTN} onClick={() => setDialog("help")}><LifeBuoy className="w-3.5 h-3.5 text-primary" /> Um Hilfe bitten</button>
             <button type="button" className={BTN} onClick={() => setDialog("rate")}><Star className="w-3.5 h-3.5 text-amber-400" /> Coach bewerten</button>
           </>
         )}

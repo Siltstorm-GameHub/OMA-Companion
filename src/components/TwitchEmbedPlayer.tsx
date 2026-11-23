@@ -16,7 +16,7 @@ export default function TwitchEmbedPlayer({
   }, []);
 
   return (
-    <div className="relative rounded-xl overflow-hidden bg-black" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+    <div className="relative rounded-xl overflow-hidden bg-black" style={{ border: "1px solid var(--color-line)" }}>
       <button
         onClick={onClose}
         aria-label="Stream schließen"

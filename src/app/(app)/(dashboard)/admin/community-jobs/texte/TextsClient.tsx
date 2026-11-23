@@ -46,7 +46,7 @@ function JobTextEditor({ job, onSaved }: { job: JobTexts; onSaved: () => void })
       <label className="block space-y-1">
         <span className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Büro-Anleitung (Markdown)</span>
-          <button type="button" onClick={() => setPreview(v => !v)} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">{preview ? "Bearbeiten" : "Vorschau"}</button>
+          <button type="button" onClick={() => setPreview(v => !v)} className="text-xs text-gray-500 hover:text-primary transition-colors">{preview ? "Bearbeiten" : "Vorschau"}</button>
         </span>
         {preview
           ? <div className="rounded-lg border border-line-strong bg-surface-2 p-3"><MarkdownLite text={guide.trim() || job.defaults.officeGuideMarkdown} className="text-xs text-gray-400" /></div>
@@ -71,7 +71,7 @@ export default function TextsClient() {
     fetch("/api/admin/community-jobs/texts").then(r => (r.ok ? r.json() : Promise.reject())).then((d: { jobs: JobTexts[] }) => setJobs(d.jobs)).catch(() => setJobs([]));
   }, [tick]);
 
-  if (!jobs) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+  if (!jobs) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
   return (
     <div className="space-y-3">
       {jobs.map(j => <JobTextEditor key={`${j.key}-${tick}`} job={j} onSaved={() => setTick(t => t + 1)} />)}

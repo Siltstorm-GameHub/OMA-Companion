@@ -79,7 +79,7 @@ export default function GameReactionPanel({
       {/* Community-Schnitt */}
       <div className="flex items-center gap-4">
         <div className="text-center shrink-0 w-20">
-          <p className="font-display text-4xl font-black text-white leading-none">{enough ? formatRating(avg!) : "–"}</p>
+          <p className="font-display text-4xl font-extrabold text-white leading-none">{enough ? formatRating(avg!) : "–"}</p>
           <div className="mt-1.5 flex justify-center"><StarDisplay value={enough ? avg! : 0} className="w-3 h-3" /></div>
           <p className="text-xs text-gray-500 mt-1">
             {stats.ratingCount} Bewertung{stats.ratingCount === 1 ? "" : "en"}

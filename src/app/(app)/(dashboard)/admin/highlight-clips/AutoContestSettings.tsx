@@ -70,7 +70,7 @@ export default function AutoContestSettings({
         <button
           onClick={save}
           disabled={!dirty || saving}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary hover:bg-primary-hover text-primary-ink disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary hover:bg-primary-hover text-primary-ink disabled:opacity-40 disabled:cursor-not-allowed max-lg:min-h-10"
         >
           {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           Speichern

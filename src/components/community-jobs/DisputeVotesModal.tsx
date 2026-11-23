@@ -84,7 +84,7 @@ export default function DisputeVotesModal({
   return (
     <Modal open={open} onClose={onClose} title="Bewertungen" size="md">
       {votes === null ? (
-        <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>
+        <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>
       ) : votes.length === 0 ? (
         <p className="text-xs text-gray-600">Noch keine Bewertungen.</p>
       ) : (

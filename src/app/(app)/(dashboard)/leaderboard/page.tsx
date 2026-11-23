@@ -234,7 +234,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
             <>
               <div className="flex-1 min-w-[200px]">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Dein Stand</p>
-                <p className="text-xl font-black text-white tabular-nums leading-tight mt-0.5">
+                <p className="text-xl font-extrabold text-white tabular-nums leading-tight mt-0.5">
                   Platz {mine.entry.rank} <span className="text-sm font-normal text-gray-500">von {fmt(mine.total)}</span>
                   {view === "gesamt" && (() => {
                     const d = rankDelta(mine.entry);
@@ -243,13 +243,13 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {mine.above
-                    ? <><span className="text-teal-300 font-semibold">{fmt(mine.above.gap)} {mine.above.gap === 1 ? "Punkt" : "Punkte"}</span> bis Platz {entries.find(x => x.id === mine.above!.id)?.rank} ({nameOf(mine.above.id)})</>
+                    ? <><span className="text-primary-fg font-semibold">{fmt(mine.above.gap)} {mine.above.gap === 1 ? "Punkt" : "Punkte"}</span> bis Platz {entries.find(x => x.id === mine.above!.id)?.rank} ({nameOf(mine.above.id)})</>
                     : <span className="text-yellow-300 font-semibold">Du stehst ganz oben</span>}
                   {mine.below && <> · {fmt(mine.below.lead)} Vorsprung auf den nächsten Platz</>}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xl font-black text-teal-300 tabular-nums leading-none">{fmt(mine.entry.points)}</p>
+                <p className="text-xl font-extrabold text-primary-fg tabular-nums leading-none">{fmt(mine.entry.points)}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {view === "monat" ? pointsLabel : <>Punkte{(mineOverall?.entry.gain ?? 0) > 0 && <> · +{fmt(mineOverall!.entry.gain)} im {monthName}</>}</>}
                 </p>

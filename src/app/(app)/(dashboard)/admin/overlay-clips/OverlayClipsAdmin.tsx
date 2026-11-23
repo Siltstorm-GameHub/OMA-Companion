@@ -125,7 +125,7 @@ export default function OverlayClipsAdmin() {
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Titel, Kanal oder Spiel" className="input-glass" style={{ paddingLeft: 36 }} />
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-              <input type="checkbox" checked={onlyRestricted} onChange={e => setOnlyRestricted(e.target.checked)} className="accent-teal-400" />
+              <input type="checkbox" checked={onlyRestricted} onChange={e => setOnlyRestricted(e.target.checked)} className="accent-primary" />
               nur nicht laufende
             </label>
           </div>
@@ -143,7 +143,7 @@ export default function OverlayClipsAdmin() {
                     // eslint-disable-next-line @next/next/no-img-element -- Twitch-Vorschaubild, externe Quelle
                     ? <img src={c.thumbnailUrl} alt="" className="w-24 aspect-video rounded-md object-cover shrink-0 bg-black/40" />
                     : <span className="w-24 aspect-video rounded-md shrink-0 bg-black/40" />}
-                  <a href={`https://clips.twitch.tv/${c.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-teal-300">
+                  <a href={`https://clips.twitch.tv/${c.id}`} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 hover:text-primary-fg">
                     <span className="block text-sm text-gray-200 truncate">{c.title}</span>
                     <span className="block text-xs text-gray-500">
                       {c.channel} · {c.views.toLocaleString("de-DE")} Aufrufe · {c.durationSec} s{c.game ? ` · ${c.game}` : ""}
@@ -156,7 +156,7 @@ export default function OverlayClipsAdmin() {
                         onClick={() => put({ gameId: c.gameId, gameName: c.game, mature: true }, `game-${c.gameId}`)}
                         disabled={busy === `game-${c.gameId}`}
                         title="Alle Clips dieses Spiels aus dem Loop nehmen (Alters-Hinweis bei Twitch)"
-                        className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-line text-gray-400 hover:text-rose-300 hover:border-rose-400/40 disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-lg border border-line text-gray-400 hover:text-rose-300 hover:border-rose-400/40 disabled:opacity-50 max-lg:min-h-10"
                       >
                         <ShieldAlert className="w-3.5 h-3.5" /> Spiel sperren
                       </button>
@@ -165,8 +165,8 @@ export default function OverlayClipsAdmin() {
                       onClick={() => put({ clipId: c.id, blocked: c.restriction !== "blocked" }, c.id)}
                       disabled={busy === c.id}
                       className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
-                        c.restriction === "blocked" ? "border-rose-400/40 text-rose-300 hover:text-teal-300 hover:border-teal-500/40" : "border-teal-500/30 text-teal-300 hover:border-rose-400/40 hover:text-rose-300"
-                      }`}
+                        c.restriction === "blocked" ? "border-rose-400/40 text-rose-300 hover:text-primary-fg hover:border-primary/40" : "border-primary/30 text-primary-fg hover:border-rose-400/40 hover:text-rose-300"
+                      } max-lg:min-h-10`}
                     >
                       {busy === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : c.restriction === "blocked" ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       {c.restriction === "blocked" ? "Ausgeschlossen" : "Ausschließen"}

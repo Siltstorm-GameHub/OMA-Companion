@@ -19,7 +19,7 @@ interface Week {
 
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : formatFixed(n, 1));
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
-const TAB_ON = "border-teal-500/50 text-teal-300 bg-teal-500/10";
+const TAB_ON = "border-primary/50 text-primary-fg bg-primary/10";
 const TAB_OFF = "border-line-strong text-gray-400 hover:text-white";
 
 export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
@@ -41,7 +41,7 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
     <div className="p-4 border-b border-line space-y-2.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
         <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
-          <Scale className="w-3.5 h-3.5 text-teal-400" /> Wie setzt sich dein Score zusammen?
+          <Scale className="w-3.5 h-3.5 text-primary" /> Wie setzt sich dein Score zusammen?
         </span>
         <span className="flex items-center gap-2 text-xs text-gray-500">
           {weeks[0].breakdown.total > 0 ? `${fmt(weeks[0].breakdown.total)} Punkte diese Woche` : "diese Woche noch 0 Punkte"}

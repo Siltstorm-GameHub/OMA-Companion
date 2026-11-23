@@ -80,7 +80,7 @@ export default function StudioEditor({ onExported, allowWatermark = false }: { o
   return (
     <div className="space-y-3">
       {!image ? (
-        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
+        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-10 cursor-pointer hover:border-primary/30 transition-colors">
           <Upload className="w-5 h-5 text-gray-500" />
           <span className="text-xs text-gray-500">Screenshot oder Foto auswählen</span>
           <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden"

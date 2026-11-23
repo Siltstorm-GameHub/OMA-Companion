@@ -54,9 +54,9 @@ export default function ProfileTabs({ panels, initialTab }: {
             return (
               <button key={key} role="tab" aria-selected={active} onClick={() => select(key)}
                 className={`shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                  active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
+                  active ? "bg-primary/20 text-primary-fg shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
                 }`}>
-                <Icon className={`w-4 h-4 ${active ? "text-teal-400" : "text-gray-600"}`} />
+                <Icon className={`w-4 h-4 ${active ? "text-primary" : "text-gray-600"}`} />
                 {label}
               </button>
             );

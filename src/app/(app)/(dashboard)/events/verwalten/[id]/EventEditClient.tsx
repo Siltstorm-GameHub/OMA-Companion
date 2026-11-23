@@ -39,7 +39,7 @@ export default function EventEditClient(props: EventEditProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link href={`/tournament/${event.id}`}
-              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-line-strong hover:border-line-strong rounded-lg px-3 py-1.5 transition-colors">
+              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-line-strong hover:border-line-strong rounded-lg px-3 py-1.5 transition-colors max-lg:min-h-10">
               <ExternalLink className="w-3.5 h-3.5" /> Öffentliche Seite
             </Link>
             <HeaderMenu
@@ -56,7 +56,7 @@ export default function EventEditClient(props: EventEditProps) {
         <ol className="grid grid-cols-4 gap-1.5">
           {LIFECYCLE_STEPS.map((label, i) => (
             <li key={label} className={`border-t-[3px] pt-1.5 text-center text-xs ${
-              i < step ? "border-teal-500/60 text-gray-400" : i === step ? "border-teal-400 text-white font-semibold" : "border-line text-gray-600"
+              i < step ? "border-primary/60 text-gray-400" : i === step ? "border-primary text-white font-semibold" : "border-line text-gray-600"
             }`} aria-current={i === step ? "step" : undefined}>
               {label}
             </li>
@@ -65,12 +65,12 @@ export default function EventEditClient(props: EventEditProps) {
         <div className="flex items-center gap-3 flex-wrap">
           <p className="flex-1 min-w-0 text-xs text-gray-400">{statusLine}</p>
           {nextStep && (nextStep.href ? (
-            <Link href={nextStep.href} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors">
+            <Link href={nextStep.href} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-hover px-3 py-1.5 text-xs font-semibold text-primary-ink transition-colors max-lg:min-h-10">
               <CheckCircle2 className="w-3.5 h-3.5" /> {nextStep.label}
             </Link>
           ) : (
             <button type="button" onClick={() => setActiveTab(nextStep.tab!)}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-line hover:bg-line px-3 py-1.5 text-xs font-semibold text-gray-200 transition-colors">
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-line hover:bg-line px-3 py-1.5 text-xs font-semibold text-gray-200 transition-colors max-lg:min-h-10">
               <Trophy className="w-3.5 h-3.5" /> {nextStep.label}
             </button>
           ))}
@@ -83,7 +83,7 @@ export default function EventEditClient(props: EventEditProps) {
           <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.key
-                ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                ? "text-primary-fg border-b-2 border-primary -mb-px"
                 : "text-gray-500 hover:text-gray-300"
             }`}>
             {tab.label}
@@ -133,7 +133,7 @@ export default function EventEditClient(props: EventEditProps) {
               Verwerfen
             </button>
             <button type="button" onClick={handleSave} disabled={loading}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-hover px-3.5 py-1.5 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
               <Save className="w-3.5 h-3.5" /> {loading ? "Speichert…" : "Speichern"}
             </button>
           </div>

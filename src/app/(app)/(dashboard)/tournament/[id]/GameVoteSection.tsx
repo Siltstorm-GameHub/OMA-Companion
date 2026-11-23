@@ -4,6 +4,7 @@
 // ("Nur abstimmen" geht auch). Verwalter des Events stellen die Kandidaten zusammen und geben nach der Wahl
 // Spiel, Regeln und Format frei — ergibt die Wahl kein Spiel, legen sie es hier fest.
 import { useEffect, useRef, useState } from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -140,7 +141,7 @@ export default function GameVoteSection({
     <section id="spielwahl" className="glass rounded-2xl p-5 mb-5 space-y-4 scroll-mt-36">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-base font-bold text-white">🗳️ Spielwahl</h2>
+          <h2 className="text-base font-extrabold text-fg flex items-center gap-2"><Glyph name="vote" className="size-4 text-primary-fg" /> Spielwahl</h2>
           <p className="text-xs text-gray-400 mt-0.5">
             {view.status === "prepared" && <>Die Abstimmung startet am {fmt(view.opensAt)} und läuft bis {fmt(view.closesAt)}. Stammspieler bekommen dann eine Meldung.</>}
             {view.status === "open" && <>Läuft bis {fmt(view.closesAt)} · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>}
@@ -187,7 +188,7 @@ export default function GameVoteSection({
       )}
 
       {view.buyHint && winner && (
-        <div className="rounded-xl bg-teal-500/10 border border-teal-400/25 px-3 py-2.5 text-xs text-teal-100">
+        <div className="rounded-xl bg-primary/10 border border-primary/25 px-3 py-2.5 text-xs text-teal-100">
           🛒 <span className="font-semibold">So kommst du an {winner.name}:</span> {view.buyHint}{" "}
           <Link href={`/spiele/${winner.slug}`} className="underline underline-offset-2">Zur Spielseite</Link>
         </div>
@@ -200,7 +201,7 @@ export default function GameVoteSection({
           return (
             <div key={c.id}
               className={`flex gap-3 rounded-xl border p-2.5 transition-colors ${
-                isWinner ? "border-emerald-400/50 bg-emerald-500/10" : picked ? "border-teal-400/40 bg-teal-500/[0.07]" : "border-line bg-surface-2"
+                isWinner ? "border-emerald-400/50 bg-emerald-500/10" : picked ? "border-primary/40 bg-primary/[0.07]" : "border-line bg-surface-2"
               }`}>
               <GameCover game={c.name} coverUrl={c.coverUrl} className="w-24 aspect-[16/9] shrink-0" rounded="rounded-lg" fallbackVariant="plain" />
               <div className="flex-1 min-w-0 space-y-1">
@@ -225,8 +226,8 @@ export default function GameVoteSection({
                 {open && view.canVote ? (
                   <button type="button" onClick={() => toggle(c.id)} aria-pressed={picked}
                     className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                      picked ? "bg-teal-500 text-white" : "bg-line text-gray-300 hover:bg-line"
-                    }`}>
+                      picked ? "bg-primary text-primary-ink" : "bg-line text-gray-300 hover:bg-line"
+                    } max-lg:min-h-10`}>
                     {picked && <Check className="w-3.5 h-3.5" />} Würde ich spielen
                   </button>
                 ) : <span />}
@@ -301,7 +302,7 @@ function RulesForm({ eventId, view, rules, format, allGames }: {
     }
   }
 
-  const input = "w-full bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "w-full bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-primary/40";
   return (
     <div className="border-t border-line pt-3 space-y-2.5">
       <p className="text-sm font-semibold text-white">{allGames ? "Spiel festlegen" : "Regeln festlegen"}</p>

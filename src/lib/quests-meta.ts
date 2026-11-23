@@ -84,6 +84,6 @@ export const QUEST_TYPE_META: Record<
   },
   COMMUNITY_JOB_VOTE: {
     label: "Community-Bewertungen", unit: "Bewertungen", icon: "👍",
-    color: "text-teal-300",   bar: "from-teal-600 to-teal-400",     bg: "from-teal-500/10",
+    color: "text-primary-fg",   bar: "from-primary to-primary",     bg: "from-primary/10",
   },
 };

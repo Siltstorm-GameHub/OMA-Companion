@@ -56,7 +56,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
   const option = (value: Mode, label: string, hint: string) => (
     <button type="button" onClick={() => setMode(value)}
       className={`flex-1 min-w-[150px] text-left rounded-lg p-2.5 border transition-colors ${
-        mode === value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+        mode === value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
       }`}>
       <span className={`block text-sm font-semibold ${mode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
       <span className="block text-xs text-gray-500">{hint}</span>
@@ -64,7 +64,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
   );
 
   return (
-    <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
       <div>
         <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel dieses Termins</p>
         <p className="text-xs text-gray-500">
@@ -85,7 +85,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
 
       <div className="flex justify-end">
         <button type="button" onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50">
+          className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50 max-lg:min-h-10">
           <Save className="w-4 h-4" /> {saving ? "Speichert…" : "Speichern"}
         </button>
       </div>

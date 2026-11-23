@@ -28,14 +28,14 @@ export default async function ClipsNav({ active }: { active: ClipsTab }) {
         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#9146ff]/15 border border-[#9146ff]/30">
           <Clapperboard className="w-4.5 h-4.5 text-[#b794ff]" />
         </div>
-        <h1 className="font-display text-2xl font-black text-white tracking-tight">Clips</h1>
+        <h1 className="font-display text-2xl font-extrabold text-white tracking-tight">Clips</h1>
       </div>
       <nav aria-label="Clip-Bereiche" className="flex gap-1.5 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <Link key={t.key} href={t.href} aria-current={active === t.key ? "page" : undefined}
             className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               active === t.key ? "border-violet-400 bg-violet-500 text-white" : "border-line-strong text-gray-300 hover:border-line-strong hover:bg-line"
-            }`}>
+            } max-lg:min-h-10`}>
             {t.label}
             {voting[t.key] && (
               <span className={`h-1.5 w-1.5 rounded-full ${active === t.key ? "bg-white" : "bg-violet-400"} animate-pulse`} title="Abstimmung läuft" />

@@ -31,7 +31,7 @@ export default async function ZusammenPage({ searchParams }: { searchParams: Pro
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
           <h1 className="text-lg font-semibold text-white">{watch.title}</h1>
           <p className="text-sm text-gray-400">Diese gemeinsame Session ist beendet.</p>
-          <Link href="/zusammen" className="text-sm text-teal-300 hover:underline">Wer ist gerade gemeinsam live? →</Link>
+          <Link href="/zusammen" className="text-sm text-primary-fg hover:underline">Wer ist gerade gemeinsam live? →</Link>
         </div>
       );
     }

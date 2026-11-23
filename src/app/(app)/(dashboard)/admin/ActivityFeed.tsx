@@ -42,12 +42,12 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
             className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
               filter === f
                 ? f === "rank"
-                  ? "text-teal-300 bg-teal-500/15 border-teal-500/30"
+                  ? "text-primary-fg bg-primary/15 border-primary/30"
                   : f === "coins"
                     ? "text-amber-300 bg-amber-500/15 border-amber-500/30"
                     : "text-white bg-line border-line-strong"
                 : "text-gray-500 bg-transparent border-line hover:text-gray-300 hover:border-line-strong"
-            }`}
+            } max-lg:min-h-10`}
           >
             {f === "all"   && "Alle"}
             {f === "coins" && <><CoinIcon size={10} /> Münzen</>}
@@ -79,7 +79,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
                       <CoinIcon size={10} /> Münzen
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
+                    <span className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded border text-primary bg-primary/10 border-primary/20">
                       <RankPointsIcon size={10} /> Rang-Punkte
                     </span>
                   )}

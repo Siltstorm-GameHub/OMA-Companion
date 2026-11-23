@@ -72,8 +72,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       onClick={onClick}
       className={`flex items-center gap-1.5 shrink-0 text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
-        active ? "bg-teal-500/20 text-teal-200" : "text-gray-400 hover:text-gray-200"
-      }`}
+        active ? "bg-primary/20 text-teal-200" : "text-gray-400 hover:text-gray-200"
+      } max-lg:min-h-10`}
     >
       {children}
     </button>
@@ -133,7 +133,7 @@ function CombinedChat({ messages, byLogin, status }: { messages: ChatMessage[]; 
       {!pinned && (
         <button
           onClick={() => setPinned(true)}
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-600 text-white shadow-lg"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-primary text-primary-ink shadow-lg max-lg:min-h-10"
         >
           <ArrowDown className="w-3.5 h-3.5" /> Neue Nachrichten
         </button>

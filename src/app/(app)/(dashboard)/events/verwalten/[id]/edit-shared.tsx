@@ -166,8 +166,8 @@ export const STATUS_STYLES: Record<string, string> = {
   umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
   finished: "text-gray-500 bg-surface-2 border-line",
 };
-export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
-export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 export const labelCls = "text-xs text-gray-500 mb-1 block";
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
@@ -227,7 +227,7 @@ export function Switch({ checked, onChange, label, hint }: { checked: boolean; o
         {hint && <span className="block text-xs text-gray-500">{hint}</span>}
       </span>
       <input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
-      <span aria-hidden className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/[0.12] transition-colors peer-checked:bg-teal-500 peer-focus-visible:ring-2 peer-focus-visible:ring-teal-400/60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />
+      <span aria-hidden className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/[0.12] transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />
     </label>
   );
 }

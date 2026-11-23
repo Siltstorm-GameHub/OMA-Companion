@@ -42,7 +42,7 @@ function since(d: Date | string, now: Date): string {
 }
 
 const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg border border-line-strong bg-line px-2.5 py-1 text-xs font-semibold text-gray-200 hover:bg-line hover:text-white transition-colors";
-const BTN_PRIMARY = "shrink-0 inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors disabled:opacity-50";
+const BTN_PRIMARY = "shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover px-2.5 py-1 text-xs font-semibold text-primary-ink transition-colors disabled:opacity-50";
 
 function Section({ title, count, children, tone }: { title: string; count?: number; children: ReactNode; tone?: "attention" }) {
   return (
@@ -60,7 +60,7 @@ function Tag({ children, tone = "gray", title }: { children: ReactNode; tone?: "
     gray: "text-gray-400 bg-line border-line",
     amber: "text-amber-300 bg-amber-500/10 border-amber-500/20",
     rose: "text-rose-300 bg-rose-500/10 border-rose-500/20",
-    teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
+    teal: "text-primary-fg bg-primary/10 border-primary/20",
   }[tone];
   return <span title={title} className={`shrink-0 rounded border px-1.5 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
 }
@@ -248,7 +248,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
           <ul className="mt-1 divide-y divide-line">
             {approvalsShown.map((a) => (
               <li key={`a-${a.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><UserCheck className="w-4 h-4" /></span>
+                <span className="w-8 h-8 shrink-0 rounded-lg border border-primary/20 bg-primary/10 text-primary-fg flex items-center justify-center"><UserCheck className="w-4 h-4" /></span>
                 {/* basis-56: auf schmalen Bildschirmen rutschen die Knöpfe in eine eigene Zeile */}
                 <span className="min-w-0 flex-1 basis-56">
                   <span className="block truncate text-sm font-medium text-white">{a.title}</span>
@@ -282,7 +282,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
             ))}
             {newSeasons.map((s) => (
               <li key={`n-${s.id}`} className="flex items-center gap-3 py-2.5">
-                <span className="w-8 h-8 shrink-0 rounded-lg border border-teal-500/20 bg-teal-500/10 text-teal-300 flex items-center justify-center"><Flag className="w-4 h-4" /></span>
+                <span className="w-8 h-8 shrink-0 rounded-lg border border-primary/20 bg-primary/10 text-primary-fg flex items-center justify-center"><Flag className="w-4 h-4" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-white">{s.name}</span>
                   <span className="block truncate text-xs text-gray-500">Saison abgeschlossen · noch keine neue Saison</span>
@@ -411,7 +411,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 ))}
               </ul>
               {!showAllPast && !q && groups.past.length > PAST_VISIBLE && (
-                <button type="button" onClick={() => setShowAllPast(true)} className="mt-2 text-xs font-semibold text-teal-300 hover:text-teal-200">
+                <button type="button" onClick={() => setShowAllPast(true)} className="mt-2 text-xs font-semibold text-primary-fg hover:text-teal-200">
                   Alle {groups.past.length} anzeigen
                 </button>
               )}

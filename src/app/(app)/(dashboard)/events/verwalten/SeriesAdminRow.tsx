@@ -16,7 +16,7 @@ import StatRowsEditor from "@/components/admin/StatRowsEditor";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 import { NumberInput } from "@/components/ui/NumberInput";
 
-const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -163,17 +163,17 @@ export default function SeriesAdminRow({
   }, {});
 
   return (
-    <div className="rounded-xl overflow-hidden border border-teal-500/20 bg-teal-500/[0.02]">
+    <div className="rounded-xl overflow-hidden border border-primary/20 bg-primary/[0.02]">
       {/* ── Series header ── */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-2 transition-colors"
         onClick={() => setExpanded(v => !v)}
       >
-        <Repeat className="w-4 h-4 text-teal-400 shrink-0" />
+        <Repeat className="w-4 h-4 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-semibold text-white text-sm">{seriesName}</p>
-            <span className="text-xs text-teal-600 bg-teal-500/10 border border-teal-500/15 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-primary bg-primary/10 border border-primary/15 px-2 py-0.5 rounded-full">
               Eventreihe · {events.length} Events
             </span>
             {statusCounts["active"]  > 0 && <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">{statusCounts["active"]} aktiv</span>}
@@ -185,7 +185,7 @@ export default function SeriesAdminRow({
           <Link
             href={`/events/series/${seriesId}`}
             onClick={e => e.stopPropagation()}
-            className="text-xs text-teal-600 hover:text-teal-400 flex items-center gap-1 transition-colors"
+            className="text-xs text-primary hover:text-primary flex items-center gap-1 transition-colors"
           >
             <ExternalLink className="w-3 h-3" /> Ansehen
           </Link>
@@ -197,7 +197,7 @@ export default function SeriesAdminRow({
       </div>
 
       {expanded && (
-        <div className="border-t border-teal-500/10">
+        <div className="border-t border-primary/10">
 
           {/* ── Reihen-Einstellungen (collapsible) ── */}
           <div className="border-b border-line">
@@ -222,7 +222,7 @@ export default function SeriesAdminRow({
                   </label>
                   <GameNameInput value={fixedGame} onChange={setFixedGame} placeholder="Leer = verschiedene Spiele möglich" className={inputCls} />
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
-                    <input type="checkbox" checked={propagateGame} onChange={e => setPropagateGame(e.target.checked)} className="rounded accent-teal-500" />
+                    <input type="checkbox" checked={propagateGame} onChange={e => setPropagateGame(e.target.checked)} className="rounded accent-primary" />
                     <span className="text-xs text-gray-500">Spiel auf alle Events der Reihe übertragen</span>
                   </label>
                 </div>
@@ -238,7 +238,7 @@ export default function SeriesAdminRow({
                     {SERIES_FORMAT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
-                    <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-teal-500" />
+                    <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-primary" />
                     <span className="text-xs text-gray-500">Format auf alle Turniere der Reihe übertragen</span>
                   </label>
                 </div>
@@ -272,8 +272,8 @@ export default function SeriesAdminRow({
                           <button key={mode} type="button" onClick={() => setRecurrenceMonthlyMode(mode)}
                             className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all"
                             style={recurrenceMonthlyMode === mode
-                              ? { background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                              : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }
+                              ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                              : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }
                             }>
                             {labels[mode]}
                           </button>
@@ -295,7 +295,7 @@ export default function SeriesAdminRow({
                     <span className="text-xs text-gray-400 w-32 shrink-0">Punkte pro Teilnahme</span>
                     <NumberInput min={0} value={statParticipationPts}
                       onChange={e => setStatParticipationPts(Number(e.target.value))}
-                      className="w-20 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors" />
+                      className="w-20 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors" />
                   </div>
 
                   <StatRowsEditor rows={statRows} onChange={setStatRows} />
@@ -349,9 +349,9 @@ export default function SeriesAdminRow({
                                     className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                                 </label>
                               ))}
-                              <label className="flex items-center gap-1.5 text-xs text-teal-500">
+                              <label className="flex items-center gap-1.5 text-xs text-primary">
                                 Punkte (auto)
-                                <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                                <span className="w-16 rounded px-1.5 py-0.5 text-xs text-primary-fg bg-primary-soft border border-primary/30 tabular-nums">
                                   {row.points}
                                 </span>
                               </label>
@@ -391,12 +391,12 @@ export default function SeriesAdminRow({
                 {/* Speichern */}
                 <div className="flex gap-2 flex-wrap items-center">
                   <button onClick={saveSettings} disabled={saving}
-                    className="text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                    className="text-xs bg-teal-700 hover:bg-primary-hover text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
                     {saving ? "Speichert…" : "Reihe speichern"}
                   </button>
                   {recurrenceType && (
                     <button onClick={generateNextEvent} disabled={generatingNext}
-                      className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50">
+                      className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-white border border-primary/40 hover:bg-primary-hover rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10">
                       <CalendarPlus className="w-3.5 h-3.5" />
                       {generatingNext ? "Erstellt…" : "Nächsten Termin erstellen"}
                     </button>
@@ -409,7 +409,7 @@ export default function SeriesAdminRow({
           {/* ── Events der Reihe ── */}
           <div className="divide-y divide-line">
             {events.map((ev: SeriesEvent) => (
-              <div key={ev.id} className="pl-4 border-l-2 border-teal-500/20">
+              <div key={ev.id} className="pl-4 border-l-2 border-primary/20">
                 <EventAdminRow event={ev} allUsers={allUsers} hideSeries />
               </div>
             ))}

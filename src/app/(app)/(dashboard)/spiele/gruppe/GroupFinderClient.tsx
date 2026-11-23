@@ -93,8 +93,8 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
       <div>
         <div className="flex items-center gap-2.5 mb-1">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.25)" }}>
-            <Users className="w-4.5 h-4.5 text-teal-400" />
+            style={{ background: "color-mix(in srgb, var(--color-primary) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)" }}>
+            <Users className="w-4.5 h-4.5 text-primary" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-fg tracking-tight">Was zocken wir?</h1>
         </div>
@@ -113,7 +113,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
           {selected.map(id => {
             const m = byId.get(id);
             return (
-              <span key={id} className="inline-flex items-center gap-1.5 rounded-full pl-0.5 pr-1 py-0.5 bg-teal-500/10 border border-teal-500/25 text-xs text-teal-100">
+              <span key={id} className="inline-flex items-center gap-1.5 rounded-full pl-0.5 pr-1 py-0.5 bg-primary/10 border border-primary/25 text-xs text-teal-100">
                 <RankedAvatar userId={id} look={null} src={m?.image} alt={m?.name ?? ""} size={22} />
                 {names.get(id) ?? "?"}
                 {id !== meId && (
@@ -143,7 +143,7 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-line text-left">
                   <RankedAvatar userId={m.id} look={null} src={m.image} alt={m.name} size={24} />
                   <span className="flex-1 truncate">{m.name}</span>
-                  <Plus className="w-3.5 h-3.5 text-teal-400" />
+                  <Plus className="w-3.5 h-3.5 text-primary" />
                 </button>
               ))}
             </div>
@@ -169,11 +169,11 @@ export default function GroupFinderClient({ games, members, meId }: { games: Gam
           <section className="surface rounded-2xl p-2 sm:p-3">
             <div className="flex items-center justify-between gap-2 px-2 pt-1 pb-2">
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-teal-400" /> {selected.length === 1 ? "Hast du" : "Haben alle"} ({result.ready.length})
+                <Check className="w-3.5 h-3.5 text-primary" /> {selected.length === 1 ? "Hast du" : "Haben alle"} ({result.ready.length})
               </h2>
               {(result.ready.length > 0 || result.almost.length > 0) && (
                 <button type="button" onClick={pickRandom}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-teal-500/30 text-teal-200 hover:bg-teal-500/10 transition-colors">
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-primary/30 text-teal-200 hover:bg-primary/10 transition-colors max-lg:min-h-10">
                   <Dices className="w-3.5 h-3.5" /> Zufällig wählen
                 </button>
               )}

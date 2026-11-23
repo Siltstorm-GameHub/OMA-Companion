@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Glyph, type GlyphName } from "@/components/ui/Glyph";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -116,11 +117,11 @@ export default function EventComments({
       {/* Kopf: mobil (eingeklappt) ein Knopf, ab lg eine Überschrift */}
       {!isPanel && <><button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
         className={`w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 text-left lg:hidden ${open ? "mb-3" : ""}`}>
-        <MessageCircle className="w-4 h-4 text-teal-300 shrink-0" />
+        <MessageCircle className="w-4 h-4 text-primary-fg shrink-0" />
         <span className="text-sm font-semibold text-white">Absprachen</span>
         {total > 0 && <span className="text-xs text-gray-500 tabular-nums">{total}</span>}
         {unread > 0 && !open && (
-          <span className="shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded-full bg-teal-500 text-teal-950 font-semibold">{unread} neu</span>
+          <span className="shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-ink font-semibold">{unread} neu</span>
         )}
         {pinned.length > 0 && !open && <span className="text-xs truncate text-amber-300/90 min-w-0">📌 {plainCommentText(pinned[pinned.length - 1].content)}</span>}
         <ChevronDown className={`w-4 h-4 text-gray-500 ml-auto shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -200,10 +201,10 @@ function CommentText({ content }: { content: string }) {
     <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">
       {parseCommentSegments(content).map((s, i) => {
         if (s.type === "mention") {
-          return <Link key={i} href={`/profile/${s.userId}`} className="text-teal-300 font-medium hover:underline">@{s.name}</Link>;
+          return <Link key={i} href={`/profile/${s.userId}`} className="text-primary-fg font-medium hover:underline">@{s.name}</Link>;
         }
         if (s.type === "link") {
-          return <a key={i} href={s.href} target="_blank" rel="noopener noreferrer nofollow" className="text-teal-300 underline break-all">{s.href}</a>;
+          return <a key={i} href={s.href} target="_blank" rel="noopener noreferrer nofollow" className="text-primary-fg underline break-all">{s.href}</a>;
         }
         return <span key={i}>{s.text}</span>;
       })}
@@ -290,7 +291,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
               className="w-full rounded-control bg-black/30 border border-line px-2.5 py-1.5 text-sm text-fg focus:outline-none focus:border-primary" />
             <div className="flex gap-2 text-xs">
               <button type="button" disabled={busy} onClick={() => run(async () => { await api(base, "PATCH", { content: draft }); setEditing(false); })}
-                className="px-2.5 py-1 rounded-lg bg-teal-500 text-teal-950 font-semibold disabled:opacity-50">Speichern</button>
+                className="px-2.5 py-1 rounded-lg bg-primary text-primary-ink font-semibold disabled:opacity-50">Speichern</button>
               <button type="button" onClick={() => { setEditing(false); setDraft(c.content); }} className="px-2.5 py-1 rounded-lg text-gray-400 hover:text-white">Abbrechen</button>
             </div>
           </div>
@@ -307,7 +308,7 @@ function MessageItem({ c, grouped, isMe, eventId, canPin, locked, onChange }: {
               <button key={r.emoji} type="button" disabled={locked || busy} title={r.users.join(", ")}
                 onClick={() => run(() => api(`${base}/reactions`, "POST", { emoji: r.emoji }))}
                 className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full border transition-colors ${
-                  r.mine ? "bg-teal-500/15 border-teal-500/40 text-teal-200" : "bg-surface-2 border-line-strong text-gray-300 hover:bg-line"}`}>
+                  r.mine ? "bg-primary/15 border-primary/40 text-teal-200" : "bg-surface-2 border-line-strong text-gray-300 hover:bg-line"}`}>
                 <span>{r.emoji}</span><span className="tabular-nums">{r.count}</span>
               </button>
             ))}
@@ -365,11 +366,11 @@ function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
   const [openKey, setOpenKey] = useState<AttendanceKey | null>(null);
   const total = summary.ready.length + summary.late.length + summary.absent.length + summary.none.length;
   if (total === 0) return null;
-  const items: { key: AttendanceKey; icon: string; label: string; count: number; tone: string }[] = [
-    { key: "ready", icon: "✅", label: "bereit", count: summary.ready.length, tone: "text-emerald-300" },
-    { key: "late", icon: "⏰", label: "später", count: summary.late.length, tone: "text-amber-300" },
-    { key: "absent", icon: "❌", label: "sagen ab", count: summary.absent.length, tone: "text-rose-300" },
-    { key: "none", icon: "❔", label: "ohne Rückmeldung", count: summary.none.length, tone: "text-gray-300" },
+  const items: { key: AttendanceKey; icon: GlyphName; label: string; count: number; tone: string }[] = [
+    { key: "ready", icon: "check", label: "bereit", count: summary.ready.length, tone: "text-emerald-300" },
+    { key: "late", icon: "clock", label: "später", count: summary.late.length, tone: "text-amber-300" },
+    { key: "absent", icon: "cross", label: "sagen ab", count: summary.absent.length, tone: "text-rose-300" },
+    { key: "none", icon: "question", label: "ohne Rückmeldung", count: summary.none.length, tone: "text-gray-300" },
   ];
   const names = openKey === "late"
     ? summary.late.map(l => `${l.name}${l.lateMin ? ` (+${l.lateMin} min)` : ""}`)
@@ -381,7 +382,7 @@ function AttendanceBar({ summary }: { summary: AttendanceSummary }) {
         {items.filter(i => i.count > 0).map(i => (
           <button key={i.key} type="button" onClick={() => setOpenKey(k => (k === i.key ? null : i.key))} aria-expanded={openKey === i.key}
             className={`px-2 py-1 rounded-lg border transition-colors ${openKey === i.key ? "bg-line border-white/25" : "border-line-strong hover:bg-line"} ${i.tone}`}>
-            {i.icon} {i.count} {i.label}
+            <Glyph name={i.icon} className="inline size-3.5 align-[-2px]" /> {i.count} {i.label}
           </button>
         ))}
       </div>
@@ -557,7 +558,7 @@ function Composer({ eventId, onSent }: { eventId: string; onSent: () => Promise<
           className="block flex-1 min-w-0 min-h-10 resize-none rounded-control bg-black/30 border border-line px-3 py-2 text-[16px] leading-6 sm:text-sm sm:leading-5 text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
         <button type="button" onClick={send} disabled={sending || !text.trim() || visibleLength > COMMENT_MAX_LENGTH}
           aria-label="Senden"
-          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-teal-500 text-teal-950 hover:bg-teal-400 disabled:opacity-40 transition-colors">
+          className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-primary-ink hover:bg-primary-hover disabled:opacity-40 transition-colors">
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </div>

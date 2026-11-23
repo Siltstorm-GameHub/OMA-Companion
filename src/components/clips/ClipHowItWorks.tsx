@@ -18,7 +18,7 @@ export default function ClipHowItWorks({ lastEvent }: { lastEvent: { id: string;
       </ul>
       {lastEvent && (
         <Link href={`/tournament/${lastEvent.id}#clip`}
-          className="mt-3 inline-flex items-center gap-1 rounded-lg bg-[#9146ff]/15 border border-[#9146ff]/30 px-3 py-1.5 text-xs font-semibold text-purple-200 hover:bg-[#9146ff]/25">
+          className="mt-3 inline-flex items-center gap-1 rounded-lg bg-[#9146ff]/15 border border-[#9146ff]/30 px-3 py-1.5 text-xs font-semibold text-purple-200 hover:bg-[#9146ff]/25 max-lg:min-h-10">
           Clip zu „{lastEvent.title}“ einreichen <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       )}

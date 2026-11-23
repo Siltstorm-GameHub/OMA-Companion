@@ -78,10 +78,10 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             {GENRES.map(g => (
               <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                  genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                  genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
               </button>
             ))}
           </div>
@@ -179,15 +179,15 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         </div>
       )}
 
-      <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
+      <div className="rounded-xl p-3 space-y-3" style={{ background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 10%, transparent)" }}>
         <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Eventreihe</p>
         <div className="flex gap-2 flex-wrap">
           {(["none", "existing", "new"] as const).map(m => (
             <button key={m} type="button" onClick={() => setSeriesMode(m)}
               className="text-xs px-3 py-1.5 rounded-lg transition-colors"
               style={seriesMode === m
-                ? { background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
               {m === "none" ? "Einzelevent" : m === "existing" ? "Bestehende Reihe" : "Neue Reihe"}
             </button>
           ))}

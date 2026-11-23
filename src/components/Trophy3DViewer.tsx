@@ -153,7 +153,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
                 alt={current.holderName ?? "Halter"} size={40} rounded="full" />
               <span className="text-left min-w-0">
                 <span className="block text-[9px] text-amber-400/80 uppercase tracking-wider font-semibold">Aktueller Halter</span>
-                <span className="block text-xs text-gray-200 font-medium group-hover/holder:text-teal-300 transition-colors truncate max-w-[140px]">
+                <span className="block text-xs text-gray-200 font-medium group-hover/holder:text-primary-fg transition-colors truncate max-w-[140px]">
                   {current.holderName ?? "Unbekannt"}
                 </span>
               </span>
@@ -190,7 +190,7 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
               alt={current.holderName ?? "Halter"} size={40} rounded="full" />
             <span className="text-left">
               <span className="block text-[9px] text-amber-400/80 uppercase tracking-wider font-semibold">Aktueller Halter</span>
-              <span className="block text-sm text-gray-200 font-medium group-hover/holder:text-teal-300 transition-colors">
+              <span className="block text-sm text-gray-200 font-medium group-hover/holder:text-primary-fg transition-colors">
                 {current.holderName ?? "Unbekannt"}
               </span>
             </span>

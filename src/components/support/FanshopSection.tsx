@@ -14,11 +14,11 @@ export default function FanshopSection() {
     <div className="space-y-4">
       {/* Header + Footnote bleiben schmal & lesbar, auch wenn das iFrame darunter volle Breite nutzt */}
       <div className="text-center space-y-2 max-w-2xl mx-auto">
-        <div className="flex items-center justify-center gap-2 text-teal-400 mb-1">
+        <div className="flex items-center justify-center gap-2 text-primary mb-1">
           <ShoppingBag className="w-5 h-5" />
           <span className="text-xs font-semibold uppercase tracking-widest">OMA Fanshop</span>
         </div>
-        <h1 className="text-2xl font-black text-white">Trag die Community</h1>
+        <h1 className="text-2xl font-extrabold text-white">Trag die Community</h1>
         <p className="text-sm text-gray-500 max-w-sm mx-auto">
           T-Shirts, Hoodies &amp; mehr im OMA-Design — jeder Kauf unterstützt uns direkt.
         </p>
@@ -30,9 +30,9 @@ export default function FanshopSection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
             style={{
-              background: "linear-gradient(135deg, rgba(20,184,166,0.9), rgba(13,148,136,0.9))",
+              background: "linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 90%, transparent), rgba(13,148,136,0.9))",
               color: "#fff",
-              boxShadow: "0 4px 16px rgba(20,184,166,0.3)",
+              boxShadow: "0 4px 16px color-mix(in srgb, var(--color-primary) 30%, transparent)",
             }}
           >
             <ExternalLink className="w-4 h-4" />
@@ -45,7 +45,7 @@ export default function FanshopSection() {
           statt wie der Rest der Seite auf eine Lesebreite gedeckelt zu sein. */}
       <div
         className="rounded-2xl overflow-hidden w-full"
-        style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}
+        style={{ border: "1px solid var(--color-line)", background: "var(--color-surface-2)" }}
       >
         <iframe
           src={SHOP_URL}

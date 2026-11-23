@@ -79,7 +79,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
           <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Glücksrad-Preise</p>
           <button
             onClick={addPrize}
-            className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors"
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> Preis hinzufügen
           </button>
@@ -114,7 +114,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                     value={prize.value}
                     onChange={(e) => updatePrize(prize.id, "value", e.target.value)}
                     placeholder="Münzen"
-                    className="w-20 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
+                    className="w-20 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-primary/50"
                   />
                 )}
 
@@ -123,7 +123,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
                   value={prize.weight}
                   onChange={(e) => updatePrize(prize.id, "weight", parseInt(e.target.value, 10) || 0)}
                   title="Gewichtung"
-                  className="w-16 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-teal-500/50"
+                  className="w-16 px-2 py-1.5 rounded-md bg-line border border-line-strong text-white text-xs focus:outline-none focus:border-primary/50"
                 />
                 <span className="text-xs text-gray-500 w-12 tabular-nums shrink-0">{chance}%</span>
 
@@ -145,7 +145,7 @@ export function ShopConfigPanel({ initial }: { initial: ShopConfig }) {
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium transition-colors disabled:opacity-50"
       >
         <Save className="w-4 h-4" />
         {saving ? "Speichert…" : "Speichern"}

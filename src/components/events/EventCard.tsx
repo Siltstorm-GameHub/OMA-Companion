@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import { EVENT_KIND_LABEL, type EventKind } from "@/lib/event-placement";
 import GameCover from "@/components/GameCover";
 import { AvatarStack } from "@/components/AvatarStack";
@@ -73,9 +74,9 @@ export default function EventCard({
   const dimmed = ev.phase.phase === "full";
   const past = ev.phase.phase === "finished";
   const border = ev.omaOriginal
-    ? "border-teal-400/45"
+    ? "border-primary/45"
     : ev.isRegistered && !past
-      ? "border-teal-400/30"
+      ? "border-primary/30"
       : ev.phase.phase === "live"
         ? "border-red-400/30"
         : ev.phase.phase === "poll" || ev.phase.phase === "gamevote"
@@ -91,14 +92,14 @@ export default function EventCard({
 
   return (
     <article
-      className={`surface group relative flex ${row ? "flex-row rounded-lg" : "flex-col rounded-card"} h-full overflow-hidden border ${border} shadow-card transition-colors duration-200 hover:border-line-strong focus-within:ring-2 focus-within:ring-teal-400/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
+      className={`surface group relative flex ${row ? "flex-row rounded-lg" : "flex-col rounded-card"} h-full overflow-hidden border ${border} shadow-card transition-colors duration-200 hover:border-line-strong focus-within:ring-2 focus-within:ring-primary/60 ${dimmed ? "saturate-[0.45] opacity-85" : ""} ${past ? "opacity-75 hover:opacity-100" : ""}`}
     >
       {/* Zeile: Datumsspalte */}
       <div className={`${row ? "" : "hidden"} flex flex-col items-center justify-center w-12 shrink-0 leading-tight py-2`}>
         {ev.phase.phase === "live" ? liveBadge : (
           <>
             {/* "MORGEN" passt nicht in die schmale Spalte → Wochentag */}
-            <span className={`text-xs font-semibold ${ev.date.top === "HEUTE" ? "text-teal-300" : "text-gray-400"}`}>{ev.date.top === "MORGEN" ? ev.date.weekday : ev.date.top}</span>
+            <span className={`text-xs font-semibold ${ev.date.top === "HEUTE" ? "text-primary-fg" : "text-gray-400"}`}>{ev.date.top === "MORGEN" ? ev.date.weekday : ev.date.top}</span>
             <span className="text-base font-bold text-white tabular-nums">{ev.date.day}</span>
             <span className="text-xs text-gray-500 tabular-nums">{ev.date.time}</span>
           </>
@@ -124,13 +125,13 @@ export default function EventCard({
             )}
           </div>
           {ev.isRegistered && !past && (
-            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-teal-300 shadow-card">
+            <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-primary-fg shadow-card">
               <Check className="w-3 h-3" /> Dabei
             </span>
           )}
           {ev.phase.phase === "period" && ev.phase.progress != null && (
             <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/40" title={`${Math.round(ev.phase.progress * 100)} % des Zeitraums vorbei`}>
-              <div className="h-full bg-teal-400/80" style={{ width: `${ev.phase.progress * 100}%` }} />
+              <div className="h-full bg-primary/80" style={{ width: `${ev.phase.progress * 100}%` }} />
             </div>
           )}
         </div>
@@ -175,7 +176,7 @@ export default function EventCard({
             <span
               title={ev.kind === "community" ? "Keine Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
               className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-xs font-medium ${ev.kind === "community" ? "bg-violet-500/15 text-violet-300" : "bg-amber-500/15 text-amber-300"}`}>
-              <span aria-hidden>{EVENT_KIND_LABEL[ev.kind].emoji}</span>{EVENT_KIND_LABEL[ev.kind].label}
+              <Glyph name={ev.kind === "community" ? "handshake" : "trophy"} className="size-3.5" />{EVENT_KIND_LABEL[ev.kind].label}
             </span>
           )}
           {ev.metaLine && <span className={`${row ? "inline" : "hidden sm:inline"} text-xs text-gray-500 truncate`}>{ev.metaLine}</span>}
@@ -184,7 +185,7 @@ export default function EventCard({
         {/* Belegung (nur Kachel) + Mitspieler */}
         {fillPct != null && !row && !past && (
           <div className="h-1 rounded-full bg-line overflow-hidden mt-0.5">
-            <div className={`h-full rounded-full ${ev.urgency?.startsWith("Noch") ? "bg-amber-400" : dimmed ? "bg-gray-500" : "bg-teal-400"}`} style={{ width: `${fillPct}%` }} />
+            <div className={`h-full rounded-full ${ev.urgency?.startsWith("Noch") ? "bg-amber-400" : dimmed ? "bg-gray-500" : "bg-primary"}`} style={{ width: `${fillPct}%` }} />
           </div>
         )}
         {ev.avatars.length > 0 && (
@@ -206,7 +207,7 @@ export default function EventCard({
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{ev.playerCount}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""}</span>
             {ev.coins > 0 && !past && <span className="flex items-center gap-0.5 font-semibold text-amber-400">+{ev.coins}<CoinIcon size={11} /></span>}
             {ev.comments && ev.comments.unread > 0 ? (
-              <span className="flex items-center gap-1 rounded-full bg-teal-500/15 px-1.5 py-px font-semibold text-teal-300" title="Neue Nachrichten in den Absprachen">
+              <span className="flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-px font-semibold text-primary-fg" title="Neue Nachrichten in den Absprachen">
                 <MessageCircle className="w-3 h-3" />{ev.comments.unread} neu
               </span>
             ) : ev.comments && ev.comments.total > 0 ? (

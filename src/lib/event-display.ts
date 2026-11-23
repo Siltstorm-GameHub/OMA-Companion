@@ -75,7 +75,7 @@ export function eventPhase(ev: EventPhaseInput, now: DateLike = Date.now()): Eve
 /** Tailwind-Klassen je Farbrolle — eine Quelle für Pillen/Tags auf allen Kacheln. */
 export const TONE_CLASSES: Record<EventTone, { pill: string; text: string; bar: string; border: string }> = {
   live:   { pill: "bg-red-500/15 text-red-400",       text: "text-red-400",    bar: "bg-red-400",    border: "border-red-400/35" },
-  teal:   { pill: "bg-teal-400/15 text-teal-300",     text: "text-teal-300",   bar: "bg-teal-400",   border: "border-teal-400/40" },
+  teal:   { pill: "bg-primary/15 text-primary-fg",     text: "text-primary-fg",   bar: "bg-primary",   border: "border-primary/40" },
   violet: { pill: "bg-violet-400/15 text-violet-300", text: "text-violet-300", bar: "bg-violet-400", border: "border-violet-400/35" },
   amber:  { pill: "bg-amber-400/15 text-amber-300",   text: "text-amber-300",  bar: "bg-amber-400",  border: "border-amber-400/35" },
   muted:  { pill: "bg-white/[0.08] text-gray-300",    text: "text-gray-400",   bar: "bg-gray-500",   border: "border-white/[0.08]" },

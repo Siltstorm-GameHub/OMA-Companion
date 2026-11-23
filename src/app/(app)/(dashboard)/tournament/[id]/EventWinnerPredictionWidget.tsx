@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Target, Search, X } from "@/components/icons";
@@ -144,7 +145,7 @@ export default function EventWinnerPredictionWidget({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-white">
-            {prediction.correct ? "✅ Richtig getippt!" : "❌ Leider daneben"}
+            <span className="inline-flex items-center gap-1.5"><Glyph name={prediction.correct ? "check" : "cross"} />{prediction.correct ? "Richtig getippt!" : "Leider daneben"}</span>
           </p>
           <p className="text-xs text-gray-500">
             Du hast auf {uname(prediction.predictedUser)} getippt · Einsatz {prediction.wager} <CoinIcon size={10} className="inline" />
@@ -248,7 +249,7 @@ export default function EventWinnerPredictionWidget({
           <div className="flex flex-wrap gap-1.5">
             {players.map(u => (
               <button key={u.id} type="button" onClick={() => setSelected(u)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10">
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10 max-lg:min-h-10">
                 <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={18} className="w-[18px] h-[18px]" />
                 {uname(u)}
               </button>

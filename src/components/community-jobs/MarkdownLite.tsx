@@ -42,7 +42,7 @@ export function EmojiText({ text }: { text: string }) {
     </>
   );
 }
-const LINK_CLASS = "text-teal-300 hover:text-teal-200 underline underline-offset-2 break-words";
+const LINK_CLASS = "text-primary-fg hover:text-teal-200 underline underline-offset-2 break-words";
 
 function renderInline(text: string, keyBase: string): ReactNode[] {
   return text.split(INLINE).map((part, i) => {
@@ -58,7 +58,7 @@ function renderInline(text: string, keyBase: string): ReactNode[] {
     if (link) {
       // @-Erwähnung: [@Name](user:<id>) → Link aufs Profil
       const mentioned = parseMentionHref(link[2]);
-      if (mentioned) return <a key={key} href={`/profile/${mentioned}`} className="text-teal-300 font-medium hover:underline">{link[1]}</a>;
+      if (mentioned) return <a key={key} href={`/profile/${mentioned}`} className="text-primary-fg font-medium hover:underline">{link[1]}</a>;
       const href = safeHref(link[2]);
       return href
         ? <a key={key} href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>{link[1]}</a>
@@ -155,7 +155,7 @@ export default function MarkdownLite({ text, className = "" }: { text: string; c
           case "paragraph":
             return <p key={key}>{b.lines.map((l, j) => <span key={j}>{j > 0 && <br />}{renderInline(l, `${key}-${j}`)}</span>)}</p>;
           case "quote":
-            return <blockquote key={key} className="border-l-2 border-teal-500/40 pl-3 text-gray-400 italic">{b.lines.map((l, j) => <span key={j}>{j > 0 && <br />}{renderInline(l, `${key}-${j}`)}</span>)}</blockquote>;
+            return <blockquote key={key} className="border-l-2 border-primary/40 pl-3 text-gray-400 italic">{b.lines.map((l, j) => <span key={j}>{j > 0 && <br />}{renderInline(l, `${key}-${j}`)}</span>)}</blockquote>;
           case "ul":
             return <ul key={key} className="list-disc pl-5 space-y-0.5">{b.items.map((it, j) => <li key={j}>{renderInline(it, `${key}-${j}`)}</li>)}</ul>;
           case "ol":

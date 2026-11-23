@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { usePolling } from "@/lib/usePolling";
 import {
   Eye, EyeOff, Maximize2, X, Smartphone, Settings, Radio, Loader2, Timer, Swords, Moon, Rocket, Clapperboard, LogOut, LayoutGrid, Tv2,
   ArrowRight as SkipForward, Trophy,
@@ -84,12 +85,10 @@ export default function LiveControl() {
     }
   }, []);
 
-  useEffect(() => {
-    // Erster Abruf direkt, danach im Takt — alles in Callbacks, kein setState im Effect-Körper.
-    const first = setTimeout(load, 0);
-    const t = setInterval(load, POLL_MS);
-    return () => { clearTimeout(first); clearInterval(t); };
-  }, [load]);
+  // Nur bei sichtbarem Tab pollen: das Handy mit der Steuerung liegt oft gesperrt/im Hintergrund
+  // daneben und hätte sonst alle 4 s weiter Function-Aufrufe erzeugt. Beim Zurückkehren lädt
+  // usePolling sofort nach.
+  usePolling(load, POLL_MS);
 
   const counting = remaining != null && remaining > 0;
   useEffect(() => {

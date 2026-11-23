@@ -22,7 +22,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
   }
 
   return (
-    <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-2">
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" checked={checkInEnabled}
           onChange={e => setCheckInEnabled(e.target.checked)}
@@ -57,7 +57,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
               <li key={u.id}>
                 <button type="button" onClick={() => checkIn([u.id])} disabled={!!busy}
                   title="Von Hand einchecken"
-                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-line border border-line text-gray-200 hover:border-teal-500/40 hover:text-teal-200 disabled:opacity-50">
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-line border border-line text-gray-200 hover:border-primary/40 hover:text-teal-200 disabled:opacity-50 max-lg:min-h-10">
                   {busy === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                   {userName(u)}
                 </button>
@@ -67,7 +67,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
         </div>
       )}
       {savedOn && !drawn && notReady.length === 0 && registeredIds.size > 0 && (
-        <p className="text-xs text-teal-300">Alle angemeldeten Spieler sind bereit.</p>
+        <p className="text-xs text-primary-fg">Alle angemeldeten Spieler sind bereit.</p>
       )}
     </div>
   );

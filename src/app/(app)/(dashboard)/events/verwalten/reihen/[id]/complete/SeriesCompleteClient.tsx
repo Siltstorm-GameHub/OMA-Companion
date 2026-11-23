@@ -38,7 +38,7 @@ export default function SeriesCompleteClient(props: Props) {
 
       {/* Header */}
       <div className="flex items-center gap-2">
-        <CheckCircle2 className="w-5 h-5 text-teal-400" />
+        <CheckCircle2 className="w-5 h-5 text-primary" />
         <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
           {isPollOnly ? "Abstimmung nachtragen" : isReEdit ? "Abschluss bearbeiten" : "Eventreihe abschließen"}
         </h1>
@@ -80,7 +80,7 @@ export default function SeriesCompleteClient(props: Props) {
             <button
               onClick={() => setConfirmPollOnly(false)}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-teal-700 hover:bg-primary-hover transition-colors disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               {loading ? "Wird gespeichert…"
@@ -135,13 +135,13 @@ export default function SeriesCompleteClient(props: Props) {
                               {r.poll && <span className="ml-1.5 text-xs text-violet-400">Abstimmung</span>}
                             </span>
                             {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">+{r.coins} <CoinIcon size={11} /></span>}
-                            {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">+{r.rankPoints} <RankPointsIcon size={11} /></span>}
+                            {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-primary tabular-nums">+{r.rankPoints} <RankPointsIcon size={11} /></span>}
                           </div>
                         ))}
                         <div className="flex items-center gap-2 text-xs border-t border-line-strong pt-1.5">
                           <span className="flex-1 text-gray-400">Summe</span>
                           <span className="flex items-center gap-0.5 text-amber-400 tabular-nums">{totalCoins} <CoinIcon size={11} /></span>
-                          <span className="flex items-center gap-0.5 text-teal-400 tabular-nums">{totalRank} <RankPointsIcon size={11} /></span>
+                          <span className="flex items-center gap-0.5 text-primary tabular-nums">{totalRank} <RankPointsIcon size={11} /></span>
                         </div>
                       </>
                     )}
@@ -178,7 +178,7 @@ export default function SeriesCompleteClient(props: Props) {
                       Zurück
                     </button>
                     <button type="button" onClick={() => handleConfirm(confirmPollOnly)} disabled={loading}
-                      className="flex-1 rounded-xl py-2.5 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50">
+                      className="flex-1 rounded-xl py-2.5 text-xs font-semibold text-white bg-teal-700 hover:bg-primary-hover disabled:opacity-50">
                       {loading ? "Wird gespeichert…" : "Bestätigen"}
                     </button>
                   </div>
@@ -191,7 +191,7 @@ export default function SeriesCompleteClient(props: Props) {
           {!isReEdit && startNewSeason && (
             <div className="rounded-lg px-3 py-2 bg-surface-2 border border-line">
               <p className="text-xs text-gray-500 flex items-start gap-1.5">
-                <Plus className="w-3 h-3 shrink-0 mt-0.5 text-teal-500" />
+                <Plus className="w-3 h-3 shrink-0 mt-0.5 text-primary" />
                 Nach dem Abschluss wirst du zum Saison-Assistenten weitergeleitet, um die neue Saison einzurichten.
               </p>
             </div>

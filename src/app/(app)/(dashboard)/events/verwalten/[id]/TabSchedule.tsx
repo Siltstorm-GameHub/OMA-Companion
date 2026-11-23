@@ -140,7 +140,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
 
           {/* Community-Ziel: Kurzfassung, eingestellt wird es im Reiter "Ziel" */}
           {hasTournament ? <GoalSummaryLink ctx={ctx} /> : supportsCommunityGoal(tmtFormat) && (
-            <p className="text-xs text-teal-300/80">🎯 Mit diesem Format ist ein Community-Ziel möglich. Du richtest es nach dem Anlegen im Reiter „Ziel“ ein.</p>
+            <p className="text-xs text-primary-fg/80">🎯 Mit diesem Format ist ein Community-Ziel möglich. Du richtest es nach dem Anlegen im Reiter „Ziel“ ein.</p>
           )}
 
           {/* Event-eigene Stat-Punkte-Konfiguration (Eventpunkte) — für alle Stats-Formate (ffa,

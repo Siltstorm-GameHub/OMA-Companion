@@ -19,7 +19,7 @@ export default function EventsSectionNav({ active }: { active: (typeof TABS)[num
         return (
           <Link key={t.key} href={t.href} aria-current={on ? "page" : undefined}
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              on ? "border-teal-500 text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+              on ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
             }`}>
             <t.icon className="w-3.5 h-3.5" />
             {t.label}

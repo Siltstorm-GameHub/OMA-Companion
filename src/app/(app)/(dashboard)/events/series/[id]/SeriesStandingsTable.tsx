@@ -83,7 +83,7 @@ const RankCell = UiRankCell;
 function RankDelta({ delta }: { delta: DeltaInfo }) {
   if (delta.isNew) {
     return (
-      <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-teal-500/15 text-teal-400 leading-none">
+      <span className="text-[9px] font-semibold px-1 py-0.5 rounded bg-primary/15 text-primary leading-none">
         NEU
       </span>
     );
@@ -264,7 +264,7 @@ export default function SeriesStandingsTable({
                 <Avatar u={u} size={7} />
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-primary-fg" : "text-fg"}`}>
                   {name}
-                  {isMe && <span className="text-xs text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {isMe && <span className="text-xs text-primary ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.hasLegacy && <span className="text-xs text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
                   {row.disqualifiedEventCount > 0 && (
@@ -394,7 +394,7 @@ export default function SeriesStandingsTable({
                 <Avatar u={u} size={6} />
                 <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-primary-fg" : "text-fg"}`}>
                   {name}
-                  {isMe && <span className="text-xs text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {isMe && <span className="text-xs text-primary ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.disqualifiedEventCount > 0 && (
                     <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>

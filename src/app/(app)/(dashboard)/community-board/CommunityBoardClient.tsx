@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { ThumbsUp, Loader2, Star, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "@/components/icons";
@@ -114,7 +115,7 @@ export default function CommunityBoardClient() {
   useEffect(() => { reload(); }, []);
 
   if (feed === null) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
   }
   if (feed.length === 0) {
     return <p className="text-sm text-gray-600 text-center py-12">Noch keine Community-Job-Beiträge.</p>;
@@ -126,7 +127,7 @@ export default function CommunityBoardClient() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <a href="/community-board/roadmap" className="text-sm font-semibold text-primary-fg hover:text-fg transition-colors">🚀 Roadmap &amp; Top-Ideen</a>
+        <a href="/community-board/roadmap" className="text-sm font-semibold text-primary-fg hover:text-fg transition-colors"><Glyph name="rocket" className="inline size-4 align-[-3px]" /> Roadmap &amp; Top-Ideen</a>
       </div>
       {usedCategories.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Berichte nach Kategorie filtern">
@@ -219,7 +220,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
           {categoryLabel && <Badge tone="info">{categoryLabel}</Badge>}
           {entry.series && <Badge tone="neutral"><BookOpen className="w-2.5 h-2.5" /> Reihe: {entry.series.title}</Badge>}
           {entry.event && (
-            <a href={`/tournament/${entry.event.id}`} className="inline-flex items-center gap-1 hover:text-teal-300 transition-colors">
+            <a href={`/tournament/${entry.event.id}`} className="inline-flex items-center gap-1 hover:text-primary-fg transition-colors">
               <CalendarDays className="w-3 h-3" /> {entry.event.title}
             </a>
           )}
@@ -247,12 +248,12 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
         {/* Kurze Texte stehen schon vollständig im Auszug — "weiterlesen" nur bei längeren. */}
         {(onReportPage || (entry.excerpt?.length ?? 0) >= 300) && (
           <button onClick={toggleRead} disabled={loading} aria-expanded={open}
-            className="mr-3 text-xs text-teal-400 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+            className="mr-3 text-xs text-primary hover:text-primary-fg transition-colors inline-flex items-center gap-1">
             {loading && <Loader2 className="w-3 h-3 animate-spin" />}
             {open ? "Einklappen" : "Ganzen Beitrag lesen"}
           </button>
         )}
-        <button onClick={copyLink} className="text-xs text-gray-500 hover:text-teal-300 transition-colors">Link kopieren</button>
+        <button onClick={copyLink} className="text-xs text-gray-500 hover:text-primary-fg transition-colors">Link kopieren</button>
       </div>
 
       {entry.seriesParts && entry.seriesParts.length > 1 && (
@@ -261,7 +262,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
           <ol className="list-decimal pl-5 text-xs space-y-0.5">
             {entry.seriesParts.map(part => (
               <li key={part.id} className={part.id === entry.id ? "text-white font-medium" : "text-gray-400"}>
-                {part.id === entry.id ? part.title : <a href={`/community-board/report/${part.id}`} className="hover:text-teal-300 transition-colors">{part.title}</a>}
+                {part.id === entry.id ? part.title : <a href={`/community-board/report/${part.id}`} className="hover:text-primary-fg transition-colors">{part.title}</a>}
               </li>
             ))}
           </ol>
@@ -343,7 +344,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
             <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${reportId}/contributions/${c.id}/votes`} listKey="votes" />
             {!editing && (
               <>
-                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-primary transition-colors">Bearbeiten</button>
                 <button onClick={remove} aria-label="Ergänzung löschen" className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
               </>
             )}
@@ -386,7 +387,7 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+      <button onClick={() => setOpen(true)} className="text-xs text-gray-500 hover:text-primary transition-colors">
         + Bericht ergänzen
       </button>
     );
@@ -399,7 +400,7 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
       {emojiOpen && <EmojiPanel onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
       <div className="flex items-center justify-between gap-1.5">
         <button onClick={() => setEmojiOpen(v => !v)} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={emojiOpen}
-          className={`p-1.5 rounded hover:text-white hover:bg-line transition-colors ${emojiOpen ? "text-teal-300" : "text-gray-400"}`}>
+          className={`p-1.5 rounded hover:text-white hover:bg-line transition-colors ${emojiOpen ? "text-primary-fg" : "text-gray-400"}`}>
           <Smile className="w-4 h-4" />
         </button>
         <div className="flex gap-1.5">
@@ -516,7 +517,7 @@ function CommentSection({
       {open && (
         <div className="mt-2 space-y-2">
           {comments === null ? (
-            <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>
+            <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
           ) : (
             comments.map(c => (
               <div key={c.id} className="bg-surface-2 rounded-lg p-2 space-y-1">
@@ -573,7 +574,7 @@ function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; curr
         ? <p className="text-xs text-gray-400 whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>
         : <MarkdownLite text={text} className="text-xs text-gray-400" />}
       {long && (
-        <button onClick={() => setExpanded(v => !v)} className="text-xs text-teal-400 hover:text-teal-300 transition-colors">
+        <button onClick={() => setExpanded(v => !v)} className="text-xs text-primary hover:text-primary-fg transition-colors">
           {expanded ? "Weniger anzeigen" : "Ganze Anleitung lesen"}
         </button>
       )}
@@ -603,8 +604,8 @@ function DisputeTrigger({ kind, fetchUrl, listKey }: { kind: DisputeKind; fetchU
 }
 
 // Daumen-hoch: deutlich als Knopf erkennbar (Teal-Rand + Teal-Text), nach dem Klick gefüllt.
-const THUMB_ON = "bg-teal-500 border-teal-500 text-black";
-const THUMB_OFF = "bg-teal-500/10 border-teal-500/40 text-teal-300 hover:bg-teal-500/20 hover:border-teal-400";
+const THUMB_ON = "bg-primary border-primary text-primary-ink";
+const THUMB_OFF = "bg-primary/10 border-primary/40 text-primary-fg hover:bg-primary/20 hover:border-primary";
 
 function UpvoteButton({
   votedByMe, upvotes, onVote, onDone, label, icon,
@@ -626,7 +627,7 @@ function UpvoteButton({
   }
   return (
     <button onClick={toggle} disabled={busy} title={votedByMe ? `${label}: Daumen zurücknehmen` : `${label}: Daumen hoch`} aria-pressed={votedByMe}
-      className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all duration-150 active:scale-95 disabled:opacity-60 ${votedByMe ? THUMB_ON : THUMB_OFF}`}>
+      className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all duration-150 active:scale-95 disabled:opacity-60 ${votedByMe ? THUMB_ON : THUMB_OFF} max-lg:min-h-10`}>
       {icon ?? <ThumbsUp className={`w-4 h-4 ${votedByMe ? "fill-current" : ""}`} />}
       <span className="tabular-nums font-semibold">{upvotes}</span>
       {!votedByMe && <span className="hidden sm:inline">Daumen hoch</span>}

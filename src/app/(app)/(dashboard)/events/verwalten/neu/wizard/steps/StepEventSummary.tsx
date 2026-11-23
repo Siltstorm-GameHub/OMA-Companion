@@ -43,7 +43,7 @@ export default function StepEventSummary({ w }: { w: EventWizard }) {
             <p>🧱 Challenge · gemeinsam {w.blocks.goal.toLocaleString("de-DE")} {w.blocks.metric === "score" ? "Punkte" : "Linien"} · Belohnung ab {w.blocks.minContribution.toLocaleString("de-DE")}: {w.blocks.rewardCoins} Münzen{w.blocks.rewardRankPoints ? ` + ${w.blocks.rewardRankPoints} Rang-Punkte` : ""}</p>
           )}
           {(w.eventOmaOriginal || w.isBlocksEvent || (seriesMode === "existing" && selectedSeries?.omaOriginal)) && (
-            <p className="text-teal-300 font-semibold">OMA Original · Logo auf dem Cover</p>
+            <p className="text-primary-fg font-semibold">OMA Original · Logo auf dem Cover</p>
           )}
           {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
           {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}

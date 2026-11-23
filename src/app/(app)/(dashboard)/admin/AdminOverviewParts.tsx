@@ -13,7 +13,7 @@ import AdminInboxRow from "./AdminInboxRow";
 const ICONS = { CalendarClock, Flag, Gamepad2, Server, Trophy, UserCheck, Vote } as const;
 const TONES: Record<InboxTone, string> = {
   amber: "text-amber-300 bg-amber-500/10 border-amber-500/20",
-  teal: "text-teal-300 bg-teal-500/10 border-teal-500/20",
+  teal: "text-primary-fg bg-primary/10 border-primary/20",
   blue: "text-sky-300 bg-sky-500/10 border-sky-500/20",
   red: "text-red-300 bg-red-500/10 border-red-500/20",
   violet: "text-primary-fg bg-primary-soft border-primary/40",
@@ -79,7 +79,7 @@ export function UpcomingList({ events, now }: { events: UpcomingEvent[]; now: Da
                 )}
               </span>
               <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
-                empty ? "bg-amber-500/15 text-amber-300" : full ? "bg-teal-500/15 text-teal-300" : "bg-line text-gray-300"
+                empty ? "bg-amber-500/15 text-amber-300" : full ? "bg-primary/15 text-primary-fg" : "bg-line text-gray-300"
               }`} title="Anmeldungen als Spieler">
                 {empty ? "0 Anm." : e.maxPlayers ? `${e.players}/${e.maxPlayers}` : e.players}
               </span>
@@ -127,7 +127,7 @@ export function NotableList({ items }: { items: NotableTx[] }) {
             </span>
             <span className="block text-xs text-gray-500">{NOTABLE_LABELS[t.kind]} · {formatBerlinDate(t.createdAt, { weekday: "short", day: "numeric", month: "numeric" })}</span>
           </span>
-          <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.rank ? "text-teal-300" : t.amount < 0 ? "text-red-300" : "text-amber-300"}`}>
+          <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.rank ? "text-primary-fg" : t.amount < 0 ? "text-red-300" : "text-amber-300"}`}>
             {t.amount > 0 ? "+" : "−"}{fmt(Math.abs(t.amount))}{t.rank && " Rang"}
           </span>
         </li>

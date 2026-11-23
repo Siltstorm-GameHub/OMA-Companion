@@ -38,13 +38,13 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
   // Gefundener lokaler Entwurf: übernehmen oder verwerfen (siehe wizard/draft.ts)
   const draftBanner = pendingDraft && (
-    <div className="mb-6 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 flex items-center gap-3 flex-wrap">
+    <div className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 flex items-center gap-3 flex-wrap">
       <p className="text-sm text-teal-200 flex-1 min-w-[200px]">
         Ungespeicherter Entwurf vom {formatBerlinDateTime(new Date(pendingDraft.savedAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
         {typeof pendingDraft.values.title === "string" && pendingDraft.values.title ? ` („${pendingDraft.values.title}“)` : ""} gefunden.
       </p>
       <button type="button" onClick={restoreDraft}
-        className="text-xs font-semibold text-white bg-teal-600 hover:bg-teal-500 rounded-lg px-3 py-1.5">
+        className="text-xs font-semibold text-primary-ink bg-primary hover:bg-primary-hover rounded-lg px-3 py-1.5">
         Wiederherstellen
       </button>
       <button type="button" onClick={discardDraft} className="text-xs text-gray-400 hover:text-white">
@@ -65,10 +65,10 @@ export default function EventSetupWizard(props: EventWizardProps) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button type="button" onClick={() => setWizardMode("event")}
-            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 transition-all text-center">
+            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all text-center">
             <span className="text-4xl">📅</span>
             <div>
-              <p className="text-base font-semibold text-teal-300">Einzelnes Event</p>
+              <p className="text-base font-semibold text-primary-fg">Einzelnes Event</p>
               <p className="text-xs text-gray-500 mt-1">Einmaliger Termin, optional einer bestehenden Reihe zuordnen</p>
             </div>
           </button>
@@ -113,7 +113,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
         <div className="flex items-center gap-2">
           {isSeriesMode
             ? <Repeat className="w-4 h-4 text-violet-400" />
-            : <CalendarDays className="w-4 h-4 text-teal-400" />}
+            : <CalendarDays className="w-4 h-4 text-primary" />}
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
             {seasonPrefill
               ? `Saison ${seasonPrefill.seasonNumber} einrichten`

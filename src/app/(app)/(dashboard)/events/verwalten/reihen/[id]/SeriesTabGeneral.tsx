@@ -46,14 +46,14 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
               <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
                   hidden ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-line hover:border-line-strong"
-                }`}>
+                } max-lg:min-h-10`}>
                 {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 {hidden ? "Ausgeblendet · einblenden" : "Sichtbar · ausblenden"}
               </button>
               <button type="button" onClick={toggleRegistrationLocked} disabled={registrationLockedBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
                   registrationLocked ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-gray-300 border-line hover:border-line-strong"
-                }`}>
+                } max-lg:min-h-10`}>
                 {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                 {registrationLocked ? "Anmeldung gesperrt · freigeben" : "Selbst-Anmeldung offen · sperren"}
               </button>
@@ -121,10 +121,10 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                 {GENRES.map(g => (
                   <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? "" : g.value)}
                     className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                      genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                     }`}>
                     <AppIcon kind="genre" name={g.value} size={32} />
-                    <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                    <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
                   </button>
                 ))}
               </div>
@@ -137,7 +137,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                     <button key={p.value} type="button"
                       onClick={() => setPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
                       className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
-                        active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
+                        active ? "border-primary/60 bg-primary/10 text-primary-fg" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
                       }`}>
                       <span>{p.icon}</span> {p.label}
                     </button>
@@ -156,7 +156,7 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                 Eine neue Saison übernimmt die Vorlage automatisch.
               </p>
               <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} hideGoal />
-              <button type="button" onClick={() => setActiveSettingsTab("goal")} className="mt-2 text-xs font-semibold text-teal-300 hover:text-teal-200">
+              <button type="button" onClick={() => setActiveSettingsTab("goal")} className="mt-2 text-xs font-semibold text-primary-fg hover:text-teal-200">
                 🎯 Community-Ziel der Reihe einstellen →
               </button>
             </Section>
@@ -186,8 +186,8 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
                       <button key={mode} type="button" onClick={() => setRecurrenceMonthlyMode(mode)}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all"
                         style={recurrenceMonthlyMode === mode
-                          ? { background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                          : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }
+                          ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                          : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }
                         }>
                         {labels[mode]}
                       </button>

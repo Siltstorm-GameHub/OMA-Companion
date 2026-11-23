@@ -64,7 +64,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
               {isSeriesEvent ? (
                 <p className="text-xs text-gray-500">
                   Titel, Spiel, Regeln und Belohnungen kommen aus der Eventreihe{" "}
-                  <Link href={backHref} className="text-teal-400 hover:text-teal-300">{event.series.name}</Link>.
+                  <Link href={backHref} className="text-primary hover:text-primary-fg">{event.series.name}</Link>.
                 </p>
               ) : (
                 <>
@@ -116,10 +116,10 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                         {GENRES.map(g => (
                           <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
                             className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                              genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                              genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                             }`}>
                             <AppIcon kind="genre" name={g.value} size={28} />
-                            <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                            <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
                           </button>
                         ))}
                       </div>
@@ -138,8 +138,8 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   {event.series && titleDescChanged && (
                     <label className="flex items-center gap-2 cursor-pointer text-sm">
                       <input type="checkbox" checked={propagateTitleDesc} onChange={e => setPropagateTitleDesc(e.target.checked)}
-                        className="rounded accent-teal-500" />
-                      <span className="text-teal-400 text-xs flex items-center gap-1">
+                        className="rounded accent-primary" />
+                      <span className="text-primary text-xs flex items-center gap-1">
                         <Repeat className="w-3 h-3" />
                         Titel und Beschreibung auf alle Events von „{event.series.name}“ anwenden
                       </span>

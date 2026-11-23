@@ -66,7 +66,7 @@ function DiscordJoinButton({ href, className }: { href: string; className?: stri
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={className ?? "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors"}
+      className={className ?? "inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-primary-ink bg-primary hover:bg-primary-hover transition-colors"}
     >
       <Users className="w-4 h-4 shrink-0" />
       Discord beitreten
@@ -89,7 +89,7 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
     >
       <div
         className="relative w-full max-w-sm rounded-2xl p-6 text-center"
-        style={{ background: "var(--nav-dropdown-bg, #0b0f0f)", border: "1px solid rgba(20,184,166,0.25)", boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}
+        style={{ background: "var(--nav-dropdown-bg, #0b0f0f)", border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)", boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -115,10 +115,10 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
         <ol className="mt-5 space-y-3 text-left">
           {inviteUrl && (
             <li className="flex items-start gap-3">
-              <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-teal-500/15 border border-teal-500/30 text-xs font-bold text-teal-300 flex items-center justify-center">1</span>
+              <span className="mt-2 w-5 h-5 shrink-0 rounded-full bg-primary/15 border border-primary/30 text-xs font-bold text-primary-fg flex items-center justify-center">1</span>
               <div className="flex-1">
                 <p className="text-xs text-gray-400 mb-1.5">Tritt dem OMA-Discord-Server bei</p>
-                <DiscordJoinButton href={inviteUrl} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors" />
+                <DiscordJoinButton href={inviteUrl} className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-primary-ink bg-primary hover:bg-primary-hover transition-colors" />
               </div>
             </li>
           )}
@@ -162,7 +162,7 @@ export function GuestBanner() {
           {inviteUrl && (
             <DiscordJoinButton
               href={inviteUrl}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors whitespace-nowrap"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary-ink bg-primary hover:bg-primary-hover transition-colors whitespace-nowrap"
             />
           )}
           <DiscordLoginButton
@@ -174,7 +174,7 @@ export function GuestBanner() {
           <button
             type="button"
             onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
-            className="hidden sm:inline text-xs text-gray-500 hover:text-teal-300 underline underline-offset-2 transition-colors whitespace-nowrap"
+            className="hidden sm:inline text-xs text-gray-500 hover:text-primary-fg underline underline-offset-2 transition-colors whitespace-nowrap"
           >
             Wie geht das?
           </button>
@@ -224,14 +224,14 @@ export function GuestMoreCta({ message, className = "" }: { message: string; cla
     <div className={`relative -mt-16 pt-16 text-center ${className}`}
       style={{ background: "linear-gradient(to bottom, transparent 0%, var(--bg-base, #0b0d12) 60%)" }}>
       <div className="inline-flex flex-col items-center gap-2 px-5 py-4 rounded-2xl"
-        style={{ background: "rgba(6,20,18,0.85)", border: "1px solid rgba(20,184,166,0.25)" }}>
+        style={{ background: "rgba(6,20,18,0.85)", border: "1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)" }}>
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
           <Lock className="w-4 h-4 text-primary-fg" /> {message}
         </div>
         <button
           type="button"
           onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
-          className="px-4 py-2 rounded-lg text-sm font-bold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors"
+          className="px-4 py-2 rounded-lg text-sm font-bold text-primary-ink bg-primary hover:bg-primary-hover transition-colors"
         >
           Beitreten &amp; anmelden
         </button>

@@ -80,8 +80,8 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
 
               {/* Zuschauer-Belohnung */}
               {ctx.spectatorMode && (
-                <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
-                  <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-primary-fg">👁️ Zuschauer-Basis-Belohnung</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Münzen</label>
@@ -105,7 +105,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
               <h3 className="text-sm font-semibold text-gray-300">Umfragen</h3>
               {polls.length < 3 && (
                 <button type="button" onClick={addPoll}
-                  className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Hinzufügen
                 </button>
               )}
@@ -171,7 +171,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                     ))}
                     <button type="button"
                       onClick={() => updatePoll(i, { customAnswers: [...poll.customAnswers, ""] })}
-                      className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300">
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg">
                       <Plus className="w-3 h-3" /> Antwort hinzufügen
                     </button>
                   </div>

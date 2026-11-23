@@ -74,7 +74,7 @@ export function StatRoundMetaEditor({
       {dirty && (
         <button type="button" disabled={saving || current.round < 1}
           onClick={async () => { setSaving(true); await onSave(current.round, current.note); setSaving(false); }}
-          className="flex items-center gap-1.5 text-xs text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50 rounded-lg px-3 py-1.5">
+          className="flex items-center gap-1.5 text-xs text-white bg-teal-700 hover:bg-primary-hover disabled:opacity-50 rounded-lg px-3 py-1.5 max-lg:min-h-10">
           <Save className="w-3.5 h-3.5" /> Runde/Zusatz speichern
         </button>
       )}

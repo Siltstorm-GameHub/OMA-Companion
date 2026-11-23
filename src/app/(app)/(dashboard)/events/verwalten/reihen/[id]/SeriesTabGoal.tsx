@@ -34,7 +34,7 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
             </p>
             {!isArchived && (
               <button type="button" onClick={() => setFixedFormat("coop_stats")}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-600 text-white">
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-teal-700 hover:bg-primary-hover text-white">
                 Werte-Erfassung einschalten
               </button>
             )}
@@ -51,7 +51,7 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
         <SeriesGoalEditor format={fixedFormat || null} value={tournamentTemplate} onChange={setTournamentTemplate}
           statFields={eventStatFields} disabled={isArchived}
           rewardLimit={goalLimits?.coins ?? null} seriesPointsLimit={goalLimits?.seriesPoints ?? null} />
-        <p className="text-xs text-teal-300/80 mt-2">
+        <p className="text-xs text-primary-fg/80 mt-2">
           Änderst du das Ziel, während ein Termin schon läuft, behalten laufende und vergangene Termine ihr bisheriges Ziel.
           Alle kommenden übernehmen das neue. Gespeichert wird mit „Speichern“ oben.
         </p>

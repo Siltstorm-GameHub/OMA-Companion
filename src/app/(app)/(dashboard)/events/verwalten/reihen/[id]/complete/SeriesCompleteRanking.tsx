@@ -68,7 +68,7 @@ export default function SeriesCompleteRanking({ ctx }: { ctx: SeriesComplete }) 
                       <Avatar u={u} size={6} />
                       <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
                       {/* Stats */}
-                      <span className="text-xs text-teal-400 font-semibold tabular-nums">
+                      <span className="text-xs text-primary font-semibold tabular-nums">
                         {pts} Pkt.
                       </span>
                       {statFields.map(f => {
@@ -85,7 +85,7 @@ export default function SeriesCompleteRanking({ ctx }: { ctx: SeriesComplete }) 
                             </span>
                           )}
                           {reward.rankPoints > 0 && (
-                            <span className="flex items-center gap-0.5 text-xs text-teal-400 tabular-nums">
+                            <span className="flex items-center gap-0.5 text-xs text-primary tabular-nums">
                               +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}

@@ -17,15 +17,15 @@ export default function ProfileOverlayButton({ hasTwitch }: { hasTwitch: boolean
     );
   }
 
-  const linkClass = "flex items-center gap-2 text-sm px-4 py-3 rounded-2xl border border-line text-gray-300 hover:text-teal-300 hover:border-teal-500/30 transition-all";
+  const linkClass = "flex items-center gap-2 text-sm px-4 py-3 rounded-2xl border border-line text-gray-300 hover:text-primary-fg hover:border-primary/30 transition-all";
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <Link href={STREAMER_OVERLAY_SETTINGS_PATH} className={linkClass}>
-        <Tv2 className="w-4 h-4 text-teal-400 shrink-0" />
+        <Tv2 className="w-4 h-4 text-primary shrink-0" />
         OBS-Overlay einrichten
       </Link>
       <Link href={`${STREAMER_OVERLAY_SETTINGS_PATH}/live`} className={linkClass}>
-        <Smartphone className="w-4 h-4 text-teal-400 shrink-0" />
+        <Smartphone className="w-4 h-4 text-primary shrink-0" />
         Live-Steuerung
       </Link>
     </div>

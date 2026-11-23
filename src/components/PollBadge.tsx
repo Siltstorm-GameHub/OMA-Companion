@@ -1,8 +1,10 @@
 "use client";
-import { usePolledCount } from "@/lib/usePolledCount";
+import { HUB_POLLS_EVENT, readHubPolls } from "@/lib/hub-events";
+import { useHubValue } from "@/lib/useHubValue";
 
+/** Zahl offener Umfragen ohne eigene Stimme — kommt aus dem gemeinsamen Hub-Abruf (/api/me/pulse). */
 export default function PollBadge() {
-  const count = usePolledCount("/api/polls/pending-count");
+  const count = useHubValue(HUB_POLLS_EVENT, readHubPolls, 0);
 
   if (count === 0) return null;
 
@@ -23,7 +25,7 @@ export default function PollBadge() {
         alignItems: "center",
         justifyContent: "center",
         padding: "0 3px",
-        boxShadow: "0 0 0 2px rgba(13,13,15,0.9)",
+        boxShadow: "0 0 0 2px var(--color-surface)",
         lineHeight: 1,
         pointerEvents: "none",
       }}

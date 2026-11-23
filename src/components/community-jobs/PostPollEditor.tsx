@@ -13,7 +13,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 export type PollDraft = PollInput & { locked?: boolean };
 
 const INPUT = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
-const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-teal-500/40";
+const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-primary/40";
 
 export function emptyPoll(): PollDraft {
   return { question: "", kind: "opinion", options: ["", ""], correctIndex: null, participationReward: 0, correctReward: 0, closesAt: null };

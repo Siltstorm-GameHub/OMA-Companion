@@ -25,21 +25,21 @@ export default function WatchTogetherTeaser() {
   if (groups.length === 0) return null;
   return (
     <div>
-      <div className="rounded-2xl border border-teal-500/20 bg-teal-500/[0.04] px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-teal-400/80">
+      <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-primary/80">
           <Users className="w-3.5 h-3.5" /> Zusammen ansehen
         </span>
         {groups.map(g => (
           <Link
             key={g.key}
             href={watchGroupHref(g)}
-            className="text-sm text-gray-200 hover:text-teal-300 truncate"
+            className="text-sm text-gray-200 hover:text-primary-fg truncate"
           >
             <span className="font-semibold">{g.members.map(m => m.name).join(" + ")}</span>
             <span className="text-gray-500"> · {g.label}</span>
           </Link>
         ))}
-        <Link href="/zusammen" className="ml-auto text-xs text-teal-300 hover:underline">Alle →</Link>
+        <Link href="/zusammen" className="ml-auto text-xs text-primary-fg hover:underline">Alle →</Link>
       </div>
     </div>
   );

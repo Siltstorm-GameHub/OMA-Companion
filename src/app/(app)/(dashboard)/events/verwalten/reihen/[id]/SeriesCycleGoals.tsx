@@ -86,10 +86,10 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
                       {" · "}{formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric" })}
                       {ev.endAt && <>–{formatBerlinDate(ev.endAt, { day: "numeric", month: "numeric" })}</>}
                     </span>
-                    {running && <span className="ml-2 text-xs text-teal-300 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5">läuft</span>}
+                    {running && <span className="ml-2 text-xs text-primary-fg bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5">läuft</span>}
                   </p>
                   <p className="text-xs truncate">
-                    <span className={resolved.goal ? "text-teal-300/90" : "text-gray-600"}>
+                    <span className={resolved.goal ? "text-primary-fg/90" : "text-gray-600"}>
                       🎯 {resolved.goal ? goalSummary(resolved.goal) : "Kein Ziel"}
                     </span>
                     <span className="text-gray-600"> · {SOURCE_LABEL[resolved.source]}</span>
@@ -106,7 +106,7 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
                 </Link>
                 {!disabled && !ended && (
                   <button type="button" onClick={() => setOpenId(open ? null : ev.id)}
-                    className="flex items-center gap-1 text-xs font-medium text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-2.5 py-1 transition-colors shrink-0">
+                    className="flex items-center gap-1 text-xs font-medium text-primary-fg hover:text-white border border-primary/40 hover:bg-primary-hover rounded-lg px-2.5 py-1 transition-colors shrink-0 max-lg:min-h-10">
                     Ziel anpassen <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
                   </button>
                 )}

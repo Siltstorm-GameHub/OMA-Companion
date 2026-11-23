@@ -139,7 +139,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
             )}
             <button
               onClick={() => setOpen(true)}
-              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-500 hover:text-white hover:border-line-strong transition-colors"
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-500 hover:text-white hover:border-line-strong transition-colors max-lg:min-h-10"
             >
               <Pencil className="w-3 h-3" /> Profil bearbeiten
             </button>
@@ -205,11 +205,11 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={cancel}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-500 hover:text-white transition-colors">
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-500 hover:text-white transition-colors max-lg:min-h-10">
               <X className="w-3 h-3" /> Abbrechen
             </button>
             <button onClick={save} disabled={saving}
-              className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors disabled:opacity-50">
+              className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors disabled:opacity-50 max-lg:min-h-10">
               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
               Speichern
             </button>

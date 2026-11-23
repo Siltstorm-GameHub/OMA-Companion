@@ -124,7 +124,7 @@ export function CoachStatsBlock() {
           {goalReached && <Check className="w-3.5 h-3.5" />}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -250,7 +250,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
                         className={`p-1 rounded ${p.attended === false ? ABSENT_ON : ABSENT_OFF}`}>
                         <X className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => addMentee(p.id)} title="Als Mentee hinzufügen" className="p-1 rounded text-gray-600 hover:text-teal-300">
+                      <button onClick={() => addMentee(p.id)} title="Als Mentee hinzufügen" className="p-1 rounded text-gray-600 hover:text-primary-fg">
                         <UserPlus className="w-3.5 h-3.5" />
                       </button>
                     </span>
@@ -368,8 +368,8 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
       {found.filter(u => !known.has(u.id)).length > 0 && (
         <div className="rounded-lg bg-line divide-y divide-line">
           {found.filter(u => !known.has(u.id)).map(u => (
-            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-line text-left">
-              <span className="truncate">{nameOf(u)}</span> <UserPlus className="w-3.5 h-3.5 text-teal-400" />
+            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-line text-left max-lg:min-h-10">
+              <span className="truncate">{nameOf(u)}</span> <UserPlus className="w-3.5 h-3.5 text-primary" />
             </button>
           ))}
         </div>
@@ -473,9 +473,9 @@ export function CoachSpecialties({ initial }: { initial?: string[] }) {
       <p className={LABEL}>Meine Spezialgebiete</p>
       <div className="flex flex-wrap items-center gap-1.5">
         {tags.map(t => (
-          <span key={t} className="inline-flex items-center gap-1 text-xs text-teal-200 bg-teal-500/10 border border-teal-500/25 rounded-full pl-2.5 pr-1.5 py-0.5">
+          <span key={t} className="inline-flex items-center gap-1 text-xs text-teal-200 bg-primary/10 border border-primary/25 rounded-full pl-2.5 pr-1.5 py-0.5">
             {t}
-            <button onClick={() => save(tags.filter(x => x !== t))} disabled={busy} aria-label={`${t} entfernen`} className="text-teal-400/70 hover:text-red-300">
+            <button onClick={() => save(tags.filter(x => x !== t))} disabled={busy} aria-label={`${t} entfernen`} className="text-primary/70 hover:text-red-300">
               <X className="w-3 h-3" />
             </button>
           </span>
@@ -618,7 +618,7 @@ export function CoachGuideList() {
           <span className="text-gray-300 truncate">{g.title}{g.game && <span className="text-gray-600"> · {g.game}</span>}</span>
           <span className="flex items-center gap-2 shrink-0 text-gray-500">
             👍 {g._count.votes}
-            <button onClick={() => { setEditing(g.id); setForm({ title: g.title, game: g.game ?? "", body: g.bodyMarkdown }); }} className="hover:text-teal-400 transition-colors">Bearbeiten</button>
+            <button onClick={() => { setEditing(g.id); setForm({ title: g.title, game: g.game ?? "", body: g.bodyMarkdown }); }} className="hover:text-primary transition-colors">Bearbeiten</button>
             <button onClick={() => remove(g)} aria-label="Löschen" className="hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
           </span>
         </div>

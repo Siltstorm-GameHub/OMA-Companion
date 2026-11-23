@@ -32,7 +32,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
   return (
     <div className="glass rounded-2xl p-4 mb-5 space-y-3">
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-        <Award className="w-3.5 h-3.5 text-teal-400" />
+        <Award className="w-3.5 h-3.5 text-primary" />
         {showAll ? `Alle Beiträge (${total})` : "Beliebteste Beiträge"}
       </h2>
       <ul className="space-y-2">
@@ -46,7 +46,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
                 <img src={item.image} alt="" loading="lazy" className="w-10 h-10 rounded-lg object-cover shrink-0 bg-black/30" />
               ) : (
                 <span className="w-10 h-10 rounded-lg bg-line flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-teal-400" />
+                  <Icon className="w-4 h-4 text-primary" />
                 </span>
               )}
               <span className="min-w-0 flex-1">
@@ -58,7 +58,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
               <span className="shrink-0 text-xs text-gray-400 tabular-nums">{item.thumbs} 👍</span>
             </>
           );
-          const cls = "flex items-center gap-3 hover:text-teal-400 transition-colors";
+          const cls = "flex items-center gap-3 hover:text-primary transition-colors";
           return (
             <li key={item.id}>
               <Link href={item.href} className={cls}>{content}</Link>
@@ -68,7 +68,7 @@ export default function ProfileContributionsList({ items, total }: { items: Prof
       </ul>
       {hidden > 0 && (
         <button type="button" onClick={() => setShowAll(v => !v)} aria-expanded={showAll}
-          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-teal-300 border border-line-strong rounded-lg py-1.5 transition-colors">
+          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-primary-fg border border-line-strong rounded-lg py-1.5 transition-colors">
           {showAll ? "Nur die Top 3 anzeigen" : `Alle ${total} Beiträge anzeigen`}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAll ? "rotate-180" : ""}`} />
         </button>

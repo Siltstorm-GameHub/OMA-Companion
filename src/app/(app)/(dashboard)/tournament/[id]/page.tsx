@@ -1,4 +1,5 @@
 import React from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import { eventHasPlacement, eventRewardOf, participationRewardOf } from "@/lib/event-placement";
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
@@ -31,6 +32,7 @@ import CoinIcon from "@/components/CoinIcon";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
 import { formatBerlinDateTime, formatBerlinTime } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
+import { cachedInMemory } from "@/lib/memory-cache";
 import { TONE_CLASSES, dateBlock, eventPhase, parseRanking, startsInLabel } from "@/lib/event-display";
 import { SECTION_ORDER, isPrePhase, pagePhaseOf, type SectionKey } from "./event-page-layout";
 import EventHowTo, { howToSteps } from "./EventHowTo";
@@ -219,13 +221,15 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
+  // Globale Werte (Wanderpokal-Halter, Minispiel-Einstellungen) 60 s pro Instanz im Speicher —
+  // die Eventseite gehört zu den meistgerenderten Seiten (lib/memory-cache).
   const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions, eventPokale, communityPolls] = await Promise.all([
-    getWanderpocalHoldersMap(),
+    cachedInMemory("wanderpocal-holders-map", 60_000, getWanderpocalHoldersMap),
     prisma.eventWinnerPrediction.findUnique({
       where: { userId_eventId: { userId, eventId } },
       include: { predictedUser: { select: { id: true, username: true, name: true, image: true, rankPoints: true } } },
     }),
-    getMinigamesConfig(),
+    cachedInMemory("minigames-config", 60_000, getMinigamesConfig),
     // Tipps aller User (ohne Einsatz/Auszahlung — nur wer auf wen tippt, plus Pott-Gesamtsumme)
     prisma.eventWinnerPrediction.findMany({
       where: { eventId },
@@ -920,7 +924,7 @@ export default async function TournamentDetailPage({
       {externalVoters.length > 0 && (
         <div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2">
-            <Vote className="w-3 h-3" style={{ color: "#14b8a6" }} />
+            <Vote className="w-3 h-3" style={{ color: "var(--color-primary)" }} />
             <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
           </div>
           {externalVoters.map((user, i) => {
@@ -1039,16 +1043,16 @@ export default async function TournamentDetailPage({
   const primaryAction = (() => {
     // Spielwahl läuft und man hat noch nicht abgestimmt → "Abstimmen" als Hauptknopf
     if (gameVote?.status === "open" && gameVote.canVote && gameVote.myCandidateIds.length === 0) {
-      return <a href="#spielwahl" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400"><Vote className="w-3.5 h-3.5" /> Spiel wählen</a>;
+      return <a href="#spielwahl" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10"><Vote className="w-3.5 h-3.5" /> Spiel wählen</a>;
     }
     if (myPendingVote) {
-      return <a href="#abstimmung" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400"><Vote className="w-3.5 h-3.5" /> Abstimmen</a>;
+      return <a href="#abstimmung" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10"><Vote className="w-3.5 h-3.5" /> Abstimmen</a>;
     }
     if (pagePhase === "live" && reportMatches.length > 0) {
-      return <a href={myOpenReport ? "#dein-match" : "#ergebnis-melden"} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400">Ergebnis melden</a>;
+      return <a href={myOpenReport ? "#dein-match" : "#ergebnis-melden"} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10">Ergebnis melden</a>;
     }
     if (pagePhase === "after" && isRegistered) {
-      return <a href="#clip" className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400"><Clapperboard className="w-3.5 h-3.5" /> Clip einreichen</a>;
+      return <a href="#clip" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10"><Clapperboard className="w-3.5 h-3.5" /> Clip einreichen</a>;
     }
     if (canRegister && isRegistered) {
       return (
@@ -1106,7 +1110,7 @@ export default async function TournamentDetailPage({
       )}
       {event.status === "umfrage" && discordChannelUrl && initialPolls.length === 0 && (
         <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400">
+          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10">
           <Vote className="w-3.5 h-3.5" />
           {legacyPollConfig?.question ? `Jetzt für „${legacyPollConfig.question}“ abstimmen` : "Jetzt abstimmen"} ↗
         </a>
@@ -1137,7 +1141,7 @@ export default async function TournamentDetailPage({
         <span className={FACT}>
           <Gamepad2 className="w-3.5 h-3.5 text-gray-500" />
           {gameListSlug
-            ? <Link href={`/spiele/${gameListSlug}`} className="hover:text-teal-300 underline decoration-white/20 underline-offset-2">{event.game}</Link>
+            ? <Link href={`/spiele/${gameListSlug}`} className="hover:text-primary-fg underline decoration-white/20 underline-offset-2">{event.game}</Link>
             : event.game}
           {genreInfo && <span className="flex items-center gap-1 text-gray-500"><AppIcon kind="genre" name={genreInfo.value} size={12} />{genreInfo.label}</span>}
         </span>
@@ -1149,7 +1153,7 @@ export default async function TournamentDetailPage({
         <span className="tabular-nums">{playerCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}</span> {event.maxPlayers ? "Plätze" : "dabei"}
         {event.maxPlayers && (
           <span className="ml-1 h-1 w-12 rounded-full bg-line overflow-hidden">
-            <span className={`block h-full rounded-full ${isFullEvent ? "bg-gray-500" : "bg-teal-400"}`} style={{ width: `${Math.min(100, Math.round(playerCount / event.maxPlayers * 100))}%` }} />
+            <span className={`block h-full rounded-full ${isFullEvent ? "bg-gray-500" : "bg-primary"}`} style={{ width: `${Math.min(100, Math.round(playerCount / event.maxPlayers * 100))}%` }} />
           </span>
         )}
       </span>
@@ -1158,7 +1162,7 @@ export default async function TournamentDetailPage({
           {event.seriesId && <span className="font-semibold">Bonus</span>}
           <PlaceMedal place={1} className="text-xs" />
           {heroFirstPlaceCoins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{heroFirstPlaceCoins}</span>}
-          {heroFirstPlaceRankPts > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{heroFirstPlaceRankPts}</span>}
+          {heroFirstPlaceRankPts > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{heroFirstPlaceRankPts}</span>}
         </span>
       ) : participationCoins > 0 ? (
         <span className={`${FACT} font-semibold text-amber-400`}>+{participationCoins} <CoinIcon size={12} /> fürs Mitmachen</span>
@@ -1166,7 +1170,7 @@ export default async function TournamentDetailPage({
       {/* Zuschauer: Anzahl und Belohnung fürs Zuschauen */}
       {event.spectatorMode && (
         <span className={FACT} title={spectatorReward ? "Belohnung fürs Zuschauen, wenn du beim Abschluss als anwesend markiert bist" : undefined}>
-          👁 <span className="tabular-nums">{spectatorCount}</span> Zuschauer
+          <Glyph name="eye" className="inline size-3.5 align-[-2px]" /> <span className="tabular-nums">{spectatorCount}</span> Zuschauer
           {spectatorReward && spectatorReward.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400">· +{spectatorReward.coins} <CoinIcon size={12} /> fürs Zuschauen</span>}
         </span>
       )}
@@ -1176,7 +1180,7 @@ export default async function TournamentDetailPage({
           title="Platzierungs-Belohnungen der Reihe: gibt es zum Abschluss der Reihe">
           Endwertung der Reihe: <PlaceMedal place={1} className="text-xs" />
           {seriesFinalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{seriesFinalFirst.coins}</span>}
-          {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-teal-400"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
+          {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
         </Link>
       )}
       <GameListInfo info={gameInfo} />
@@ -1231,13 +1235,13 @@ export default async function TournamentDetailPage({
         <>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-              <span aria-hidden>🤝</span> Mit dabei waren
+              <Glyph name="handshake" className="size-4 text-primary-fg" /> Mit dabei waren
               <span className="text-xs font-normal text-gray-500">
                 {communityPeople.length - communitySpectatorCount}{communitySpectatorCount > 0 && ` + ${communitySpectatorCount} Zuschauer`}
               </span>
             </h2>
             {myParticipationReward && (
-              <span className="flex items-center gap-1.5 rounded-lg bg-teal-400/15 px-2.5 py-1 text-xs font-semibold text-teal-300 tabular-nums">
+              <span className="flex items-center gap-1.5 rounded-lg bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary-fg tabular-nums">
                 Danke fürs Mitmachen
                 {myParticipationReward.coins > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.coins} <CoinIcon size={12} /></span>}
                 {myParticipationReward.rankPoints > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.rankPoints} <RankPointsIcon size={12} /></span>}
@@ -1252,7 +1256,7 @@ export default async function TournamentDetailPage({
                 return (
                   <span key={u.id} className="flex items-center gap-1.5 min-w-0">
                     <RankedAvatar userId={u.id} src={u.image} alt={userName(u)} size={24} className="w-6 h-6" />
-                    <span className={`truncate text-xs font-medium ${isMe ? "text-teal-300" : "text-gray-200"}`}>
+                    <span className={`truncate text-xs font-medium ${isMe ? "text-primary-fg" : "text-gray-200"}`}>
                       <StyledUserName userId={u.id} name={userName(u)} />{isMe && <span className="text-gray-500 ml-1">(du)</span>}
                     </span>
                     {spectator && (
@@ -1284,7 +1288,7 @@ export default async function TournamentDetailPage({
                 <span className={`rounded-full ring-2 ${st.ring}`}>
                   <RankedAvatar userId={p.id} src={p.user!.image} alt={userName(p.user!)} size={st.size} variant="flat" />
                 </span>
-                <span className={`max-w-full truncate text-xs font-semibold ${isMe ? "text-teal-300" : "text-white"}`}>
+                <span className={`max-w-full truncate text-xs font-semibold ${isMe ? "text-primary-fg" : "text-white"}`}>
                   {userName(p.user!)}{isMe && " (du)"}
                 </span>
                 <div className={`${st.h} w-full rounded-t-md ${st.bg} ${st.text} flex items-start justify-center text-xs font-bold pt-0.5`}>{i + 1}</div>
@@ -1317,7 +1321,7 @@ export default async function TournamentDetailPage({
                   return (
                     <span key={uid} className="flex items-center gap-1.5">
                       <RankedAvatar userId={u?.id} src={u?.image} alt={name} size={22} className="w-[22px] h-[22px]" />
-                      <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-100"}`}>
+                      <span className={`text-sm font-medium ${isMe ? "text-primary-fg" : "text-violet-100"}`}>
                         <StyledUserName userId={u?.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1">(du)</span>}
                       </span>
                     </span>
@@ -1368,9 +1372,9 @@ export default async function TournamentDetailPage({
               const name = user.username ?? user.name ?? "Unbekannt";
               return (
                 <div key={user.id}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-primary/30" : ""}`}>
                   <RankedAvatar userId={user.id} src={user.image} alt={name} size={24} className="w-6 h-6" />
-                  <span className={`text-sm ${isMe ? "text-teal-300 font-medium" : "text-gray-200"}`}>
+                  <span className={`text-sm ${isMe ? "text-primary-fg font-medium" : "text-gray-200"}`}>
                     <StyledUserName userId={user.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                   </span>
                 </div>
@@ -1419,7 +1423,7 @@ export default async function TournamentDetailPage({
         <span className="text-xs text-gray-400 font-medium">Live übertragen von:</span>
         {streamingPartners.map(({ partner: p }) => (
           <a key={p.id} href={`https://twitch.tv/${p.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110 max-lg:min-h-10"
             style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}>
             <Image src={p.logoUrl} alt={p.name} width={16} height={16} className="rounded-full shrink-0" />
             {p.name}
@@ -1429,7 +1433,7 @@ export default async function TournamentDetailPage({
         {filteredCommunityStreamers.map(({ user: u }) => (
           u.twitchLogin ? (
             <a key={u.id} href={`https://twitch.tv/${u.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110 max-lg:min-h-10"
               style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}>
               <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
               {u.name ?? u.username}
@@ -1437,7 +1441,7 @@ export default async function TournamentDetailPage({
             </a>
           ) : (
             <span key={u.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}>
+              style={{ background: "var(--color-surface-3)", border: "1px solid var(--color-line)", color: "#9ca3af" }}>
               <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
               {u.name ?? u.username}
             </span>
@@ -1527,7 +1531,7 @@ export default async function TournamentDetailPage({
         </div>
       )}
       {event.status === "finished" && isRegistered && (
-        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="glass rounded-2xl p-4" style={{ border: "1px solid var(--color-line)" }}>
           <div className="flex items-center gap-2 mb-3">
             <Clapperboard className="w-4 h-4 text-gray-400" />
             <span className="text-sm font-semibold text-gray-300">Deinen Twitch-Clip einreichen</span>
@@ -1596,7 +1600,7 @@ export default async function TournamentDetailPage({
                 <span className="text-gray-500"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
               </p>
               <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
+                <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
               </div>
             </section>
           );
@@ -1740,11 +1744,11 @@ export default async function TournamentDetailPage({
     </div>
   ) : (
     <div id="absprachen" className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 text-sm text-gray-400">
-      <MessageCircle className="w-4 h-4 text-teal-300 shrink-0" />
+      <MessageCircle className="w-4 h-4 text-primary-fg shrink-0" />
       <span className="flex-1">Absprachen zum Event gibt es für Mitglieder.</span>
       <GateButton href={`/tournament/${event.id}`} title="Mitreden"
         message="Für die Absprachen brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
-        className="text-xs px-3 py-1.5 rounded-lg font-semibold text-teal-950 bg-teal-400 hover:bg-teal-300 transition-colors">
+        className="text-xs px-3 py-1.5 rounded-lg font-semibold text-primary-ink bg-primary hover:bg-primary-hover transition-colors">
         Mitreden
       </GateButton>
     </div>
@@ -1795,7 +1799,7 @@ export default async function TournamentDetailPage({
         {canManage && (
           <Link
             href={`/events/verwalten/${event.id}`}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-line border border-line-strong text-gray-300 hover:text-white hover:bg-line transition-colors font-medium"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-line border border-line-strong text-gray-300 hover:text-white hover:bg-line transition-colors font-medium max-lg:min-h-10"
           >
             <Settings className="w-3.5 h-3.5" /> Verwalten
           </Link>

@@ -77,7 +77,7 @@ function Editor({ game, onDone }: { game: AdminGame; onDone: () => void }) {
     }
   }
 
-  const input = "bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-primary/40";
   return (
     <div className="border-t border-line p-4 space-y-5 bg-black/20">
       <div className="grid sm:grid-cols-[1fr_9rem_9rem] gap-3">
@@ -283,7 +283,7 @@ export default function GameAdminManager({ games, initialEditId }: { games: Admi
                 <GameCover game={g.name} coverUrl={g.coverUrl} className="w-20 h-10" rounded="rounded-md" fallbackVariant="plain" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Link href={`/spiele/${g.slug}`} className="font-semibold text-sm text-white hover:text-teal-300 truncate">{g.name}</Link>
+                    <Link href={`/spiele/${g.slug}`} className="font-semibold text-sm text-white hover:text-primary-fg truncate">{g.name}</Link>
                     <Badge tone={STATUS_BADGE[g.status].tone}>{STATUS_BADGE[g.status].label}</Badge>
                     {!g.enriched && g.status !== "HIDDEN" && <Badge tone="info">Abgleich offen</Badge>}
                   </div>

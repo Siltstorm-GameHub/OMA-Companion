@@ -43,7 +43,7 @@ export default function AnnouncementPreview({ w }: { w: EventWizard }) {
       {failed && <p className="text-xs text-gray-500">Vorschau gerade nicht verfügbar.</p>}
       {!failed && !preview && <p className="text-xs text-gray-500">Vorschau wird geladen…</p>}
       {preview && (
-        <div className="border-l-4 border-teal-500 pl-3 space-y-2">
+        <div className="border-l-4 border-primary pl-3 space-y-2">
           <p className="text-sm font-semibold text-white">{preview.title}</p>
           <p className="text-xs text-gray-300 whitespace-pre-line">{preview.description}</p>
           <div className="grid grid-cols-2 gap-2">

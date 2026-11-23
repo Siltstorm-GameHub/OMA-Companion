@@ -124,7 +124,7 @@ export const RECURRENCE_OPTS: { value: string; label: string; desc: string }[] =
 ];
 
 export const inputCls   = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
-export const inputStyle = { background: "#0b1a17", border: "1px solid rgba(20,184,166,0.18)" };
+export const inputStyle = { background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 18%, transparent)" };
 export const labelCls   = "text-xs text-gray-500 mb-1 block";
 
 // Vorlage aus einem bestehenden Event ("Event duplizieren", siehe new/page.tsx) — Datum/Uhrzeit

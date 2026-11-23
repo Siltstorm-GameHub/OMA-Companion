@@ -36,7 +36,7 @@ function EmptyInvite({ text, href, cta }: { text: string; href: string; cta: str
     <div className="glass rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-center">
       <Trophy className="w-6 h-6 text-gray-600" />
       <p className="text-xs text-gray-400">{text}</p>
-      <Link href={href} className="text-xs text-teal-400 hover:text-teal-300 transition-colors">{cta} →</Link>
+      <Link href={href} className="text-xs text-primary hover:text-primary-fg transition-colors">{cta} →</Link>
     </div>
   );
 }
@@ -70,7 +70,7 @@ function MeTiles({ coins }: { coins: number }) {
 function Stat({ value, label, href, cls = "text-white" }: { value: ReactNode; label: string; href?: string; cls?: string }) {
   const inner = (
     <>
-      <span className={`block text-lg sm:text-xl font-black tabular-nums leading-none ${cls}`}>{value}</span>
+      <span className={`block text-lg sm:text-xl font-extrabold tabular-nums leading-none ${cls}`}>{value}</span>
       <span className="block text-xs text-gray-500 mt-1">{label}</span>
     </>
   );
@@ -118,7 +118,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
 
       <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-6 border-t border-line pt-4">
         <Stat value={`#${data.leaderboardRank}`} label={`Rang von ${data.totalUsers}`} href="/leaderboard" />
-        <Stat value={data.rankPoints.toLocaleString("de-DE")} label="Punkte" cls={isOwn ? "text-teal-300" : "text-primary-fg"} />
+        <Stat value={data.rankPoints.toLocaleString("de-DE")} label="Punkte" cls={isOwn ? "text-primary-fg" : "text-primary-fg"} />
         <Stat value={data.eventCount} label="Events" />
         <Stat value={data.eventWins} label="Siege" />
         <Stat value={pokaleTotal} label="Pokale" />
@@ -133,8 +133,8 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
 
   // ── Was euch verbindet (nur fremde Profile) ──
   const relationCard = relation && (relation.sharedEvents > 0 || relation.sharedInGameIds.length > 0) ? (
-    <section aria-label="Was euch verbindet" className="glass rounded-2xl p-4 border border-teal-400/20">
-      <h2 className={H2}><Users className="w-3.5 h-3.5 text-teal-400" /> Ihr beide</h2>
+    <section aria-label="Was euch verbindet" className="glass rounded-2xl p-4 border border-primary/20">
+      <h2 className={H2}><Users className="w-3.5 h-3.5 text-primary" /> Ihr beide</h2>
       <ul className="space-y-1.5 text-sm text-gray-300">
         {relation.sharedEvents > 0 && (
           <li className="flex items-center gap-2"><Swords className="w-3.5 h-3.5 text-gray-500" />
@@ -145,7 +145,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
             bei {relation.sharedInGameIds.length} {relation.sharedInGameIds.length === 1 ? "Spiel" : "Spielen"} beide am Start</li>
         )}
       </ul>
-      <Link href={`/profile/compare/${user.id}`} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-teal-300 hover:text-teal-200">
+      <Link href={`/profile/compare/${user.id}`} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary-fg hover:text-teal-200">
         Im Detail vergleichen <ChevronRight className="w-3.5 h-3.5" />
       </Link>
     </section>
@@ -179,11 +179,11 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
         {[
           { icon: <Trophy className="w-4 h-4 text-yellow-300" />, value: data.eventWins, label: "Event-Siege" },
           { icon: <Trophy className="w-4 h-4 text-amber-400" />, value: data.pokale.length, label: "Event-Pokale" },
-          { icon: <Trophy className="w-4 h-4 text-teal-300" />, value: data.wanderpocalTrophies.length, label: "Wanderpokale" },
+          { icon: <Trophy className="w-4 h-4 text-primary-fg" />, value: data.wanderpocalTrophies.length, label: "Wanderpokale" },
           { icon: <Vote className="w-4 h-4 text-violet-300" />, value: data.pollMasterCount, label: "Abstimmungen gewonnen", title: "Als MVP gewählt oder Community-Champion" },
         ].map(s => (
           <div key={s.label} className="glass rounded-2xl px-4 py-3" title={s.title}>
-            <div className="flex items-center gap-2">{s.icon}<span className="text-xl font-black text-white tabular-nums">{s.value}</span></div>
+            <div className="flex items-center gap-2">{s.icon}<span className="text-xl font-extrabold text-white tabular-nums">{s.value}</span></div>
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
         ))}
@@ -217,10 +217,10 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <div className="space-y-5 min-w-0">
         <section>
-          <h2 className={H2}><Clock className="w-3.5 h-3.5 text-teal-500/70" /> Auf dem Server</h2>
+          <h2 className={H2}><Clock className="w-3.5 h-3.5 text-primary/70" /> Auf dem Server</h2>
           <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
             {[
-              { icon: <Clock className="w-3.5 h-3.5 text-teal-400" />,          label: "Voice-Stunden",     value: `${data.voiceHours} h` },
+              { icon: <Clock className="w-3.5 h-3.5 text-primary" />,          label: "Voice-Stunden",     value: `${data.voiceHours} h` },
               { icon: <MessageSquare className="w-3.5 h-3.5 text-blue-400" />,  label: "Nachrichten",       value: data.messageCount.toLocaleString("de-DE") },
               { icon: <CoinIcon size={14} />,                                   label: "Münzen gesammelt",  value: data.coinsEarned.toLocaleString("de-DE") },
               { icon: <CoinIcon size={14} />,                                   label: "Münzen ausgegeben", value: data.coinsSpent.toLocaleString("de-DE") },

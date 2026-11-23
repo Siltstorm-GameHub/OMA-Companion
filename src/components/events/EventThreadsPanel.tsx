@@ -37,7 +37,7 @@ export default function EventThreadsPanel({
             {selected && <p className="text-xs text-gray-500 truncate">{whenLabel(selected)}</p>}
           </div>
           <Link href={`/tournament/${selectedId}`} onClick={onNavigate}
-            className="shrink-0 flex items-center gap-0.5 text-xs text-teal-300 hover:text-teal-200 px-2 py-1 rounded-lg hover:bg-teal-500/10">
+            className="shrink-0 flex items-center gap-0.5 text-xs text-primary-fg hover:text-teal-200 px-2 py-1 rounded-lg hover:bg-primary/10 max-lg:min-h-10">
             Zum Event <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
@@ -57,7 +57,7 @@ export default function EventThreadsPanel({
           Noch keine Absprachen. Sobald du bei einem Event dabei bist, findest du hier alles dazu —
           wer später kommt, Lobby-Codes, kurze Fragen.
         </p>
-        <Link href="/events" onClick={onNavigate} className="text-xs text-teal-300 hover:text-teal-200 mt-1">Zu den Events →</Link>
+        <Link href="/events" onClick={onNavigate} className="text-xs text-primary-fg hover:text-teal-200 mt-1">Zu den Events →</Link>
       </div>
     );
   }
@@ -101,11 +101,11 @@ function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
 }) {
   const badge = t.myStatus && t.phase !== "voting" ? statusBadge(t.myStatus.status, t.myStatus.lateMin) : null;
   return (
-    <div className="m-2 rounded-xl border border-teal-400/20 bg-teal-500/[0.06] overflow-hidden">
+    <div className="m-2 rounded-xl border border-primary/20 bg-primary/[0.06] overflow-hidden">
       <button type="button" onClick={() => onSelect(t.eventId)}
         className="w-full text-left px-3 pt-2.5 pb-2 hover:bg-surface-2 transition-colors">
         <div className="flex items-center gap-2">
-          <p className="flex-1 min-w-0 text-xs uppercase tracking-wider text-teal-300/80 font-semibold">Dein nächstes Event</p>
+          <p className="flex-1 min-w-0 text-xs uppercase tracking-wider text-primary-fg/80 font-semibold">Dein nächstes Event</p>
           <UnreadCount n={t.unread} />
         </div>
         <p className="flex items-center gap-2 min-w-0 mt-0.5">
@@ -122,7 +122,7 @@ function NextEventCard({ t, onSelect, onRefresh, onNavigate }: {
       <div className="px-3 pb-2.5">
         {t.phase === "voting" ? (
           <Link href={`/tournament/${t.eventId}#abstimmung`} onClick={onNavigate}
-            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 hover:bg-violet-500/25">
+            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-400/30 text-violet-200 hover:bg-violet-500/25 max-lg:min-h-10">
             🗳️ Jetzt abstimmen <ChevronRight className="w-3 h-3" />
           </Link>
         ) : (
@@ -153,15 +153,15 @@ function ThreadList({ threads, onSelect }: { threads: EventThreadDTO[]; onSelect
         return (
           <li key={t.eventId}>
             <button type="button" onClick={() => onSelect(t.eventId)}
-              className={`relative w-full text-left px-4 py-2 border-b border-line hover:bg-surface-2 transition-colors ${unread ? "bg-teal-500/[0.05]" : ""}`}>
-              {unread && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-teal-400" />}
+              className={`relative w-full text-left px-4 py-2 border-b border-line hover:bg-surface-2 transition-colors ${unread ? "bg-primary/[0.05]" : ""}`}>
+              {unread && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-primary" />}
               <span className="flex items-center gap-2 min-w-0">
                 <PhaseBadge t={t} />
                 <span className={`text-sm truncate ${unread ? "font-semibold text-white" : "text-gray-300"}`}>{t.title}</span>
                 {t.phase === "upcoming" && <span className="shrink-0 text-xs text-gray-500">{shortWhen(t.startAt)}</span>}
                 {t.pinned && <span className="shrink-0 text-xs" title={`Angepinnt: ${t.pinned}`}>📌</span>}
                 <span className="flex-1" />
-                {t.last && <span className={`shrink-0 text-xs ${unread ? "text-teal-300" : "text-gray-600"}`}>{shortTime(t.last.createdAt)}</span>}
+                {t.last && <span className={`shrink-0 text-xs ${unread ? "text-primary-fg" : "text-gray-600"}`}>{shortTime(t.last.createdAt)}</span>}
               </span>
               <span className="flex items-center gap-2 min-w-0">
                 <LastMessage t={t} />
@@ -192,7 +192,7 @@ function LastMessage({ t }: { t: EventThreadDTO }) {
 function UnreadCount({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-teal-950 text-xs font-bold flex items-center justify-center">
+    <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-ink text-xs font-bold flex items-center justify-center">
       {n > 99 ? "99+" : n}
     </span>
   );

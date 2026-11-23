@@ -47,7 +47,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
               onClick={() => { setVariousGames(v); if (v) { setFixedGame(""); setFixedGenre(null); } }}
               className={`flex-1 rounded-xl px-3 py-2 text-xs font-medium border transition-all ${
                 variousGames === v
-                  ? "border-teal-500/60 bg-teal-500/10 text-teal-300"
+                  ? "border-primary/60 bg-primary/10 text-primary-fg"
                   : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
               }`}>
               {v ? "🎲 Verschiedene Spiele" : "🎮 Festes Spiel"}
@@ -72,10 +72,10 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
             {GENRES.map(g => (
               <button key={g.value} type="button" onClick={() => setFixedGenre(fixedGenre === g.value ? null : g.value)}
                 className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
-                  fixedGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                  fixedGenre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-xs font-medium leading-tight text-center ${fixedGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                <span className={`text-xs font-medium leading-tight text-center ${fixedGenre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
               </button>
             ))}
           </div>
@@ -91,7 +91,7 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
               <button key={p.value} type="button"
                 onClick={() => setFixedPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
                 className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
-                  active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
+                  active ? "border-primary/60 bg-primary/10 text-primary-fg" : "border-line-strong bg-line text-gray-400 hover:border-line-strong"
                 }`}>
                 <span>{p.icon}</span> {p.label}
               </button>

@@ -286,7 +286,7 @@ export default function SwipeDeck({
             <p className="font-display text-lg font-bold text-white">Alles durch!</p>
             <p className="text-xs text-gray-400">Neue Karten kommen täglich dazu, jeden Montag gibt es den Drop der Woche. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
             {onShowList && (
-              <button type="button" onClick={onShowList} className="text-sm font-semibold text-teal-300 hover:text-teal-200">
+              <button type="button" onClick={onShowList} className="text-sm font-semibold text-primary-fg hover:text-teal-200">
                 Zur Liste →
               </button>
             )}
@@ -348,7 +348,7 @@ export default function SwipeDeck({
             style={{ background: "linear-gradient(160deg, rgba(16,185,129,0.25), #121216 65%)" }}
             onClick={e => e.stopPropagation()}>
             <p className="text-4xl" aria-hidden>🎮</p>
-            <p className="font-display text-2xl font-black text-white">Match!</p>
+            <p className="font-display text-2xl font-extrabold text-white">Match!</p>
             <p className="text-sm text-gray-300">
               <span className="text-white font-semibold">{othersLabel(match)}</span>{" "}
               {match.count > 2 ? "sind" : "ist"} bei{" "}
@@ -423,10 +423,10 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
           </span>
         </span>
         {card.discountPercent > 0 && (
-          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-black text-white">−{card.discountPercent} %</span>
+          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-white">−{card.discountPercent} %</span>
         )}
         {hint && (
-          <span className={`absolute top-1/2 -translate-y-1/2 border-4 rounded-xl px-3 py-1 font-display text-2xl font-black tracking-wider bg-black/40 ${STAMP[hint].cls}`}>
+          <span className={`absolute top-1/2 -translate-y-1/2 border-4 rounded-xl px-3 py-1 font-display text-2xl font-extrabold tracking-wider bg-black/40 ${STAMP[hint].cls}`}>
             {STAMP[hint].text}
           </span>
         )}
@@ -438,7 +438,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
             <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-line text-gray-300">{GAME_GENRES[g]}</span>
           ))}
           {f.modes.map(m => (
-            <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-200">{GAME_MODES[m]}</span>
+            <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-teal-200">{GAME_MODES[m]}</span>
           ))}
         </div>
         <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
@@ -455,7 +455,7 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         {link && (card.kind === "game" || card.source === "free") && (
           <a href={link.href} target="_blank" rel="noreferrer"
             onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
-            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-xs font-semibold text-teal-200">
+            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-xs font-semibold text-teal-200 max-lg:min-h-10">
             {link.label} <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -539,7 +539,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
     <div className="h-full flex flex-col cursor-pointer" onClick={onBackClick}>
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line">
         <p className="font-display text-base font-bold text-white truncate">{card.name}</p>
-        <button type="button" onClick={onClose} className="text-xs font-semibold text-teal-300 hover:text-teal-200 shrink-0">Zurück zur Karte</button>
+        <button type="button" onClick={onClose} className="text-xs font-semibold text-primary-fg hover:text-teal-200 shrink-0">Zurück zur Karte</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
         {correcting && card.kind === "game" ? (
@@ -552,7 +552,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
               <Fact label="Rundenlänge">{labelOf(SESSION_LENGTHS, fields.sessionLength) ?? "unbekannt"}</Fact>
               <Fact label="Plattformen">
                 {fields.platforms.map(p => GAME_PLATFORMS[p]).join(", ") || "unbekannt"}
-                {fields.crossplay && <span className="text-teal-300"> · Crossplay</span>}
+                {fields.crossplay && <span className="text-primary-fg"> · Crossplay</span>}
               </Fact>
               <Fact label="Spielmodus">{fields.modes.map(m => GAME_MODES[m]).join(", ") || "unbekannt"}</Fact>
             </dl>
@@ -589,7 +589,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
                   <button type="button" onClick={() => setCorrecting(true)} className="inline-flex items-center gap-1.5 text-gray-400 hover:text-white">
                     <Pencil className="w-3.5 h-3.5" /> Angaben korrigieren
                   </button>
-                  <Link href={`/spiele/${card.slug}`} className="inline-flex items-center gap-0.5 font-semibold text-teal-300 hover:text-teal-200">
+                  <Link href={`/spiele/${card.slug}`} className="inline-flex items-center gap-0.5 font-semibold text-primary-fg hover:text-teal-200">
                     Zur Spielseite <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>

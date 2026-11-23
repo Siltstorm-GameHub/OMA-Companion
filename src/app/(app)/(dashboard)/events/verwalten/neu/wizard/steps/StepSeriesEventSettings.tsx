@@ -58,8 +58,8 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       </div>
 
       {eventStatFields.length > 0 && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
-          <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-3">
+          <p className="text-sm font-medium text-primary-fg">🏆 Sieger-Ermittlung</p>
           <p className="text-xs text-gray-500">
             Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
           </p>
@@ -73,12 +73,12 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
             </select>
           </div>
           {winnerStatKeys.length > 0 && (
-            <p className="text-xs text-teal-600">
+            <p className="text-xs text-primary">
               🏆 +1 für den Event-Sieger auf: {winnerStatKeys.join(", ")}
             </p>
           )}
           {matchWinStatKeys.length > 0 && (
-            <p className="text-xs text-teal-600">
+            <p className="text-xs text-primary">
               ⚔️ +1 pro Match Win (aus einzelnen Runden) auf: {matchWinStatKeys.join(", ")}
             </p>
           )}
@@ -87,7 +87,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
 
       {/* "Ohne Platzierung": gemeinsames Ziel je Termin — legt für alle Termine eine Werte-Erfassung an */}
       {eventType === "community" && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-2">
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/[0.04] space-y-2">
           <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel (optional)</p>
           {eventStatFields.length === 0 ? (
             <p className="text-xs text-gray-500">Lege oben unter „Statistiken“ fest, welche Werte gezählt werden (z. B. Tore). Dann kannst du hier ein gemeinsames Ziel setzen.</p>
@@ -99,7 +99,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       )}
 
       {eventType === "tournament" && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/[0.04] space-y-3">
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/[0.04] space-y-3">
           <div>
             <p className="text-sm font-semibold text-teal-200">Turniervorlage</p>
             <p className="text-xs text-gray-500">

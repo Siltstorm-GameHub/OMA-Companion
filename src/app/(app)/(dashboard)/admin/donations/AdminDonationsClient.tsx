@@ -42,7 +42,7 @@ function Input({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputStyle = { background: "#0b1a17", border: "1px solid rgba(20,184,166,0.15)" };
+const inputStyle = { background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" };
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white bg-transparent outline-none";
 
 export default function AdminDonationsClient({
@@ -197,13 +197,13 @@ export default function AdminDonationsClient({
       {/* Header + Bilanz */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.2)" }}>
-          <Heart className="w-5 h-5 text-teal-400" />
+          style={{ background: "color-mix(in srgb, var(--color-primary) 12%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)" }}>
+          <Heart className="w-5 h-5 text-primary" />
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">Spendenpool verwalten</h1>
           <p className="text-xs text-gray-500">
-            Einnahmen <span className="text-teal-400 font-semibold">{fmt(totalPool)} €</span>
+            Einnahmen <span className="text-primary font-semibold">{fmt(totalPool)} €</span>
             {" · "}Ausgaben <span className="text-red-400 font-semibold">{fmt(totalSpent)} €</span>
             {" · "}Guthaben <span className={`font-semibold ${balance >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(balance)} €</span>
           </p>
@@ -213,23 +213,23 @@ export default function AdminDonationsClient({
       {/* Bilanz-Karten */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Einnahmen", value: totalPool, icon: Euro, color: "#14b8a6", bg: "rgba(20,184,166,0.08)", border: "rgba(20,184,166,0.18)" },
+          { label: "Einnahmen", value: totalPool, icon: Euro, color: "var(--color-primary)", bg: "color-mix(in srgb, var(--color-primary) 8%, transparent)", border: "color-mix(in srgb, var(--color-primary) 18%, transparent)" },
           { label: "Ausgaben",  value: totalSpent, icon: TrendingDown, color: "#f87171", bg: "rgba(239,68,68,0.06)", border: "rgba(239,68,68,0.15)" },
           { label: "Guthaben",  value: balance, icon: Wallet, color: balance >= 0 ? "#4ade80" : "#f87171", bg: balance >= 0 ? "rgba(74,222,128,0.07)" : "rgba(239,68,68,0.07)", border: balance >= 0 ? "rgba(74,222,128,0.18)" : "rgba(239,68,68,0.18)" },
         ].map(({ label, value, icon: Icon, color, bg, border }) => (
           <div key={label} className="rounded-2xl p-4 text-center" style={{ background: bg, border: `1px solid ${border}` }}>
             <Icon className="w-4 h-4 mx-auto mb-1.5" style={{ color }} />
             <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className="text-lg font-black text-white tabular-nums">{fmt(Math.abs(value))} <span className="text-sm" style={{ color }}>€</span></p>
+            <p className="text-lg font-extrabold text-white tabular-nums">{fmt(Math.abs(value))} <span className="text-sm" style={{ color }}>€</span></p>
           </div>
         ))}
       </div>
 
       {/* ── Spende eintragen ─────────────────────────────────────── */}
       <form onSubmit={handleAddDonation} className="rounded-2xl p-5 space-y-4"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(20,184,166,0.12)" }}>
+        style={{ background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 12%, transparent)" }}>
         <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-teal-400" /> Spende eintragen
+          <Plus className="w-4 h-4 text-primary" /> Spende eintragen
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
@@ -270,14 +270,14 @@ export default function AdminDonationsClient({
           </div>
         </div>
         <button type="submit" disabled={isPending} className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all"
-          style={{ background: "linear-gradient(135deg, #0d9488, #14b8a6)", opacity: isPending ? 0.6 : 1 }}>
+          style={{ background: "linear-gradient(135deg, #0d9488, var(--color-primary))", opacity: isPending ? 0.6 : 1 }}>
           {isPending ? "Wird gespeichert…" : "Spende eintragen"}
         </button>
       </form>
 
       {/* ── Ausgabe eintragen ────────────────────────────────────── */}
       <form onSubmit={handleAddExpense} className="rounded-2xl p-5 space-y-4"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(239,68,68,0.15)" }}>
+        style={{ background: "var(--color-surface-2)", border: "1px solid rgba(239,68,68,0.15)" }}>
         <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
           <ShoppingCart className="w-4 h-4 text-red-400" /> Ausgabe dokumentieren
         </h2>
@@ -286,7 +286,7 @@ export default function AdminDonationsClient({
             <Input label="Titel">
               <input type="text" value={exTitle} onChange={e => setExTitle(e.target.value)} required
                 placeholder="z.B. Minecraft Server Oktober"
-                className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(239,68,68,0.15)" }} />
+                className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(239,68,68,0.15)" }} />
             </Input>
           </div>
           <Input label="Betrag (€)">
@@ -295,18 +295,18 @@ export default function AdminDonationsClient({
               <NumberInput min="0.01" step="0.01" value={exAmt}
                 onChange={e => setExAmt(e.target.value)} required placeholder="9.99"
                 className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
-                style={{ background: "#0b1a17", border: "1px solid rgba(239,68,68,0.15)" }} />
+                style={{ background: "var(--color-surface-2)", border: "1px solid rgba(239,68,68,0.15)" }} />
             </div>
           </Input>
           <Input label="Datum">
             <input type="date" value={exDate} onChange={e => setExDate(e.target.value)} required
-              className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(239,68,68,0.15)" }} />
+              className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(239,68,68,0.15)" }} />
           </Input>
           <div className="col-span-2">
             <Input label="Beschreibung (optional, öffentlich sichtbar)">
               <input type="text" value={exDesc} onChange={e => setExDesc(e.target.value)}
                 placeholder="z.B. Monatliche Servergebühr bei Hetzner"
-                className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(239,68,68,0.15)" }} />
+                className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(239,68,68,0.15)" }} />
             </Input>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function AdminDonationsClient({
           <div className="space-y-2">
             {expenses.map(e => (
               <div key={e.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-line)" }}>
                 <ShoppingCart className="w-4 h-4 text-red-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white truncate">{e.title}</p>
@@ -354,19 +354,19 @@ export default function AdminDonationsClient({
           <Lightbulb className="w-4 h-4 text-yellow-400" /> Ziele (der Reihe nach, nach den laufenden Kosten)
         </h2>
         <form onSubmit={handleAddIdea} className="rounded-2xl p-5 space-y-3 mb-4"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(234,179,8,0.18)" }}>
+          style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.18)" }}>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Input label="Titel">
                 <input type="text" value={ideaTitle} onChange={e => setIdeaTitle(e.target.value)} required
                   placeholder="z.B. Neuer Gameserver"
-                  className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+                  className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.2)" }} />
               </Input>
             </div>
             <Input label="Beschreibung (optional)">
               <input type="text" value={ideaDesc} onChange={e => setIdeaDesc(e.target.value)}
                 placeholder="Details zur Idee"
-                className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+                className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.2)" }} />
             </Input>
             <Input label="Schätzpreis in € (optional)">
               <div className="relative">
@@ -374,7 +374,7 @@ export default function AdminDonationsClient({
                 <NumberInput min="0" step="0.01" value={ideaCost} onChange={e => setIdeaCost(e.target.value)}
                   placeholder="0.00"
                   className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
-                  style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+                  style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.2)" }} />
               </div>
             </Input>
           </div>
@@ -395,28 +395,28 @@ export default function AdminDonationsClient({
                 {editingId === idea.id ? (
                   <div className="space-y-2">
                     <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                      className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                      className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.3)" }} />
                     <div className="grid grid-cols-2 gap-2">
                       <input value={editDesc} onChange={e => setEditDesc(e.target.value)}
                         placeholder="Beschreibung"
-                        className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                        className={inputCls} style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.3)" }} />
                       <div className="relative">
                         <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
                         <NumberInput min="0" step="0.01" value={editCost} onChange={e => setEditCost(e.target.value)}
                           placeholder="Schätzpreis"
                           className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
-                          style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                          style={{ background: "var(--color-surface-2)", border: "1px solid rgba(234,179,8,0.3)" }} />
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => handleSaveEdit(idea.id)} disabled={isPending}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black max-lg:min-h-10"
                         style={{ background: "#eab308" }}>
                         <Check className="w-3 h-3" /> Speichern
                       </button>
                       <button onClick={() => setEditingId(null)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-                        style={{ background: "rgba(255,255,255,0.05)" }}>
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-colors max-lg:min-h-10"
+                        style={{ background: "var(--color-surface-3)" }}>
                         <X className="w-3 h-3" /> Abbrechen
                       </button>
                     </div>
@@ -458,7 +458,7 @@ export default function AdminDonationsClient({
           <div className="space-y-2">
             {donations.map(d => (
               <div key={d.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-line)" }}>
                 <Link href={`/profile/${d.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                   {d.user.image ? (
                     <Image src={d.user.image} alt={d.user.name ?? ""} width={32} height={32} className="w-8 h-8 rounded-full shrink-0" />
@@ -476,7 +476,7 @@ export default function AdminDonationsClient({
                     </p>
                   </div>
                 </Link>
-                <span className="text-sm font-bold text-teal-400 shrink-0">{fmt(d.amount)} €</span>
+                <span className="text-sm font-bold text-primary shrink-0">{fmt(d.amount)} €</span>
                 <button onClick={() => handleDeleteDonation(d.id)} disabled={isPending}
                   className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 shrink-0">
                   <Trash2 className="w-4 h-4" />

@@ -71,7 +71,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
               {PICTO_CATEGORIES.map(c => (
                 <button key={c.name} type="button" onClick={() => setCat(c.name)}
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                    cat === c.name ? "border-teal-500/50 bg-teal-500/10 text-teal-300" : "border-line-strong text-gray-500 hover:text-gray-300"
+                    cat === c.name ? "border-primary/50 bg-primary/10 text-primary-fg" : "border-line-strong text-gray-500 hover:text-gray-300"
                   }`}>
                   {c.name}
                 </button>
@@ -92,7 +92,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
                       className="aspect-square flex items-center justify-center rounded-lg border transition-all"
                       style={selected
                         ? { borderColor: `${color}99`, background: `${color}1f` }
-                        : { borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}>
+                        : { borderColor: "var(--color-line)", background: "var(--color-surface-2)" }}>
                       <span className="w-6 h-6 block" style={{
                         backgroundColor: selected ? color : "#9ca3af",
                         WebkitMaskImage: src, maskImage: src,
@@ -123,7 +123,7 @@ export default function IconPicker({ value, onChange }: { value: string; onChang
               Icon entfernen
             </button>
             <button type="button" onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors">
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white bg-teal-700 hover:bg-primary-hover transition-colors">
               Fertig
             </button>
           </div>

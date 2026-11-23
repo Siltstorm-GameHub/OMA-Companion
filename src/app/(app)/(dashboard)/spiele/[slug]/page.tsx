@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Glyph } from "@/components/ui/Glyph";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
@@ -93,7 +94,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         <div className="p-4 sm:p-5 space-y-3">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h1 className="font-display text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">{game.name}</h1>
+              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">{game.name}</h1>
               <p className="text-xs text-gray-500 mt-1">
                 {[game.releaseYear, fields.isFree === true ? "Kostenlos" : fields.isFree === false ? "Kostenpflichtig" : null].filter(Boolean).join(" · ")}
               </p>
@@ -101,7 +102,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             <div className="flex flex-col items-end gap-1.5">
               {game.status === "APPROVED" && user && (
                 <Link href={`/events/verwalten/neu?mode=event&game=${encodeURIComponent(game.slug)}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors">
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold bg-primary hover:bg-primary-hover text-primary-ink transition-colors max-lg:min-h-10">
                   <CalendarPlus className="w-3.5 h-3.5" /> Event anlegen
                 </Link>
               )}
@@ -119,7 +120,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               {game.priceCents !== null && steamUrl && (
                 <a href={steamUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-line border border-line hover:border-line-strong transition-colors">
+                  className="inline-flex items-center gap-2 rounded-xl px-3 py-1.5 bg-line border border-line hover:border-line-strong transition-colors max-lg:min-h-10">
                   {game.discountPercent > 0 && (
                     <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-amber-400 text-gray-950">−{game.discountPercent} %</span>
                   )}
@@ -160,7 +161,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         <Fact label="Spieler">{players ?? <span className="text-gray-600">unbekannt</span>}</Fact>
         <Fact label="Plattformen">
           {platforms || <span className="text-gray-600">unbekannt</span>}
-          {fields.crossplay && <span className="text-teal-300 text-xs"> · Crossplay</span>}
+          {fields.crossplay && <span className="text-primary-fg text-xs"> · Crossplay</span>}
         </Fact>
         <Fact label="Rundenlänge">{session ?? <span className="text-gray-600">unbekannt</span>}</Fact>
       </div>
@@ -176,7 +177,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
       {match && (
         <div className="rounded-2xl border border-emerald-400/30 p-4 flex items-center gap-3 flex-wrap"
           style={{ background: "linear-gradient(110deg, rgba(16,185,129,0.14), transparent 70%)" }}>
-          <span className="text-2xl leading-none" aria-hidden>🎮</span>
+          <Glyph name="gamepad" className="size-6 text-primary-fg" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-white">Match: {match.count} sind am Start</p>
             <p className="text-xs text-gray-400 truncate">Mit dir: {othersLabel(match)}</p>
@@ -220,11 +221,11 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         {/* Wer zockt das? */}
         <section className="surface rounded-2xl p-4 space-y-3">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5 text-teal-500/70" /> Zockt gerade
+            <Users className="w-3.5 h-3.5 text-primary/70" /> Zockt gerade
           </h2>
           {detail.players.length === 0 ? (
             <p className="text-xs text-gray-500">
-              Noch niemand hat es in seinen Lieblingsspielen. Zockst du es? <Link href="/profile" className="text-teal-400 hover:text-teal-300">Im Profil eintragen →</Link>
+              Noch niemand hat es in seinen Lieblingsspielen. Zockst du es? <Link href="/profile" className="text-primary hover:text-primary-fg">Im Profil eintragen →</Link>
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -242,7 +243,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         {/* Events & Gameserver */}
         <section className="surface rounded-2xl p-4 space-y-3">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-            <CalendarDays className="w-3.5 h-3.5 text-teal-500/70" /> In der Community
+            <CalendarDays className="w-3.5 h-3.5 text-primary/70" /> In der Community
           </h2>
           {detail.stats.pastEvents > 0 && (
             <p className="text-xs text-gray-400">
@@ -257,10 +258,10 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
             <ul className="space-y-1">
               {detail.servers.map(s => (
                 <li key={s.id}>
-                  <Link href="/servers" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-line text-sm text-gray-200">
-                    <Server className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                  <Link href="/servers" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-line text-sm text-gray-200 max-lg:min-h-10">
+                    <Server className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="flex-1 truncate">{s.name}</span>
-                    <span className={`text-xs ${s.isOnline ? "text-teal-300" : "text-gray-600"}`}>{s.isOnline ? "Online" : "Offline"}</span>
+                    <span className={`text-xs ${s.isOnline ? "text-primary-fg" : "text-gray-600"}`}>{s.isOnline ? "Online" : "Offline"}</span>
                   </Link>
                 </li>
               ))}
@@ -269,10 +270,10 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
                 return (
                 <li key={e.id}>
                   <Link href={`/tournament/${e.id}`}
-                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/15" : "hover:bg-line"}`}>
-                    <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isNext ? "text-teal-300" : "text-gray-500"}`} />
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-200 ${isNext ? "bg-primary/10 border border-primary/25 hover:bg-primary/15" : "hover:bg-line"} max-lg:min-h-10`}>
+                    <CalendarDays className={`w-3.5 h-3.5 shrink-0 ${isNext ? "text-primary-fg" : "text-gray-500"}`} />
                     <span className="flex-1 truncate">
-                      {isNext && <span className="text-xs font-semibold text-teal-300 mr-1.5">NÄCHSTES</span>}
+                      {isNext && <span className="text-xs font-semibold text-primary-fg mr-1.5">NÄCHSTES</span>}
                       {e.title}
                     </span>
                     <span className="text-xs text-gray-500 shrink-0">{fmtDate(e.startAt)}</span>

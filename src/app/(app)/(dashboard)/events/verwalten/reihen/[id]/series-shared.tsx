@@ -6,8 +6,8 @@ import { Eye, EyeOff } from "@/components/icons";
 
 // Aus SeriesDetailClient.tsx ausgelagert: Typen, Konstanten und kleine Bausteine, die Hook und Reiter teilen.
 
-export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
-export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 export const PLATFORMS: { value: string; label: string; icon: string }[] = [
   { value: "PC",     label: "PC",     icon: "🖥️" },
   { value: "Xbox",   label: "Xbox",   icon: "🟢" },
@@ -179,7 +179,7 @@ export function Field({ label, children }: { label: React.ReactNode; children: R
 export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="rounded accent-teal-500" />
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="rounded accent-primary" />
       <span className="text-xs text-gray-500">{label}</span>
     </label>
   );

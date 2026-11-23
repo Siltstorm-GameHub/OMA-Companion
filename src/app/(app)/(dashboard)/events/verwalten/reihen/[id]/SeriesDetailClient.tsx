@@ -38,8 +38,8 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
 
       {/* Neue-Saison-Hinweis (archiviert, aber noch keine aktive Folgesaison) */}
       {series.status === "archived" && !hasActiveSibling && (
-        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-teal-500/20 bg-teal-500/[0.06]">
-          <Repeat className="w-4 h-4 text-teal-400 shrink-0" />
+        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-primary/20 bg-primary/[0.06]">
+          <Repeat className="w-4 h-4 text-primary shrink-0" />
           <p className="flex-1 text-sm text-teal-200">
             Diese Saison ist archiviert, es wurde aber noch keine neue Saison gestartet.
             {!isModerator && " Eine neue Saison richtet ein Mod ein."}
@@ -47,7 +47,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           {isModerator && (
             <Link
               href={`/events/verwalten/reihen/${series.id}/new-season`}
-              className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-teal-300 hover:text-teal-200 border border-teal-500/30 hover:border-teal-500/50 rounded-lg px-3 py-1.5 transition-all"
+              className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-primary-fg hover:text-teal-200 border border-primary/30 hover:border-primary/50 rounded-lg px-3 py-1.5 transition-all max-lg:min-h-10"
             >
               Neue Saison einrichten <ChevronRight className="w-3.5 h-3.5" />
             </Link>
@@ -76,7 +76,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             href={`/events/series/${series.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-line hover:border-line-strong rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-line hover:border-line-strong rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
@@ -84,14 +84,14 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           {!isModerator ? null : series.status === "archived" ? (
             <Link
               href={`/events/verwalten/reihen/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
             >
               <Vote className="w-3.5 h-3.5" /> Abschluss bearbeiten
             </Link>
           ) : (
             <Link
               href={`/events/verwalten/reihen/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
             >
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
@@ -112,7 +112,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <button key={tab.key} type="button" onClick={() => setActiveSettingsTab(tab.key)}
                 className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeSettingsTab === tab.key
-                    ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                    ? "text-primary-fg border-b-2 border-primary -mb-px"
                     : "text-gray-500 hover:text-gray-300"
                 }`}>
                 {!isModerator && tab.key === "stats" ? "Mehr" : tab.label}
@@ -150,7 +150,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
             ) : (
             <button
               onClick={openGenerateModal} disabled={generatingNext}
-              className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-white border border-primary/40 hover:bg-primary-hover rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
               {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin anlegen" : "Termin hinzufügen"}
@@ -240,7 +240,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       variant: "danger", confirmLabel: "Abschluss aufheben",
                     })) await undoCompletion();
                   }} disabled={!canUndoCompletion || undoing}
-                  className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none">
+                  className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none max-lg:min-h-10">
                   <RefreshCw className="w-3.5 h-3.5" /> Aufheben
                 </button>
               </div>
@@ -275,7 +275,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
             </div>
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 max-lg:min-h-10"
             >
               <Trash2 className="w-3.5 h-3.5" /> Löschen
             </button>
@@ -339,7 +339,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-sm rounded-xl border border-line bg-gray-900 p-4 space-y-3">
             <p className="text-sm font-semibold text-white flex items-center gap-1.5">
-              <CalendarPlus className="w-4 h-4 text-teal-300" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
+              <CalendarPlus className="w-4 h-4 text-primary-fg" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
             </p>
             <p className="text-xs text-gray-500">
               {recurrenceType
@@ -363,7 +363,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <button
                 onClick={generateNextEvent}
                 disabled={generatingNext || !generateDateStr}
-                className="text-sm font-semibold text-white bg-teal-600 hover:bg-teal-500 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                className="text-sm font-semibold text-primary-ink bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
               >
                 {generatingNext ? "Erstellt…" : "Termin erstellen"}
               </button>
@@ -382,7 +382,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               Verwerfen
             </button>
             <button type="button" onClick={saveSettings} disabled={saving}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 px-3.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-hover px-3.5 py-1.5 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
               <Save className="w-3.5 h-3.5" /> {saving ? "Speichert…" : "Speichern"}
             </button>
           </div>

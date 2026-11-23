@@ -455,7 +455,7 @@ export function DailyPollPanel({ polls: initial, events }: { polls: Poll[]; even
                   {p.rewardCoins > 0 && (
                     <span className="text-amber-500 flex items-center gap-1"><CoinIcon size={10} /> {p.rewardCoins}</span>
                   )}
-                  {p.event && <span className="text-teal-500/80">Event: {p.event.title}</span>}
+                  {p.event && <span className="text-primary/80">Event: {p.event.title}</span>}
                   {!p.isActive && <span className="text-amber-600">Inaktiv</span>}
                   {active && <span className="text-primary-fg font-medium">Wird gerade angezeigt</span>}
                 </div>

@@ -162,7 +162,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         <button
           onClick={handleOpen}
           title="Verlauf & Anpassen"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/15 transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/15 transition-colors max-lg:min-h-10"
         >
           <Star className="w-3.5 h-3.5" />
           Verlauf
@@ -196,7 +196,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
               { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-primary-fg",  coin: false },
             ].map(s => (
               <div key={s.label} className="bg-gray-950 px-3 py-4 text-center">
-                <p className={`text-xl font-black tabular-nums ${s.color}`}>{s.value}</p>
+                <p className={`text-xl font-extrabold tabular-nums ${s.color}`}>{s.value}</p>
                 <p className="text-xs text-gray-600 mt-1 flex items-center justify-center gap-1">
                   {s.coin && <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />}
                   {s.label}

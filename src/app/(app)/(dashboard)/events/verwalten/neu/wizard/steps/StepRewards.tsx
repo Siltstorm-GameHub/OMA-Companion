@@ -97,7 +97,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
 
       {/* "Ohne Platzierung": gemeinsames Community-Ziel (legt eine Werte-Erfassung an, keine Platzierung) */}
       {isEventMode && eventType === "community" && !w.isBlocksEvent && seriesMode === "none" && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-3">
           <CommunityGoalEditor value={w.communityGoal} onChange={w.setCommunityGoal} statFields={w.statFields}
             rewardLimit={lim?.goalRewardCoins ?? null} hasEnd={!!w.endAt} />
           {w.communityGoal.enabled && (
@@ -116,8 +116,8 @@ export default function StepRewards({ w }: { w: EventWizard }) {
       )}
 
       {spectatorMode && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
-          <p className="text-sm font-medium text-teal-300 mb-3">👁️ Zuschauer-Basis-Belohnung</p>
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5">
+          <p className="text-sm font-medium text-primary-fg mb-3">👁️ Zuschauer-Basis-Belohnung</p>
           <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
             {!belongsToSeries && (
               <div>
@@ -204,7 +204,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           <p className="text-sm font-medium text-gray-200">Umfragen</p>
           {polls.length < 5 && (
             <button type="button" onClick={addPoll}
-              className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
               <Plus className="w-3.5 h-3.5" /> Hinzufügen
             </button>
           )}

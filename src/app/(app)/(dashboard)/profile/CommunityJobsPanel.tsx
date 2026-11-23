@@ -114,7 +114,7 @@ export default function CommunityJobsPanel() {
   if (loading) {
     return (
       <section className="glass card-shine rounded-2xl p-6 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
       </section>
     );
   }
@@ -141,9 +141,9 @@ export default function CommunityJobsPanel() {
           return (
             <button key={job.key} role="tab" aria-selected={active} onClick={() => selectJob(job.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                active ? "bg-teal-600/20 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
-              }`}>
-              <Icon className={`w-3.5 h-3.5 ${active ? "text-teal-400" : "text-gray-600"}`} />
+                active ? "bg-primary/20 text-primary-fg shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
+              } max-lg:min-h-10`}>
+              <Icon className={`w-3.5 h-3.5 ${active ? "text-primary" : "text-gray-600"}`} />
               {job.label}
             </button>
           );
@@ -218,7 +218,7 @@ function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountP
   };
 }
 
-const SWITCH_ON = "bg-teal-500 text-black shadow-sm";
+const SWITCH_ON = "bg-primary text-primary-ink shadow-sm";
 const SWITCH_OFF = "text-gray-300 hover:text-white";
 const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
 const CALM_CHIP = "text-gray-300 bg-line border-line-strong";
@@ -335,8 +335,8 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
     <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-line flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4 text-teal-400" />
+        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-primary" />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-white">Büro · {COMMUNITY_JOBS.find(j => j.key === jobKey)?.label ?? jobKey}</p>
@@ -369,7 +369,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
           <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
             className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-surface-2 transition-colors">
             <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
-              <BookOpen className="w-3.5 h-3.5 text-teal-400" /> So funktioniert dieser Job
+              <BookOpen className="w-3.5 h-3.5 text-primary" /> So funktioniert dieser Job
             </span>
             <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
           </button>
@@ -397,7 +397,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         {([["work", "Arbeit", recCount], ["pay", "Gehalt", 0]] as const).map(([key, label, count]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
             className={`flex-1 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors border-b-2 ${
-              tab === key ? "text-teal-300 border-teal-400" : "text-gray-500 border-transparent hover:text-gray-300"
+              tab === key ? "text-primary-fg border-primary" : "text-gray-500 border-transparent hover:text-gray-300"
             }`}>
             {label}{count > 0 && <span className="ml-1.5 text-xs rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-0.5">{count}</span>}
           </button>
@@ -433,7 +433,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-gray-200 truncate">
-                          {e.url ? <Link href={e.url} className="hover:text-teal-300 transition-colors">{e.title}</Link> : e.title}
+                          {e.url ? <Link href={e.url} className="hover:text-primary-fg transition-colors">{e.title}</Link> : e.title}
                         </p>
                         <p className="text-xs text-amber-400/90">{e.reason}</p>
                       </div>
@@ -463,7 +463,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                   ))}
                 </div>
                 {hiddenCount > 0 && (
-                  <button onClick={() => setShowAllEvents(true)} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+                  <button onClick={() => setShowAllEvents(true)} className="text-xs text-gray-500 hover:text-primary transition-colors">
                     +{hiddenCount} weitere anzeigen
                   </button>
                 )}
@@ -503,7 +503,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                   {items.map(s => (
                     <div key={`${activeTab}-${s.id}`}
-                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-surface-2 border border-line hover:border-teal-500/30 transition-colors flex flex-col">
+                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-surface-2 border border-line hover:border-primary/30 transition-colors flex flex-col">
                       <a href={s.url} target="_blank" rel="noopener noreferrer" className="block">
                         <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
                           {s.headerImage && (
@@ -516,7 +516,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                             </span>
                           ) : null}
                         </div>
-                        <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-teal-300 transition-colors">{s.name}</p>
+                        <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-primary-fg transition-colors">{s.name}</p>
                         {s.price && <p className="px-2.5 text-xs text-gray-500">{s.price}</p>}
                       </a>
                       {canPostAboutSteam && (
@@ -543,14 +543,14 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
           <div className="space-y-1">
             {onlineServers.map(s => (
               <Link key={s.id} href="/servers"
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-surface-2 hover:bg-line transition-colors">
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-surface-2 hover:bg-line transition-colors max-lg:min-h-10">
                 <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-gray-300 truncate">{s.name}</p>
                   <p className="text-xs text-gray-600 truncate">{s.game}</p>
                 </div>
-                <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
-                  <span className="w-1 h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" />
+                <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-primary bg-primary/10 border-primary/20">
+                  <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse" />
                   Online
                 </span>
               </Link>
@@ -696,7 +696,7 @@ function DashTile({
 const SECTION_TONE_CLASSES: Record<"amber" | "blue" | "teal" | "orange" | "emerald", string> = {
   amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
   blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
-  teal: "bg-teal-500/10 border-teal-500/20 text-teal-400",
+  teal: "bg-primary/10 border-primary/20 text-primary",
   orange: "bg-orange-500/10 border-orange-500/20 text-orange-400",
   emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
 };
@@ -768,7 +768,7 @@ function JobToolContent({ jobKey, coachSelf, onDuplicate, onCompose }: {
 
 function VoteRow({ upvotes, votedByMe }: { upvotes: number; votedByMe: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-xs ${votedByMe ? "text-teal-400" : "text-gray-500"}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${votedByMe ? "text-primary" : "text-gray-500"}`}>
       <ThumbsUp className="w-3 h-3" /> {upvotes}
     </span>
   );
@@ -780,7 +780,7 @@ function EditDeleteBar({
 }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <span className="flex items-center gap-1.5 shrink-0">
-      <button onClick={onEdit} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+      <button onClick={onEdit} className="text-xs text-gray-600 hover:text-primary transition-colors">Bearbeiten</button>
       <button onClick={onDelete} className="text-xs text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
     </span>
   );
@@ -928,7 +928,7 @@ const INPUT_CLS = "bg-surface-2 border border-line rounded-control px-2 py-1 tex
 function MeetingLink({ url }: { url?: string | null }) {
   if (!url) return null;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-300 hover:text-teal-200 underline underline-offset-2" onClick={e => e.stopPropagation()}>
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary-fg hover:text-teal-200 underline underline-offset-2" onClick={e => e.stopPropagation()}>
       Treffpunkt
     </a>
   );
@@ -1067,7 +1067,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setOpenParticipants(openParticipants === s.id ? null : s.id)}
-                    className="text-gray-500 hover:text-teal-400 transition-colors" aria-expanded={openParticipants === s.id}>
+                    className="text-gray-500 hover:text-primary transition-colors" aria-expanded={openParticipants === s.id}>
                     {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet{(s.waitlistCount ?? 0) > 0 ? ` · ${s.waitlistCount} wartend` : ""}
                   </button>
                   {onDuplicate && (
@@ -1078,7 +1078,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                         capacity: s.capacity != null ? String(s.capacity) : undefined, eventId: s.eventId ?? undefined,
                         meetingUrl: s.meetingUrl ?? undefined,
                       })}
-                      className="p-1 text-gray-600 hover:text-teal-400 transition-colors">
+                      className="p-1 text-gray-600 hover:text-primary transition-colors">
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -1086,7 +1086,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                     ? <span className="text-xs text-emerald-400">✓ beworben</span>
                     : promo.requested.includes(s.id)
                       ? <span className="text-xs text-amber-400">Werbung angefragt</span>
-                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-xs text-gray-600 hover:text-teal-400 transition-colors">Werbung anfragen</button>}
+                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-xs text-gray-600 hover:text-primary transition-colors">Werbung anfragen</button>}
                   <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
                 </span>
               </div>
@@ -1242,7 +1242,7 @@ function IdeaList() {
       ) : (
         <div key={i.id} className="flex items-center justify-between text-xs">
           <span className="min-w-0">
-            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-teal-300 transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-xs text-gray-600">v{i.version}</span>}</Link>
+            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-primary-fg transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-xs text-gray-600">v{i.version}</span>}</Link>
             {(i.category || (i.lifecycle && i.lifecycle !== "OPEN")) && (
               <span className="block text-xs text-gray-600 truncate">
                 {ideaCategoryLabel(i.category)}
@@ -1323,12 +1323,12 @@ function GuideForm({ onDone }: { onDone: () => void }) {
         className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
       <div className="space-y-1">
         <GameNameInput value={game} onChange={v => setGame(v.slice(0, 40))} placeholder="Spiel (optional) — sein Cover erscheint bei deiner Anleitung"
-          className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+          className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40" />
       </div>
       <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
         className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-teal-400 transition-colors">
+        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary transition-colors">
           <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
         </button>
         <PhotoRequestButton requesterJob="coach" defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
@@ -1414,7 +1414,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
             <label className="space-y-1 text-xs text-gray-500">
               Plätze (optional)
               <NumberInput min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
-                className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+                className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40" />
             </label>
           </div>
           <div className="flex flex-wrap items-end gap-3">

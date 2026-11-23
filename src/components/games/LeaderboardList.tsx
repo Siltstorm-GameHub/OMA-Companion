@@ -44,7 +44,7 @@ function Row({ row, place, isViewer }: { row: LeaderboardEntry; place: number; i
     <Link
       href={`/profile/${row.userId}`}
       className={`glass rounded-card p-3 flex items-center gap-3 hover:bg-line transition-colors ${
-        isViewer ? "ring-1 ring-teal-500/40 bg-teal-500/[0.05]" : ""
+        isViewer ? "ring-1 ring-primary/40 bg-primary/[0.05]" : ""
       }`}
     >
       <RankBadge place={place} />

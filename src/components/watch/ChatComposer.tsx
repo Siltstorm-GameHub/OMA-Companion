@@ -115,7 +115,7 @@ export default function ChatComposer({ channels, activeChannel }: { channels: Ch
           type="submit"
           disabled={!text.trim() || sending}
           aria-label="Senden"
-          className="shrink-0 px-3 rounded-lg bg-teal-500/20 border border-teal-400/40 text-teal-100 disabled:opacity-40"
+          className="shrink-0 px-3 rounded-lg bg-primary/20 border border-primary/40 text-teal-100 disabled:opacity-40"
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>

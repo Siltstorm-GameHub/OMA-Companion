@@ -76,7 +76,7 @@ function HintPortal({
         zIndex: 99999,
         width: 272,
         background: "rgba(4,10,9,0.97)",
-        border: "1px solid rgba(20,184,166,0.2)",
+        border: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)",
         borderRadius: "0.75rem",
         padding: "1rem",
         boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
@@ -94,8 +94,8 @@ function HintPortal({
           transform: "rotate(45deg)",
           background: "rgba(4,10,9,0.97)",
           ...(isAbove
-            ? { borderRight: "1px solid rgba(20,184,166,0.2)", borderBottom: "1px solid rgba(20,184,166,0.2)" }
-            : { borderLeft: "1px solid rgba(20,184,166,0.2)", borderTop: "1px solid rgba(20,184,166,0.2)" }),
+            ? { borderRight: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)", borderBottom: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)" }
+            : { borderLeft: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)", borderTop: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)" }),
         }}
       />
     </div>,
@@ -138,12 +138,12 @@ export default function PwaInstallButton() {
 
   const steps = {
     ios: [
-      <>Tippe auf das <Share className="inline w-3 h-3 text-teal-400 mx-0.5" /><strong className="text-white">Teilen</strong>-Symbol unten in Safari</>,
+      <>Tippe auf das <Share className="inline w-3 h-3 text-primary mx-0.5" /><strong className="text-white">Teilen</strong>-Symbol unten in Safari</>,
       <>Wähle <strong className="text-white">„Zum Home-Bildschirm"</strong></>,
       <>Tippe oben rechts auf <strong className="text-white">„Hinzufügen"</strong></>,
     ],
     manual: [
-      <><Menu className="inline w-3 h-3 text-teal-400 mr-0.5" />Tippe auf das <strong className="text-white">Menü (⋮)</strong> oben rechts im Browser</>,
+      <><Menu className="inline w-3 h-3 text-primary mr-0.5" />Tippe auf das <strong className="text-white">Menü (⋮)</strong> oben rechts im Browser</>,
       <>Wähle <strong className="text-white">„App installieren"</strong> oder <strong className="text-white">„Zum Startbildschirm"</strong></>,
       <>Tippe auf <strong className="text-white">„Installieren"</strong></>,
     ],
@@ -156,7 +156,7 @@ export default function PwaInstallButton() {
       <button
         ref={btnRef}
         onClick={install}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-teal-400 hover:text-teal-300 hover:bg-teal-500/8 transition-colors w-full"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-primary hover:text-primary-fg hover:bg-primary/8 transition-colors w-full"
       >
         <Download style={{ width: 13, height: 13 }} />
         App installieren
@@ -171,7 +171,7 @@ export default function PwaInstallButton() {
       <button
         ref={btnRef}
         onClick={() => setShowHint(v => !v)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-teal-400 hover:text-teal-300 hover:bg-teal-500/8 transition-colors w-full"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-primary hover:text-primary-fg hover:bg-primary/8 transition-colors w-full"
       >
         <Download style={{ width: 13, height: 13 }} />
         App installieren
@@ -188,7 +188,7 @@ export default function PwaInstallButton() {
           <ol className="space-y-2.5">
             {stepList.map((step, i) => (
               <li key={i} className="flex items-start gap-2.5 text-xs text-gray-400">
-                <span className="w-4 h-4 rounded-full bg-teal-500/20 text-teal-400 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <span>{step}</span>

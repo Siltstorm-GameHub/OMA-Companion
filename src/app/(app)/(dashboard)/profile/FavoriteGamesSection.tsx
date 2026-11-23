@@ -132,23 +132,23 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
     <section id="favorite-games-section" aria-label="Spiele" className="scroll-mt-24">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-          <Gamepad2 className="w-3.5 h-3.5 text-teal-500/70" /> Spiele
+          <Gamepad2 className="w-3.5 h-3.5 text-primary/70" /> Spiele
         </h2>
         {!readOnly && (editing ? (
           <div className="flex items-center gap-2">
             <button onClick={() => { setDraft(games); setEditing(false); setSteamOpen(false); }}
-              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-400 hover:text-white transition-colors">
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-line text-gray-400 hover:text-white transition-colors max-lg:min-h-10">
               <X className="w-3 h-3" /> Abbrechen
             </button>
             <button onClick={save} disabled={saving}
-              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-teal-500 hover:bg-teal-400 text-teal-950 font-semibold transition-colors disabled:opacity-50">
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink font-semibold transition-colors disabled:opacity-50 max-lg:min-h-10">
               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
               Speichern
             </button>
           </div>
         ) : (
           <button onClick={() => { setDraft(games); setEditing(true); }}
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line-strong text-gray-400 hover:text-white hover:border-line-strong transition-colors">
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-line-strong text-gray-400 hover:text-white hover:border-line-strong transition-colors max-lg:min-h-10">
             <Pencil className="w-3 h-3" /> Ändern
           </button>
         ))}
@@ -161,7 +161,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
         {tiles.length === 0 && !editing ? (
           !readOnly && (
             <button type="button" onClick={() => { setDraft(games); setEditing(true); }}
-              className="w-full rounded-xl border border-dashed border-line-strong px-3 py-3 text-sm text-gray-500 hover:border-teal-400/40 hover:text-gray-300 transition-colors">
+              className="w-full rounded-xl border border-dashed border-line-strong px-3 py-3 text-sm text-gray-500 hover:border-primary/40 hover:text-gray-300 transition-colors">
               Was zockst du gerade? Wähl bis zu {MAX_FAVORITE_GAMES} Spiele.
             </button>
           )
@@ -192,7 +192,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                 );
               }
               return t.slug
-                ? <Link key={t.key} href={`/spiele/${t.slug}`} className={`${cls} hover:border-teal-400/40`} title={`${t.name}: wer spielt es noch?`}>{cover}</Link>
+                ? <Link key={t.key} href={`/spiele/${t.slug}`} className={`${cls} hover:border-primary/40`} title={`${t.name}: wer spielt es noch?`}>{cover}</Link>
                 : <div key={t.key} className={cls}>{cover}</div>;
             })}
             {editing && Array.from({ length: MAX_FAVORITE_GAMES - draft.length }).map((_, i) => (
@@ -215,7 +215,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                       <button key={g.name} type="button" disabled={picked || full}
                         onClick={() => add({ name: g.name, appId: g.appId })}
                         className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                          picked ? "border-teal-400/50 bg-teal-500/15 text-teal-300" : "border-line-strong text-gray-300 hover:border-white/[0.25] disabled:opacity-40"
+                          picked ? "border-primary/50 bg-primary/15 text-primary-fg" : "border-line-strong text-gray-300 hover:border-white/[0.25] disabled:opacity-40"
                         }`}>
                         {picked ? "✓ " : "+ "}{g.name}
                       </button>
@@ -238,10 +238,10 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                 <div className="mt-1.5 rounded-lg border border-line divide-y divide-line overflow-hidden">
                   {shownSuggestions.map(s => (
                     <button key={s.name} type="button" disabled={inDraft(s.name)} onClick={() => add({ name: s.name, appId: null })}
-                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-left hover:bg-line disabled:opacity-40">
+                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-left hover:bg-line disabled:opacity-40 max-lg:min-h-10">
                       <GameCover game={s.name} coverUrl={s.coverUrl} className="w-12 h-7 shrink-0" rounded="rounded" fallbackVariant="plain" />
                       <span className="text-sm text-gray-200 truncate">{s.name}</span>
-                      {inDraft(s.name) && <Check className="w-3.5 h-3.5 text-teal-400 ml-auto" />}
+                      {inDraft(s.name) && <Check className="w-3.5 h-3.5 text-primary ml-auto" />}
                     </button>
                   ))}
                 </div>
@@ -252,7 +252,7 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
             </div>
 
             <div>
-              <button type="button" onClick={() => setSteamOpen(o => !o)} className="text-xs text-teal-400 hover:text-teal-300">
+              <button type="button" onClick={() => setSteamOpen(o => !o)} className="text-xs text-primary hover:text-primary-fg">
                 {steamOpen ? "Steam-Suche schließen" : "Spiel nicht in der Liste? Auf Steam suchen"}
               </button>
               {steamOpen && (
@@ -276,18 +276,18 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
               <p className="text-xs font-semibold text-gray-500">
                 Am Start <span className="font-normal text-gray-600">· {inGames.length} {inGames.length === 1 ? "Spiel" : "Spiele"}</span>
               </p>
-              <Link href={readOnly ? "/spiele/gruppe" : "/spiele"} className="text-xs text-teal-500 hover:text-teal-300">
+              <Link href={readOnly ? "/spiele/gruppe" : "/spiele"} className="text-xs text-primary hover:text-primary-fg">
                 {readOnly ? "Gemeinsam finden" : "GameSwipe"} →
               </Link>
             </div>
             {readOnly && sharedCount > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-teal-300 mb-1.5">
+              <p className="flex items-center gap-1.5 text-xs text-primary-fg mb-1.5">
                 <Users className="w-3.5 h-3.5" /> Ihr seid beide bei {sharedCount} {sharedCount === 1 ? "Spiel" : "Spielen"} am Start
               </p>
             )}
             {inGames.length === 0 ? (
               <p className="text-xs text-gray-500">
-                Sag in <Link href="/spiele" className="text-teal-400 hover:text-teal-300">GameSwipe</Link>, welche Spiele du hast und spielen würdest.
+                Sag in <Link href="/spiele" className="text-primary hover:text-primary-fg">GameSwipe</Link>, welche Spiele du hast und spielen würdest.
               </p>
             ) : chips.length === 0 ? (
               <p className="text-xs text-gray-600">Alle stehen schon oben unter „Zockt gerade“.</p>
@@ -296,9 +296,9 @@ export default function FavoriteGamesSection({ games, current, inGames, sharedId
                 {chips.map(g => {
                   const both = shared.has(g.id);
                   const cls = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                    both ? "border-teal-400/40 bg-teal-500/10 text-teal-200 hover:border-teal-300/60" : "border-line text-gray-300 hover:border-line-strong hover:text-white"
+                    both ? "border-primary/40 bg-primary/10 text-teal-200 hover:border-teal-300/60" : "border-line text-gray-300 hover:border-line-strong hover:text-white"
                   }`;
-                  const label = <>{both && <span className="h-1.5 w-1.5 rounded-full bg-teal-400" aria-label="ihr beide" />}{g.name}</>;
+                  const label = <>{both && <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-label="ihr beide" />}{g.name}</>;
                   return g.slug
                     ? <Link key={g.id} href={`/spiele/${g.slug}`} className={cls} title={both ? `${g.name}: ihr seid beide am Start` : g.name}>{label}</Link>
                     : <span key={g.id} className={cls}>{label}</span>;

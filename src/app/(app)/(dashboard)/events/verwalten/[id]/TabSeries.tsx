@@ -21,12 +21,12 @@ export default function TabSeries({ ctx }: { ctx: EventEdit }) {
                 <button key={opt.value} type="button" onClick={() => setSeriesWinnerMode(opt.value)}
                   className={`w-full flex items-start gap-3 rounded-xl px-3 py-2.5 border text-left transition-all ${
                     seriesWinnerMode === opt.value
-                      ? "border-teal-500/60 bg-teal-500/10"
+                      ? "border-primary/60 bg-primary/10"
                       : "border-gray-700 bg-gray-800 hover:border-gray-600"
                   }`}>
-                  <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${seriesWinnerMode === opt.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
+                  <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${seriesWinnerMode === opt.value ? "border-primary bg-primary" : "border-gray-600"}`} />
                   <div>
-                    <p className={`text-sm font-medium ${seriesWinnerMode === opt.value ? "text-teal-300" : "text-gray-300"}`}>{opt.label}</p>
+                    <p className={`text-sm font-medium ${seriesWinnerMode === opt.value ? "text-primary-fg" : "text-gray-300"}`}>{opt.label}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
                   </div>
                 </button>

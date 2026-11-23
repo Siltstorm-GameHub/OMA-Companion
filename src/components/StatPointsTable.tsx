@@ -31,7 +31,7 @@ export default function StatPointsTable({
             <div key={f} className="grid grid-cols-[1fr_auto] items-center gap-3 px-3 py-2">
               <div className="min-w-0">
                 <p className="text-sm text-gray-200 truncate">{f}</p>
-                <p className={`text-xs ${pts === 0 ? "text-gray-600" : "text-teal-400"}`}>
+                <p className={`text-xs ${pts === 0 ? "text-gray-600" : "text-primary"}`}>
                   {pts === 0 ? "zählt nicht für Punkte" : `1 ${f} = ${pts} Pkt.`}
                 </p>
               </div>
@@ -40,7 +40,7 @@ export default function StatPointsTable({
                   step="0.1"
                   value={pts}
                   onChange={(e) => onChange(f, Number(e.target.value))}
-                  className="w-full rounded-lg pl-3 pr-9 py-1.5 text-sm text-white text-center outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
+                  className="w-full rounded-lg pl-3 pr-9 py-1.5 text-sm text-white text-center outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors"
                 />
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">Pkt.</span>
               </div>

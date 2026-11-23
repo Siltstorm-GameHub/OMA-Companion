@@ -37,7 +37,7 @@ export function Tabs({ tabs, active, onChange, variant = "underline", className 
             className={
               variant === "underline"
                 ? `flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                    isActive ? "border-teal-500 text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+                    isActive ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
                   }`
                 : `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive

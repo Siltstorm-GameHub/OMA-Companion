@@ -627,7 +627,7 @@ export default function ReportEditor({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs text-gray-500">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
-          <button onClick={() => setPhotoOpen(v => !v)} className="text-xs text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1">
+          <button onClick={() => setPhotoOpen(v => !v)} className="text-xs text-gray-500 hover:text-primary-fg transition-colors inline-flex items-center gap-1">
             <Camera className="w-3 h-3" /> Bild bei anderen anfragen
           </button>
         </div>
@@ -647,12 +647,12 @@ export default function ReportEditor({
         ) : (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button onClick={() => setCoverAssetId("")} aria-pressed={coverAssetId === ""}
-              className={`shrink-0 w-16 h-12 rounded-lg border text-xs ${coverAssetId === "" ? "border-teal-400 text-teal-300" : "border-line-strong text-gray-500 hover:text-white"}`}>
+              className={`shrink-0 w-16 h-12 rounded-lg border text-xs ${coverAssetId === "" ? "border-primary text-primary-fg" : "border-line-strong text-gray-500 hover:text-white"}`}>
               Keins
             </button>
             {assets.map(a => (
               <button key={a.id} onClick={() => setCoverAssetId(a.id)} aria-pressed={coverAssetId === a.id} title={a.caption ?? a.type}
-                className={`shrink-0 rounded-lg overflow-hidden border-2 ${coverAssetId === a.id ? "border-teal-400" : "border-transparent hover:border-line-strong"}`}>
+                className={`shrink-0 rounded-lg overflow-hidden border-2 ${coverAssetId === a.id ? "border-primary" : "border-transparent hover:border-line-strong"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau, beliebiger Blob-Host */}
                 <img src={a.url} alt="" className="w-16 h-12 object-cover" />
               </button>
@@ -661,7 +661,7 @@ export default function ReportEditor({
         )}
         {coverAssetId && <p className="text-xs text-gray-600">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
         <button type="button" onClick={() => setCoverPickerOpen(v => !v)} aria-expanded={coverPickerOpen}
-          className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+          className="text-xs text-gray-500 hover:text-primary transition-colors">
           {coverPickerOpen ? "Spiel-Cover ausblenden" : "Oder ein Spiel-Cover als Titelbild wählen"}
         </button>
         {coverPickerOpen && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
@@ -679,16 +679,16 @@ export default function ReportEditor({
             ))}
             {panelButtons.map(b => (
               <button key={b.key} onClick={() => togglePanel(b.key)} disabled={preview} title={b.label} aria-label={b.label} aria-expanded={panel === b.key}
-                className={`p-1.5 rounded hover:text-white hover:bg-line disabled:opacity-30 transition-colors ${panel === b.key ? "text-teal-300" : "text-gray-400"}`}>
+                className={`p-1.5 rounded hover:text-white hover:bg-line disabled:opacity-30 transition-colors ${panel === b.key ? "text-primary-fg" : "text-gray-400"}`}>
                 <b.icon className="w-3.5 h-3.5" />
               </button>
             ))}
           </div>
           <div className="flex rounded-lg border border-line-strong overflow-hidden text-xs font-semibold" role="tablist">
             <button role="tab" aria-selected={!preview} onClick={() => setPreview(false)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}><Pencil className="w-3 h-3" /> Schreiben</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"} max-lg:min-h-10`}><Pencil className="w-3 h-3" /> Schreiben</button>
             <button role="tab" aria-selected={preview} onClick={() => setPreview(true)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"}`}><Eye className="w-3 h-3" /> Vorschau</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"} max-lg:min-h-10`}><Eye className="w-3 h-3" /> Vorschau</button>
           </div>
         </div>
 
@@ -801,7 +801,7 @@ export default function ReportEditor({
         <div className="space-y-1.5">
           <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200}
             placeholder="Korrekturhinweis (öffentlich, optional — z.B. „Tippfehler im Ergebnis korrigiert“)" className={INPUT} />
-          <button onClick={toggleRevisions} className="text-xs text-gray-500 hover:text-teal-300 transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
+          <button onClick={toggleRevisions} className="text-xs text-gray-500 hover:text-primary-fg transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
             <History className="w-3 h-3" /> Frühere Versionen {revisions ? `(${revisions.length})` : ""}
           </button>
           {showRevisions && (

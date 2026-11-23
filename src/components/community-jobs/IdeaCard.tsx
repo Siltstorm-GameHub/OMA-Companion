@@ -83,7 +83,7 @@ function Reasons({ ideaId }: { ideaId: string }) {
 
   return (
     <div className="space-y-1.5">
-      <button onClick={toggle} aria-expanded={open} className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+      <button onClick={toggle} aria-expanded={open} className="text-xs text-gray-500 hover:text-primary transition-colors">
         {open ? "Begründungen ausblenden" : "Begründungen ansehen (nur für dich sichtbar)"}
       </button>
       {open && (items === null ? <p className="text-xs text-gray-600">Lädt…</p> : items.length === 0 ? <p className="text-xs text-gray-600">Noch keine Begründungen.</p> : (
@@ -124,7 +124,7 @@ function GameCard({ appId, fallbackName }: { appId: number; fallbackName?: strin
 
   const url = `https://store.steampowered.com/app/${appId}`;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2 hover:border-teal-500/30 transition-colors">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2 hover:border-primary/30 transition-colors">
       {info?.image && (
         // eslint-disable-next-line @next/next/no-img-element -- Steam-Header-Bild
         <img src={info.image} alt="" className="w-24 h-11 rounded object-cover shrink-0" />
@@ -189,7 +189,7 @@ function Versions({ entry }: { entry: IdeaEntry }) {
     <div className="space-y-1.5">
       <p className="text-xs text-gray-500">
         Version {entry.version}{entry.editedAt ? ` · überarbeitet am ${formatBerlinDate(entry.editedAt)}` : ""}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}
-        {" "}<button onClick={toggle} aria-expanded={open} className="text-teal-400 hover:text-teal-300 transition-colors">{open ? "Frühere Fassungen ausblenden" : "Frühere Fassungen"}</button>
+        {" "}<button onClick={toggle} aria-expanded={open} className="text-primary hover:text-primary-fg transition-colors">{open ? "Frühere Fassungen ausblenden" : "Frühere Fassungen"}</button>
       </p>
       {open && (items === null ? <p className="text-xs text-gray-600">Lädt…</p> : (
         <ul className="space-y-1.5">
@@ -245,7 +245,7 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {entry.draftEventId
-          ? <Link href={`/events/verwalten/${entry.draftEventId}`} className="text-xs text-teal-400 hover:text-teal-300 transition-colors">Event-Entwurf öffnen →</Link>
+          ? <Link href={`/events/verwalten/${entry.draftEventId}`} className="text-xs text-primary hover:text-primary-fg transition-colors">Event-Entwurf öffnen →</Link>
           : <Button size="sm" variant="ghost" loading={draftBusy} onClick={createDraft}>Event-Entwurf aus dieser Idee anlegen</Button>}
       </div>
     </div>
@@ -280,7 +280,7 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
             : <span className="text-xs text-gray-600">Abstimmung beendet</span>)}
         </div>
         <p className="text-sm font-semibold text-white">
-          {onIdeaPage ? entry.title : <Link href={`/community-board/idea/${entry.id}`} className="hover:text-teal-300 transition-colors">{entry.title}</Link>}
+          {onIdeaPage ? entry.title : <Link href={`/community-board/idea/${entry.id}`} className="hover:text-primary-fg transition-colors">{entry.title}</Link>}
         </p>
         {entry.lifecycleNote && entry.lifecycle !== "OPEN" && <p className="text-xs text-gray-400">Team: {entry.lifecycleNote}</p>}
       </div>
@@ -293,9 +293,9 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
       {(entry.sourceEventId || entry.sourceReportId) && (
         <p className="text-xs text-gray-500">
           Entstanden zu{" "}
-          {entry.sourceEventId && <Link href={`/tournament/${entry.sourceEventId}`} className="text-teal-400 hover:text-teal-300">einem Event</Link>}
+          {entry.sourceEventId && <Link href={`/tournament/${entry.sourceEventId}`} className="text-primary hover:text-primary-fg">einem Event</Link>}
           {entry.sourceEventId && entry.sourceReportId && " und "}
-          {entry.sourceReportId && <Link href={`/community-board/report/${entry.sourceReportId}`} className="text-teal-400 hover:text-teal-300">einem Bericht</Link>}
+          {entry.sourceReportId && <Link href={`/community-board/report/${entry.sourceReportId}`} className="text-primary hover:text-primary-fg">einem Bericht</Link>}
         </p>
       )}
 
@@ -305,7 +305,7 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
 
       <div className="flex flex-wrap items-center gap-2">
         {actions}
-        <button onClick={copyLink} title="Link zur Idee kopieren" aria-label="Link kopieren" className="p-1 text-gray-600 hover:text-teal-400 transition-colors"><Copy className="w-3.5 h-3.5" /></button>
+        <button onClick={copyLink} title="Link zur Idee kopieren" aria-label="Link kopieren" className="p-1 text-gray-600 hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
       </div>
 
       {isAuthor && (entry.voteCount ?? 0) > 0 && <Reasons ideaId={entry.id} />}

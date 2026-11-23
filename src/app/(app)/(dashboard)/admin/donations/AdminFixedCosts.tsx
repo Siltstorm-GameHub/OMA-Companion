@@ -23,7 +23,7 @@ const toDateInput = (d: Date | string) => {
 // Mittag UTC: bleibt in Berlin sicher auf demselben Kalendertag
 const fromDateInput = (s: string) => `${s}T12:00:00.000Z`;
 
-const inputStyle = { background: "#0b1a17", border: "1px solid rgba(56,189,248,0.2)" };
+const inputStyle = { background: "var(--color-surface-2)", border: "1px solid rgba(56,189,248,0.2)" };
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white bg-transparent outline-none";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -139,7 +139,7 @@ export default function AdminFixedCosts({
       </p>
 
       <form onSubmit={handleAdd} className="rounded-2xl p-5 space-y-3 mb-4"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(56,189,248,0.18)" }}>
+        style={{ background: "var(--color-surface-2)", border: "1px solid rgba(56,189,248,0.18)" }}>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Field label="Titel">
@@ -196,11 +196,11 @@ export default function AdminFixedCosts({
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleSaveEdit(c.id)} disabled={isPending}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 max-lg:min-h-10">
                       <Check className="w-3 h-3" /> Speichern
                     </button>
                     <button onClick={() => setEditingId(null)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-line">
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-line max-lg:min-h-10">
                       <X className="w-3 h-3" /> Abbrechen
                     </button>
                   </div>

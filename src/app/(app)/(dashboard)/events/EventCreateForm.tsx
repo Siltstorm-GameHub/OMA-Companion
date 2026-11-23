@@ -11,7 +11,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 
 
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
-const inputStyle = { background: "#0b1a17", border: "1px solid rgba(20,184,166,0.18)" };
+const inputStyle = { background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 18%, transparent)" };
 
 type Series = { id: string; name: string; _count: { events: number } };
 
@@ -89,10 +89,10 @@ export default function EventCreateForm() {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(20,184,166,0.18)", background: "rgba(20,184,166,0.04)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid color-mix(in srgb, var(--color-primary) 18%, transparent)", background: "color-mix(in srgb, var(--color-primary) 4%, transparent)" }}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-teal-300 hover:bg-teal-500/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-primary-fg hover:bg-primary/5 transition-colors"
       >
         <span className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -102,7 +102,7 @@ export default function EventCreateForm() {
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "rgba(20,184,166,0.12)" }}>
+        <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "color-mix(in srgb, var(--color-primary) 12%, transparent)" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
 
             <div className="sm:col-span-2">
@@ -148,9 +148,9 @@ export default function EventCreateForm() {
             </div>
 
             {/* ── Eventreihe ─────────────────────────────────────── */}
-            <div className="sm:col-span-2 rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
+            <div className="sm:col-span-2 rounded-xl p-3 space-y-3" style={{ background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 10%, transparent)" }}>
               <label className="text-xs text-gray-400 flex items-center gap-1.5 font-semibold uppercase tracking-wider">
-                <Repeat className="w-3.5 h-3.5 text-teal-400" /> Eventreihe
+                <Repeat className="w-3.5 h-3.5 text-primary" /> Eventreihe
               </label>
 
               <div className="flex gap-2 flex-wrap">
@@ -158,8 +158,8 @@ export default function EventCreateForm() {
                   <button key={m} type="button" onClick={() => setSeriesMode(m)}
                     className="text-xs px-3 py-1.5 rounded-lg transition-colors"
                     style={seriesMode === m
-                      ? { background: "rgba(20,184,166,0.18)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
-                      : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }}>
+                      ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
+                      : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>
                     {m === "none" ? "Kein (Einzelevent)" : m === "existing" ? "Bestehende Reihe" : "Neue Reihe erstellen"}
                   </button>
                 ))}
@@ -188,7 +188,7 @@ export default function EventCreateForm() {
 
           <button type="submit" disabled={loading}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all"
-            style={{ background: "linear-gradient(135deg, #0d9488, #14b8a6)", opacity: loading ? 0.6 : 1 }}>
+            style={{ background: "linear-gradient(135deg, #0d9488, var(--color-primary))", opacity: loading ? 0.6 : 1 }}>
             {loading ? "Wird erstellt..." : "Event erstellen"}
           </button>
         </form>

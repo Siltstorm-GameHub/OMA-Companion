@@ -93,7 +93,7 @@ export default function ImageUploadField({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-line-strong bg-surface-2 text-xs font-medium text-gray-300 hover:border-teal-500/40 disabled:opacity-50 transition-colors"
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-line-strong bg-surface-2 text-xs font-medium text-gray-300 hover:border-primary/40 disabled:opacity-50 transition-colors"
         >
           {uploading
             ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Lädt…</>
@@ -108,8 +108,8 @@ export default function ImageUploadField({
             title="Vorlage auswählen"
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
               showPresets
-                ? "border-teal-500/50 bg-teal-500/10 text-teal-300"
-                : "border-line-strong bg-surface-2 text-gray-300 hover:border-teal-500/40"
+                ? "border-primary/50 bg-primary/10 text-primary-fg"
+                : "border-line-strong bg-surface-2 text-gray-300 hover:border-primary/40"
             }`}
           >
             <Images className="w-3.5 h-3.5" /> Vorlagen
@@ -151,7 +151,7 @@ export default function ImageUploadField({
                 type="button"
                 onClick={() => { setPreviewFailed(false); onChange(p.url); setShowPresets(false); }}
                 className={`group relative rounded-lg overflow-hidden border text-left transition-colors ${
-                  active ? "border-teal-400 ring-1 ring-teal-400/60" : "border-line hover:border-teal-500/50"
+                  active ? "border-primary ring-1 ring-primary/60" : "border-line hover:border-primary/50"
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- statisches SVG aus public/ */}
@@ -160,7 +160,7 @@ export default function ImageUploadField({
                   {p.label}
                 </span>
                 {active && (
-                  <span className="absolute top-1 right-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500 text-black">
+                  <span className="absolute top-1 right-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-ink">
                     <Check className="w-3 h-3" />
                   </span>
                 )}
@@ -186,7 +186,7 @@ export default function ImageUploadField({
       )}
 
       {activePreset && (
-        <p className="text-xs text-teal-400/80">Vorlage: {activePreset.label}</p>
+        <p className="text-xs text-primary/80">Vorlage: {activePreset.label}</p>
       )}
 
       {value && previewFailed && (

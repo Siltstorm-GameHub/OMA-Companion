@@ -28,10 +28,10 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
     <div className="glass rounded-2xl p-4 mb-5 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5 text-teal-400" /> Beiträge zu diesem Event{posts.length > 0 ? ` (${posts.length})` : ""}
+          <FileText className="w-3.5 h-3.5 text-primary" /> Beiträge zu diesem Event{posts.length > 0 ? ` (${posts.length})` : ""}
         </h2>
         {canCreate && (
-          <Link href={composeHref} className="inline-flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
+          <Link href={composeHref} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
             <Plus className="w-3.5 h-3.5" /> Beitrag dazu erstellen
           </Link>
         )}
@@ -47,13 +47,13 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
             const clips = p.media.length - images.length;
             return (
               <li key={p.id}>
-                <Link href={`/community-board/report/${p.id}`} className="flex items-center gap-3 hover:text-teal-400 transition-colors">
+                <Link href={`/community-board/report/${p.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element -- Blob-Bilder/Spiel-Cover beliebiger Größe
                     <img src={thumb} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover shrink-0 bg-black/30" />
                   ) : (
                     <span className="w-12 h-12 rounded-lg bg-line flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-teal-400" />
+                      <FileText className="w-4 h-4 text-primary" />
                     </span>
                   )}
                   <span className="min-w-0 flex-1">

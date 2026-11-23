@@ -241,7 +241,7 @@ function MatchCard({
       aria-pressed={selected}
       aria-label={`${uname(p1)} gegen ${uname(p2)} — Details`}
       className={`w-52 rounded-xl border overflow-hidden flex flex-col text-left transition-[filter] hover:brightness-125 ${
-        selected ? "ring-2 ring-teal-400/60" : ""
+        selected ? "ring-2 ring-primary/60" : ""
       } ${
         isLive    ? "border-red-500/60" :
         isMyMatch ? "border-primary/40" :

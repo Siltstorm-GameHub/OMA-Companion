@@ -69,17 +69,17 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
           )}
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
-          <span className="text-xs text-teal-400 font-semibold tabular-nums">{doneCount}/{items.length}</span>
+          <span className="text-xs text-primary font-semibold tabular-nums">{doneCount}/{items.length}</span>
           <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${collapsed ? "" : "rotate-180"}`} />
         </div>
       </button>
 
       {!collapsed && (
         <div className="relative px-5 pb-5">
-          <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "var(--color-surface-3)" }}>
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)" }}
+              style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--color-primary), #2dd4bf)" }}
             />
           </div>
 
@@ -94,7 +94,7 @@ export default function ProfileCompletion({ done, rewardPerItem }: Props) {
                 }`}
               >
                 {item.done ? (
-                  <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                 ) : (
                   <Circle className="w-4 h-4 text-gray-600 shrink-0" />
                 )}

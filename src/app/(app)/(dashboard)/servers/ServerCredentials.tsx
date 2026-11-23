@@ -56,8 +56,8 @@ export default function ServerCredentials({
       </div>
 
       {joinInstructions && (
-        <details className="group rounded-lg bg-teal-500/10 border border-teal-500/20 overflow-hidden">
-          <summary className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-teal-300 hover:text-teal-200 cursor-pointer select-none list-none">
+        <details className="group rounded-lg bg-primary/10 border border-primary/20 overflow-hidden">
+          <summary className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-primary-fg hover:text-teal-200 cursor-pointer select-none list-none">
             <ChevronRight className="w-3.5 h-3.5 shrink-0 transition-transform group-open:rotate-90" />
             <Info className="w-3.5 h-3.5 shrink-0" />
             So trittst du bei

@@ -110,7 +110,7 @@ export default function LoginPage() {
             <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-primary/30 mb-4">
               <Image src="/brand/logo-256.png" alt="OMA" width={64} height={64} className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Old Masters Ally</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">Old Masters Ally</h1>
             <p className="text-sm text-gray-500 mt-1">Companion App</p>
           </div>
 
@@ -124,7 +124,7 @@ export default function LoginPage() {
                 <span className="text-xs text-emerald-500/80 font-medium">Server online</span>
               </div>
 
-              <h2 className="text-2xl font-black text-white mb-1">Willkommen zurück</h2>
+              <h2 className="text-2xl font-extrabold text-white mb-1">Willkommen zurück</h2>
               <p className="text-sm text-gray-500 mb-8">
                 Melde dich mit deinem Discord-Account an.
               </p>

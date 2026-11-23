@@ -62,7 +62,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
         {USER_FILTERS.map(f => (
           <button key={f.key} type="button" onClick={() => setFilter(f.key)} aria-pressed={filter === f.key}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              filter === f.key ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-line text-gray-400 hover:text-white"
+              filter === f.key ? "bg-primary/15 text-teal-200 ring-1 ring-primary/30" : "border border-line text-gray-400 hover:text-white"
             }`}>
             {f.label} <span className="tabular-nums text-gray-500">{counts[f.key]}</span>
           </button>
@@ -92,7 +92,7 @@ export default function AdminUsersClient({ users: initial, meId, syncTools }: {
                 return (
                   <li key={u.id}>
                     <button type="button" onClick={() => setSelectedId(on ? null : u.id)} aria-pressed={on}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-teal-500/[0.08]" : "hover:bg-surface-2"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${on ? "bg-primary/[0.08]" : "hover:bg-surface-2"} ${!u.hasLogin || u.leftServerAt ? "opacity-60" : ""}`}>
                       {u.image
                         ? <img src={u.image} alt="" loading="lazy" width={28} height={28} className="w-7 h-7 rounded-full ring-1 ring-white/10 shrink-0" />
                         : <span className="w-7 h-7 shrink-0 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300">{name[0]?.toUpperCase()}</span>}

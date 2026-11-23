@@ -7,7 +7,7 @@ import { parseCycleConfig } from "@/lib/series-cycles-config";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
-import { ExternalLink, Plus, Users, EyeOff } from "@/components/icons";
+import { ExternalLink, Plus, Repeat, Users, EyeOff } from "@/components/icons";
 import SyncButton from "./SyncButton";
 import { GateLink, GuestMoreCta } from "@/components/GuestGate";
 import EventCardActions from "@/components/events/EventCardActions";
@@ -269,8 +269,8 @@ export default async function EventsPage() {
                         <ScrollReveal className="h-full">
                           <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />}
                             extra={item.ev.seriesId && (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) > 0 ? (
-                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-xs text-teal-300 hover:text-white">
-                                🔁 +{moreCyclesBySeries.get(item.ev.seriesId)} weitere {moreCyclesBySeries.get(item.ev.seriesId) === 1 ? "Zyklus" : "Zyklen"} · Anmeldung offen
+                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-xs text-primary-fg hover:text-white">
+                                <Repeat className="inline size-3.5 align-[-2px]" /> +{moreCyclesBySeries.get(item.ev.seriesId)} weitere {moreCyclesBySeries.get(item.ev.seriesId) === 1 ? "Zyklus" : "Zyklen"} · Anmeldung offen
                               </Link>
                             ) : undefined} />
                         </ScrollReveal>

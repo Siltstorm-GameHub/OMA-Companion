@@ -165,7 +165,7 @@ function PollCard({
                   )}
                   {poll.participationCoins > 0 && poll.participationSeriesPoints > 0 && " + "}
                   {poll.participationSeriesPoints > 0 && (
-                    <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>
+                    <span className="text-primary font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>
                   )}
                 </span>
               )}
@@ -217,7 +217,7 @@ function PollCard({
                   className={`w-full rounded-xl overflow-hidden relative transition-all ${
                     isMine ? "ring-1 ring-emerald-500/40" : ""
                   } ${isWon ? "ring-1 ring-amber-500/40" : ""}`}
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+                  style={{ background: "var(--color-surface-3)", border: "1px solid var(--color-line)" }}
                 >
                   {/* Progress bar */}
                   <div

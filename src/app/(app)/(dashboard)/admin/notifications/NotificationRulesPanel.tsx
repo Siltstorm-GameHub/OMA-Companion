@@ -350,7 +350,7 @@ function DiscordPreview({ rule, title, body }: { rule: NotificationRuleRow; titl
   const content = SAMPLE_CONTENT[rule.key];
   return (
     <div className="rounded-xl px-3 py-3 bg-[#313338] border border-black/30 flex gap-3">
-      <div className="w-9 h-9 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">OMA</div>
+      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-ink text-xs font-bold shrink-0">OMA</div>
       <div className="min-w-0 flex-1">
         <p className="text-[13px] leading-tight">
           <span className="font-semibold text-white">OMA Companion</span>
@@ -389,7 +389,7 @@ function PushPreview({ title, body }: { title: string; body: string }) {
   const plain = (t: string) => t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/<a?:(\w+):\d+>/g, ":$1:");
   return (
     <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-line flex gap-2.5">
-      <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">OMA</div>
+      <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-ink text-[9px] font-bold shrink-0">OMA</div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-white break-words">{plain(title) || "–"}</p>
         <p className="text-xs text-gray-400 whitespace-pre-line break-words mt-0.5 line-clamp-4">{plain(body) || "–"}</p>
@@ -419,7 +419,7 @@ function Toggle({ on, onClick, label, icon: Icon }: { on: boolean; onClick: () =
         on
           ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
           : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
-      }`}
+      } max-lg:min-h-10`}
     >
       <Icon className="w-3.5 h-3.5" />
       {label}
@@ -745,7 +745,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                         onClick={() => deleteRule(r)}
                         disabled={deletingKey === r.key}
                         title="Regel löschen"
-                        className="ml-1 flex items-center gap-1 text-xs px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-line hover:border-red-500/20 transition-colors disabled:opacity-40"
+                        className="ml-1 flex items-center gap-1 text-xs px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-line hover:border-red-500/20 transition-colors disabled:opacity-40 max-lg:min-h-10"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -780,7 +780,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             r.eventAudience === "all"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                               : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
-                          }`}
+                          } max-lg:min-h-10`}
                         >
                           <Users className="w-3.5 h-3.5" />
                           Alle User
@@ -791,7 +791,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                             r.eventAudience === "participants"
                               ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
                               : "bg-surface-2 text-gray-600 border-line hover:border-line-strong"
-                          }`}
+                          } max-lg:min-h-10`}
                         >
                           <UserCheck className="w-3.5 h-3.5" />
                           Nur angemeldete Teilnehmer
@@ -1010,7 +1010,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                     </button>
                     {r.isEventNotification && (
-                      <p className="flex items-center gap-1 text-xs text-teal-400/80">
+                      <p className="flex items-center gap-1 text-xs text-primary/80">
                         <Link2 className="w-3 h-3 shrink-0" />
                         Führt automatisch zum jeweiligen Event/Turnier — dieser Link ist nur ein Fallback, falls ausnahmsweise keine Zuordnung vorliegt.
                       </p>

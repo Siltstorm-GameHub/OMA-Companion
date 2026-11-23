@@ -293,10 +293,10 @@ export default function FfaView({
           <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
             {isLigaPunkteLive && (
-              <span className="flex items-center gap-1.5 normal-case tracking-normal text-xs font-medium text-teal-400" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
+              <span className="flex items-center gap-1.5 normal-case tracking-normal text-xs font-medium text-primary" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
                 </span>
                 Tabellenpunkte live
               </span>
@@ -324,7 +324,7 @@ export default function FfaView({
                     {hasTurnierpunkte && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Eventpunkte</th>
                     )}
-                    <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Tabellenpunkte</th>
+                    <th className="text-center px-3 py-2.5 font-medium text-primary/70">Tabellenpunkte</th>
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
@@ -359,7 +359,7 @@ export default function FfaView({
                             )}
                             {isLigaPunkteLive && projectedWinnerIds.includes(r.userId) && (
                               <span
-                                className="inline-flex items-center gap-1 text-xs font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-full shrink-0"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0"
                                 title="Führt aktuell nach Eventpunkten — würde bei Abschluss jetzt den Sieger-Bonus in Tabellenpunkten bekommen"
                               >
                                 <Trophy className="w-2.5 h-2.5" /> aktuell vorn
@@ -459,26 +459,26 @@ export default function FfaView({
                           <div className="flex flex-col items-center gap-0">
                             {eventLigapunkte > 0 && !isLigaPunkteLive && (ligaPunkteBreakdownByUser[r.userId]?.length ?? 0) > 0
                               ? <details className="group text-center">
-                                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer tabular-nums font-bold inline-flex items-center gap-0.5 text-teal-400"
+                                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer tabular-nums font-bold inline-flex items-center gap-0.5 text-primary"
                                     title="Aufschlüsselung anzeigen">
                                     +{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />
                                   </summary>
                                   <div className="mt-1 space-y-0.5">
                                     {ligaPunkteBreakdownByUser[r.userId].map(item => (
                                       <div key={item.label} className="text-[9px] text-gray-500 whitespace-nowrap leading-tight">
-                                        {item.label}: <span className="tabular-nums text-teal-500/80">{item.points > 0 ? "+" : ""}{fmtUpTo2(item.points)}</span>
+                                        {item.label}: <span className="tabular-nums text-primary/80">{item.points > 0 ? "+" : ""}{fmtUpTo2(item.points)}</span>
                                       </div>
                                     ))}
                                   </div>
                                 </details>
                               : eventLigapunkte > 0
-                              ? <span className={`tabular-nums font-bold inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
+                              ? <span className={`tabular-nums font-bold inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-primary-fg/80" : "text-primary"}`}
                                   title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
                                   {isLigaPunkteLive && "~"}+{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />
                                 </span>
                               : <span className="text-sm text-gray-600">–</span>}
                             {winnerBonusIfWon > 0 && (
-                              <span className="text-[9px] text-teal-500/70 tabular-nums leading-none" title="Zusätzlicher Sieger-Bonus, falls das Turnier jetzt mit dieser Platzierung enden würde">
+                              <span className="text-[9px] text-primary/70 tabular-nums leading-none" title="Zusätzlicher Sieger-Bonus, falls das Turnier jetzt mit dieser Platzierung enden würde">
                                 +{winnerBonusIfWon} falls Sieger
                               </span>
                             )}
@@ -664,7 +664,7 @@ export default function FfaView({
                                       {(proofsByEntry[`${match.id}:${e.userId}`] ?? []).map((url, i, all) => (
                                         <a key={url} href={url} target="_blank" rel="noopener noreferrer"
                                           title={`Nachweis${all.length > 1 ? ` ${i + 1}` : ""} ansehen (vom Admin bestätigt)`}
-                                          className="inline-flex items-center gap-0.5 text-gray-500 hover:text-teal-300 transition-colors">
+                                          className="inline-flex items-center gap-0.5 text-gray-500 hover:text-primary-fg transition-colors">
                                           <Camera className="w-3.5 h-3.5" />{all.length > 1 && <span className="text-[9px]">{i + 1}</span>}
                                         </a>
                                       ))}

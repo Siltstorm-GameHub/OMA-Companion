@@ -15,7 +15,7 @@ export default function RankingTabs({ tabs }: { tabs: { key: string; label: stri
               key={t.key}
               type="button"
               onClick={() => setActive(t.key)}
-              className={`px-3 py-1.5 rounded-md transition-colors ${active === t.key ? "bg-teal-500/20 text-teal-200" : "text-gray-400 hover:text-white"}`}
+              className={`px-3 py-1.5 rounded-md transition-colors ${active === t.key ? "bg-primary/20 text-teal-200" : "text-gray-400 hover:text-white"}`}
             >
               {t.label}
             </button>

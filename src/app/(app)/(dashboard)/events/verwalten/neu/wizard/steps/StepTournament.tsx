@@ -36,7 +36,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
               }`}>
               <span className={`text-sm font-semibold ${format === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
               <span className="text-xs text-gray-500">{f.desc}</span>
-              {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-teal-300">🎯 Ziel möglich</span>}
+              {supportsCommunityGoal(f.value) && <span className="text-xs font-medium text-primary-fg">🎯 Ziel möglich</span>}
             </button>
           ))}
         </div>
@@ -76,7 +76,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
 
       {/* Liga, K.O. & Co.: Community-Ziel auf die Tore laut Spielergebnis (lib/community-goal.ts) */}
       {!hasStat && !seriesFixedFormat && isResultGoalFormat(format) && (
-        <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
+        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5">
           <CommunityGoalEditor value={communityGoal} onChange={setCommunityGoal} statFields={[RESULT_SCORE_FIELD]} inSeries={!!selectedSeries}
             rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} hasEnd={!!w.endAt} />
         </div>
@@ -124,7 +124,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       )}
 
       {/* Check-in vor Turnierstart — nur Eingecheckte werden ausgelost */}
-      <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-2">
+      <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-2">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={checkInEnabled} onChange={e => setCheckInEnabled(e.target.checked)} className="w-4 h-4 mt-0.5 rounded shrink-0" />
           <div>

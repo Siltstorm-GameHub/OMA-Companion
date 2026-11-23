@@ -157,7 +157,7 @@ export default function ImageCropTool({
           <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full opacity-40 pointer-events-none" />
           <div
             onMouseDown={e => onHandleDown("move", e)}
-            className="absolute border-2 border-teal-400 bg-teal-400/10 cursor-move overflow-hidden"
+            className="absolute border-2 border-primary bg-primary/10 cursor-move overflow-hidden"
             style={{ left: rect.x, top: rect.y, width: rect.w, height: rect.h }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- zeigt den Ausschnitt scharf, Rest bleibt abgedunkelt */}
@@ -168,7 +168,7 @@ export default function ImageCropTool({
           </div>
           {(["nw", "ne", "sw", "se"] as Handle[]).map(h => (
             <div key={h} onMouseDown={e => onHandleDown(h, e)}
-              className="absolute w-3 h-3 bg-teal-400 rounded-full border border-white/60 cursor-nwse-resize"
+              className="absolute w-3 h-3 bg-primary rounded-full border border-white/60 cursor-nwse-resize"
               style={{
                 left: rect.x + (h.includes("w") ? 0 : rect.w) - 6,
                 top: rect.y + (h.includes("n") ? 0 : rect.h) - 6,

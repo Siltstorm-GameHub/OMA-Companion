@@ -24,7 +24,7 @@ export default function SeriesCompletePlayedOpen({ ctx }: { ctx: SeriesComplete 
                     <span className="text-gray-500 shrink-0">
                       {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}
                     </span>
-                    <a href={`/events/verwalten/${ev.id}/complete`} className="shrink-0 font-semibold text-teal-300 hover:text-teal-200">Abschließen</a>
+                    <a href={`/events/verwalten/${ev.id}/complete`} className="shrink-0 font-semibold text-primary-fg hover:text-teal-200">Abschließen</a>
                   </li>
                 ))}
               </ul>

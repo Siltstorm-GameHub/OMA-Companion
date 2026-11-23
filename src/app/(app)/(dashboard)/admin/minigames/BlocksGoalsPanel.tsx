@@ -60,7 +60,7 @@ export function BlocksGoalsPanel({ initial, max }: { initial: BlocksGoal[]; max:
           <button
             type="button"
             onClick={() => setGoals((prev) => [...prev, { score: (prev[prev.length - 1]?.score ?? 0) + 25_000, coins: 100, rankPoints: 0 }])}
-            className="flex items-center gap-1.5 text-xs font-semibold text-teal-300 hover:text-teal-200"
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary-fg hover:text-teal-200"
           >
             <Plus className="w-3.5 h-3.5" /> Ziel hinzufügen
           </button>
@@ -69,7 +69,7 @@ export function BlocksGoalsPanel({ initial, max }: { initial: BlocksGoal[]; max:
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium transition-colors disabled:opacity-50"
       >
         <Save className="w-4 h-4" />
         {saving ? "Speichert…" : "Speichern"}
@@ -86,7 +86,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
         min={0}
         value={value}
         onChange={(e) => onChange(Math.max(0, parseInt(e.target.value, 10) || 0))}
-        className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-teal-500/50"
+        className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-primary/50"
       />
     </label>
   );

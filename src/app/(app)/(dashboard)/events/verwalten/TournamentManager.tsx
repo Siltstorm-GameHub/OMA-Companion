@@ -974,7 +974,7 @@ export default function TournamentManager({
               <>
                 <span className="text-xs text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt — Punkte gibt es erst nach der Bestätigung">vorläufig</span>
                 <button onClick={() => confirmProvisional(match.id)} disabled={loading}
-                  className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 bg-teal-500/10 px-1.5 py-0.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20">
+                  className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary-fg hover:bg-primary/20">
                   Bestätigen
                 </button>
               </>
@@ -992,7 +992,7 @@ export default function TournamentManager({
             )}
             {isEditing && (
               <button onClick={() => cancelEdit(match.id)} disabled={loading}
-                className="inline-flex items-center gap-1 rounded-md border border-teal-500/40 px-1.5 py-0.5 text-xs font-semibold text-teal-300">
+                className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-1.5 py-0.5 text-xs font-semibold text-primary-fg">
                 <X className="w-3 h-3" /> Abbrechen
               </button>
             )}
@@ -1208,7 +1208,7 @@ export default function TournamentManager({
                       {/* Punkt 2: Werte des vorherigen Matches übernehmen (gleiche Teilnehmer über mehrere Runden) */}
                       {matchIdx > 0 && (
                         <button type="button" onClick={() => copyFromPreviousMatch(match.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors">
+                          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors max-lg:min-h-10">
                           <RefreshCw className="w-3 h-3" /> Werte aus vorherigem Match übernehmen
                         </button>
                       )}
@@ -1401,17 +1401,17 @@ export default function TournamentManager({
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading || !!teamError}
                           title={teamError ?? undefined}
-                          className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded px-3 py-1.5">
+                          className="flex items-center gap-1.5 text-xs bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded px-3 py-1.5 max-lg:min-h-10">
                           <Save className="w-3 h-3" /> Ergebnisse speichern
                         </button>
                         {isPlayed && (
                           <button onClick={() => resetMatch(match.id)} disabled={loading}
-                            className="flex items-center gap-1 text-xs text-amber-500 hover:bg-amber-900/20 rounded px-2 py-1.5 transition-colors">
+                            className="flex items-center gap-1 text-xs text-amber-500 hover:bg-amber-900/20 rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
                             <RotateCcw className="w-3.5 h-3.5" /> Zurücksetzen
                           </button>
                         )}
                         <button onClick={() => deleteMatch(match.id)} disabled={loading}
-                          className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-900/20 rounded px-2 py-1.5 transition-colors">
+                          className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-900/20 rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
                           <Trash2 className="w-3.5 h-3.5" /> Löschen
                         </button>
                       </div>
@@ -1459,7 +1459,7 @@ export default function TournamentManager({
       {([["tree", "Baum"], ["list", "Liste"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setDuelView(k)} aria-pressed={duelView === k}
           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            duelView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+            duelView === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
           }`}>
           {label}
         </button>
@@ -1498,7 +1498,7 @@ export default function TournamentManager({
       {([["random", "Zufällig"], ["rank", "Nach Rangpunkten setzen"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setSeeding(k)} aria-pressed={seeding === k}
           title={k === "rank" ? "Die Stärksten (Rangpunkte) treffen erst spät aufeinander bzw. landen in verschiedenen Gruppen" : undefined}
-          className={`rounded-md px-2 py-1 text-xs transition-colors ${seeding === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
+          className={`rounded-md px-2 py-1 text-xs transition-colors ${seeding === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
           {label}
         </button>
       ))}
@@ -1525,7 +1525,7 @@ export default function TournamentManager({
   ];
 
   const goalBar = goalProgress && goal ? (
-            <div className="rounded-xl border border-teal-500/20 bg-teal-500/[0.04] px-3 py-2 space-y-1">
+            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] px-3 py-2 space-y-1">
               <p className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
                 <span className="tabular-nums text-gray-300">
@@ -1535,7 +1535,7 @@ export default function TournamentManager({
                 </span>
               </p>
               <div className="h-1.5 rounded-full bg-line overflow-hidden">
-                <div className="h-full rounded-full bg-teal-400" style={{ width: `${goalProgress.main.percent}%` }} />
+                <div className="h-full rounded-full bg-primary" style={{ width: `${goalProgress.main.percent}%` }} />
               </div>
             </div>
   ) : null;
@@ -1599,7 +1599,7 @@ export default function TournamentManager({
             <p className="text-xs text-amber-300">Kein angemeldeter Spieler ohne Platz. Trag den Nachrücker zuerst im Reiter „Teilnehmer“ ein.</p>
           )}
           <button type="button" onClick={replacePlayerAction} disabled={loading || !replaceFrom || !replaceTo}
-            className="text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+            className="text-xs bg-teal-700/80 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
             Ersetzen
           </button>
         </div>
@@ -1635,7 +1635,7 @@ export default function TournamentManager({
                 Vorhandene Termine überschreiben
               </label>
               <button type="button" onClick={scheduleMatches} disabled={loading || !scheduleStart || scheduleInterval < 5}
-                className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+                className="text-xs bg-teal-700 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
                 Termine setzen
               </button>
             </div>
@@ -1663,7 +1663,7 @@ export default function TournamentManager({
                 </select>
                 <button type="button" disabled={loading}
                   onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50">
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50 max-lg:min-h-10">
                   <Plus className="w-3.5 h-3.5" /> Zur Runde
                 </button>
               </div>
@@ -1813,7 +1813,7 @@ export default function TournamentManager({
       {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
       {!is1v1 && statView === "rounds" && expanded.size > 0 && (
         <button onClick={saveAllExpanded} disabled={loading}
-          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
+          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
           <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
         </button>
       )}
@@ -1824,7 +1824,7 @@ export default function TournamentManager({
             {([["table", "Tabelle"], ["rounds", "Runden"]] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setStatView(k)} aria-pressed={statView === k}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  statView === k ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+                  statView === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
                 }`}>
                 {label}
               </button>

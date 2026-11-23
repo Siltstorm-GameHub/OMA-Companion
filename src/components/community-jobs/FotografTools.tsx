@@ -148,11 +148,11 @@ export function AlbumsBlock({ onChanged }: { onChanged?: () => void }) {
       {albums.length === 0 && <p className="text-xs text-gray-600">Noch keine Alben. Ein Album fasst Bilder einer Serie zusammen und lässt sich als Ganzes verlinken.</p>}
       {albums.map(a => (
         <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
-          <a href={`/community-board/album/${a.id}`} className="min-w-0 truncate text-gray-200 hover:text-teal-400 transition-colors">
-            <Images className="inline w-3 h-3 mr-1.5 text-teal-400" />{a.title} <span className="text-gray-600">({a._count?.assets ?? 0})</span>
+          <a href={`/community-board/album/${a.id}`} className="min-w-0 truncate text-gray-200 hover:text-primary transition-colors">
+            <Images className="inline w-3 h-3 mr-1.5 text-primary" />{a.title} <span className="text-gray-600">({a._count?.assets ?? 0})</span>
           </a>
           <span className="flex items-center gap-1 shrink-0">
-            <button onClick={() => copyLink(a.id)} title="Link kopieren" aria-label="Link kopieren" className="p-1 text-gray-500 hover:text-teal-400 transition-colors"><Copy className="w-3.5 h-3.5" /></button>
+            <button onClick={() => copyLink(a.id)} title="Link kopieren" aria-label="Link kopieren" className="p-1 text-gray-500 hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
             <button onClick={() => remove(a.id)} title="Album löschen" aria-label="Album löschen" className="p-1 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
           </span>
         </div>

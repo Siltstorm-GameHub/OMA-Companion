@@ -43,7 +43,7 @@ function Swatch({ item }: { item: Cosmetic }) {
     case "title":
       return <CosmeticTitle title={item.id} className="text-[9px]" />;
     case "nameColor":
-      return <CosmeticName nameColor={item.id} className="text-sm font-black">Name</CosmeticName>;
+      return <CosmeticName nameColor={item.id} className="text-sm font-extrabold">Name</CosmeticName>;
   }
 }
 
@@ -105,7 +105,7 @@ const VIEWS: { key: View; label: string }[] = [
   { key: "sets", label: "🎁 Sets" },
 ];
 
-const inputCls = "px-2 py-1.5 rounded-lg bg-line border border-line-strong text-white text-sm text-right tabular-nums focus:outline-none focus:border-teal-500/50";
+const inputCls = "px-2 py-1.5 rounded-lg bg-line border border-line-strong text-white text-sm text-right tabular-nums focus:outline-none focus:border-primary/50";
 
 export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: {
   initial: CosmeticsConfig;
@@ -194,7 +194,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         <DateField label="bis" value={w.to} onChange={to => patchSeason(season, { to })} />
         <label className="flex items-center gap-1.5 cursor-pointer">
           <input type="checkbox" checked={enabled} onChange={e => patchSeason(season, { enabled: e.target.checked })}
-            className="w-4 h-4 accent-teal-500" />
+            className="w-4 h-4 accent-primary" />
           <span className="text-xs text-gray-400 w-8">{enabled ? "An" : "Aus"}</span>
         </label>
         <button onClick={() => patchSeason(season, null)} disabled={!customized}
@@ -264,7 +264,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input type="checkbox" checked={enabled} onChange={e => patch(item.id, { enabled: e.target.checked })}
-                className="w-4 h-4 accent-teal-500" />
+                className="w-4 h-4 accent-primary" />
               <span className="text-xs text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
             </label>
           </>
@@ -313,7 +313,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input type="checkbox" checked={enabled} onChange={e => patchSet(set, { enabled: e.target.checked })}
-              className="w-4 h-4 accent-teal-500" />
+              className="w-4 h-4 accent-primary" />
             <span className="text-xs text-gray-400 w-14">{enabled ? "Im Shop" : "Aus"}</span>
           </label>
         </div>
@@ -329,7 +329,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
           <p className="text-sm text-white font-medium">Angebote der Woche</p>
           <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
             <input type="checkbox" checked={settings.weeklyEnabled} onChange={e => setSettings(s => ({ ...s, weeklyEnabled: e.target.checked }))}
-              className="w-4 h-4 accent-teal-500" />
+              className="w-4 h-4 accent-primary" />
             Rabatte aktiv
           </label>
         </div>
@@ -367,7 +367,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         {VIEWS.map(v => (
           <button key={v.key} onClick={() => setView(v.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              v.key === view ? "bg-teal-600/20 text-teal-300 ring-1 ring-teal-500/20" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+              v.key === view ? "bg-primary/20 text-primary-fg ring-1 ring-primary/20" : "text-gray-500 hover:text-gray-300 hover:bg-line"
             }`}>
             {v.label}
           </button>
@@ -416,7 +416,7 @@ export function CosmeticsConfigPanel({ initial, initialSettings, ownerCounts }: 
         <button
           onClick={save}
           disabled={saving || !dirty}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50 shadow-lg"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium transition-colors disabled:opacity-50 shadow-lg"
         >
           <Save className="w-4 h-4" />
           {saving ? "Speichert…" : dirty ? "Änderungen speichern" : "Gespeichert"}

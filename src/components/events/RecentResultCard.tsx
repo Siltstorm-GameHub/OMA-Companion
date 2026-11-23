@@ -67,19 +67,19 @@ export default function RecentResultCard({ r }: { r: RecentResultData }) {
         </p>
         <p className="text-xs text-gray-500 truncate">
           {r.dateLabel}{r.seriesName && <> · {r.seriesName}</>} · {r.playerCount} dabei
-          {r.myPlace && <> · <span className="font-semibold text-teal-300">Du: Platz {r.myPlace}</span></>}
+          {r.myPlace && <> · <span className="font-semibold text-primary-fg">Du: Platz {r.myPlace}</span></>}
         </p>
       </div>
       {r.hasResults && (
-        <span className="hidden sm:flex items-center gap-0.5 text-xs font-medium text-teal-300 shrink-0">
+        <span className="hidden sm:flex items-center gap-0.5 text-xs font-medium text-primary-fg shrink-0">
           Ergebnisse <ChevronRight className="w-3.5 h-3.5" />
         </span>
       )}
     </>
   );
 
-  const cls = `flex items-center gap-3 px-3 py-2 rounded-lg border ${r.myPlace ? "border-teal-400/25" : "border-line"} bg-surface-2 transition-colors`;
+  const cls = `flex items-center gap-3 px-3 py-2 rounded-lg border ${r.myPlace ? "border-primary/25" : "border-line"} bg-surface-2 transition-colors`;
   return r.hasResults
-    ? <GateLink href={r.href} className={`${cls} hover:bg-line focus-visible:ring-2 focus-visible:ring-teal-400/60 outline-none`}>{body}</GateLink>
+    ? <GateLink href={r.href} className={`${cls} hover:bg-line focus-visible:ring-2 focus-visible:ring-primary/60 outline-none`}>{body}</GateLink>
     : <div className={cls}>{body}</div>;
 }

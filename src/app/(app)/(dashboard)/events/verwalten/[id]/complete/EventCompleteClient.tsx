@@ -33,8 +33,8 @@ export default function EventCompleteClient(props: Props) {
           {/* Schritte springen zum jeweiligen Abschnitt */}
           {steps.map((label, i) => (
             <a key={label} href={`#schritt-${label.toLowerCase()}`}
-              className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-gray-300 hover:border-teal-500/40 hover:text-white">
-              <span className="font-semibold text-teal-300">{i + 1}</span> {label}
+              className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-xs text-gray-300 hover:border-primary/40 hover:text-white">
+              <span className="font-semibold text-primary-fg">{i + 1}</span> {label}
             </a>
           ))}
           <span className="text-xs text-gray-500">
@@ -116,7 +116,7 @@ export default function EventCompleteClient(props: Props) {
       )}
       {isFinishedSummary && (
         <p className="flex items-start gap-2 rounded-xl border border-line bg-surface-2 px-4 py-3 text-xs text-gray-300">
-          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-teal-400" />
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
           <span>
             Abgeschlossen. Unten siehst du, was vergeben wurde. Die Platzierung lässt sich noch korrigieren — beim
             Bestätigen werden Unterschiede automatisch nach- oder zurückgebucht
@@ -209,7 +209,7 @@ export default function EventCompleteClient(props: Props) {
             <button
               onClick={() => handleConfirm(false)}
               disabled={loading || noRanking}
-              className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-500 px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50"
+              className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary-hover px-4 py-2 text-sm font-semibold text-primary-ink transition-colors disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" /> {mainLabel}
             </button>

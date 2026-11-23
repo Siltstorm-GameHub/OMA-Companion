@@ -220,7 +220,7 @@ export default function GameNameInput({
           className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-xl shadow-2xl"
           style={{
             background: "rgba(13,13,18,0.98)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--color-line-strong)",
           }}
         >
           {/* Ladezustand */}
@@ -294,7 +294,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-teal-500/20 text-teal-300 rounded-sm px-0.5 not-italic">
+      <mark className="bg-primary/20 text-primary-fg rounded-sm px-0.5 not-italic">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}

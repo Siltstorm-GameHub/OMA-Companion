@@ -51,7 +51,7 @@ export default function AuditClient() {
         </span>
       </div>
 
-      {entries === null ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div> : (
+      {entries === null ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div> : (
         <div className="glass rounded-card overflow-hidden divide-y divide-line">
           {entries.length === 0 && <p className="p-4 text-xs text-gray-600">Keine Einträge.</p>}
           {entries.map(e => (

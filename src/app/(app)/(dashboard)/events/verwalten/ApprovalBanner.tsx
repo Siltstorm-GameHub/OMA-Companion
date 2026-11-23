@@ -49,7 +49,7 @@ export function RejectControl({ kind, id, compact = false, onDone }: {
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-white px-2">Abbrechen</button>
         <button type="button" onClick={reject} disabled={busy || !reason.trim()}
-          className="inline-flex items-center gap-1 rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+          className="inline-flex items-center gap-1 rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 max-lg:min-h-10">
           {busy ? "Lehnt ab…" : "Ablehnen und Ersteller informieren"}
         </button>
       </div>
@@ -104,7 +104,7 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
         </div>
         {!inheritedFromSeries && (
           <button type="button" onClick={() => post("resubmit")} disabled={busy}
-            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-colors disabled:opacity-50">
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink transition-colors disabled:opacity-50 max-lg:min-h-10">
             {busy ? "Reicht ein…" : "Erneut einreichen"}
           </button>
         )}
@@ -127,7 +127,7 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
       {canApprove && !inheritedFromSeries && (
         <>
           <button type="button" onClick={() => post("approve")} disabled={busy}
-            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50">
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 max-lg:min-h-10">
             <Check className="w-3.5 h-3.5" /> {busy ? "Gibt frei…" : "Freigeben"}
           </button>
           <RejectControl kind={kind} id={id} />

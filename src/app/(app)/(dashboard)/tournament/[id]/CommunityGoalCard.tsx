@@ -1,4 +1,5 @@
 import { formatGoalNumber, goalPercent, goalTargetLabel, goalUnit, isAvgGoal, meetsGoal, type CommunityGoalProgress, type GoalPace } from "@/lib/community-goal";
+import { Glyph } from "@/components/ui/Glyph";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -8,7 +9,7 @@ const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
 function Bar({ percent, reached, color = "teal" }: { percent: number; reached: boolean; color?: "teal" | "sky" | "rose" }) {
   const fill = reached
     ? "bg-gradient-to-r from-amber-400 to-amber-300"
-    : color === "sky" ? "bg-sky-400" : color === "rose" ? "bg-rose-400" : "bg-gradient-to-r from-teal-500 to-emerald-400";
+    : color === "sky" ? "bg-sky-400" : color === "rose" ? "bg-rose-400" : "bg-gradient-to-r from-primary to-emerald-400";
   return (
     <div className="h-2.5 w-full rounded-full bg-line overflow-hidden"
       role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percent)}>
@@ -59,10 +60,10 @@ export default function CommunityGoalCard({
   const scopeLabel = goal.scope === "team" ? "Team-Ziel" : goal.scope === "solo" ? "Einzel-Ziel" : "Community-Ziel";
 
   return (
-    <div className={`glass rounded-2xl p-5 mb-5 border ${reached ? "border-amber-400/30" : "border-teal-500/20"}`}>
+    <div className={`glass rounded-2xl p-5 mb-5 border ${reached ? "border-amber-400/30" : "border-primary/20"}`}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wide text-teal-400">🎯 {scopeLabel}</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em] text-primary-fg"><Glyph name="target" className="size-3.5" /> {scopeLabel}</p>
           <h3 className="text-base font-semibold text-white truncate">
             {goal.title || goalTargetLabel(goal)}
           </h3>
@@ -74,27 +75,27 @@ export default function CommunityGoalCard({
             </p>
           )}
           {pace && (
-            <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-emerald-300" : pace.status === "on_track" ? "text-teal-300" : "text-amber-300"}`}>
-              {pace.status === "ahead" ? "🚀" : pace.status === "on_track" ? "✅" : "⚠️"} {pace.label}
+            <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-emerald-300" : pace.status === "on_track" ? "text-primary-fg" : "text-amber-300"}`}>
+              <Glyph name={pace.status === "ahead" ? "rocket" : pace.status === "on_track" ? "check" : "warning"} className="inline size-3.5 align-[-2px]" /> {pace.label}
               <span className="font-normal text-gray-500"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
             </p>
           )}
           {!!goal.rewardSeriesPoints && !reached && !settled && (
-            <p className="text-xs text-amber-300/80 mt-0.5">🏆 +{goal.rewardSeriesPoints} Tabellenpunkte für die Eventreihe bei Erreichen</p>
+            <p className="text-xs text-amber-300/80 mt-0.5"><Glyph name="trophy" className="inline size-3.5 align-[-2px]" /> +{goal.rewardSeriesPoints} Tabellenpunkte für die Eventreihe bei Erreichen</p>
           )}
           {goal.streakBonus && (
             <p className="text-xs text-orange-300/80 mt-0.5">
-              🔥 Serien-Bonus: alle {goal.streakBonus.length} geschafften Zyklen in Folge +{goal.streakBonus.coins} Münzen
+              <Glyph name="fire" className="inline size-3.5 align-[-2px]" /> Serien-Bonus: alle {goal.streakBonus.length} geschafften Zyklen in Folge +{goal.streakBonus.coins} Münzen
               {reached && streak && streak >= 2 ? ` · jetzt ${streak}× in Folge!` : ""}
             </p>
           )}
           {!!rewardCoins && rewardCoins > 0 && !reached && !settled && (
-            <p className="text-xs text-amber-300/80 mt-0.5">🪙 {rewardCoins} Münzen {goal.scope === "team" ? "für alle im Siegerteam" : goal.scope === "solo" ? "für jeden, der die Marke erreicht" : "für alle Mitwirkenden, wenn das Ziel erreicht wird"}</p>
+            <p className="text-xs text-amber-300/80 mt-0.5"><Glyph name="coins" className="inline size-3.5 align-[-2px]" /> {rewardCoins} Münzen {goal.scope === "team" ? "für alle im Siegerteam" : goal.scope === "solo" ? "für jeden, der die Marke erreicht" : "für alle Mitwirkenden, wenn das Ziel erreicht wird"}</p>
           )}
         </div>
         {reached ? (
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30">
-            🏆 {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
+            <Glyph name="trophy" className="inline size-4 align-[-3px]" /> {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
           </span>
         ) : settled ? (
           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-line border border-line-strong">
@@ -128,7 +129,7 @@ export default function CommunityGoalCard({
               <p className="text-xs uppercase tracking-wide text-gray-500 mb-1.5">{avg ? "Ø je Teilnehmer" : "Top-Beiträge"}</p>
               <ul className="space-y-1">
                 {ranked.slice(0, 5).map(([uid, v]) => (
-                  <li key={uid} className={`flex justify-between text-sm ${uid === userId ? "text-teal-300" : "text-gray-300"}`}>
+                  <li key={uid} className={`flex justify-between text-sm ${uid === userId ? "text-primary-fg" : "text-gray-300"}`}>
                     <span className="truncate">{uname(userById.get(uid))}</span>
                     <span className="tabular-nums text-gray-400">
                       {avg ? `Ø ${fmt(v)}` : `${fmt(v)} · ${Math.round((v / Math.max(main.total, 1)) * 100)} %`}
@@ -137,7 +138,7 @@ export default function CommunityGoalCard({
                 ))}
               </ul>
               {hasMine && !ranked.slice(0, 5).some(([uid]) => uid === userId) && (avg || myValue > 0) && (
-                <p className="text-xs text-teal-300 mt-1.5">{avg ? `Dein Ø: ${fmt(myValue)}` : `Dein Beitrag: ${fmt(myValue)}`} {unit}</p>
+                <p className="text-xs text-primary-fg mt-1.5">{avg ? `Dein Ø: ${fmt(myValue)}` : `Dein Beitrag: ${fmt(myValue)}`} {unit}</p>
               )}
             </div>
           )}
@@ -186,7 +187,7 @@ export default function CommunityGoalCard({
                 return (
                   <li key={uid}>
                     <div className="flex justify-between gap-2 text-sm mb-1">
-                      <span className={`truncate ${uid === userId ? "text-teal-300 font-medium" : "text-gray-300"}`}>
+                      <span className={`truncate ${uid === userId ? "text-primary-fg font-medium" : "text-gray-300"}`}>
                         {uname(userById.get(uid))} {done && "🏆"}
                       </span>
                       <span className="tabular-nums text-gray-400">{avgPrefix}{fmt(v)} / {fmt(goal.target)}</span>
@@ -198,7 +199,7 @@ export default function CommunityGoalCard({
             </ul>
           )}
           {hasMine && !ranked.slice(0, 10).some(([uid]) => uid === userId) && (
-            <p className="text-xs text-teal-300 mt-2">Dein Stand: {avgPrefix}{fmt(myValue)} / {fmt(goal.target)} {unit}</p>
+            <p className="text-xs text-primary-fg mt-2">Dein Stand: {avgPrefix}{fmt(myValue)} / {fmt(goal.target)} {unit}</p>
           )}
         </div>
       )}

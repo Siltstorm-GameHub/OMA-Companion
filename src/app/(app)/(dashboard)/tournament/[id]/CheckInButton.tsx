@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Glyph } from "@/components/ui/Glyph";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Loader2 } from "@/components/icons";
@@ -64,13 +65,13 @@ export default function CheckInButton({
   if (state === "not_yet_open") {
     return (
       <span className="text-xs text-gray-400" title="Wer bei der Auslosung nicht bereit ist, kommt nicht in den Turnierbaum.">
-        ⏳ „Bin bereit“ ab {formatBerlinDateTime(new Date(opensAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
+        <Glyph name="clock" className="inline size-4 align-[-3px]" /> „Bin bereit“ ab {formatBerlinDateTime(new Date(opensAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
       </span>
     );
   }
   if (state === "closed") {
     return (
-      <span className={`text-xs ${checkedIn ? "text-teal-300" : "text-gray-500"}`}>
+      <span className={`text-xs ${checkedIn ? "text-primary-fg" : "text-gray-500"}`}>
         {checkedIn ? "✓ Bereit" : "Bereit-Meldung geschlossen"}
       </span>
     );
@@ -80,7 +81,7 @@ export default function CheckInButton({
       <button type="button" onClick={toggle} disabled={loading}
         className={`flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 border transition-colors disabled:opacity-50 ${
           checkedIn
-            ? "bg-teal-500/15 border-teal-500/40 text-teal-300 hover:bg-teal-500/25"
+            ? "bg-primary/15 border-primary/40 text-primary-fg hover:bg-primary/25"
             : "bg-amber-500 border-amber-400 text-gray-950 hover:bg-amber-400 animate-pulse"
         }`}>
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : checkedIn ? <Check className="w-4 h-4" /> : null}

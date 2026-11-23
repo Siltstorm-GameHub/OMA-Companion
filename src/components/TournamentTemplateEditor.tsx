@@ -5,7 +5,7 @@ import type { TournamentTemplate } from "@/lib/series-seasons";
 import SeriesGoalEditor from "@/components/SeriesGoalEditor";
 import { NumberInput } from "@/components/ui/NumberInput";
 
-const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50";
+const numCls = "w-20 rounded-lg px-2 py-1.5 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50";
 
 /**
  * Turniervorlage einer Eventreihe: Gruppenphase, Check-in und Punktemodus, die jeder neue Termin der
@@ -46,7 +46,7 @@ export default function TournamentTemplateEditor({
       {showGroups && (
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-            <input type="checkbox" checked={!!gs} className="accent-teal-500"
+            <input type="checkbox" checked={!!gs} className="accent-primary"
               onChange={e => onChange({ ...value, groupStage: e.target.checked ? {
                 groupCount: 2, advancePerGroup: DEFAULT_ADVANCE_PER_GROUP, thirdPlaceMatch: false,
                 groupLegs: 1, knockoutLegs: 1, singleLegFinal: true,
@@ -68,24 +68,24 @@ export default function TournamentTemplateEditor({
                 </label>
               </div>
               <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                <input type="checkbox" className="accent-teal-500" checked={gs.groupLegs === 2}
+                <input type="checkbox" className="accent-primary" checked={gs.groupLegs === 2}
                   onChange={e => setGs({ groupLegs: e.target.checked ? 2 : 1 })} />
                 Gruppenphase mit Hin- und Rückspiel
               </label>
               <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                <input type="checkbox" className="accent-teal-500" checked={gs.knockoutLegs === 2}
+                <input type="checkbox" className="accent-primary" checked={gs.knockoutLegs === 2}
                   onChange={e => setGs({ knockoutLegs: e.target.checked ? 2 : 1 })} />
                 K.O.-Runde mit Hin- und Rückspiel
               </label>
               {gs.knockoutLegs === 2 && (
                 <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer pl-6">
-                  <input type="checkbox" className="accent-teal-500" checked={gs.singleLegFinal !== false}
+                  <input type="checkbox" className="accent-primary" checked={gs.singleLegFinal !== false}
                     onChange={e => setGs({ singleLegFinal: e.target.checked })} />
                   Finale trotzdem als Einzelspiel
                 </label>
               )}
               <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                <input type="checkbox" className="accent-teal-500" checked={gs.thirdPlaceMatch === true}
+                <input type="checkbox" className="accent-primary" checked={gs.thirdPlaceMatch === true}
                   onChange={e => setGs({ thirdPlaceMatch: e.target.checked })} />
                 Spiel um Platz 3
               </label>
@@ -96,7 +96,7 @@ export default function TournamentTemplateEditor({
 
       <div className="space-y-2">
         <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-          <input type="checkbox" className="accent-teal-500" checked={value.checkInEnabled === true}
+          <input type="checkbox" className="accent-primary" checked={value.checkInEnabled === true}
             onChange={e => onChange({ ...value, checkInEnabled: e.target.checked })} />
           Check-in vor Turnierstart
           {value.checkInEnabled && <span className="text-xs text-gray-500">(öffnet {CHECK_IN_MINUTES} Min. vor Start)</span>}
@@ -106,7 +106,7 @@ export default function TournamentTemplateEditor({
       {showPoints && (
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-            <input type="checkbox" className="accent-teal-500" checked={!!value.matchResultPoints}
+            <input type="checkbox" className="accent-primary" checked={!!value.matchResultPoints}
               onChange={e => onChange({ ...value, matchResultPoints: e.target.checked ? { win: 30, draw: 10 } : null })} />
             Liga: Münzen je Sieg/Unentschieden statt Platzierung{anyFormat && <span className="text-gray-600">(nur Liga-Modus)</span>}
           </label>

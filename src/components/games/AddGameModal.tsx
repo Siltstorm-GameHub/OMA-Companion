@@ -174,11 +174,11 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Schon in der Spieleliste</p>
               {result.local.map(g => (
                 <Link key={g.slug} href={`/spiele/${g.slug}`} onClick={onClose}
-                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 bg-teal-500/[0.06] border border-teal-500/20 hover:bg-teal-500/10 transition-colors">
+                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 bg-primary/[0.06] border border-primary/20 hover:bg-primary/10 transition-colors">
                   <GameCover game={g.name} coverUrl={g.coverUrl} className="w-14 h-8" rounded="rounded-md" fallbackVariant="plain" />
                   <span className="flex-1 min-w-0 text-sm text-white truncate">{g.name}</span>
-                  <span className="text-xs text-teal-300 shrink-0">{g.status === "PENDING" ? "Wartet auf Freischaltung" : "Ansehen"}</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-teal-300 shrink-0" />
+                  <span className="text-xs text-primary-fg shrink-0">{g.status === "PENDING" ? "Wartet auf Freischaltung" : "Ansehen"}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-primary-fg shrink-0" />
                 </Link>
               ))}
             </div>
@@ -197,11 +197,11 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                 </Link>
               ) : (
                 <button key={s.appId} type="button" onClick={() => pick({ steamAppId: s.appId }, s.name)}
-                  className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
+                  className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
                   <span className="flex-1 min-w-0 text-sm text-white truncate">{s.name}</span>
-                  <Plus className="w-4 h-4 text-teal-400 shrink-0" />
+                  <Plus className="w-4 h-4 text-primary shrink-0" />
                 </button>
               ))}
             </div>
@@ -229,9 +229,9 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                   </Link>
                 ) : (
                   <button key={g.igdbId} type="button" onClick={() => pick({ igdbId: g.igdbId }, g.name)}
-                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-teal-500/40 hover:bg-teal-500/10 transition-colors">
+                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
                     {inner}
-                    <Plus className="w-4 h-4 text-teal-400 shrink-0" />
+                    <Plus className="w-4 h-4 text-primary shrink-0" />
                   </button>
                 );
               })}
@@ -257,7 +257,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
       {step.kind === "loading" && (
         <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-400">
-          <Loader2 className="w-6 h-6 animate-spin text-teal-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
           Hole Infos zu „{step.name}“ …
         </div>
       )}
@@ -268,7 +268,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
           <div className="flex justify-center gap-2">
             <Button variant="ghost" onClick={back} icon={<ArrowLeft className="w-4 h-4" />}>Zurück</Button>
             <Link href={`/spiele/${step.slug}`} onClick={onClose}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-teal-600 hover:bg-teal-500 text-white transition-colors">
+              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
               Zum Spiel <ChevronRight className="w-4 h-4" />
             </Link>
           </div>

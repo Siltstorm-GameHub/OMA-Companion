@@ -112,7 +112,6 @@ html {
   --violet-glow:      transparent;
   --teal-glow:        transparent;
   --crimson-glow:     transparent;
-  --aurora-vignette:  none;
   --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 10px 28px rgb(0 0 0 / 0.45);
 
   /* Navigation (Seitenleiste / untere Leiste / Menüs) */
@@ -136,29 +135,6 @@ html {
   --color-success-subtle: var(--color-success-soft);
   --color-warning-subtle: var(--color-warning-soft);
 }
-
-/* ── Dynamic Notch animations ──────────────────────────────────── */
-@keyframes notch-slide-down {
-  from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0)     scale(1);    }
-}
-@keyframes notch-slide-up {
-  from { opacity: 1; transform: translateX(-50%) translateY(0)      scale(1);    }
-  to   { opacity: 0; transform: translateX(-50%) translateY(-14px)  scale(0.95); }
-}
-@keyframes notch-fade-in {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1)    translateY(0);     }
-}
-
-/* ── Theme-Transition (View Transitions API) ───────────────────── */
-::view-transition-old(root) { animation: none; z-index: 1; }
-::view-transition-new(root) {
-  z-index: 2;
-  clip-path: circle(0% at 0% 100%);
-  animation: theme-circle-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-@keyframes theme-circle-reveal { to { clip-path: circle(150% at 0% 100%); } }
 
 /* ── Base ──────────────────────────────────────────────────────── */
 html, body { overflow-x: hidden; }
@@ -209,7 +185,6 @@ body {
   #__next, main, aside, header, nav, footer { position: relative; z-index: 2; }
 }
 
-
 /* ── Karten (Richtung G) ────────────────────────────────────────── */
 /* Klickbare Karten: kein Anheben, kein Leuchten – beim Überfahren nur hellerer Rand. */
 .card-hover {
@@ -220,23 +195,10 @@ body {
   border-color: var(--color-line-strong) !important;
 }
 
-.card-hover-glow {
-  transition: background-color 150ms ease, border-color 150ms ease !important;
-}
-.card-hover-glow:hover {
-  border-color: var(--color-line-strong) !important;
-}
-
 /* Alte Namen */
 .card-glow-rose:hover,
-.card-glow-violet:hover {
-  border-color: var(--color-line-strong) !important;
-}
 
 /* Standalone 3D shadow utility */
-.shadow-3d {
-  box-shadow: var(--shadow-card);
-}
 
 /* ── Transitions ────────────────────────────────────────────────── */
 a, button, [role="button"] {
@@ -306,20 +268,8 @@ select.input-glass option { background: var(--color-surface-2); }
 }
 
 /* ── Cut-corner cards — Gaming aesthetic ───────────────────────── */
-.card-cut {
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
-}
-.card-cut-sm {
-  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
-}
-.card-cut-tr {
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
-}
 
 /* ── Gaming accent bars ────────────────────────────────────────── */
-.accent-violet { border-left: 2px solid #8b5cf6 !important; }
-.accent-teal   { border-left: 2px solid #14b8a6 !important; }
-.accent-amber  { border-left: 2px solid #f59e0b !important; }
 
 /* ── Display font ──────────────────────────────────────────────── */
 /* Überschriften: gleiche Schrift wie der Fließtext (Plus Jakarta Sans), nur kräftiger gesetzt */
@@ -333,29 +283,11 @@ select.input-glass option { background: var(--color-surface-2); }
 .text-gradient-gaming {
   color: var(--color-primary-fg);
 }
-.text-gradient-gold {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.text-gradient-teal {
-  background: linear-gradient(135deg, #5eead4 0%, #14b8a6 50%, #0d9488 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 
 /* ── Neon-Klassen: Leuchten entfernt (Entwurf: kein Glow), Klassen bleiben als No-op ── */
-.neon-teal, .neon-violet, .neon-amber, .neon-crimson, .neon-rose { text-shadow: none; }
 
 /* ── Safe area ──────────────────────────────────────────────────── */
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.safe-area-pt { padding-top:    env(safe-area-inset-top,    0px); }
-.safe-area-px {
-  padding-left:  env(safe-area-inset-left,  0px);
-  padding-right: env(safe-area-inset-right, 0px);
-}
 
 /* Nach-oben-Knopf: über der unteren Leiste (bis lg), am Desktop unten rechts */
 .back-to-top-btn {
@@ -378,11 +310,9 @@ select.input-glass option { background: var(--color-surface-2); }
 /* Disable card lift animations on touch — hover states don't fire cleanly */
 @media (pointer: coarse) {
   .card-hover:hover  { transform: none; }
-  .card-hover-glow:hover { transform: none; }
   /* Faster active feedback instead */
   .card-hover:active { transform: scale(0.985); }
 }
-
 
 /*
  * ── Animationen ─────────────────────────────────────────────────────
@@ -394,15 +324,7 @@ select.input-glass option { background: var(--color-surface-2); }
 .stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .stagger-6 { animation-delay: 0ms; }
 
 /* ── Animations (Definitionen) ──────────────────────────────────── */
-@keyframes fade-in        { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0);  } }
-@keyframes fade-in-scale  { from { opacity:0; transform:scale(0.96);      } to { opacity:1; transform:scale(1);      } }
 @keyframes slide-up       { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-.animate-fade-in-scale { animation: fade-in-scale 0.25s ease both; }
-
-@keyframes card-reveal {
-  0%   { opacity: 0; transform: translateY(16px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
 
 .stagger-1 { animation-delay:  40ms; }
 .stagger-2 { animation-delay:  80ms; }
@@ -533,171 +455,8 @@ select.input-glass option { background: var(--color-surface-2); }
 }
 .icon-bounce-new { display: inline-flex; animation: icon-bounce-new 0.7s ease-in-out 2; }
 
-/* ── Progress shimmer — Teal ────────────────────────────────────── */
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-}
-.progress-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(20,184,166,0.6)  0%,
-    rgba(20,184,166,1)    35%,
-    rgba(94,234,212,1)    50%,
-    rgba(45,212,191,0.9)  65%,
-    rgba(20,184,166,1)    80%,
-    rgba(20,184,166,0.6)  100%
-  );
-  background-size: 200% auto;
-  animation: shimmer 2.2s linear infinite;
-}
-.progress-shimmer-violet {
-  background: linear-gradient(
-    90deg,
-    rgba(109,40,217,0.6)  0%,
-    rgba(139,92,246,1)    35%,
-    rgba(167,139,250,1)   50%,
-    rgba(139,92,246,1)    65%,
-    rgba(109,40,217,0.6)  100%
-  );
-  background-size: 200% auto;
-  animation: shimmer 2.2s linear infinite;
-}
-
 /* Glanz-Streifen beim Überfahren entfernt (Entwurf: kein Leuchten) – Klasse bleibt als No-op */
 .card-shine { overflow: hidden; }
-
-/* ── Glow pulse (active status dot) ────────────────────────────── */
-@keyframes glow-ring {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
-  50%       { box-shadow: 0 0 0 5px rgba(52,211,153,0); }
-}
-.glow-active { animation: glow-ring 2s ease-in-out infinite; }
-
-/* ── Teal pulse glow (avatar, highlights) ───────────────────────── */
-@keyframes pulse-glow-teal {
-  0%, 100% { box-shadow: 0 0 8px rgba(20,184,166,0.4),  0 0 20px rgba(20,184,166,0.15); }
-  50%       { box-shadow: 0 0 20px rgba(20,184,166,0.7), 0 0 40px rgba(20,184,166,0.30); }
-}
-.pulse-glow-rose { animation: pulse-glow-teal 2.5s ease-in-out infinite; }
-
-/* Aurora- und Partikel-Hintergründe entfernt */
-
-/* ── Dot grid background — Teal-getönt ─────────────────────────── */
-.bg-grid {
-  background-image: radial-gradient(circle, rgba(20,184,166,0.07) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-/* ── Line grid — feiner Raster für Tiefe ───────────────────────── */
-.bg-grid-lines {
-  background-image:
-    linear-gradient(rgba(20,184,166,0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20,184,166,0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-}
-
-/* ── Noise grain — organische Textur ───────────────────────────── */
-.bg-noise::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.055'/%3E%3C/svg%3E");
-  background-size: 300px 300px;
-  mix-blend-mode: overlay;
-  z-index: 0;
-}
-
-/* ── Scanline overlay ────────────────────────────────────────────── */
-.scanlines::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-  pointer-events: none;
-  z-index: 0;
-  border-radius: inherit;
-}
-
-/* Hellmodus entfernt: Der Entwurf sieht nur das dunkle Dashboard vor. */
-
-/* ── Float — sanftes Schweben ───────────────────────────────────── */
-@keyframes float {
-  0%, 100% { transform: translateY(0px);  }
-  50%       { transform: translateY(-7px); }
-}
-.animate-float { animation: float 4s ease-in-out infinite; }
-.animate-float-slow { animation: float 6s ease-in-out infinite; }
-.animate-float-delay { animation: float 4s ease-in-out 1s infinite; }
-
-/* ── Glow Pulse — Karten leuchten auf ──────────────────────────── */
-@keyframes glow-pulse-teal {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(20,184,166,0.08), 0 0 20px rgba(20,184,166,0.04); }
-  50%       { box-shadow: 0 0 0 1px rgba(20,184,166,0.22), 0 0 40px rgba(20,184,166,0.10); }
-}
-.animate-glow-pulse { animation: glow-pulse-teal 3s ease-in-out infinite; }
-
-/* ── Blur Reveal — Text erscheint aus Unschärfe ─────────────────── */
-@keyframes blur-reveal {
-  from { opacity: 0; filter: blur(10px); letter-spacing: 0.15em; }
-  to   { opacity: 1; filter: blur(0px);  letter-spacing: normal;  }
-}
-.animate-blur-reveal { animation: blur-reveal 0.6s cubic-bezier(0.16,1,0.3,1) both; }
-
-/* ── Aurora sweep — Gradient läuft über Elemente ───────────────── */
-@keyframes aurora-sweep {
-  0%   { background-position: 0%   50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0%   50%; }
-}
-.aurora-text {
-  background: linear-gradient(
-    90deg,
-    #2dd4bf 0%, #14b8a6 20%, #5eead4 40%, #14b8a6 60%, #0d9488 80%, #2dd4bf 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: aurora-sweep 4s ease-in-out infinite;
-}
-
-/* ── Number pop — Ziffern springen beim Erscheinen ──────────────── */
-@keyframes number-pop {
-  0%   { opacity: 0; transform: scale(0.7) translateY(8px); }
-  70%  { transform: scale(1.08) translateY(-2px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-.animate-number-pop { animation: number-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-/* ── Scanline sweep — Lichtstrahl zieht über Karte ──────────────── */
-@keyframes scan-sweep {
-  0%   { transform: translateX(-100%) skewX(-15deg); opacity: 0;   }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { transform: translateX(300%)  skewX(-15deg); opacity: 0;   }
-}
-.scan-on-load::before {
-  content: '';
-  position: absolute;
-  inset: 0; left: -60%; width: 50%;
-  background: linear-gradient(90deg, transparent, rgba(20,184,166,0.08), rgba(255,255,255,0.05), transparent);
-  pointer-events: none;
-  animation: scan-sweep 0.8s ease forwards;
-}
-
-/* ── Carousel-Fortschrittsbalken — füllt sich bis zur nächsten Rotation ── */
-@keyframes carousel-progress-fill {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-.carousel-progress-fill {
-  animation: carousel-progress-fill linear forwards;
-  animation-duration: var(--carousel-interval, 7000ms);
-  transform-origin: left;
-}
 
 /* ── active:scale für Link-Karten (card-hover) ──────────────────── */
 a.card-hover:active { transform: scale(0.985); }
@@ -719,11 +478,6 @@ a.card-hover:active { transform: scale(0.985); }
   pointer-events: none;
 }
 
-/* ── Podium-Glow — Top-3 Tabellenzeilen ────────────────────────── */
-.podium-gold   { box-shadow: inset 0 0 40px rgba(251,191,36,0.07),  inset 4px 0 0 rgba(251,191,36,0.35)  !important; }
-.podium-silver { box-shadow: inset 0 0 30px rgba(156,163,175,0.06), inset 4px 0 0 rgba(156,163,175,0.30) !important; }
-.podium-bronze { box-shadow: inset 0 0 30px rgba(180,83,9,0.07),    inset 4px 0 0 rgba(180,83,9,0.28)    !important; }
-
 /* ── Bottom-Sheet — Slide-Up von unten ─────────────────────────── */
 @keyframes sheet-slide-up {
   from { transform: translateY(100%); opacity: 0.8; }
@@ -736,13 +490,6 @@ a.card-hover:active { transform: scale(0.985); }
 }
 .sheet-backdrop { animation: sheet-backdrop-in 0.2s ease both; }
 
-/* ── Value-Flash — Live-Werte aufleuchten wenn sie sich ändern ──── */
-@keyframes value-flash {
-  0%   { background-color: rgba(20,184,166,0.30); color: #fff; }
-  100% { background-color: transparent;           color: inherit; }
-}
-.value-flash { animation: value-flash 0.7s ease-out both; }
-
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -750,11 +497,6 @@ a.card-hover:active { transform: scale(0.985); }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  [data-animated-bg] { display: none !important; }
-  .progress-shimmer  { background: rgba(20,184,166,0.8) !important; animation: none !important; }
-  .animate-float, .animate-float-slow, .animate-float-delay,
-  .animate-glow-pulse, .aurora-text, .animate-blur-reveal,
-  .animate-number-pop, .scan-on-load::before { animation: none !important; }
 }
 
 /*

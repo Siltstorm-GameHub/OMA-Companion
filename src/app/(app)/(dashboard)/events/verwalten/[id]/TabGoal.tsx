@@ -32,7 +32,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
     <div className="space-y-4">
       {/* ── Stand ── */}
       {goalStatus && (
-        <section aria-label="Stand des Ziels" className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
+        <section aria-label="Stand des Ziels" className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             <p className="text-sm font-semibold text-teal-200">Stand: {goalStatus.current} von {goalStatus.target}</p>
             <span className="text-xs text-gray-400">
@@ -42,7 +42,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
             </span>
           </div>
           <div className="h-2 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={Math.floor(goalStatus.percent)} aria-valuemin={0} aria-valuemax={100}>
-            <div className={`h-full rounded-full ${goalStatus.reached ? "bg-emerald-400" : "bg-teal-400"}`} style={{ width: `${goalStatus.percent}%` }} />
+            <div className={`h-full rounded-full ${goalStatus.reached ? "bg-emerald-400" : "bg-primary"}`} style={{ width: `${goalStatus.percent}%` }} />
           </div>
           {goalStatus.rewarded.length > 0 ? (
             <div>
@@ -86,7 +86,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
               ] as const).map(([value, label, hint]) => (
                 <button key={value} type="button" onClick={() => setGoalMode(value)} aria-pressed={goalMode === value}
                   className={`flex-1 min-w-[150px] text-left rounded-lg p-2.5 border transition-colors ${
-                    goalMode === value ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                    goalMode === value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                   }`}>
                   <span className={`block text-sm font-semibold ${goalMode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
                   <span className="block text-xs text-gray-500">{hint}</span>
@@ -120,7 +120,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           <CommunityGoalEditor value={{ ...goalForm, enabled: true }} onChange={f => setGoalForm({ ...f, enabled: true })}
             statFields={setupFields} inSeries={!!event.series} hideToggle {...editorProps} />
           <button type="button" onClick={() => createGoalTracking(setupFields)} disabled={goalSetupLoading || setupFields.length === 0}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50">
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-primary-hover disabled:opacity-50">
             {goalSetupLoading ? "Legt an…" : "Ziel anlegen"}
           </button>
           <p className="text-xs text-gray-500">„Ziel anlegen“ gilt sofort.</p>
@@ -135,7 +135,7 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           <p className="text-xs text-gray-500">Ziele gibt es bei: {GOAL_FORMAT_NAMES}.</p>
           {!hasTournament && (
             <button type="button" onClick={() => setActiveTab("tournament")}
-              className="text-xs font-semibold text-teal-300 hover:text-teal-200">Zum Spielplan und Format wählen →</button>
+              className="text-xs font-semibold text-primary-fg hover:text-teal-200">Zum Spielplan und Format wählen →</button>
           )}
         </section>
       )}

@@ -11,7 +11,7 @@ import { ArrowRight } from "@/components/icons";
 export type HubAccent = "teal" | "violet";
 
 const ACCENT: Record<HubAccent, { border: string; borderStrong: string; footer: string; hover: string }> = {
-  teal:   { border: "border-teal-400/25",  borderStrong: "border-teal-400/50",  footer: "text-teal-300",   hover: "hover:bg-teal-400/[0.06]" },
+  teal:   { border: "border-primary/25",  borderStrong: "border-primary/50",  footer: "text-primary-fg",   hover: "hover:bg-primary/[0.06]" },
   violet: { border: "border-[#9146ff]/30", borderStrong: "border-[#9146ff]/55", footer: "text-violet-300", hover: "hover:bg-violet-400/[0.06]" },
 };
 

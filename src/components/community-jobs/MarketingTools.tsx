@@ -110,7 +110,7 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
                         <span className={`flex items-center gap-1.5 ${done ? "text-emerald-400" : isDue ? "text-amber-400" : "text-gray-500"}`}>
                           {done ? <Check className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-current inline-block" />}
                           {label}
-                          {planned && <span className="text-teal-300">· geplant {formatBerlinDate(planned, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                          {planned && <span className="text-primary-fg">· geplant {formatBerlinDate(planned, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
                           {!done && !planned && step.daysBefore < 999 && <span className="text-gray-600">{isDue ? "· jetzt fällig" : `· ab ${formatBerlinDate(due, { day: "2-digit", month: "2-digit" })}`}</span>}
                         </span>
                         {!done && !planned && (

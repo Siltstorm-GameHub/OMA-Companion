@@ -33,7 +33,7 @@ export default function MyEventResult({
   }
   if (!place && !reward) return null;
   return (
-    <section aria-label="Dein Ergebnis" className="glass rounded-2xl px-4 py-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 border border-teal-400/20">
+    <section aria-label="Dein Ergebnis" className="glass rounded-2xl px-4 py-3 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 border border-primary/20">
       <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Dein Ergebnis</span>
       {place ? (
         <span className="text-sm font-semibold text-white">Platz {place} <span className="text-gray-500 font-normal">von {total}</span></span>
@@ -44,7 +44,7 @@ export default function MyEventResult({
         <span className="flex items-center gap-1 text-sm font-semibold text-amber-400"><CoinIcon size={14} />+{reward.coins}</span>
       )}
       {reward && reward.rankPoints > 0 && (
-        <span className="flex items-center gap-1 text-sm font-semibold text-teal-400"><RankPointsIcon size={14} />+{reward.rankPoints}</span>
+        <span className="flex items-center gap-1 text-sm font-semibold text-primary"><RankPointsIcon size={14} />+{reward.rankPoints}</span>
       )}
     </section>
   );

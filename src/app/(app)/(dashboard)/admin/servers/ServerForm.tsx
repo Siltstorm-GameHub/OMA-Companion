@@ -129,8 +129,8 @@ export default function ServerForm({
 
       <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
         <input type="checkbox" checked={form.openAccess} onChange={(e) => set("openAccess", e.target.checked)}
-          className="accent-teal-500 w-3.5 h-3.5" />
-        <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+          className="accent-primary w-3.5 h-3.5" />
+        <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
         Ohne Bewerbung für alle freigeben (jeder angemeldete User sieht die Zugangsdaten sofort)
       </label>
 

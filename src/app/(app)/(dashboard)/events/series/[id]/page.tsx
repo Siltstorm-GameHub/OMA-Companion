@@ -68,7 +68,7 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
               <Archive className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
+              <p className="text-sm font-medium text-white truncate group-hover:text-primary-fg transition-colors">
                 {s.name}
                 {s.id === currentId && <span className="ml-2 text-xs text-gray-600">(diese Saison)</span>}
               </p>
@@ -100,7 +100,7 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
               <span className="text-xs px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
                 Saison {s.seasonNumber ?? "–"}
               </span>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
+              <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-primary transition-colors" />
             </div>
           </Link>
         ))}
@@ -123,7 +123,7 @@ function SeasonSwitcher({ currentId, seasons }: {
           <Link key={s.id} href={`/events/series/${s.id}`} title={s.name} aria-current={current ? "page" : undefined}
             className={`shrink-0 text-xs rounded-full px-3 py-1.5 border transition-colors whitespace-nowrap ${
               current
-                ? "bg-teal-500/15 border-teal-500/40 text-teal-200 font-semibold"
+                ? "bg-primary/15 border-primary/40 text-teal-200 font-semibold"
                 : "border-line text-gray-400 hover:text-white hover:border-line-strong"
             }`}>
             Saison {s.seasonNumber ?? i + 1}
@@ -756,7 +756,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               <span key={r.place} className="flex items-center gap-1 text-sm font-semibold text-white tabular-nums">
                 <PlaceMedal place={r.place} />
                 {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400"><CoinIcon size={13} />{r.coins.toLocaleString("de-DE")}</span>}
-                {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-400"><RankPointsIcon size={13} />{r.rankPoints}</span>}
+                {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-primary"><RankPointsIcon size={13} />{r.rankPoints}</span>}
               </span>
             ))}
           </div>
@@ -781,13 +781,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── Back ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <Link href="/events"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors">
           <ArrowLeft className="w-4 h-4" /> Zurück zu Events
         </Link>
         {/* Aktive Saison-Link (wenn gerade auf archivierter Saison) */}
         {isArchived && activeSibling && (
           <Link href={`/events/series/${activeSibling.id}`}
-            className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 border border-teal-500/20 hover:border-teal-500/40 rounded-lg px-3 py-1.5 transition-all">
+            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-fg border border-primary/20 hover:border-primary/40 rounded-lg px-3 py-1.5 transition-all max-lg:min-h-10">
             <CheckCircle2 className="w-3.5 h-3.5" /> Zur aktuellen Saison →
           </Link>
         )}
@@ -868,7 +868,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 <p className="text-sm text-gray-400">Kein Gesamtsieger eingetragen.</p>
               )}
               {activeSibling && (
-                <Link href={`/events/series/${activeSibling.id}`} className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-teal-500 px-3 py-1.5 text-xs font-semibold text-teal-950 hover:bg-teal-400">
+                <Link href={`/events/series/${activeSibling.id}`} className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10">
                   Zur aktuellen Saison
                 </Link>
               )}
@@ -884,7 +884,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               <p className="text-sm text-gray-300">
                 {nextCard.date.top === "HEUTE" ? "Heute" : nextCard.date.top === "MORGEN" ? "Morgen" : `${nextCard.date.weekday.charAt(0)}${nextCard.date.weekday.slice(1).toLowerCase()} ${nextCard.date.day}.`}
                 {" · "}{nextCard.date.time} Uhr
-                {nextStartsIn && <span className="text-teal-300"> · {nextStartsIn}</span>}
+                {nextStartsIn && <span className="text-primary-fg"> · {nextStartsIn}</span>}
               </p>
               <p className="text-xs text-gray-500">
                 {nextCard.playerCount}{nextCard.maxPlayers ? `/${nextCard.maxPlayers}` : ""} dabei
@@ -895,7 +895,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                 <EventCardActions ev={nextSource} card={nextCard} viewer={viewer} userId={userId} />
                 <a href={`/api/events/${nextSource.id}/ics`} download
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line">
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line max-lg:min-h-10">
                   <CalendarPlus className="w-3.5 h-3.5" /> Kalender
                 </a>
               </div>
@@ -921,7 +921,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             <div key={group.eventId} className="glass rounded-2xl p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-500 uppercase tracking-widest">{group.eventTitle}</span>
-                <Link href={`/tournament/${group.eventId}`} className="text-xs text-gray-600 hover:text-teal-400 transition-colors">
+                <Link href={`/tournament/${group.eventId}`} className="text-xs text-gray-600 hover:text-primary transition-colors">
                   Zum Event →
                 </Link>
               </div>
@@ -967,7 +967,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {(series.rules || punkteItems.length > 0 || (isTournamentSeries && seriesPokale.length === 0 && !isArchived)) && (
         <section id="regeln" aria-label="So funktioniert's" className="space-y-3 scroll-mt-24">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-teal-400" /> So funktioniert&apos;s
+            <Zap className="w-3.5 h-3.5 text-primary" /> So funktioniert&apos;s
           </h2>
           {punkteItems.length > 0 && (
             <div className="glass rounded-2xl p-4">
@@ -977,7 +977,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                   <span key={i} className="flex items-center gap-2 glass-heavy rounded-card px-2.5 py-1.5" title={p.who}>
                     <span className="text-sm">{p.emoji}</span>
                     <span className="text-xs text-gray-300">{p.label}</span>
-                    <span className="text-xs font-bold text-teal-400">{p.pts}</span>
+                    <span className="text-xs font-bold text-primary">{p.pts}</span>
                   </span>
                 ))}
               </div>

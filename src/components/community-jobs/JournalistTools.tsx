@@ -46,11 +46,11 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-300 flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
+          <TrendingUp className="w-3.5 h-3.5 text-primary" />
           {stats.published} {stats.published === 1 ? "Beitrag" : "Beiträge"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -75,7 +75,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
           {stats.top && (
             <p className="text-xs text-gray-400">
-              Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-gray-200 hover:text-teal-300">{stats.top.title}</a> <span className="text-gray-600">({stats.top.votes} 👍)</span>
+              Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-gray-200 hover:text-primary-fg">{stats.top.title}</a> <span className="text-gray-600">({stats.top.votes} 👍)</span>
             </p>
           )}
 
@@ -88,7 +88,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.votes}`}>
                     <span className="text-[9px] text-gray-500">{w.votes}</span>
-                    <div className="w-full rounded-t bg-teal-400/70" style={{ height: `${Math.max(4, (w.votes / maxWeek) * 36)}px` }} />
+                    <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(4, (w.votes / maxWeek) * 36)}px` }} />
                     <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
                 ))}
@@ -259,7 +259,7 @@ function InterviewsBlock() {
                 {questions.length > 1 && <button onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))} aria-label="Frage entfernen" className="text-gray-600 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>}
               </div>
             ))}
-            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-xs text-gray-500 hover:text-teal-300">+ Weitere Frage</button>}
+            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-xs text-gray-500 hover:text-primary-fg">+ Weitere Frage</button>}
           </div>
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setComposing(false)}>Abbrechen</Button>

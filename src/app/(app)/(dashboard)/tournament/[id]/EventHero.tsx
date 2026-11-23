@@ -80,7 +80,7 @@ export default function EventHero({
                 </span>
               )}
               {myStatus && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${myStatus.tone === "teal" ? "bg-teal-400/15 text-teal-300" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${myStatus.tone === "teal" ? "bg-primary/15 text-primary-fg" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> {myStatus.label}
                 </span>
               )}
@@ -104,7 +104,7 @@ export default function EventHero({
           </div>
           {period && (
             <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40" title={`${Math.round(period.progress * 100)} % des Zeitraums vorbei`}>
-              <div className="h-full bg-teal-400/80" style={{ width: `${period.progress * 100}%` }} />
+              <div className="h-full bg-primary/80" style={{ width: `${period.progress * 100}%` }} />
             </div>
           )}
         </div>

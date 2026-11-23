@@ -153,8 +153,8 @@ export default async function PointsPage({ searchParams }: { searchParams: Promi
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500">Rang-Punkte</p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-xl font-bold text-teal-300 tabular-nums"><RankPointsIcon size={16} /> {fmt(rankPoints)}</p>
-            <p className="text-xs text-gray-500">nur für Platzierungen, zählen für die <Link href="/leaderboard" className="text-teal-400 hover:text-teal-300">Rangliste</Link></p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xl font-bold text-primary-fg tabular-nums"><RankPointsIcon size={16} /> {fmt(rankPoints)}</p>
+            <p className="text-xs text-gray-500">nur für Platzierungen, zählen für die <Link href="/leaderboard" className="text-primary hover:text-primary-fg">Rangliste</Link></p>
           </div>
           <Link href="/shop"
             className={buttonClasses("accent", "lg", "col-span-2 lg:col-span-1")}>

@@ -306,7 +306,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                     <button
                       onClick={() => finishNow(contest.id)}
                       disabled={finishing === contest.id}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-50 transition-colors max-lg:min-h-10"
                     >
                       {finishing === contest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Square className="w-3 h-3" />}
                       Jetzt beenden
@@ -340,7 +340,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
               <button
                 onClick={() => saveRewards(contest.id)}
                 disabled={saving === contest.id}
-                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-primary-soft border border-primary/40 text-primary-fg hover:bg-primary-hover disabled:opacity-50 transition-colors ml-auto"
+                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-primary-soft border border-primary/40 text-primary-fg hover:bg-primary-hover disabled:opacity-50 transition-colors ml-auto max-lg:min-h-10"
               >
                 {saving === contest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 Speichern
@@ -387,7 +387,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                         {noAccountWinner && (
                           <button
                             onClick={() => toggleLinking(winner.id)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors shrink-0"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 border border-amber-500/20 text-amber-300 hover:bg-amber-500/20 transition-colors shrink-0 max-lg:min-h-10"
                           >
                             <Link2 className="w-3.5 h-3.5" /> Konto verknüpfen
                           </button>

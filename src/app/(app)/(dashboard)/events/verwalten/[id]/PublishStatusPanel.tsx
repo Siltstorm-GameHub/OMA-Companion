@@ -96,7 +96,7 @@ export default function PublishStatusPanel({
         ))}
       </ul>
       <button type="button" disabled={busy} onClick={retry}
-        className="flex items-center gap-1.5 text-xs text-amber-300 border border-amber-600/50 rounded-lg px-3 py-1.5 hover:bg-amber-900/20 disabled:opacity-40">
+        className="flex items-center gap-1.5 text-xs text-amber-300 border border-amber-600/50 rounded-lg px-3 py-1.5 hover:bg-amber-900/20 disabled:opacity-40 max-lg:min-h-10">
         <RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} /> Erneut versuchen
       </button>
     </div>

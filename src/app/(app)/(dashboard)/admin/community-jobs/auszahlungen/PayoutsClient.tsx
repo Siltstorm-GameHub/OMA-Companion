@@ -92,7 +92,7 @@ export default function PayoutsClient() {
       <section className="space-y-2">
         <h2 className={LABEL}>Täglicher Lauf (letzte 10)</h2>
         <div className="glass rounded-card overflow-hidden divide-y divide-line">
-          {runs === null && <div className="p-4"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>}
+          {runs === null && <div className="p-4"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>}
           {runs?.length === 0 && <p className="p-4 text-xs text-gray-600">Noch kein Lauf protokolliert (wird ab dem nächsten Cron-Lauf aufgezeichnet).</p>}
           {runs?.map(r => (
             <div key={r.id} className="p-3 space-y-1">
@@ -108,7 +108,7 @@ export default function PayoutsClient() {
 
       <section className="space-y-2">
         <h2 className={LABEL}>Auszahlungen je Woche</h2>
-        {weeks === null && <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />}
+        {weeks === null && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
         {weeks?.length === 0 && <p className="text-xs text-gray-600">Noch keine Auszahlungen.</p>}
         {weeks?.map(w => (
           <div key={w.weekStart} className="glass rounded-card p-3 space-y-2">

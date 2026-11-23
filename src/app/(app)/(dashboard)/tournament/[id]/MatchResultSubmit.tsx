@@ -53,7 +53,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 const inputCls =
-  "w-full px-3 py-2 rounded-xl bg-surface-2 border border-line-strong text-sm text-white focus:border-teal-500/40 focus:outline-none";
+  "w-full px-3 py-2 rounded-xl bg-surface-2 border border-line-strong text-sm text-white focus:border-primary/40 focus:outline-none";
 
 export function MatchForm({
   eventId, m, subject, s, statFields, locked, beforeSubmit, bare = false,
@@ -185,14 +185,14 @@ export function MatchForm({
 
       {/* Gegner hat schon gemeldet: mit einem Klick bestätigen (kein eigener Screenshot nötig) */}
       {!locked && m.isDuel && m.opponentReport && !conflict && s?.status !== "approved" && s?.status !== "corrected" && (
-        <div className="rounded-lg border border-teal-700/40 bg-teal-900/15 px-3 py-2 space-y-1.5">
+        <div className="rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 space-y-1.5">
           <p className="text-xs text-teal-200">
             {m.opponentReport.reporterName} hat gemeldet: {uname(m.player1)} {m.opponentReport.score1 ?? "–"} : {m.opponentReport.score2 ?? "–"} {uname(m.player2)}
             {m.opponentReport.advancerId && <> · weiter: {m.opponentReport.advancerId === m.player1?.id ? uname(m.player1) : uname(m.player2)}</>}
           </p>
           <div className="flex items-center gap-3">
             <button onClick={confirmOpponent} disabled={busy}
-              className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium disabled:opacity-50">
+              className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink text-xs font-medium disabled:opacity-50">
               Stimmt — bestätigen
             </button>
             <span className="text-xs text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Verwalter entscheidet.</span>
@@ -206,7 +206,7 @@ export function MatchForm({
       )}
 
       {!locked && !open && (
-        <button onClick={() => setOpen(true)} className="text-xs text-teal-300 hover:underline">
+        <button onClick={() => setOpen(true)} className="text-xs text-primary-fg hover:underline">
           {!s ? "Ergebnis selbst melden" : s.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
         </button>
       )}
@@ -267,7 +267,7 @@ export function MatchForm({
           <button
             onClick={submit}
             disabled={busy}
-            className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50"
           >
             {busy ? "Sende…" : s ? "Meldung aktualisieren" : "Ergebnis melden"}
           </button>
@@ -282,7 +282,7 @@ export function ReportHint() {
   return (
     <details className="text-xs text-gray-500 group">
       <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-        Mit Screenshot melden — sofort sichtbar. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-teal-300 group-open:hidden">Mehr</span>
+        Mit Screenshot melden — sofort sichtbar. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-primary-fg group-open:hidden">Mehr</span>
       </summary>
       <p className="mt-1">
         Du kannst dein Ergebnis oder das eines anderen Spielers eintragen. Bis es endgültig ist, steht es als „vorläufig“ da.
@@ -401,7 +401,7 @@ function MultiForm({
       <input value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Anmerkung (optional)" className={inputCls} />
 
       <button onClick={submit} disabled={busy}
-        className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium disabled:opacity-50">
+        className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
         {busy ? "Sende…" : filled.length > 0 ? `Für ${filled.length} Spieler melden` : "Ergebnisse melden"}
       </button>
     </div>

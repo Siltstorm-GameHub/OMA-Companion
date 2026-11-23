@@ -16,7 +16,7 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
         <h2 className="flex items-center gap-2 font-display text-base font-bold text-white">
           <Tag className="w-4 h-4 text-rose-300" /> Gerade im Angebot
         </h2>
-        <Link href="/spiele?sort=sale" className="flex items-center gap-0.5 text-xs font-semibold text-teal-300 hover:text-teal-200 shrink-0">
+        <Link href="/spiele?sort=sale" className="flex items-center gap-0.5 text-xs font-semibold text-primary-fg hover:text-teal-200 shrink-0">
           {total > games.length ? `Alle ${total}` : "Spieleliste"} <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
@@ -34,12 +34,12 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
             >
               <div className="relative">
                 <GameCover game={g.name} coverUrl={g.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
-                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-black text-white tabular-nums">
+                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-white tabular-nums">
                   −{g.discountPercent} %
                 </span>
               </div>
               <div className="p-2 space-y-0.5">
-                <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">{g.name}</p>
+                <p className="text-xs font-semibold text-white truncate group-hover:text-primary-fg transition-colors">{g.name}</p>
                 {price && (
                   <p className="text-xs tabular-nums">
                     <span className="text-white font-semibold">{price}</span>

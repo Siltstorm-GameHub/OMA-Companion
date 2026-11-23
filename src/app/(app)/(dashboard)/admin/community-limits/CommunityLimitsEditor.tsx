@@ -22,7 +22,7 @@ const SCALAR_FIELDS: { key: ScalarKey; label: string }[] = [
   { key: "goalSeriesPoints",       label: "Community-Ziel: Tabellenpunkte je Belohntem" },
 ];
 
-const inputCls = "w-full bg-gray-900 border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-teal-500/50 disabled:opacity-60";
+const inputCls = "w-full bg-gray-900 border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white tabular-nums focus:outline-none focus:border-primary/50 disabled:opacity-60";
 
 function NumberField({ label, value, onChange, disabled, step = 1 }: {
   label: string; value: number; onChange: (v: number) => void; disabled: boolean; step?: number;
@@ -174,7 +174,7 @@ export default function CommunityLimitsEditor({ initial, canEdit }: { initial: C
         <div className="flex items-center gap-3 justify-end">
           {message && <span className={`text-xs ${message.ok ? "text-emerald-400" : "text-rose-400"}`}>{message.text}</span>}
           <button type="button" onClick={save} disabled={saving}
-            className="flex items-center gap-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50">
+            className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50 max-lg:min-h-10">
             <Save className="w-4 h-4" /> {saving ? "Speichert…" : "Speichern"}
           </button>
         </div>

@@ -79,7 +79,7 @@ export default function CoverBrandBadge({
 
       {omaOriginal && (
         <div
-          className="absolute bottom-[clamp(6px,1.5cqw,12px)] right-[clamp(6px,1.5cqw,12px)] flex flex-col items-center gap-[clamp(2px,0.5cqw,4px)] rounded-[clamp(6px,1.2cqw,10px)] bg-black/80 border-[1.5px] border-teal-400/70 shadow-md shadow-black/50 px-[clamp(5px,1.1cqw,9px)] pt-[clamp(4px,0.9cqw,7px)] pb-[clamp(3px,0.6cqw,5px)]"
+          className="absolute bottom-[clamp(6px,1.5cqw,12px)] right-[clamp(6px,1.5cqw,12px)] flex flex-col items-center gap-[clamp(2px,0.5cqw,4px)] rounded-[clamp(6px,1.2cqw,10px)] bg-black/80 border-[1.5px] border-primary/70 shadow-md shadow-black/50 px-[clamp(5px,1.1cqw,9px)] pt-[clamp(4px,0.9cqw,7px)] pb-[clamp(3px,0.6cqw,5px)]"
           title="OMA Original"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}

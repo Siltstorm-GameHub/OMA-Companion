@@ -70,7 +70,7 @@ export default function GameCard({ game }: { game: GameListItem }) {
             <span className="text-gray-600">{game.ratingCount > 0 ? `${game.ratingCount} Bewertung${game.ratingCount === 1 ? "" : "en"}` : "Noch nicht bewertet"}</span>
           )}
           {game.playingCount > 0 && (
-            <span className="flex items-center gap-1 text-teal-300/90 shrink-0" title="Mitglieder, die das gerade zocken">
+            <span className="flex items-center gap-1 text-primary-fg/90 shrink-0" title="Mitglieder, die das gerade zocken">
               <Users className="w-3 h-3" /> {game.playingCount}
             </span>
           )}

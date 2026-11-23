@@ -64,7 +64,7 @@ export default function ProofUploader({
             type="button"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
-            className="w-20 h-20 rounded-lg border border-dashed border-line-strong text-gray-400 hover:text-teal-300 hover:border-teal-500/40 flex flex-col items-center justify-center gap-1 text-xs disabled:opacity-50"
+            className="w-20 h-20 rounded-lg border border-dashed border-line-strong text-gray-400 hover:text-primary-fg hover:border-primary/40 flex flex-col items-center justify-center gap-1 text-xs disabled:opacity-50"
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
             Screenshot

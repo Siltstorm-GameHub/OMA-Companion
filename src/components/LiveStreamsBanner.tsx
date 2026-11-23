@@ -190,7 +190,7 @@ export default function LiveStreamsBanner({
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     aria-label="Auf Twitch öffnen"
-                    className="flex-shrink-0 text-gray-600 hover:text-teal-400 transition-colors mt-0.5"
+                    className="flex-shrink-0 text-gray-600 hover:text-primary transition-colors mt-0.5"
                   >
                     <ExternalLink className="w-3 h-3" />
                   </a>

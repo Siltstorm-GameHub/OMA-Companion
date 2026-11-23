@@ -26,7 +26,7 @@ function ServerRow({ server, isLast }: { server: Server; isLast: boolean }) {
           <GameCover game={server.game} className="w-8 h-8" rounded="rounded-sm" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
+          <p className="text-xs font-semibold text-white truncate group-hover:text-primary-fg transition-colors">
             {server.name}
           </p>
           <p className="text-xs text-gray-600 mt-0.5">{server.game}</p>

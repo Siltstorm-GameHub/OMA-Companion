@@ -62,7 +62,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
     }
   }
 
-  const input = "w-20 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-teal-500/40";
+  const input = "w-20 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-primary/40";
   const num = (k: keyof typeof GAME_VOTE_LIMITS) => (
     <input type="number" min={GAME_VOTE_LIMITS[k][0]} max={GAME_VOTE_LIMITS[k][1]} value={cfg[k]} className={input}
       onChange={e => set(k, Number(e.target.value))} />

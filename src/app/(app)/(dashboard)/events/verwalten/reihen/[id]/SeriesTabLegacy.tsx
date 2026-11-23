@@ -51,9 +51,9 @@ export default function SeriesTabLegacy({ ctx }: { ctx: SeriesDetail }) {
                               className="w-16 rounded px-1.5 py-0.5 text-xs text-white bg-gray-800 border border-gray-700" />
                           </label>
                         ))}
-                        <span className="flex items-center gap-1.5 text-xs text-teal-500">
+                        <span className="flex items-center gap-1.5 text-xs text-primary">
                           Punkte (auto)
-                          <span className="w-16 rounded px-1.5 py-0.5 text-xs text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                          <span className="w-16 rounded px-1.5 py-0.5 text-xs text-primary-fg bg-primary-soft border border-primary/30 tabular-nums">
                             {row.points}
                           </span>
                         </span>

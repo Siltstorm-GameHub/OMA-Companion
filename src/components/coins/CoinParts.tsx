@@ -34,7 +34,7 @@ export function DayBlock({ day }: { day: LedgerDay }) {
   const sums = [
     day.coinsIn > 0 && <span key="in" className="text-amber-300">+{fmt(day.coinsIn)}</span>,
     day.coinsOut < 0 && <span key="out" className="text-red-300">−{fmt(-day.coinsOut)}</span>,
-    day.rank !== 0 && <span key="rk" className="text-teal-300">{day.rank > 0 ? "+" : "−"}{fmt(Math.abs(day.rank))} Rang</span>,
+    day.rank !== 0 && <span key="rk" className="text-primary-fg">{day.rank > 0 ? "+" : "−"}{fmt(Math.abs(day.rank))} Rang</span>,
   ].filter(Boolean);
   return (
     <li>
@@ -52,7 +52,7 @@ export function DayBlock({ day }: { day: LedgerDay }) {
               </span>
             </span>
             <span className={`shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums ${
-              i.currency === "rank" ? "text-teal-300" : i.amount < 0 ? "text-red-300" : "text-amber-300"
+              i.currency === "rank" ? "text-primary-fg" : i.amount < 0 ? "text-red-300" : "text-amber-300"
             }`}>
               {i.amount > 0 ? "+" : "−"}{fmt(Math.abs(i.amount))}
               {i.currency === "rank" ? <RankPointsIcon size={12} /> : <CoinIcon size={12} />}

@@ -17,7 +17,7 @@ interface Anomalies {
 const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 
 function P({ p }: { p: Person }) {
-  return <Link href={`/profile/${p.id}`} className="text-teal-300 hover:text-teal-200 transition-colors">{p.name}</Link>;
+  return <Link href={`/profile/${p.id}`} className="text-primary-fg hover:text-teal-200 transition-colors">{p.name}</Link>;
 }
 
 function Block({ title, hint, empty, count, children }: { title: string; hint: string; empty: string; count: number; children: React.ReactNode }) {
@@ -41,7 +41,7 @@ export default function AnomaliesClient() {
   }, []);
 
   if (error) return <p className="text-xs text-red-400">Konnte nicht geladen werden.</p>;
-  if (!data) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+  if (!data) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
 
   return (
     <div className="space-y-6">

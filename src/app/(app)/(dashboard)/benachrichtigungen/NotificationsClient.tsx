@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { NotificationGlyph } from "@/components/ui/Glyph";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Bell, Check, Loader2, Settings, Trash2 } from "@/components/icons";
@@ -10,10 +11,6 @@ import { RelativeTime } from "@/components/RelativeTime";
 
 type Notification = { id: string; type: string; title: string; body: string; url?: string | null; read: boolean; createdAt: string };
 
-const ICONS: Record<string, string> = {
-  badge: "🏅", quest: "⭐", event_result: "✅", event_start: "⏰", points: "⭐",
-  coins: "💰", clip: "🎬", admin: "📢", game: "🎮", event_comment: "💬",
-};
 
 type Filter = "all" | "unread";
 
@@ -99,7 +96,7 @@ export default function NotificationsClient() {
         <ul className="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
           {shown.map((n) => (
             <li key={n.id} className={`group flex items-start gap-3 px-4 py-3.5 ${n.read ? "" : "bg-primary-soft/40"}`}>
-              <span className="grid size-10 shrink-0 place-items-center rounded-control bg-surface-2 text-lg" aria-hidden>{ICONS[n.type] ?? "🔔"}</span>
+              <span className="grid size-10 shrink-0 place-items-center rounded-control bg-primary-soft text-primary-fg"><NotificationGlyph type={n.type} className="size-[1.125rem]" /></span>
               <button type="button" onClick={() => open(n)} className="min-w-0 flex-1 text-left">
                 <span className="flex items-center gap-2">
                   <span className={`truncate text-sm ${n.read ? "font-semibold text-gray-200" : "font-extrabold text-fg"}`}>{n.title}</span>

@@ -102,7 +102,7 @@ export default function AdminContentSection() {
     }
   }
 
-  if (entries === null) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+  if (entries === null) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
 
   return (
     <section className="space-y-2">
@@ -123,7 +123,7 @@ export default function AdminContentSection() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <Icon className="w-3 h-3 text-teal-400 shrink-0" />
+                  <Icon className="w-3 h-3 text-primary shrink-0" />
                   <span className="text-xs text-gray-600">{KIND_LABEL[entry.kind]} · {entry.author.username ?? entry.author.name}</span>
                 </div>
                 <p className="text-xs text-gray-300 truncate">{entry.title ?? entry.caption}</p>

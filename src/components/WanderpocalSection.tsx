@@ -32,7 +32,7 @@ function HolderChip({ holder }: { holder: WanderpocalHolderInfo }) {
     <Link href={`/profile/${holder.holderUserId}`}
       className="inline-flex items-center gap-1.5 group/holder">
       <RankedAvatar userId={holder.holderUserId} src={holder.holderAvatarUrl} alt={holder.holderName ?? "Halter"} size={16} />
-      <span className="text-xs text-gray-500 group-hover/holder:text-teal-300 transition-colors truncate max-w-[90px]">
+      <span className="text-xs text-gray-500 group-hover/holder:text-primary-fg transition-colors truncate max-w-[90px]">
         {holder.holderName ?? "Unbekannt"}
       </span>
     </Link>

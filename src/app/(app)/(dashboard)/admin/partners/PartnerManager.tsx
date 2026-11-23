@@ -158,7 +158,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
   return (
     <div className="space-y-6">
       {/* ── Neuen Partner hinzufügen ─────────────────────────────── */}
-      <div className="glass rounded-2xl p-5 space-y-4" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+      <div className="glass rounded-2xl p-5 space-y-4" style={{ border: "1px solid var(--color-line)" }}>
         <h2 className="text-sm font-semibold text-white">Partner hinzufügen</h2>
 
         <div className="flex gap-2">
@@ -204,7 +204,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
               <button
                 onClick={addPartner}
                 disabled={saving || !nameInput.trim()}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors max-lg:min-h-10"
               >
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                 Hinzufügen
@@ -224,7 +224,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
       ) : (
         <div className="space-y-2">
           {partners.map((p) => (
-            <div key={p.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: p.isActive ? 1 : 0.5 }}>
+            <div key={p.id} className="rounded-card glass overflow-hidden" style={{ border: "1px solid var(--color-line)", opacity: p.isActive ? 1 : 0.5 }}>
               <div className="flex items-center gap-3 px-4 py-3">
                 <Image src={p.logoUrl} alt={p.name} width={36} height={36} className="rounded-full flex-shrink-0" />
                 <div className="flex-1 min-w-0">

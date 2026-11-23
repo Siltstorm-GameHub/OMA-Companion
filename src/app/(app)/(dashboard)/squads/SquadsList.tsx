@@ -32,7 +32,7 @@ export default async function SquadsList() {
                 <div className="relative h-20 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}
                   <img src={s.coverImageUrl} alt="" className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.75), transparent 65%)" }} />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, color-mix(in srgb, var(--color-surface) 75%, transparent), transparent 65%)" }} />
                 </div>
               ) : null}
               <div className="p-4">

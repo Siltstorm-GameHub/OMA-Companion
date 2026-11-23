@@ -1,4 +1,5 @@
 import { CheckCircle2, Swords } from "@/components/icons";
+import { QuestGlyph } from "@/components/ui/Glyph";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests-meta";
@@ -41,7 +42,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
       {/* Quest-Fortschritt */}
       {questsWithProgress.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Monatliche Quests</h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Monatliche Quests</h2>
           <div className="space-y-2">
             {questsWithProgress.map(quest => {
               const meta    = QUEST_TYPE_META[quest.type as QuestType];
@@ -54,7 +55,7 @@ export default function ProfileQuestsAndTournaments({ questsWithProgress, tourna
                   <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-xl`} />
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-base">{meta.icon}</span>
+                      <span className="text-primary-fg"><QuestGlyph type={quest.type} /></span>
                       <span className={`text-sm font-medium ${done ? "text-emerald-300" : "text-white"}`}>{quest.title}</span>
                       {done && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                     </div>

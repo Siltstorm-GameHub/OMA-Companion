@@ -152,7 +152,7 @@ export function PushSubscribeButton() {
         <button
           onClick={unsubscribe}
           disabled={busy}
-          className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl transition-colors hover:bg-line text-teal-400"
+          className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl transition-colors hover:bg-line text-primary"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellRing className="w-4 h-4" />}
           <span>Push-Benachrichtigungen aktiv</span>
@@ -160,7 +160,7 @@ export function PushSubscribeButton() {
         <button
           onClick={resetAll}
           disabled={busy}
-          className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl transition-colors hover:bg-line text-gray-600 hover:text-gray-400"
+          className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl transition-colors hover:bg-line text-gray-600 hover:text-gray-400 max-lg:min-h-10"
         >
           <span>Falsches Gerät/Browser? Hier zurücksetzen</span>
         </button>

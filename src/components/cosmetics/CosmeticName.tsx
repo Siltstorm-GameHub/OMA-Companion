@@ -86,7 +86,7 @@ function JobTitleBadge({ tier, className = "" }: { tier: JobBadgeTier; className
       <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/70 whitespace-nowrap">Community-Job</span>
       <span className="w-px h-2.5 bg-white/25 shrink-0" />
       <span
-        className="text-xs font-black uppercase tracking-[0.16em] whitespace-nowrap"
+        className="text-xs font-extrabold uppercase tracking-[0.16em] whitespace-nowrap"
         style={{ backgroundImage: s.metal, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" }}
       >
         {s.stage}

@@ -70,7 +70,7 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
         </p>
         {resultsHref && (
           <Link href={resultsHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line">
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line max-lg:min-h-10">
             Ergebnis-Meldungen
             {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-black tabular-nums">{pendingCount}</span>}
           </Link>
@@ -80,7 +80,7 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
       </div>
       {total > 0 && (
         <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-teal-400" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
       )}
     </section>
@@ -148,11 +148,11 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
               <span className="block text-xs text-gray-500" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
             </span>
             <button type="button" onClick={() => act(s.id, "approve")} disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50">
+              className="inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover px-2.5 py-1 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
               {busy === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Übernehmen
             </button>
             <button type="button" onClick={() => act(s.id, "reject")} disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-line disabled:opacity-50">
+              className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-line disabled:opacity-50 max-lg:min-h-10">
               <X className="w-3.5 h-3.5" /> Ablehnen
             </button>
             <Link href={resultsHref} className="text-xs text-gray-500 hover:text-gray-300">Prüfen</Link>

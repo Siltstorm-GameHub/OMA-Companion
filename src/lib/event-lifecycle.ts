@@ -24,7 +24,24 @@ import { after } from "next/server";
  * bricht sofort ab, wenn keine fälligen Events existieren, und vermeidet N+1-Queries durch
  * groupBy statt Einzelabfrage pro Event.
  */
+// Drosselung: Die Prüfung lief bei JEDEM Render von Übersicht, Events, Verwalten und Eventseite —
+// sieben Teil-Syncs nacheinander mit je eigenen DB-Abfragen, auch wenn nichts fällig war (größter
+// Einzelposten "Active CPU" dieser Seiten). Jetzt höchstens einmal je SYNC_INTERVAL_MS pro
+// Server-Instanz; gleichzeitige Aufrufe warten auf denselben Lauf. Fällige Übergänge greifen damit
+// spätestens nach SYNC_INTERVAL_MS (pro Instanz) — bei Startzeiten auf die Minute unkritisch.
+const SYNC_INTERVAL_MS = 30_000;
+let lastSyncStartedAt = 0;
+let runningSync: Promise<void> | null = null;
+
 export async function syncDueEventActivations(): Promise<void> {
+  if (runningSync) return runningSync;
+  if (Date.now() - lastSyncStartedAt < SYNC_INTERVAL_MS) return;
+  lastSyncStartedAt = Date.now();
+  runningSync = runDueEventSyncs().finally(() => { runningSync = null; });
+  return runningSync;
+}
+
+async function runDueEventSyncs(): Promise<void> {
   // Geplante Veröffentlichungen (Event.publishAt) — gleicher Lazy-Mechanismus, siehe event-publish.ts
   await publishDueScheduledEvents();
 

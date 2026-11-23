@@ -28,7 +28,7 @@ export interface IdeaPrefill {
 }
 
 const FIELD = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
-const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40";
+const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -194,7 +194,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         <div className="rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-2.5 space-y-1">
           <p className="text-xs text-amber-400">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
           {similar.map(s => (
-            <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-gray-200 hover:text-teal-300 transition-colors">
+            <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-gray-200 hover:text-primary-fg transition-colors">
               <span className="truncate">{s.title}</span>
               <span className="shrink-0 text-xs text-gray-500">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
             </Link>
@@ -228,7 +228,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           </div>
           {mentionResults.map(u => (
             <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
-              className="block w-full text-left text-xs text-gray-200 hover:text-teal-300 px-1.5 py-0.5 rounded hover:bg-line transition-colors">{u.username ?? u.name}</button>
+              className="block w-full text-left text-xs text-gray-200 hover:text-primary-fg px-1.5 py-0.5 rounded hover:bg-line transition-colors">{u.username ?? u.name}</button>
           ))}
         </div>
       )}
@@ -264,7 +264,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           ))}
           {images.length < IDEA_MAX_IMAGES && (
             <>
-              <label className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-line-strong rounded-lg px-2.5 py-2 cursor-pointer hover:border-teal-500/30 transition-colors">
+              <label className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-line-strong rounded-lg px-2.5 py-2 cursor-pointer hover:border-primary/30 transition-colors">
                 {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Hochladen
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ""; }} />
@@ -297,7 +297,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
               {library.map(a => (
                 <button key={a.id} title={a.caption ?? undefined}
                   onClick={() => { setImages(cur => (cur.includes(a.url) ? cur : [...cur, a.url].slice(0, IDEA_MAX_IMAGES))); setPanel(null); }}
-                  className="rounded overflow-hidden border-2 border-transparent hover:border-teal-400">
+                  className="rounded overflow-hidden border-2 border-transparent hover:border-primary">
                   {/* eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau */}
                   <img src={a.url} alt="" className="w-full h-14 object-cover" />
                 </button>

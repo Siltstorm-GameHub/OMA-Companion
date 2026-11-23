@@ -59,7 +59,7 @@ export default function CommunityJobsAdminPanel({
     }
   }
 
-  if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-teal-400 animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
 
   return (
     <div className="space-y-8">
@@ -320,7 +320,7 @@ function ReputationSection() {
         <Button size="sm" variant="outline" type="submit">Suchen</Button>
       </form>
       <div className="glass rounded-card overflow-hidden divide-y divide-line">
-        {users === null && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>}
+        {users === null && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>}
         {users?.length === 0 && <p className="p-4 text-xs text-gray-600">Keine User gefunden.</p>}
         {users?.map(u => {
           const override = u.reputationOverrideUntil && new Date(u.reputationOverrideUntil) > new Date();

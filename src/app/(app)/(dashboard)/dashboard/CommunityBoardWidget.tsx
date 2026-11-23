@@ -55,8 +55,8 @@ function voteUrl(e: FeedEntry): string | null {
   }
 }
 
-const THUMB_ON = "bg-teal-500 border-teal-500 text-black";
-const THUMB_OFF = "bg-black/55 border-teal-500/50 text-teal-300 hover:bg-teal-500/20";
+const THUMB_ON = "bg-primary border-primary text-primary-ink";
+const THUMB_OFF = "bg-black/55 border-primary/50 text-primary-fg hover:bg-primary/20";
 
 /** Daumen direkt auf der Karte (über dem Karten-Link). Eigene Beiträge und Ideen zeigen nur die Zahl bzw. den Weg ins Board. */
 function ThumbVote({ entry, meId, onChange }: { entry: FeedEntry; meId?: string; onChange: (voted: boolean, delta: number) => void }) {
@@ -94,7 +94,7 @@ function ThumbVote({ entry, meId, onChange }: { entry: FeedEntry; meId?: string;
 
   return (
     <button onClick={toggle} disabled={busy} aria-pressed={voted} aria-label={voted ? "Daumen zurücknehmen" : "Daumen hoch"}
-      className={`relative z-20 self-start inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 ${voted ? THUMB_ON : THUMB_OFF}`}>
+      className={`relative z-20 self-start inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 ${voted ? THUMB_ON : THUMB_OFF} max-lg:min-h-10`}>
       <ThumbsUp className={`w-3.5 h-3.5 ${voted ? "fill-current" : ""}`} /> <span className="tabular-nums">{count}</span>
     </button>
   );
@@ -133,16 +133,16 @@ export default function CommunityBoardWidget() {
     <div className="animate-slide-up">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-teal-400" /> Neues aus der Community
+          <Newspaper className="w-4 h-4 text-primary" /> Neues aus der Community
         </h2>
-        <Link href="/community-board" className="text-xs flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
+        <Link href="/community-board" className="text-xs flex items-center gap-0.5 text-primary hover:text-primary-fg transition-colors">
           Alle <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
 
       {feed === null ? (
         <div className="glass card-shine rounded-2xl p-6 flex items-center justify-center">
-          <Loader2 className="w-4 h-4 text-teal-400 animate-spin" />
+          <Loader2 className="w-4 h-4 text-primary animate-spin" />
         </div>
       ) : feed.length === 0 ? (
         <div className="glass card-shine rounded-2xl p-4">
@@ -177,7 +177,7 @@ export default function CommunityBoardWidget() {
                 ) : (
                   <>
                     <div className="absolute inset-0"
-                      style={{ background: `radial-gradient(circle at 50% 30%, ${acc(accentName, 0.22)}, rgba(13,13,15,0.92) 75%)` }} />
+                      style={{ background: `radial-gradient(circle at 50% 30%, ${acc(accentName, 0.22)}, var(--color-surface) 75%)` }} />
                     {/* Nicht-absoluter Textblock → bestimmt die Kartenbreite anhand der Caption-Länge */}
                     <div className="relative h-full flex flex-col justify-end p-2.5 gap-1">
                       <div className="flex items-center gap-1.5">
@@ -199,7 +199,7 @@ export default function CommunityBoardWidget() {
                   <>
                     {/* Kind-Badge oben links */}
                     <span className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center"
-                      style={{ background: "rgba(13,13,15,0.6)", border: `1px solid ${acc(accentName, 0.4)}` }}>
+                      style={{ background: "color-mix(in srgb, var(--color-surface) 60%, transparent)", border: `1px solid ${acc(accentName, 0.4)}` }}>
                       <Icon className="w-3 h-3" style={{ color: acc(accentName, 1) }} />
                     </span>
 

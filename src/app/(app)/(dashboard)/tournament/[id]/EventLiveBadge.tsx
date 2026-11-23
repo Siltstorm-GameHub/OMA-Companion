@@ -23,7 +23,7 @@ export default function EventLiveBadge({ twitchLogins }: { twitchLogins: string[
       href={`https://twitch.tv/${livePartner.twitchLogin}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all hover:brightness-110"
+      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-all hover:brightness-110 max-lg:min-h-10"
       style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.3)", color: "#c4a3ff" }}
     >
       <div className="relative flex-shrink-0">

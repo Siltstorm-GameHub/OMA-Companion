@@ -123,7 +123,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
 
       {open && results.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-lg shadow-2xl"
-          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid rgba(255,255,255,0.1)",}}>
+          style={{ background: "rgba(13,13,18,0.98)", border: "1px solid var(--color-line-strong)",}}>
           {results.map(g => (
             <li key={g.appId}>
               <button type="button"

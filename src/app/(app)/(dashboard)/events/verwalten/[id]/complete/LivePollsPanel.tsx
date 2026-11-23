@@ -314,7 +314,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                       Teilnahme:{" "}
                       {poll.participationCoins > 0 && <span className="text-amber-400 font-medium">{poll.participationCoins} Münzen</span>}
                       {poll.participationCoins > 0 && poll.participationSeriesPoints > 0 && " + "}
-                      {poll.participationSeriesPoints > 0 && <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>}
+                      {poll.participationSeriesPoints > 0 && <span className="text-primary font-medium">{poll.participationSeriesPoints} Tabellenpunkte</span>}
                     </span>
                   )}
                   {(poll.winnerCoins > 0 || poll.winnerRankPoints > 0) && (
@@ -356,7 +356,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                             isExcluded
                               ? "border-red-700/60 bg-red-950/30 text-red-400/80 line-through"
                               : "border-line-strong bg-line text-gray-200 hover:border-red-500/60 hover:bg-red-500/10 hover:text-red-300"
-                          }`}
+                          } max-lg:min-h-10`}
                         >
                           {isExcluded && <UserX className="w-3 h-3 shrink-0" />}
                           {userName(u)}
@@ -374,7 +374,7 @@ export default function LivePollsPanel({ eventId, isAdmin, isMod, readOnly = fal
                   const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
                   const isWinner = poll.winnerIds?.includes(a.id) ?? false;
                   return (
-                    <div key={a.id} className="relative rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div key={a.id} className="relative rounded-lg overflow-hidden" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-line)" }}>
                       <div className="absolute inset-0" style={{ width: `${pct}%`, background: isWinner ? "rgba(251,191,36,0.10)" : "rgba(255,255,255,0.03)" }} />
                       <div className="relative flex items-center justify-between gap-2 px-3 py-1.5">
                         <span className={`text-xs truncate flex items-center gap-1 ${isWinner ? "text-amber-300 font-medium" : "text-gray-300"}`}>

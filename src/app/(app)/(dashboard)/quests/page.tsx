@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { QuestGlyph } from "@/components/ui/Glyph";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -147,11 +148,11 @@ export default async function QuestsPage() {
               neue Quests {daysLeft === 0 ? "morgen" : `in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`}
             </p>
             <div className="mt-2.5 h-2 max-w-sm rounded-full bg-line overflow-hidden">
-              <div className={`h-full rounded-full ${allDone ? "bg-emerald-400" : "bg-teal-400"}`} style={{ width: `${rows.length ? (done.length / rows.length) * 100 : 0}%` }} />
+              <div className={`h-full rounded-full ${allDone ? "bg-emerald-400" : "bg-primary"}`} style={{ width: `${rows.length ? (done.length / rows.length) * 100 : 0}%` }} />
             </div>
           </div>
           <div className="text-right">
-            <p className="flex items-center justify-end gap-1 text-xl font-black tabular-nums text-amber-400">
+            <p className="flex items-center justify-end gap-1 text-xl font-extrabold tabular-nums text-amber-400">
               <CoinIcon size={16} />{coins.earned.toLocaleString("de-DE")}
               <span className="text-sm font-semibold text-gray-500">/ {coins.total.toLocaleString("de-DE")}</span>
             </p>
@@ -187,7 +188,7 @@ export default async function QuestsPage() {
             return (
               <article key={q.id} className="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
                 <div className="flex items-start gap-3">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-control bg-surface-2 text-xl" aria-hidden>{meta?.icon ?? "📜"}</span>
+                  <span className="grid size-11 shrink-0 place-items-center rounded-control bg-primary-soft text-primary-fg"><QuestGlyph type={type} className="size-5" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-extrabold leading-snug text-fg">{q.title}</p>
                     {QUEST_ACTIONS[type] && <p className="mt-0.5 text-xs text-subtle">{QUEST_ACTIONS[type]!.counts}</p>}
@@ -231,7 +232,7 @@ export default async function QuestsPage() {
           <ul className="divide-y divide-line border-t border-line">
             {done.map(q => (
               <li key={q.id} className="flex items-center gap-3 px-4 py-2.5">
-                <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+                <span className="shrink-0 text-subtle"><QuestGlyph type={q.type} /></span>
                 <span className="flex-1 min-w-0 truncate text-sm text-gray-300">{q.title}</span>
                 <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 tabular-nums">+{q.reward}<CoinIcon size={11} /></span>
               </li>
@@ -243,7 +244,7 @@ export default async function QuestsPage() {
         <section aria-label="Erledigte Quests" className="glass rounded-2xl overflow-hidden divide-y divide-line">
           {done.map(q => (
             <div key={q.id} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="text-base shrink-0" aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+              <span className="shrink-0 text-subtle"><QuestGlyph type={q.type} /></span>
               <span className="flex-1 min-w-0 truncate text-sm text-gray-300">{q.title}</span>
               <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 tabular-nums">+{q.reward}<CoinIcon size={11} /></span>
             </div>
@@ -271,7 +272,7 @@ export default async function QuestsPage() {
                   <ul className="pb-2">
                     {quests.map(q => (
                       <li key={q.id} className={`flex items-center gap-3 px-4 py-1.5 text-xs ${q.completed ? "text-gray-300" : "text-gray-600"}`}>
-                        <span aria-hidden>{QUEST_TYPE_META[q.type as QuestType]?.icon ?? "📜"}</span>
+                        <QuestGlyph type={q.type} className="size-3.5 text-subtle" />
                         <span className="flex-1 min-w-0 truncate">{q.title}</span>
                         <span className="tabular-nums">{q.completed ? `+${q.reward}` : `${q.current}/${q.target}`}</span>
                       </li>

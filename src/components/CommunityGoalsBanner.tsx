@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Glyph } from "@/components/ui/Glyph";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import {
@@ -19,7 +20,7 @@ import GoalSpotlightDismiss from "@/components/GoalSpotlightDismiss";
 import { ChevronRight, Target } from "@/components/icons";
 
 
-const PACE_COLOR: Record<GoalPace["status"], string> = { ahead: "text-emerald-300", on_track: "text-teal-300", behind: "text-amber-300" };
+const PACE_COLOR: Record<GoalPace["status"], string> = { ahead: "text-emerald-300", on_track: "text-primary-fg", behind: "text-amber-300" };
 const PACE_ICON: Record<GoalPace["status"], string> = { ahead: "🚀", on_track: "✅", behind: "⚠️" };
 const SPOTLIGHT_ICON: Record<SpotlightKind, string> = { reached: "🎉", milestone: "🎯", final: "⏳", start: "✨", live: "🎯" };
 
@@ -136,7 +137,7 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
     <div className="space-y-2">
       {big.map(item => <SpotlightCard key={item.eventId} item={item} />)}
       {small.length > 0 && (
-        <div className="surface rounded-card overflow-hidden divide-y divide-line border border-teal-500/10">
+        <div className="surface rounded-card overflow-hidden divide-y divide-line border border-primary/10">
           {small.map(item => <CompactRow key={item.eventId} item={item} />)}
         </div>
       )}
@@ -161,13 +162,13 @@ function SpotlightCard({ item }: { item: GoalItem }) {
   return (
     <div className="relative">
       <Link href={`/tournament/${item.eventId}`}
-        className="group block rounded-2xl border border-teal-500/20 bg-gradient-to-r from-teal-500/[0.08] via-emerald-500/[0.04] to-transparent px-4 py-3 transition-colors hover:border-teal-400/40">
+        className="group block rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/[0.08] via-emerald-500/[0.04] to-transparent px-4 py-3 transition-colors hover:border-primary/40">
         <div className="flex items-center gap-3 pr-6">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${reached ? "bg-amber-500/15 text-amber-300" : "bg-teal-500/15 text-teal-300"}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${reached ? "bg-amber-500/15 text-amber-300" : "bg-primary/15 text-primary-fg"}`}>
             <Target className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-xs font-bold uppercase tracking-widest truncate ${reached ? "text-amber-300" : spotlight.kind === "final" ? "text-amber-300" : "text-teal-300"}`}>
+            <p className={`text-xs font-bold uppercase tracking-widest truncate ${reached ? "text-amber-300" : spotlight.kind === "final" ? "text-amber-300" : "text-primary-fg"}`}>
               {SPOTLIGHT_ICON[spotlight.kind]} {headline}{item.remainingLabel ? ` · ${item.remainingLabel}` : ""}
             </p>
             <p className="text-sm font-semibold text-white truncate group-hover:text-teal-100">{item.title}</p>
@@ -180,7 +181,7 @@ function SpotlightCard({ item }: { item: GoalItem }) {
         </div>
         <div className="mt-2 h-2 w-full rounded-full bg-line overflow-hidden"
           role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(main.percent)}>
-          <div className={`h-full rounded-full ${reached ? "bg-gradient-to-r from-amber-400 to-amber-300" : "bg-gradient-to-r from-teal-500 to-emerald-400"}`}
+          <div className={`h-full rounded-full ${reached ? "bg-gradient-to-r from-amber-400 to-amber-300" : "bg-gradient-to-r from-primary to-emerald-400"}`}
             style={{ width: `${main.percent}%` }} />
         </div>
         {item.pace && (
@@ -191,7 +192,7 @@ function SpotlightCard({ item }: { item: GoalItem }) {
         <div className="mt-1.5 flex items-center justify-between gap-3">
           <p className="text-xs text-gray-400 min-w-0">
             {item.myValue > 0
-              ? <>{isAvgGoal(goal) ? "Dein Ø" : "Dein Beitrag"}: <span className="text-teal-300 font-semibold tabular-nums">{formatGoalNumber(item.myValue, goal)} {unit}</span></>
+              ? <>{isAvgGoal(goal) ? "Dein Ø" : "Dein Beitrag"}: <span className="text-primary-fg font-semibold tabular-nums">{formatGoalNumber(item.myValue, goal)} {unit}</span></>
               : item.isParticipant
                 ? <>Du bist dabei — {isAvgGoal(goal) ? "dein Ø zählt mit" : `jeder ${unit}-Wert zählt mit`}.</>
                 : <>Mach mit: Jeder Beitrag zählt — {unit}.</>}
@@ -218,11 +219,11 @@ function CompactRow({ item }: { item: GoalItem }) {
       <ProgressRing percent={main.percent} reached={reached} />
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-200 truncate group-hover:text-white">
-          <span className="text-teal-400/80">🎯</span> {item.title}
+          <Glyph name="target" className="inline size-3.5 align-[-2px] text-primary" /> {item.title}
         </p>
         <p className="text-xs text-gray-500 truncate">
           {status}
-          {item.myValue > 0 && <> · {isAvgGoal(goal) ? "dein Ø" : "dein Beitrag"} <span className="text-teal-300/90 tabular-nums">{formatGoalNumber(item.myValue, goal)}</span></>}
+          {item.myValue > 0 && <> · {isAvgGoal(goal) ? "dein Ø" : "dein Beitrag"} <span className="text-primary-fg/90 tabular-nums">{formatGoalNumber(item.myValue, goal)}</span></>}
         </p>
       </div>
       <HistoryDots history={item.history} current={reached} />
@@ -240,7 +241,7 @@ function ProgressRing({ percent, reached }: { percent: number; reached: boolean 
     <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0 -rotate-90" aria-hidden="true">
       <circle cx="12" cy="12" r={r} fill="none" strokeWidth="3" className="stroke-white/[0.08]" />
       <circle cx="12" cy="12" r={r} fill="none" strokeWidth="3" strokeLinecap="round"
-        className={reached ? "stroke-amber-300" : "stroke-teal-400"}
+        className={reached ? "stroke-amber-300" : "stroke-primary"}
         strokeDasharray={c} strokeDashoffset={c * (1 - Math.min(100, percent) / 100)} />
     </svg>
   );
@@ -255,12 +256,12 @@ function HistoryDots({ history, current, withStreak }: { history: boolean[]; cur
     <span className="flex items-center gap-1.5 shrink-0" title={`${done} von ${history.length} früheren Zielen geschafft`}>
       <span className="flex items-center gap-[3px]" aria-label={`${done} von ${history.length} früheren Zielen geschafft`}>
         {history.map((ok, i) => (
-          <span key={i} className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-teal-400" : "border border-gray-600"}`} />
+          <span key={i} className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-primary" : "border border-gray-600"}`} />
         ))}
-        <span className={`w-2 h-2 rounded-full border ${current ? "bg-amber-300 border-amber-300" : "border-teal-400/70"}`} />
+        <span className={`w-2 h-2 rounded-full border ${current ? "bg-amber-300 border-amber-300" : "border-primary/70"}`} />
       </span>
       {withStreak && streak >= 2 && (
-        <span className="text-xs font-semibold text-amber-300 tabular-nums">🔥 {streak}× in Folge</span>
+        <span className="text-xs font-semibold text-amber-300 tabular-nums"><Glyph name="fire" className="inline size-3.5 align-[-2px]" /> {streak}× in Folge</span>
       )}
     </span>
   );

@@ -89,7 +89,7 @@ export default function ApplyButton({
             Abbrechen
           </button>
           <button onClick={apply} disabled={loading}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium bg-primary hover:bg-primary-hover text-primary-ink disabled:opacity-50 transition-colors max-lg:min-h-10">
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             Absenden
           </button>
@@ -100,7 +100,7 @@ export default function ApplyButton({
 
   return (
     <button onClick={() => setShowMessageBox(true)}
-      className="text-xs px-3 py-1.5 rounded-lg font-medium bg-teal-600 hover:bg-teal-500 text-white transition-colors">
+      className="text-xs px-3 py-1.5 rounded-lg font-medium bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
       {isFull ? "Für Warteliste bewerben" : "Bewerben"}
     </button>
   );

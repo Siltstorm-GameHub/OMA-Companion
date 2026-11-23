@@ -30,9 +30,9 @@ export default function StepCategory({ w }: { w: EventWizard }) {
             return (
               <button key={k.value} type="button" onClick={() => setEventType(k.value)} aria-pressed={on}
                 className={`text-left rounded-2xl p-4 border-2 transition-all ${
-                  on ? "border-teal-500/60 bg-teal-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                  on ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
-                <span className={`flex items-center gap-2 text-sm font-semibold ${on ? "text-teal-300" : "text-gray-200"}`}>
+                <span className={`flex items-center gap-2 text-sm font-semibold ${on ? "text-primary-fg" : "text-gray-200"}`}>
                   <span aria-hidden className="text-xl">{k.emoji}</span> {k.label}
                 </span>
                 <span className="mt-1.5 block text-xs text-gray-400 leading-relaxed">{k.desc}</span>
@@ -60,11 +60,11 @@ export default function StepCategory({ w }: { w: EventWizard }) {
       </div>
 
       {showSpectatorToggle && (
-        <div className="rounded-xl p-4 border" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
+        <div className="rounded-xl p-4 border" style={{ borderColor: "var(--color-line)", background: "var(--color-surface-2)" }}>
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <input type="checkbox" checked={spectatorMode} onChange={e => setSpectatorMode(e.target.checked)} className="peer sr-only" />
             <span aria-hidden
-              className={`relative w-10 h-5 rounded-full transition-colors shrink-0 peer-focus-visible:ring-2 peer-focus-visible:ring-teal-400 ${spectatorMode ? "bg-teal-500" : "bg-gray-700"}`}>
+              className={`relative w-10 h-5 rounded-full transition-colors shrink-0 peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${spectatorMode ? "bg-primary" : "bg-gray-700"}`}>
               <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${spectatorMode ? "translate-x-5" : ""}`} />
             </span>
             <span>

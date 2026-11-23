@@ -102,7 +102,7 @@ function OnlineCount() {
     <button
       type="button"
       onClick={toggleHub}
-      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-muted hover:bg-surface-2 hover:text-fg"
+      className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-muted hover:bg-surface-2 hover:text-fg max-lg:min-h-10"
     >
       <span className="size-1.5 rounded-full bg-success" aria-hidden />
       {count} online

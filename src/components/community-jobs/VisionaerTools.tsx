@@ -45,11 +45,11 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-gray-300 flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-teal-400" />
+          <TrendingUp className="w-3.5 h-3.5 text-primary" />
           {stats.total} {stats.total === 1 ? "Idee" : "Ideen"} · {stats.votes > 0 ? `Ø ${formatFixed(stats.average, 1)} ★` : "noch keine Bewertung"} · diese Woche {stats.starsThisWeek} ★
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-teal-400 transition-colors flex items-center gap-1">
+          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -74,7 +74,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
           {stats.best && (
             <p className="text-xs text-gray-400">
-              Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-gray-200 hover:text-teal-300 transition-colors">{stats.best.title}</Link>{" "}
+              Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-gray-200 hover:text-primary-fg transition-colors">{stats.best.title}</Link>{" "}
               <span className="text-gray-600">(Ø {formatFixed(stats.best.average, 1)} ★ · {stats.best.count} Stimmen)</span>
             </p>
           )}
@@ -101,7 +101,7 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.stars} Sterne`}>
                     <span className="text-[9px] text-gray-500">{w.stars}</span>
-                    <div className="w-full rounded-t bg-teal-400/70" style={{ height: `${Math.max(4, (w.stars / maxWeek) * 36)}px` }} />
+                    <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(4, (w.stars / maxWeek) * 36)}px` }} />
                     <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
                 ))}

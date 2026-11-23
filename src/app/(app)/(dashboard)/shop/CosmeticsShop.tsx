@@ -305,7 +305,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             <p className="text-sm font-semibold text-white">{set.name}</p>
             <p className="text-xs text-gray-500">{set.description}</p>
           </div>
-          {!complete && s.discountPct > 0 && <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-500 text-black">−{s.discountPct} %</span>}
+          {!complete && s.discountPct > 0 && <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-500 text-black">−{s.discountPct} %</span>}
         </div>
 
         <LookPreview look={lookOfSet(set)} image={image} name={displayName} size={40} />
@@ -316,7 +316,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             if (!c) return null;
             const have = owned.has(id);
             return (
-              <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${have ? "border-teal-500/40 text-teal-300 bg-teal-500/10" : "border-line-strong text-gray-400"}`}>
+              <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${have ? "border-primary/40 text-primary-fg bg-primary/10" : "border-line-strong text-gray-400"}`}>
                 {have && "✓ "}{c.name}
               </span>
             );
@@ -325,7 +325,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
 
         <div className="mt-auto text-xs" onClick={e => e.stopPropagation()}>
           {complete ? (
-            <span className="flex items-center justify-center gap-1 py-1.5 text-teal-300"><Check className="w-3.5 h-3.5" /> Komplett</span>
+            <span className="flex items-center justify-center gap-1 py-1.5 text-primary-fg"><Check className="w-3.5 h-3.5" /> Komplett</span>
           ) : confirmBuy === confirmKey ? (
             <div className="flex gap-1.5">
               <button onClick={() => buySet(s.id)} disabled={!!busy}
@@ -369,7 +369,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         <Link href="/points" title="Woher kommen Münzen?"
           className="group glass rounded-card px-4 py-2 flex items-center gap-2 hover:bg-line transition-colors">
           <CoinIcon size={18} />
-          <span className="text-lg font-black text-amber-300 tabular-nums">{fmt(state.balance)}</span>
+          <span className="text-lg font-extrabold text-amber-300 tabular-nums">{fmt(state.balance)}</span>
           <span className="flex items-center gap-0.5 border-l border-line-strong pl-2 text-xs font-semibold text-amber-200/80 group-hover:text-amber-200">
             Münzen verdienen <ChevronRight className="w-3.5 h-3.5" />
           </span>

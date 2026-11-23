@@ -79,7 +79,7 @@ export default function WatchTogetherView({
   return (
     <div className="flex flex-col min-h-[100dvh] p-3 sm:p-4 gap-3">
       <header className="flex flex-wrap items-center gap-3">
-        <Link href="/zusammen" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-teal-300">
+        <Link href="/zusammen" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-fg">
           <ArrowLeft className="w-4 h-4" /> Übersicht
         </Link>
         <div className="min-w-0">
@@ -90,12 +90,12 @@ export default function WatchTogetherView({
         {!mobile && n > 1 && (
           <button
             onClick={() => setFocus(f => (f ? null : audioLogin ?? live[0]?.twitchLogin ?? null))}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-300 hover:border-teal-500/40"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-line text-gray-300 hover:border-primary/40 max-lg:min-h-10"
           >
             {focusLogin ? <><LayoutGrid className="w-3.5 h-3.5" /> Raster</> : <><Maximize2 className="w-3.5 h-3.5" /> Fokus</>}
           </button>
         )}
-        <span className="text-xs text-gray-500">powered by <Link href="/dashboard" className="text-teal-300 hover:underline">OMA</Link></span>
+        <span className="text-xs text-gray-500">powered by <Link href="/dashboard" className="text-primary-fg hover:underline">OMA</Link></span>
       </header>
 
       {n === 0 ? (
@@ -109,7 +109,7 @@ export default function WatchTogetherView({
           <div className="lg:flex-1 min-w-0">
             {!audioLogin && (
               <p className="flex items-center gap-1.5 mb-2 text-xs text-gray-400">
-                <Volume2 className="w-3.5 h-3.5 text-teal-300" /> Alle Streams starten stumm – klick bei einem Stream auf „Ton“.
+                <Volume2 className="w-3.5 h-3.5 text-primary-fg" /> Alle Streams starten stumm – klick bei einem Stream auf „Ton“.
               </p>
             )}
             {mobile && n > 1 && (
@@ -119,8 +119,8 @@ export default function WatchTogetherView({
                     key={m.twitchLogin}
                     onClick={() => setAudio(m.twitchLogin)}
                     className={`shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${
-                      m.twitchLogin === mobileLogin ? "border-teal-400/60 bg-teal-500/15 text-teal-100" : "border-line text-gray-300"
-                    }`}
+                      m.twitchLogin === mobileLogin ? "border-primary/60 bg-primary/15 text-teal-100" : "border-line text-gray-300"
+                    } max-lg:min-h-10`}
                   >
                     <span className="w-2 h-2 rounded-full" style={{ background: colorOf(m.twitchLogin) }} /> {m.name}
                   </button>
@@ -147,7 +147,7 @@ export default function WatchTogetherView({
                       {!hasAudio && (
                         <button
                           onClick={() => setAudio(m.twitchLogin)}
-                          className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-line text-gray-300 hover:border-teal-500/40 hover:text-teal-200"
+                          className="shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-line text-gray-300 hover:border-primary/40 hover:text-teal-200 max-lg:min-h-10"
                         >
                           <Volume2 className="w-3.5 h-3.5" /> Ton
                         </button>
@@ -166,7 +166,7 @@ export default function WatchTogetherView({
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Auf Twitch öffnen"
-                        className="shrink-0 p-1 text-gray-500 hover:text-teal-300"
+                        className="shrink-0 p-1 text-gray-500 hover:text-primary-fg"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>

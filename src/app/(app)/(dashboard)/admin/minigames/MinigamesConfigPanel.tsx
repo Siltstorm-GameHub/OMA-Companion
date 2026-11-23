@@ -44,7 +44,7 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
               type="checkbox"
               checked={config[item.key]}
               onChange={e => set(item.key, e.target.checked)}
-              className="w-4 h-4 accent-teal-500"
+              className="w-4 h-4 accent-primary"
             />
             <div className="flex-1">
               <p className="text-sm text-white font-medium">{item.label}</p>
@@ -71,7 +71,7 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium transition-colors disabled:opacity-50"
       >
         <Save className="w-4 h-4" />
         {saving ? "Speichert…" : "Speichern"}
@@ -88,7 +88,7 @@ function Field({ label, value, onChange }: { label: string; value: number; onCha
         min={0}
         value={value}
         onChange={e => onChange(parseInt(e.target.value, 10) || 0)}
-        className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-teal-500/50"
+        className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-primary/50"
       />
     </label>
   );

@@ -22,8 +22,8 @@ export default function StatRowsEditor({
   showMatchWinToggle = true,
   showLeagueOverride = false,
   showLatestToggle = false,
-  accentClassName = "text-teal-400 hover:text-teal-300",
-  inputClassName = "rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors",
+  accentClassName = "text-primary hover:text-primary-fg",
+  inputClassName = "rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors",
   inputStyle,
 }: {
   rows: StatRow[];

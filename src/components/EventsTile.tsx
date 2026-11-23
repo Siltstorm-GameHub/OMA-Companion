@@ -33,7 +33,7 @@ const BTN_SECONDARY = `${BTN} border border-line-strong bg-surface-2 text-fg hov
 
 function Pill({ tone, children }: { tone: "teal" | "red" | "violet" | "yellow"; children: ReactNode }) {
   const cls = {
-    teal: "text-teal-300",
+    teal: "text-primary-fg",
     red: "text-red-400",
     violet: "text-violet-300",
     yellow: "text-yellow-300",
@@ -104,11 +104,11 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
         <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center">
           <span className="text-4xl drop-shadow-card" aria-hidden>🤝</span>
-          <span className="text-lg font-black text-white drop-shadow-card">Du warst dabei!</span>
+          <span className="text-lg font-extrabold text-white drop-shadow-card">Du warst dabei!</span>
           {r.reward && (r.reward.coins > 0 || r.reward.rankPoints > 0) && (
             <span className="flex items-center gap-2 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold tabular-nums">
               {r.reward.coins > 0 && <span className="flex items-center gap-0.5 text-amber-300">+{r.reward.coins} <CoinIcon size={12} /></span>}
-              {r.reward.rankPoints > 0 && <span className="flex items-center gap-0.5 text-teal-300">+{r.reward.rankPoints} <RankPointsIcon size={12} /></span>}
+              {r.reward.rankPoints > 0 && <span className="flex items-center gap-0.5 text-primary-fg">+{r.reward.rankPoints} <RankPointsIcon size={12} /></span>}
             </span>
           )}
           {r.pollWins.length > 0 && (
@@ -142,7 +142,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       <>
         <Cover game={r.game} coverUrl={r.coverUrl} omaOriginal={r.omaOriginal} dim />
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-black text-yellow-300 drop-shadow-card tabular-nums">{r.place}.</span>
+          <span className="text-5xl font-extrabold text-yellow-300 drop-shadow-card tabular-nums">{r.place}.</span>
           <span className="text-xs font-semibold text-gray-200">von {r.total}</span>
           {r.pollWins.length > 0 && (
             <span className="mt-2 flex max-w-[90%] items-center gap-1.5 rounded-md bg-[#0b0d12]/85 px-2 py-1 text-xs font-semibold text-violet-200 shadow-card">
@@ -212,7 +212,7 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
         highlighted = true;
         const startsIn = startsInLabel(ev.startAt, now);
         pill = statusPill ?? <Pill tone="teal"><Clock className="w-3.5 h-3.5" />{startsIn ? `startet ${startsIn}` : "startet gleich"}</Pill>;
-        sub = <>{running ? `${ev.playerCount} dabei` : longDate(ev.startAt, now)} · <span className="text-teal-300">du bist dabei</span></>;
+        sub = <>{running ? `${ev.playerCount} dabei` : longDate(ev.startAt, now)} · <span className="text-primary-fg">du bist dabei</span></>;
         action = ev.discordUrl
           ? <a href={ev.discordUrl} target="_blank" rel="noopener noreferrer" className={BTN_PRIMARY}><ExternalLink className="w-3.5 h-3.5" />Discord</a>
           : <Link href={href} className={BTN_SECONDARY}>Details</Link>;
@@ -272,13 +272,13 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
       // Ein Event: ganze Zeile führt hin. Mehrere: jeder Chip ist ein eigener Link zu seinem Event
       // (die Zeile selbst ist dann kein Link — sonst wären die Links verschachtelt).
       href: multi ? undefined : `/tournament/${first.id}`,
-      lead: <span className="font-semibold text-teal-300">läuft</span>,
+      lead: <span className="font-semibold text-primary-fg">läuft</span>,
       // Jeder Name als eigener Chip — bei mehreren Events auf einen Blick getrennt (max. 2 + "+N")
       label: (
         <span className="flex items-center gap-1.5 min-w-0">
           {periodEvents.slice(0, 2).map(e => multi ? (
             <Link key={e.id} href={`/tournament/${e.id}`} title={e.title}
-              className={`${chipCls} max-w-[48%] transition-colors hover:border-teal-400/40 hover:bg-teal-500/10 hover:text-white`}>
+              className={`${chipCls} max-w-[48%] transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-white`}>
               {e.title}
             </Link>
           ) : (
@@ -302,10 +302,10 @@ export default function EventsTile({ feature, rows, periodEvents = [], weekCount
     return {
       key: e.id,
       href: `/tournament/${e.id}`,
-      lead: running ? <span className="font-bold text-red-400">LIVE</span> : b.top === "HEUTE" ? <span className="text-teal-300">{b.time}</span> : `${b.weekday} ${b.day}`,
+      lead: running ? <span className="font-bold text-red-400">LIVE</span> : b.top === "HEUTE" ? <span className="text-primary-fg">{b.time}</span> : `${b.weekday} ${b.day}`,
       label: <>{e.omaOriginal && <OmaTitlePrefix title={e.title} />}{e.title}</>,
       hint: e.isRegistered
-        ? <span className="text-teal-300">dabei</span>
+        ? <span className="text-primary-fg">dabei</span>
         : full
           ? <span className="text-gray-500">voll</span>
           : urgent

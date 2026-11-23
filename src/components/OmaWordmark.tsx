@@ -31,9 +31,9 @@ export default function OmaWordmark({
   const s = SIZES[size];
   return (
     <span className={`inline-flex items-baseline gap-[0.35em] font-display leading-none whitespace-nowrap ${className}`}>
-      <span className={`${s.oma} font-semibold tracking-[0.2em] text-teal-300`}>OMA</span>
-      <span className={`${s.name} font-black tracking-tight`} style={{ color: p.color }}>{p.name}</span>
-      {suffix && <span className={`${s.name} font-black tracking-tight text-white`}>· {suffix}</span>}
+      <span className={`${s.oma} font-semibold tracking-[0.2em] text-primary-fg`}>OMA</span>
+      <span className={`${s.name} font-extrabold tracking-tight`} style={{ color: p.color }}>{p.name}</span>
+      {suffix && <span className={`${s.name} font-extrabold tracking-tight text-white`}>· {suffix}</span>}
     </span>
   );
 }

@@ -83,7 +83,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                             dominionTriggerStats.includes(p.label)
                               ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
                               : "text-gray-500 border-line hover:border-line-strong"
-                          }`}
+                          } max-lg:min-h-10`}
                         ><Vote className="w-3 h-3" />{p.label}</button>
                       ))}
                       {statRows.filter(r => r.field.trim()).length === 0 && polls.filter(p => p.label.trim()).length === 0 && (

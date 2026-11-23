@@ -4,6 +4,7 @@ import { isEventRunning } from "@/lib/event-display";
 import { participationRewardOf } from "@/lib/event-placement";
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
+import { cachedInMemory } from "@/lib/memory-cache";
 import Link from "next/link";
 import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import WatchTogetherTeaser from "@/components/watch/WatchTogetherTeaser";
@@ -55,7 +56,7 @@ function parseJsonArray(raw: string | null | undefined): string[] {
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 const ROLE_STYLE: Record<string, string> = {
-  admin:     "text-teal-300 bg-teal-500/10 border border-teal-500/20",
+  admin:     "text-primary-fg bg-primary/10 border border-primary/20",
   moderator: "text-cyan-300 bg-cyan-500/10 border border-cyan-500/20",
   user:      "text-gray-400 bg-line border border-line",
 };
@@ -159,6 +160,78 @@ const getGlobalDashboardData = unstable_cache(
   { revalidate: 300, tags: ["dashboard-global"] }
 );
 
+/**
+ * Nicht nutzerbezogene Werte der Übersicht (Quests des Monats, Tagesnachricht, Clip des Monats,
+ * Rangliste Top 5, Squads, Wanderpokal). Kamen früher bei JEDEM Render einzeln aus der DB — jetzt
+ * höchstens einmal pro Minute und Server-Instanz (lib/memory-cache). Nutzerbezogenes (eigener
+ * Quest-Fortschritt, eigene Stimme, eigener Rang …) wird weiterhin pro Request geladen.
+ */
+function getHomeGlobals(month: number, year: number) {
+  return cachedInMemory(`dashboard-home-globals:${year}-${month}`, 60_000, async () => {
+    const now = new Date();
+    const [monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows, latestWanderpokal] = await Promise.all([
+      prisma.quest.findMany({ where: { month, year }, orderBy: { reward: "desc" } }),
+      prisma.dailyMessage.findFirst({
+        where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, title: true, content: true, endDate: true },
+      }),
+      prisma.monthlyClipContest.findFirst({
+        where:   { status: "finished" },
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        select:  { id: true, month: true, year: true, winnerNominationIds: true },
+      }),
+      prisma.monthlyClipContest.findFirst({
+        where:   { status: "voting" },
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+        select:  { id: true, month: true, year: true, votingEndsAt: true, _count: { select: { nominations: true } } },
+      }),
+      prisma.user.findMany({
+        where: { deletedAt: null, rankPoints: { gt: 0 } },
+        orderBy: { rankPoints: "desc" },
+        take: 5,
+        select: { id: true, username: true, name: true, image: true, rankPoints: true },
+      }),
+      prisma.squad.findMany({
+        orderBy: { memberships: { _count: "desc" } },
+        take: 3,
+        select: { id: true, name: true, _count: { select: { memberships: true } } },
+      }),
+      prisma.wanderpocalHolder.findFirst({ orderBy: { heldSince: "desc" }, select: { scopeType: true, scopeValue: true } }),
+    ]);
+
+    // Bei Gleichstand gibt es mehrere Gewinner-Clips — die Kachel zeigt den ersten und nennt den Gleichstand
+    const winnerNominationIds = finishedClipContest?.winnerNominationIds ?? [];
+    const [winnerClipsUnordered, clipRankingRows, wanderpokalHolders] = await Promise.all([
+      winnerNominationIds.length > 0
+        ? prisma.clipNomination.findMany({
+            where:  { id: { in: winnerNominationIds } },
+            select: { id: true, clipUrl: true, thumbnailUrl: true, clipTitle: true, customTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
+          })
+        : Promise.resolve([]),
+      finishedClipContest
+        ? prisma.clipNomination.findMany({
+            where:   { contestId: finishedClipContest.id },
+            orderBy: { votes: { _count: "desc" } },
+            take:    3,
+            select:  { id: true, clipTitle: true, customTitle: true, _count: { select: { votes: true } } },
+          })
+        : Promise.resolve([]),
+      latestWanderpokal
+        ? prisma.wanderpocalHolder.findMany({
+            where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
+            select: { user: { select: { username: true, name: true } } },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows,
+      latestWanderpokal, winnerNominationIds, winnerClipsUnordered, clipRankingRows, wanderpokalHolders,
+    };
+  });
+}
+
 export default async function DashboardPage() {
   // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen) — muss abgeschlossen
   // sein, bevor unten Event-Status gelesen wird (siehe src/lib/event-lifecycle.ts).
@@ -173,8 +246,10 @@ export default async function DashboardPage() {
   const month = nowParts.month;
   const year  = nowParts.year;
 
+  // Zusätzlich 60 s im Speicher: spart pro Render den Data-Cache-Lesezugriff samt JSON-Parse
+  // (revalidateTag("dashboard-global") greift dadurch bis zu 60 s später).
   const { memberCount, activeSeries, recentSummaries, recentlyFinishedCandidates } =
-    await getGlobalDashboardData();
+    await cachedInMemory("dashboard-global", 60_000, getGlobalDashboardData);
 
   // Namen der Spitzenreiter außerhalb des globalen Caches auflösen, damit Namensänderungen sofort
   // sichtbar sind, ohne den 5-Minuten-Cache der (teuren) Standings-Berechnung zu invalidieren.
@@ -199,46 +274,21 @@ export default async function DashboardPage() {
     }));
 
   const [
-    myQuestsDone,
-    totalMonthQuests,
-    myMonthQuests,
-    activeDailyMessage,
+    homeGlobals,
+    myQuestProgress,
     servers,
-    finishedClipContest,
-    activeClipContest,
     homeEventRows,
     spunToday,
     swipe,
   ] = await Promise.all([
+    getHomeGlobals(month, year),
     userId
-      ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
-      : 0,
-    prisma.quest.count({ where: { month, year } }),
-    prisma.quest.findMany({
-      where:   { month, year },
-      orderBy: { reward: "desc" },
-      include: { progress: userId ? { where: { userId }, take: 1 } : false },
-    }),
-    prisma.dailyMessage.findFirst({
-      where: {
-        isActive:  true,
-        startDate: { lte: now },
-        endDate:   { gte: now },
-      },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, title: true, content: true, endDate: true },
-    }),
+      ? prisma.userQuestProgress.findMany({
+          where: { userId, quest: { month, year } },
+          select: { questId: true, completed: true, current: true },
+        })
+      : Promise.resolve([]),
     getVisibleServers(userId),
-    prisma.monthlyClipContest.findFirst({
-      where:   { status: "finished" },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      select:  { id: true, month: true, year: true, winnerNominationIds: true },
-    }),
-    prisma.monthlyClipContest.findFirst({
-      where:   { status: "voting" },
-      orderBy: [{ year: "desc" }, { month: "desc" }],
-      select:  { id: true, month: true, year: true, votingEndsAt: true, _count: { select: { nominations: true } } },
-    }),
     // Kandidaten für die Startseiten-Event-Kachel (lib/home-event-feature.ts) — pro Request, weil
     // Anmeldung, offene Stimmen und Relevanz vom Betrachter abhängen.
     prisma.event.findMany({
@@ -270,6 +320,19 @@ export default async function DashboardPage() {
     userId ? getSwipeSummary(userId).catch(() => null) : null,
   ]);
 
+  const {
+    monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows,
+    latestWanderpokal, winnerNominationIds, winnerClipsUnordered, clipRankingRows, wanderpokalHolders,
+  } = homeGlobals;
+  // Eigener Fortschritt zu den (gecachten) Quests des Monats
+  const progressByQuest = new Map(myQuestProgress.map(p => [p.questId, p]));
+  const myMonthQuests = monthQuests.map(q => {
+    const p = progressByQuest.get(q.id);
+    return { ...q, progress: p ? [{ completed: p.completed, current: p.current }] : [] };
+  });
+  const totalMonthQuests = monthQuests.length;
+  const myQuestsDone = myQuestProgress.filter(p => p.completed).length;
+
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 
   const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -281,11 +344,8 @@ export default async function DashboardPage() {
   const startOfLastMonth = fromDatetimeLocalBerlin(`${lastMonthYear}-${pad2(lastMonth)}-01T00:00`);
   const startOfNextMonth = fromDatetimeLocalBerlin(`${nextMonthYear}-${pad2(nextMonth)}-01T00:00`);
 
-  // Bei Gleichstand gibt es mehrere Gewinner-Clips — die Kachel zeigt den ersten und nennt den Gleichstand
-  const winnerNominationIds = finishedClipContest?.winnerNominationIds ?? [];
-
   // Unabhängige Follow-up-Queries parallelisieren
-  const [leaderboardRank, rankGainThisMonth, rankGainLastMonth, winnerClipsUnordered] = await Promise.all([
+  const [leaderboardRank, rankGainThisMonth, rankGainLastMonth] = await Promise.all([
     userId
       ? prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }).then(n => n + 1)
       : Promise.resolve(null),
@@ -301,22 +361,11 @@ export default async function DashboardPage() {
           _sum: { amount: true },
         }).then(r => r._sum.amount ?? 0)
       : 0,
-    winnerNominationIds.length > 0
-      ? prisma.clipNomination.findMany({
-          where:  { id: { in: winnerNominationIds } },
-          select: { id: true, clipUrl: true, thumbnailUrl: true, clipTitle: true, customTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
-        })
-      : Promise.resolve([]),
   ]);
 
   // ── Module der Übersicht (Designentwurf): Rangliste, Squads, dein laufendes Match, Wanderpokal ──
-  const [topRankUsers, mySquadRows, topSquadRows, myOpenMatch, latestWanderpokal] = await Promise.all([
-    prisma.user.findMany({
-      where: { deletedAt: null, rankPoints: { gt: 0 } },
-      orderBy: { rankPoints: "desc" },
-      take: 5,
-      select: { id: true, username: true, name: true, image: true, rankPoints: true },
-    }),
+  // (Top 5, Top-Squads und Wanderpokal kommen aus getHomeGlobals)
+  const [mySquadRows, myOpenMatch] = await Promise.all([
     userId
       ? prisma.squadMembership.findMany({
           where: { userId },
@@ -324,11 +373,6 @@ export default async function DashboardPage() {
           select: { squad: { select: { id: true, name: true, _count: { select: { memberships: true } } } } },
         })
       : Promise.resolve([]),
-    prisma.squad.findMany({
-      orderBy: { memberships: { _count: "desc" } },
-      take: 3,
-      select: { id: true, name: true, _count: { select: { memberships: true } } },
-    }),
     // Offenes 1-gegen-1-Match in einem laufenden Turnier (beide Gegner stehen fest, noch kein Ergebnis)
     userId
       ? prisma.match.findFirst({
@@ -345,22 +389,13 @@ export default async function DashboardPage() {
           },
         })
       : Promise.resolve(null),
-    prisma.wanderpocalHolder.findFirst({ orderBy: { heldSince: "desc" }, select: { scopeType: true, scopeValue: true } }),
   ]);
-  const [matchUsers, wanderpokalHolders] = await Promise.all([
-    myOpenMatch
-      ? prisma.user.findMany({
-          where: { id: { in: [myOpenMatch.player1Id!, myOpenMatch.player2Id!] } },
-          select: { id: true, username: true, name: true, image: true },
-        })
-      : Promise.resolve([]),
-    latestWanderpokal
-      ? prisma.wanderpocalHolder.findMany({
-          where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
-          select: { user: { select: { username: true, name: true } } },
-        })
-      : Promise.resolve([]),
-  ]);
+  const matchUsers = myOpenMatch
+    ? await prisma.user.findMany({
+        where: { id: { in: [myOpenMatch.player1Id!, myOpenMatch.player2Id!] } },
+        select: { id: true, username: true, name: true, image: true },
+      })
+    : [];
   const uName = (u: { username: string | null; name: string | null } | undefined) => u?.username ?? u?.name ?? "Mitglied";
   let homeMatch: HomeMatch | null = null;
   if (myOpenMatch && userId) {
@@ -397,7 +432,7 @@ export default async function DashboardPage() {
     .map(({ customTitle, ...c }) => ({ ...c, clipTitle: customTitle ?? c.clipTitle }));
 
   // ── Startseiten-Kacheln: Events (eine Priorität statt Karussell) + Clip-Platzierung ──
-  const [viewer, myRecentResult, clipRankingRows, myClipVote, dailyPolls, myCommunityEvents] = await Promise.all([
+  const [viewer, myRecentResult, myClipVote, dailyPolls, myCommunityEvents] = await Promise.all([
     loadEventViewerContext(userId),
     // Ergebnis eines Events, bei dem du in den letzten 24 Std mitgespielt hast
     userId
@@ -418,14 +453,6 @@ export default async function DashboardPage() {
           },
         })
       : null,
-    finishedClipContest
-      ? prisma.clipNomination.findMany({
-          where:   { contestId: finishedClipContest.id },
-          orderBy: { votes: { _count: "desc" } },
-          take:    3,
-          select:  { id: true, clipTitle: true, customTitle: true, _count: { select: { votes: true } } },
-        })
-      : Promise.resolve([]),
     // Aufgabenleiste: schon für den Clip des Monats abgestimmt?
     userId && activeClipContest
       ? prisma.clipContestVote.findUnique({ where: { contestId_userId: { contestId: activeClipContest.id, userId } }, select: { id: true } })

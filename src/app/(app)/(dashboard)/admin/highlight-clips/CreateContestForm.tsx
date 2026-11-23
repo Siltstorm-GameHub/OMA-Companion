@@ -162,7 +162,7 @@ export default function CreateContestForm({
           />
           <button
             onClick={addChannel}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-line border border-line-strong text-gray-300 hover:bg-line transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-line border border-line-strong text-gray-300 hover:bg-line transition-colors max-lg:min-h-10"
           >
             <Plus className="w-3.5 h-3.5" /> Hinzufügen
           </button>

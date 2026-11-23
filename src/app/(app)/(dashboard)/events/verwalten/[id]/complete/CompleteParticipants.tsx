@@ -11,7 +11,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-teilnehmer" aria-label="Teilnehmer" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Teilnehmer")}</span>
+            <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-fg text-xs flex items-center justify-center">{stepNo("Teilnehmer")}</span>
             Teilnehmer
           </h2>
           <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
@@ -33,7 +33,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
                     }`}>
                       <input type="checkbox" checked={!isAbsent} onChange={() => toggleAbsent(u.id)}
                         aria-label={`${userName(u)} war da`} title={isAbsent ? "Nicht da: keine Belohnung" : "War da"}
-                        className="rounded accent-teal-500 shrink-0" />
+                        className="rounded accent-primary shrink-0" />
                       <Avatar u={u} size={5} />
                       <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : isAbsent ? "text-gray-500" : "text-white"}`}>{userName(u)}</span>
                       {isExcluded && <span className="text-xs text-red-400 shrink-0">Disqualifiziert</span>}
@@ -43,7 +43,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
                           <span className="text-xs text-amber-400 tabular-nums leading-tight">+{effectiveParticipationCoins} <CoinIcon size={11} /></span>
                         )}
                         {!isExcluded && !isAbsent && participationRankPts > 0 && (
-                          <span className="text-xs text-teal-400 tabular-nums leading-tight">+{participationRankPts} <RankPointsIcon size={11} /></span>
+                          <span className="text-xs text-primary tabular-nums leading-tight">+{participationRankPts} <RankPointsIcon size={11} /></span>
                         )}
                       </span>
                       <button

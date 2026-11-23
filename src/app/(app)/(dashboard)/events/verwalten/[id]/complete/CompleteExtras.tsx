@@ -12,23 +12,23 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-extras" aria-label="Extras" className="space-y-3 scroll-mt-20">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Extras")}</span>
+            <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-fg text-xs flex items-center justify-center">{stepNo("Extras")}</span>
             Extras
           </h2>
           <div className="grid gap-3 lg:grid-cols-2 items-start">
           {/* MVP */}
           {seriesStatConfig?.mvpStatField && (
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "color-mix(in srgb, var(--color-primary) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
               <div className="flex items-center gap-2">
                 <RankPointsIcon size={14} />
-                <span className="text-xs font-semibold text-teal-300">
+                <span className="text-xs font-semibold text-primary-fg">
                   MVP{" "}
                   <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}“ in der Reihen-Tabelle)</span>
                 </span>
               </div>
               {isFinishedSummary ? (
                 mvpUserId ? (
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                     <Avatar u={registeredUsers.find(u => u.id === mvpUserId) ?? { id: mvpUserId, name: mvpUserId, username: null, image: null }} size={6} />
                     <span className="text-sm text-white flex-1 truncate">{userName(registeredUsers.find(u => u.id === mvpUserId) ?? { id: mvpUserId, name: mvpUserId, username: null, image: null })}</span>
                   </div>
@@ -38,14 +38,14 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
               ) : (
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-2 cursor-pointer transition-colors">
-                    <input type="radio" name="mvp" value="" checked={mvpUserId === ""} onChange={() => setMvpUserId("")} className="accent-teal-500" />
+                    <input type="radio" name="mvp" value="" checked={mvpUserId === ""} onChange={() => setMvpUserId("")} className="accent-primary" />
                     <span className="text-sm text-gray-500 italic">Kein MVP</span>
                   </label>
                   {registeredUsers.map(u => (
                     <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-surface-2"
+                      mvpUserId === u.id ? "bg-primary/10 border border-primary/20" : "hover:bg-surface-2"
                     }`}>
-                      <input type="radio" name="mvp" value={u.id} checked={mvpUserId === u.id} onChange={() => setMvpUserId(u.id)} className="accent-teal-500 shrink-0" />
+                      <input type="radio" name="mvp" value={u.id} checked={mvpUserId === u.id} onChange={() => setMvpUserId(u.id)} className="accent-primary shrink-0" />
                       <Avatar u={u} size={6} />
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                       {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
@@ -103,15 +103,15 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
 
           {/* Zuschauer-Anwesenheit */}
           {spectatorUsers.length > 0 && spectatorRewardJson && (
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
-              <p className="text-xs font-semibold text-teal-300">
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "color-mix(in srgb, var(--color-primary) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)" }}>
+              <p className="text-xs font-semibold text-primary-fg">
                 👁️ Zuschauer-Anwesenheit
                 <span className="font-normal text-gray-500 ml-1">({effectiveSpectatorCoins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
               </p>
               {isFinishedSummary ? (
                 <div className="space-y-1">
                   {spectatorUsers.filter(u => spectatorAttended.has(u.id)).map(u => (
-                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
                       <Avatar u={u} size={5} />
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                     </div>
@@ -126,7 +126,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                   <div className="flex items-center gap-2">
                     <button type="button"
                       onClick={() => setSpectatorAttended(new Set(spectatorUsers.map(u => u.id)))}
-                      className="text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                      className="text-xs text-primary hover:text-primary-fg transition-colors">
                       Alle anwesend
                     </button>
                     <span className="text-gray-700">·</span>
@@ -146,7 +146,7 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                   </div>
                   {spectatorUsers.map(u => (
                     <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-surface-2 border border-transparent hover:border-line"
+                      spectatorAttended.has(u.id) ? "bg-primary/10 border border-primary/20" : "bg-surface-2 border border-transparent hover:border-line"
                     }`}>
                       <input type="checkbox" checked={spectatorAttended.has(u.id)}
                         onChange={e => setSpectatorAttended(prev => {
@@ -154,11 +154,11 @@ export default function CompleteExtras({ ctx }: { ctx: EventComplete }) {
                           if (e.target.checked) next.add(u.id); else next.delete(u.id);
                           return next;
                         })}
-                        className="accent-teal-500 shrink-0" />
+                        className="accent-primary shrink-0" />
                       <Avatar u={u} size={5} />
                       <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
                       {/* Aktivität beim Event als Entscheidungshilfe */}
-                      <span className={`text-xs shrink-0 ${spectatorActivity[u.id]?.length ? "text-teal-300/80" : "text-gray-600"}`}>
+                      <span className={`text-xs shrink-0 ${spectatorActivity[u.id]?.length ? "text-primary-fg/80" : "text-gray-600"}`}>
                         {spectatorActivity[u.id]?.length ? spectatorActivity[u.id].join(" · ") : "keine Aktivität"}
                       </span>
                     </label>

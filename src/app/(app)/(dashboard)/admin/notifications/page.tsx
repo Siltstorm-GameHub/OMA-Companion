@@ -49,7 +49,7 @@ export default async function AdminNotificationsPage() {
           🔔 Benachrichtigungs-Regeln
         </h2>
         {addedRules.length > 0 && (
-          <div className="mb-4 rounded-xl border border-teal-500/25 bg-teal-500/5 px-4 py-3 text-sm text-teal-100">
+          <div className="mb-4 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-teal-100">
             <p className="font-semibold">Neue Regeln angelegt ({addedRules.length})</p>
             <p className="text-xs text-teal-100/80 mt-0.5">
               Diese Meldungen gab es schon, sie liefen aber an den Regeln vorbei. Jetzt kannst du sie hier

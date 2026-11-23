@@ -62,7 +62,7 @@ export default async function YearReviewPage({
     { icon: <Medal className="w-4 h-4" />,         label: "Event-Siege",   value: String(review.eventWins),      accent: "from-amber-500/8",   iconCls: "text-amber-400 bg-amber-500/10 border-amber-500/15" },
     { icon: <Swords className="w-4 h-4" />,        label: "Turniere gespielt", value: String(review.tournamentsPlayed), sub: review.tournamentWins > 0 ? `${review.tournamentWins}× gewonnen` : undefined, accent: "from-primary/10", iconCls: "text-primary-fg bg-primary-soft border-primary/40" },
     { icon: <Gamepad2 className="w-4 h-4" />,      label: "Lieblingsspiel", value: review.topGames[0] ?? "–", sub: review.topGames.slice(1, 3).join(" · ") || undefined, accent: "from-blue-500/8", iconCls: "text-blue-400 bg-blue-500/10 border-blue-500/15" },
-    { icon: <Clock className="w-4 h-4" />,         label: "Voice-Stunden (geschätzt)", value: `${review.voiceHoursEstimate}h`, accent: "from-teal-500/8", iconCls: "text-teal-400 bg-teal-500/10 border-teal-500/15" },
+    { icon: <Clock className="w-4 h-4" />,         label: "Voice-Stunden (geschätzt)", value: `${review.voiceHoursEstimate}h`, accent: "from-primary/8", iconCls: "text-primary bg-primary/10 border-primary/15" },
     { icon: <MessageSquare className="w-4 h-4" />, label: "Nachrichten (geschätzt)", value: `${review.messagesEstimate}+`, accent: "from-indigo-500/8", iconCls: "text-indigo-400 bg-indigo-500/10 border-indigo-500/15" },
   ];
 
@@ -79,7 +79,7 @@ export default async function YearReviewPage({
               <GiftIcon size={20} />
             </div>
             <div>
-              <h1 className="font-display text-xl font-black text-white tracking-tight">Jahresrückblick {year}</h1>
+              <h1 className="font-display text-xl font-extrabold text-white tracking-tight">Jahresrückblick {year}</h1>
               <p className="text-xs text-gray-500">{displayName}s Jahr in der Community</p>
             </div>
           </div>
@@ -112,13 +112,13 @@ export default async function YearReviewPage({
               <RankPointsIcon size={14} /> {review.rankPointsStart.toLocaleString("de-DE")}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-600 shrink-0" />
-            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-teal-500/30 bg-teal-500/10 text-teal-300 tabular-nums">
+            <span className="flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary-fg tabular-nums">
               <RankPointsIcon size={14} /> {review.rankPointsEnd.toLocaleString("de-DE")}
             </span>
           </div>
           <p className="relative text-xs text-gray-500 mt-3 flex items-center gap-1.5">
             <RankPointsIcon size={12} />
-            <span className="text-teal-400 font-semibold tabular-nums">+<CountUp to={review.rankPointsEarned} /></span> Rang-Punkte in {year}
+            <span className="text-primary font-semibold tabular-nums">+<CountUp to={review.rankPointsEarned} /></span> Rang-Punkte in {year}
           </p>
         </div>
 
@@ -128,11 +128,11 @@ export default async function YearReviewPage({
           </p>
           <div className="relative flex items-end gap-6">
             <div>
-              <p className="text-2xl font-black text-amber-400 tabular-nums"><CountUp to={review.coinsEarned} /></p>
+              <p className="text-2xl font-extrabold text-amber-400 tabular-nums"><CountUp to={review.coinsEarned} /></p>
               <p className="text-xs text-gray-500 mt-0.5">verdient</p>
             </div>
             <div>
-              <p className="text-2xl font-black text-gray-400 tabular-nums"><CountUp to={review.coinsSpent} /></p>
+              <p className="text-2xl font-extrabold text-gray-400 tabular-nums"><CountUp to={review.coinsSpent} /></p>
               <p className="text-xs text-gray-500 mt-0.5">ausgegeben</p>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default async function YearReviewPage({
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${(i % 6) + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
             <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="relative text-lg font-black text-white leading-tight truncate" title={s.value}>{s.value}</p>
+            <p className="relative text-lg font-extrabold text-white leading-tight truncate" title={s.value}>{s.value}</p>
             {s.sub && <p className="relative text-xs text-gray-500 mt-0.5 truncate">{s.sub}</p>}
             <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
@@ -158,7 +158,7 @@ export default async function YearReviewPage({
           {review.biggestWin && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
               <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">🏆 Größter Gewinn</p>
-              <p className="relative text-lg font-black text-amber-400 tabular-nums flex items-center gap-1.5">
+              <p className="relative text-lg font-extrabold text-amber-400 tabular-nums flex items-center gap-1.5">
                 +{review.biggestWin.amount.toLocaleString("de-DE")} <CoinIcon size={14} />
               </p>
               <p className="relative text-xs text-gray-400 mt-1">{review.biggestWin.reason}</p>
@@ -167,7 +167,7 @@ export default async function YearReviewPage({
           {review.busiestMonth && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
               <p className="relative text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">📈 Aktivster Monat</p>
-              <p className="relative text-lg font-black text-white">{MONTH_NAMES[review.busiestMonth.month - 1]}</p>
+              <p className="relative text-lg font-extrabold text-white">{MONTH_NAMES[review.busiestMonth.month - 1]}</p>
               <p className="relative text-xs text-gray-400 mt-1">{review.busiestMonth.count} Aktivitäten</p>
             </div>
           )}
@@ -203,19 +203,19 @@ export default async function YearReviewPage({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {review.lul && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <p className="relative text-2xl font-black text-white tabular-nums">{review.lul.points}</p>
+              <p className="relative text-2xl font-extrabold text-white tabular-nums">{review.lul.points}</p>
               <p className="relative text-xs text-gray-400 mt-1.5">LuL-Punkte · {review.lul.spieltage} Spieltage{review.lul.wins > 0 ? ` · ${review.lul.wins} Siege` : ""}</p>
             </div>
           )}
           {review.predictions && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <p className="relative text-2xl font-black text-white tabular-nums">{review.predictions.correct}/{review.predictions.total}</p>
+              <p className="relative text-2xl font-extrabold text-white tabular-nums">{review.predictions.correct}/{review.predictions.total}</p>
               <p className="relative text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Target className="w-3 h-3" /> Vorhersagen richtig</p>
             </div>
           )}
           {review.donationsTotal > 0 && (
             <div className="glass card-shine relative overflow-hidden rounded-2xl p-4">
-              <p className="relative text-2xl font-black text-white tabular-nums">{review.donationsTotal.toLocaleString("de-DE")}€</p>
+              <p className="relative text-2xl font-extrabold text-white tabular-nums">{review.donationsTotal.toLocaleString("de-DE")}€</p>
               <p className="relative text-xs text-gray-400 mt-1.5 flex items-center gap-1"><Heart className="w-3 h-3" /> gespendet</p>
             </div>
           )}

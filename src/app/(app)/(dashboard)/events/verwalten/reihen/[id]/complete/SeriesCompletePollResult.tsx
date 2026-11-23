@@ -49,7 +49,7 @@ export default function SeriesCompletePollResult({ ctx }: { ctx: SeriesComplete 
                           excluded
                             ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
                             : "bg-violet-500/10 border-violet-500/15 text-violet-300 hover:border-red-500/30 hover:text-red-400"
-                        }`}
+                        } max-lg:min-h-10`}
                       >
                         <Avatar u={u} size={4} /> {userName(u)}
                       </button>

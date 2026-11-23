@@ -57,7 +57,7 @@ export default function RecalculateSeriesButton({ seriesId, finishedCount }: { s
         type="button"
         onClick={run}
         disabled={busy || finishedCount === 0}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-teal-600/40 bg-teal-700/15 hover:bg-teal-700/25 text-sm text-teal-300 disabled:opacity-40 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/40 bg-teal-700/15 hover:bg-teal-700/25 text-sm text-primary-fg disabled:opacity-40 transition-colors"
       >
         <RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />
         {busy ? "Wird neu berechnet…" : `Abgeschlossene Events neu berechnen (${finishedCount})`}

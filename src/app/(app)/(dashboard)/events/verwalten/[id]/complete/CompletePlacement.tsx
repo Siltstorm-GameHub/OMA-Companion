@@ -16,7 +16,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
   return (
     <section id="schritt-platzierung" aria-label="Platzierung" className="space-y-3 scroll-mt-20">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-          <span className="w-5 h-5 rounded-full bg-teal-500/15 text-teal-300 text-xs flex items-center justify-center">{stepNo("Platzierung")}</span>
+          <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-fg text-xs flex items-center justify-center">{stepNo("Platzierung")}</span>
           Platzierung festlegen
         </h2>
 
@@ -221,7 +221,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                         <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                         <input type="checkbox" checked={!isAbsent} onChange={() => toggleAbsent(uid)}
                           aria-label={`${userName(u)} war da`} title={isAbsent ? "Nicht da: kein Platz, keine Belohnung" : "War da"}
-                          className="rounded accent-teal-500 shrink-0" />
+                          className="rounded accent-primary shrink-0" />
                         <span className="text-sm w-6 text-center shrink-0">
                           {place === null
                             ? <span className="text-xs text-gray-600">–</span>
@@ -266,7 +266,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                             </span>
                           )}
                           {!isExcluded && reward && reward.rankPoints > 0 && (
-                            <span className="text-xs text-teal-400 tabular-nums leading-tight">
+                            <span className="text-xs text-primary tabular-nums leading-tight">
                               +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}

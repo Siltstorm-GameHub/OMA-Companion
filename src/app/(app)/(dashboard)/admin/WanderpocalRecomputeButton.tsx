@@ -42,7 +42,7 @@ export default function WanderpocalRecomputeButton() {
             <button
               onClick={handleRecompute}
               disabled={loading}
-              className="mt-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-colors font-medium disabled:opacity-50"
+              className="mt-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:border-amber-500/30 transition-colors font-medium disabled:opacity-50 max-lg:min-h-10"
             >
               {loading
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />

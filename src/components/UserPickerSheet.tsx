@@ -103,7 +103,7 @@ export function UserPickerSheet({
                       onClick={() => onToggle(u.id)}
                       className={`flex items-center gap-2 p-2.5 rounded-xl text-xs text-left transition-colors ${
                         isSelected
-                          ? "bg-teal-900/40 border border-teal-600/40 text-teal-300"
+                          ? "bg-primary-soft border border-primary/40 text-primary-fg"
                           : "bg-gray-800 border border-transparent text-gray-300 hover:bg-gray-750"
                       }`}
                     >
@@ -116,7 +116,7 @@ export function UserPickerSheet({
                       )}
                       <span className="truncate font-medium">{uname(u)}</span>
                       {isSelected && (
-                        <div className="ml-auto w-4 h-4 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
+                        <div className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center shrink-0">
                           <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
                             <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
@@ -131,7 +131,7 @@ export function UserPickerSheet({
             <div className="px-4 pb-6 pt-2 safe-area-pb border-t border-gray-800">
               <button
                 onClick={() => setOpen(false)}
-                className="w-full bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold rounded-xl py-3 transition-colors"
+                className="w-full bg-primary hover:bg-primary-hover text-primary-ink text-sm font-semibold rounded-xl py-3 transition-colors"
               >
                 Fertig ({selected.length} ausgewählt)
               </button>

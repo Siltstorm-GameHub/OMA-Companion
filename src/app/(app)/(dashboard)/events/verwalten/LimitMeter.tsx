@@ -13,7 +13,7 @@ function Meter({ label, used, max, unit }: { label: string; used: number; max: n
         </span>
       </div>
       <div className="mt-1 h-1.5 rounded-full bg-line overflow-hidden">
-        <div className={`h-full rounded-full ${full ? "bg-amber-400" : "bg-teal-400"}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${full ? "bg-amber-400" : "bg-primary"}`} style={{ width: `${pct}%` }} />
       </div>
       <p className={`mt-1 text-xs ${full ? "text-amber-300" : "text-gray-500"}`}>
         {full ? "Limit erreicht" : `noch ${left} ${left === 1 ? unit.one : unit.many} möglich`}

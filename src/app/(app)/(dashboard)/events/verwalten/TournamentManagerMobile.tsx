@@ -24,7 +24,7 @@ function parseStats(json: string | null): Record<string, number> {
 }
 
 function Avatar({ u, tone }: { u?: User; tone: "a" | "b" }) {
-  const bg = tone === "a" ? "bg-teal-500" : "bg-rose-500";
+  const bg = tone === "a" ? "bg-primary" : "bg-rose-500";
   const initial = u ? userName(u)[0]?.toUpperCase() : "?";
   if (u?.image) return <img src={u.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />;
   return (
@@ -66,8 +66,8 @@ function Snackbar({ text, onUndo, onDismiss }: { text: string; onUndo: () => voi
   }, [text]);
   return (
     <div className="fixed left-3 right-3 bottom-3 z-40 flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-xl shadow-black/40">
-      <span className="text-xs text-gray-200 flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" />{text}</span>
-      <button onClick={onUndo} className="text-xs font-semibold text-teal-400 shrink-0">Rückgängig</button>
+      <span className="text-xs text-gray-200 flex items-center gap-2"><Check className="w-3.5 h-3.5 text-primary shrink-0" />{text}</span>
+      <button onClick={onUndo} className="text-xs font-semibold text-primary shrink-0">Rückgängig</button>
     </div>
   );
 }
@@ -250,10 +250,10 @@ export default function TournamentManagerMobile({
 
       {/* ── "Jetzt dran"-Karte ── */}
       {focused && (
-      <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(165deg, rgba(20,184,166,0.12), rgba(31,41,55,0.9))", border: "1px solid rgba(20,184,166,0.35)" }}>
+      <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(165deg, color-mix(in srgb, var(--color-primary) 12%, transparent), rgba(31,41,55,0.9))", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">
               {(is1v1 ? !isPlayed1v1 : !isPlayedFfa) ? "Jetzt dran" : "Zuletzt angesehen"}
             </span>
             <span className="text-xs text-gray-400">{matchLabel(focused)}</span>
@@ -346,9 +346,9 @@ export default function TournamentManagerMobile({
               <div key={m.id} role="button" tabIndex={0} onClick={() => setFocusIdx(idx)}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFocusIdx(idx); } }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                  isFocused ? "border-teal-500/50 bg-teal-500/10" : "border-gray-700 bg-gray-800/60"
+                  isFocused ? "border-primary/50 bg-primary/10" : "border-gray-700 bg-gray-800/60"
                 }`}>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${played ? "bg-teal-500" : "bg-gray-600"}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${played ? "bg-primary" : "bg-gray-600"}`} />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-white truncate">
                     {is1v1
@@ -358,7 +358,7 @@ export default function TournamentManagerMobile({
                   {is1v1 && <p className="text-xs text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
                 </div>
                 {is1v1 && played && (
-                  <span className="text-xs text-teal-400 shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
+                  <span className="text-xs text-primary shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
                 )}
                 {!is1v1 && (
                   <span className="text-xs text-gray-500 shrink-0">{m.entries.length} Sp.</span>
@@ -489,7 +489,7 @@ function AddMatchForm({
               {sortedUsers.map(u => (
                 <button key={u.id} onClick={() => setMP1(u.id === mP1 ? "" : u.id)}
                   className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    mP1 === u.id ? "bg-teal-900/40 border-teal-600 text-white" : "bg-gray-800 border-gray-700 text-gray-300"
+                    mP1 === u.id ? "bg-primary-soft border-primary text-white" : "bg-gray-800 border-gray-700 text-gray-300"
                   }`}>
                   {userName(u)}
                 </button>
@@ -522,7 +522,7 @@ function AddMatchForm({
                 <button key={u.id}
                   onClick={() => setMFfaIds(checked ? mFfaIds.filter(id => id !== u.id) : [...mFfaIds, u.id])}
                   className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    checked ? "bg-teal-900/40 border-teal-600 text-white" : "bg-gray-800 border-gray-700 text-gray-300"
+                    checked ? "bg-primary-soft border-primary text-white" : "bg-gray-800 border-gray-700 text-gray-300"
                   }`}>
                   {userName(u)}
                 </button>
@@ -590,7 +590,7 @@ function FocusedDuelCard({
         {/* Freilos (nur ein Spieler): kein Zurücksetzen, sonst fiele der Spieler aus dem Baum */}
         {canPlay && (
           <div className="flex gap-2">
-            <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-teal-300 border border-teal-900/50 bg-teal-950/20 rounded-xl py-2">
+            <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-primary-fg border border-primary/30 bg-primary-soft rounded-xl py-2">
               <Pencil className="w-3.5 h-3.5" /> Bearbeiten
             </button>
             <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-xl py-2">

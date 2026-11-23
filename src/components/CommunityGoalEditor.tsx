@@ -21,7 +21,7 @@ export { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, goalToForm, type CommunityGoalFo
  * "Mehr Optionen" — aufgeklappt, sobald dort schon etwas vom Standard abweicht.
  * statFields = auswertbare Felder (goalFieldsFor) — bei Ergebnis-Formaten nur RESULT_SCORE_FIELD.
  */
-const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 
 /** Obergrenze am Feld (Mitglieder) — wie LimitHint im Event-Assistenten */
 function Limit({ value, max }: { value: number; max: number | null | undefined }) {
@@ -115,7 +115,7 @@ export default function CommunityGoalEditor({
                       <button key={f} type="button" aria-pressed={on}
                         onClick={() => set({ fields: on ? selected.filter(x => x !== f) : [...selected, f] })}
                         className={`rounded-full px-3 py-1 text-xs border transition-colors ${
-                          on ? "border-teal-500/60 bg-teal-500/15 text-teal-300" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                          on ? "border-primary/60 bg-primary/15 text-primary-fg" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
                         }`}>
                         {on ? "✓ " : ""}{goalFieldLabel(f)}
                       </button>

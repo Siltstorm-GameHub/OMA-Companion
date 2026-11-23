@@ -15,7 +15,7 @@ import { ROLE_INFO, displayName, relativeSince, type AdminUserRow } from "@/lib/
 
 type Tx = { id: string; amount: number; reason: string; createdAt: string };
 
-const inputCls = "rounded-lg bg-surface-2 border border-line-strong px-2.5 py-1.5 text-sm text-white focus:border-teal-500/40 focus:outline-none";
+const inputCls = "rounded-lg bg-surface-2 border border-line-strong px-2.5 py-1.5 text-sm text-white focus:border-primary/40 focus:outline-none";
 
 export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
   user: AdminUserRow;
@@ -148,7 +148,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
               <button key={key} type="button" role="radio" aria-checked={on} disabled={roleBusy || isMe}
                 onClick={() => changeRole(key)}
                 className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
-                  on ? "bg-teal-500/15 text-teal-200 ring-1 ring-teal-500/30" : "border border-line text-gray-400 hover:text-white hover:bg-line disabled:opacity-50"
+                  on ? "bg-primary/15 text-teal-200 ring-1 ring-primary/30" : "border border-line text-gray-400 hover:text-white hover:bg-line disabled:opacity-50"
                 }`}>
                 {roleBusy && !on ? <Loader2 className="w-3 h-3 inline animate-spin" /> : info.label}
               </button>
@@ -175,7 +175,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
           <input value={reason} onChange={e => setReason(e.target.value)} onKeyDown={e => e.key === "Enter" && book()}
             placeholder="Grund (sieht das Mitglied)" maxLength={200} className={`${inputCls} min-w-0 flex-1`} />
           <button type="button" onClick={book} disabled={booking}
-            className="inline-flex items-center gap-1 rounded-lg bg-teal-600 hover:bg-teal-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+            className="inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover px-3 py-1.5 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
             {booking && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Buchen
           </button>
         </div>
@@ -201,7 +201,7 @@ export default function UserDetail({ user, meId, now, onBack, onRoleChanged }: {
           </ul>
         )}
         <button type="button" onClick={() => setHistoryOpen(true)}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-teal-300 hover:text-teal-200">
+          className="inline-flex items-center gap-1 text-xs font-semibold text-primary-fg hover:text-teal-200">
           <History className="w-3.5 h-3.5" /> Ganzer Verlauf und Stände korrigieren
         </button>
       </div>

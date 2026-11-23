@@ -31,7 +31,7 @@ export function BannerCarousel({ children, interval = 7000 }: { children: React.
               onClick={() => setIndex(i)}
               aria-label={`Banner ${i + 1} anzeigen`}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? "w-5 bg-teal-400" : "w-1.5 bg-white/15 hover:bg-white/30"
+                i === index ? "w-5 bg-primary" : "w-1.5 bg-white/15 hover:bg-white/30"
               }`}
             />
           ))}

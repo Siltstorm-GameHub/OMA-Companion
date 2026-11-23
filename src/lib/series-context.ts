@@ -7,6 +7,7 @@ import { computeStatStandings, type LegacyStandingRow, type StatConfig } from "@
 import { timelineStates, type TimelineState } from "@/lib/series-timeline";
 import { eventPayout } from "@/lib/placement-rewards";
 import { resolveSeriesColor } from "@/lib/series-icons";
+import { cachedInMemory } from "@/lib/memory-cache";
 
 export type SeriesContextEvent = { id: string; title: string; startAt: Date; state: TimelineState };
 
@@ -34,7 +35,21 @@ const isGamePhaseDone = (completionData: string | null) => {
   catch { return false; }
 };
 
+/**
+ * Lädt den Reihen-Kontext. Der teure, nicht nutzerbezogene Teil (alle Termine der Reihe samt
+ * Match-Einträgen + komplette Reihentabelle) wird 20 s pro Server-Instanz gecacht — die Eventseite
+ * wird während eines Termins oft neu geladen (router.refresh nach jeder Meldung). Pro Request kommt
+ * nur noch der eigene Platz dazu.
+ */
 export async function loadSeriesContext(seriesId: string, eventId: string, userId: string | null | undefined): Promise<SeriesContext | null> {
+  const base = await cachedInMemory(`series-context:${seriesId}:${eventId}`, 20_000, () => loadSeriesBase(seriesId, eventId));
+  if (!base) return null;
+  const { standings, ...rest } = base;
+  const i = userId ? standings.findIndex(r => r.userId === userId) : -1;
+  return { ...rest, myPlace: i >= 0 ? i + 1 : null, myPoints: i >= 0 ? standings[i].totalPoints : 0 };
+}
+
+async function loadSeriesBase(seriesId: string, eventId: string) {
   const series = await prisma.eventSeries.findUnique({
     where: { id: seriesId },
     select: {
@@ -58,20 +73,19 @@ export async function loadSeriesContext(seriesId: string, eventId: string, userI
   const states = timelineStates(series.events.map(e => ({ status: e.status, gamePhaseDone: isGamePhaseDone(e.completionData) })));
   const events: SeriesContextEvent[] = series.events.map((e, i) => ({ id: e.id, title: e.title, startAt: e.startAt, state: states[i] }));
 
-  // Eigener Platz — gleiche Berechnung wie die Reihen-Seite, Tabelle = alle mit Punkten oder Teilnahme
-  let myPlace: number | null = null;
-  let myPoints = 0;
-  let tableSize = 0;
+  // Reihentabelle (für den eigenen Platz) — gleiche Berechnung wie die Reihen-Seite,
+  // Tabelle = alle mit Punkten oder Teilnahme
+  let standings: { userId: string; totalPoints: number }[] = [];
   if (series.seriesStatConfig) {
     try {
       const cfg = JSON.parse(series.seriesStatConfig) as StatConfig;
       const legacy: LegacyStandingRow[] = series.legacyStandings ? JSON.parse(series.legacyStandings) : [];
-      const rows = computeStatStandings(series.events, cfg, legacy).rows.filter(r => r.totalPoints > 0 || r.participations > 0);
-      tableSize = rows.length;
-      const i = userId ? rows.findIndex(r => r.userId === userId) : -1;
-      if (i >= 0) { myPlace = i + 1; myPoints = rows[i].totalPoints; }
+      standings = computeStatStandings(series.events, cfg, legacy).rows
+        .filter(r => r.totalPoints > 0 || r.participations > 0)
+        .map(r => ({ userId: r.userId, totalPoints: r.totalPoints }));
     } catch { /* kaputte Konfiguration → kein Platz */ }
   }
+  const tableSize = standings.length;
 
   const finalFirst = eventPayout({ seriesId: series.id, placementRewardsJson: null, series }).seriesFinal?.find(p => p.place === 1) ?? null;
   const prev = series.events[idx - 1];
@@ -86,7 +100,7 @@ export async function loadSeriesContext(seriesId: string, eventId: string, userI
     prev: prev ? { id: prev.id, title: prev.title } : null,
     next: next ? { id: next.id, title: next.title } : null,
     events,
-    myPlace, myPoints, tableSize,
+    standings, tableSize,
     finalFirst: finalFirst ? { coins: finalFirst.coins, rankPoints: finalFirst.rankPoints } : null,
   };
 }
