@@ -3,6 +3,7 @@ import GameCover from "@/components/GameCover";
 import { GateLink } from "@/components/GuestGate";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { ChevronRight } from "@/components/icons";
+import { MEDAL } from "@/components/ui/Podium";
 
 export type PodiumUser = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -22,10 +23,11 @@ export type RecentResultData = {
   hasResults: boolean;
 };
 
+// Medaillenfarben wie beim großen Podest (components/ui/Podium)
 const STEP = [
-  { h: "h-6", bg: "bg-yellow-400/25", text: "text-yellow-300", ring: "ring-yellow-400/70", size: 26 },
-  { h: "h-4", bg: "bg-slate-300/20", text: "text-slate-300", ring: "ring-slate-300/60", size: 22 },
-  { h: "h-3", bg: "bg-orange-500/20", text: "text-orange-300", ring: "ring-orange-400/60", size: 22 },
+  { h: "h-6", bg: "bg-coin", text: "text-canvas", ring: MEDAL[0].ring, size: 26 },
+  { h: "h-4", bg: "bg-gray-300", text: "text-canvas", ring: MEDAL[1].ring, size: 22 },
+  { h: "h-3", bg: "bg-amber-700", text: "text-fg", ring: MEDAL[2].ring, size: 22 },
 ];
 
 function Avatar({ u, size, ring }: { u: PodiumUser; size: number; ring: string }) {
@@ -63,7 +65,7 @@ export default function RecentResultCard({ r }: { r: RecentResultData }) {
         <p className="text-sm font-semibold text-white truncate">
           {r.omaOriginal && <OmaTitlePrefix title={r.title} />}
           {r.title}
-          {winner && <span className="font-normal text-gray-400"> · Sieg: <span className="text-yellow-300">{winner.username ?? winner.name}</span></span>}
+          {winner && <span className="font-normal text-gray-400"> · Sieg: <span className="font-semibold text-coin">{winner.username ?? winner.name}</span></span>}
         </p>
         <p className="text-xs text-gray-500 truncate">
           {r.dateLabel}{r.seriesName && <> · {r.seriesName}</>} · {r.playerCount} dabei

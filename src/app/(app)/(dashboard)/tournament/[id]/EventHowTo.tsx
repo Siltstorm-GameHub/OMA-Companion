@@ -59,30 +59,100 @@ export function howToSteps(o: {
   });
 }
 
-/** Kasten "So läuft's ab" (vor dem Start, bei Turnieren) — zeigt auch, wo man selbst gerade steht. */
-export default function EventHowTo({ steps }: { steps: HowToStep[] }) {
+// ── Ablauf-Leiste (für alle sichtbar, unter dem Kopf) ──────────────────────────────────────────
+
+export type TimelineStep = { key: string; label: string; time?: string | null; state: "done" | "current" | "todo" };
+
+/**
+ * Ablauf des ganzen Events: Anmeldung → (Bereit melden) → (Auslosung) → Spielen → (Abstimmung) → Ergebnis.
+ * Erledigt ist, was die Phase schon hinter sich hat; "current" ist der erste offene Schritt.
+ */
+export function eventTimeline(o: {
+  phase: "before" | "drawn" | "live" | "voting" | "after";
+  now?: Date;
+  registrationClosesAt: Date | null;
+  checkInAt: Date | null;
+  hasDraw: boolean;
+  drawn: boolean;
+  startAt: Date;
+  endAt: Date | null;
+  period: boolean;
+  hasVoting: boolean;
+}): TimelineStep[] {
+  const now = o.now ?? new Date();
+  const t = (d: Date) => formatBerlinTime(d, { hour: "2-digit", minute: "2-digit" });
+  const started = o.phase === "live" || o.phase === "voting" || o.phase === "after";
+  const raw: { key: string; label: string; time?: string | null; done: boolean }[] = [
+    {
+      key: "reg", label: o.period ? "Einsteigen" : "Anmeldung",
+      time: o.registrationClosesAt ? `bis ${t(o.registrationClosesAt)}` : null,
+      done: o.drawn || started || (!!o.checkInAt && now >= o.checkInAt),
+    },
+  ];
+  if (o.checkInAt) raw.push({ key: "ready", label: "Bereit melden", time: `ab ${t(o.checkInAt)}`, done: o.drawn || started });
+  if (o.hasDraw) raw.push({ key: "draw", label: "Auslosung", done: o.drawn || started });
+  raw.push({
+    key: "play", label: o.period ? "Läuft" : "Spielen",
+    time: o.period && o.endAt ? `bis ${formatBerlinTime(o.endAt, { day: "2-digit", month: "2-digit" })}` : t(o.startAt),
+    done: o.phase === "voting" || o.phase === "after",
+  });
+  if (o.hasVoting) raw.push({ key: "vote", label: "Abstimmung", done: o.phase === "after" });
+  raw.push({ key: "result", label: "Ergebnis", done: o.phase === "after" });
+  let current = false;
+  return raw.map(s => {
+    if (s.done) return { key: s.key, label: s.label, time: s.time, state: "done" as const };
+    if (!current) { current = true; return { key: s.key, label: s.label, time: s.time, state: "current" as const }; }
+    return { key: s.key, label: s.label, time: s.time, state: "todo" as const };
+  });
+}
+
+/**
+ * Schmale Ablauf-Leiste: wo das Event gerade steht, mit Uhrzeiten (ersetzt den Kasten "So läuft es ab").
+ * Am Handy nur die Punkte über die volle Breite und darunter der aktuelle Schritt in Worten.
+ */
+export function EventTimeline({ steps, className = "" }: { steps: TimelineStep[]; className?: string }) {
+  const currentIdx = steps.findIndex(s => s.state === "current");
+  const current = currentIdx >= 0 ? steps[currentIdx] : null;
+  const dot = (s: TimelineStep, i: number) => (
+    <span className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-extrabold ${
+      s.state === "done" ? "bg-primary text-primary-ink"
+        : s.state === "current" ? "bg-surface ring-2 ring-primary text-primary-fg"
+          : "bg-surface-3 text-subtle"
+    }`}>
+      {s.state === "done" ? <Check className="size-3.5" /> : i + 1}
+    </span>
+  );
   return (
-    <section aria-label="So läuft's ab" className="glass rounded-2xl px-4 py-3 mb-5">
-      <h2 className="text-base font-extrabold text-fg mb-2.5">So läuft&apos;s ab</h2>
-      <ol className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+    <nav aria-label="Ablauf" className={className}>
+      {/* Handy: Punkte über die volle Breite, darunter der aktuelle Schritt */}
+      <div className="sm:hidden">
+        <ol className="flex items-center">
+          {steps.map((s, i) => (
+            <li key={s.key} className={`flex items-center ${i > 0 ? "flex-1" : ""}`} aria-current={s.state === "current" ? "step" : undefined} title={s.label}>
+              {i > 0 && <span className={`mx-1 h-0.5 flex-1 rounded-full ${s.state === "todo" ? "bg-line-strong" : "bg-primary/60"}`} aria-hidden />}
+              {dot(s, i)}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-1.5 text-xs text-muted">
+          {current
+            ? <>Schritt {currentIdx + 1} von {steps.length}: <b className="text-fg">{current.label}</b>{current.time && <span className="font-bold text-primary-fg"> · {current.time}</span>}</>
+            : <>Abgeschlossen</>}
+        </p>
+      </div>
+      {/* Ab Tablet: mit Beschriftung und Uhrzeiten */}
+      <ol className="hidden sm:flex items-start">
         {steps.map((s, i) => (
-          <li key={s.key} className={`flex items-start gap-2 rounded-xl px-3 py-2 sm:flex-1 sm:min-w-[10rem] border ${
-            s.state === "current" ? "border-primary/40 bg-primary/[0.07]"
-              : s.state === "done" ? "border-line bg-surface-2 opacity-75"
-                : "border-line"
-          }`}>
-            <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-              s.state === "done" ? "bg-primary/20 text-primary-fg" : s.state === "current" ? "bg-primary text-primary-ink" : "bg-line text-gray-400"
-            }`}>
-              {s.state === "done" ? <Check className="w-3 h-3" /> : i + 1}
-            </span>
-            <span className="min-w-0">
-              <span className={`block text-sm ${s.state === "current" ? "text-white font-semibold" : "text-gray-300"}`}>{s.label}</span>
-              {s.hint && s.state !== "done" && <span className="block text-xs text-gray-500">{s.hint}</span>}
+          <li key={s.key} className="flex flex-1 items-start" aria-current={s.state === "current" ? "step" : undefined}>
+            {i > 0 && <span className={`mt-[11px] h-0.5 flex-1 min-w-4 rounded-full ${s.state === "todo" ? "bg-line-strong" : "bg-primary/60"}`} aria-hidden />}
+            <span className="flex w-[5.5rem] shrink-0 flex-col items-center gap-1 text-center">
+              {dot(s, i)}
+              <span className={`text-xs leading-tight ${s.state === "current" ? "font-extrabold text-fg" : s.state === "done" ? "font-semibold text-muted" : "font-semibold text-subtle"}`}>{s.label}</span>
+              {s.time && <span className={`text-[11px] tabular-nums leading-tight ${s.state === "current" ? "text-primary-fg font-bold" : "text-subtle"}`}>{s.time}</span>}
             </span>
           </li>
         ))}
       </ol>
-    </section>
+    </nav>
   );
 }

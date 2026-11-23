@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { countPendingApplications } from "./gameservers";
 import { APPROVAL_PENDING, pendingApprovalEventWhere } from "./community-events";
 import type { AdminCounts } from "./admin-nav";
+import { eventScopeWhere, type EventScope } from "./roles";
 import { coinsAwarded, isLate, pulse, type PulseValue } from "./admin-overview";
 
 /*
@@ -48,6 +49,24 @@ export async function loadAdminCounts(now: Date = new Date()): Promise<AdminCoun
     gameSuggestions: games,
     jobDisputes: d1 + d2 + d3,
   };
+}
+
+/**
+ * Zahl am Reiter "Verwalten" (Events-Seite und Verwaltung): was gerade auf dich wartet —
+ * laufende Turniere, Umfragephasen, vorbeigegangene Events ohne Abschluss; für Mods zusätzlich
+ * Freigaben. Mitglieder zählen nur Events in ihrem Bereich (eigene, eigene Reihen, Squads als Captain).
+ */
+export async function loadManageAttentionCount(scope: EventScope, now: Date = new Date()): Promise<number> {
+  const inScope = eventScopeWhere(scope);
+  const [tournaments, polls, overdue, approvals] = await Promise.all([
+    prisma.event.count({ where: { AND: [inScope, tournamentWhere] } }),
+    prisma.event.count({ where: { AND: [inScope, { status: "umfrage" }] } }),
+    prisma.event.count({ where: { AND: [inScope, overdueWhere(now)] } }),
+    scope
+      ? Promise.resolve(0)
+      : Promise.all([prisma.event.count({ where: pendingEventWhere }), prisma.eventSeries.count({ where: pendingSeriesWhere })]).then(([a, b]) => a + b),
+  ]);
+  return tournaments + polls + overdue + approvals;
 }
 
 export type InboxTone = "amber" | "teal" | "blue" | "red" | "violet";

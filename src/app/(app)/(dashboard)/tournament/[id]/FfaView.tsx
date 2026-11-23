@@ -1,7 +1,8 @@
 "use client";
 import { formatDecimal, formatFixed } from "@/lib/format-number";
 import PlaceMedal from "@/components/PlaceMedal";
-import { useState } from "react";
+import React, { Fragment, useState } from "react";
+import { POINTS_GLOSSARY, useScoringInfo } from "./ScoringInfo";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "@/components/icons";
 import { Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame, Camera } from "@/components/icons";
@@ -259,25 +260,52 @@ export default function FfaView({
 
   // Farbe einer Stat-Zelle nach ihrem Wert innerhalb der Spalte (gleiche Werte = gleiche Farbe),
   // nicht nach der Zeilenposition.
-  const RANK_TEXT = ["text-amber-300", "text-gray-300", "text-amber-700"];
+  const RANK_TEXT = ["text-amber-300", "text-fg/90", "text-amber-700"];
   const statRankCls = (f: string, val: number) => {
-    if (val <= 0) return "text-gray-400";
+    if (val <= 0) return "text-muted";
     const higher = new Set(
       ranked.filter(t => t.matchCount > 0 && (t.stats[f] ?? 0) > val).map(t => t.stats[f]),
     ).size;
-    return RANK_TEXT[higher] ?? "text-gray-400";
+    return RANK_TEXT[higher] ?? "text-muted";
   };
   // Dasselbe für die Ø-Spalten bei avg_stats — "besser" richtet sich nach der gewählten Richtung.
   const avgRankCls = (val: number | null | undefined, valueOf: (uid: string) => number | null | undefined) => {
-    if (val === null || val === undefined) return "text-gray-400";
+    if (val === null || val === undefined) return "text-muted";
     const better = new Set(
       ranked.map(t => valueOf(t.userId)).filter(v => v != null && compareAvg(v, val, avgWinnerDirection) < 0),
     ).size;
-    return RANK_TEXT[better] ?? "text-gray-400";
+    return RANK_TEXT[better] ?? "text-muted";
   };
   const fmtAvg = (v: number | null | undefined) => (v === null || v === undefined ? "–" : fmtUpTo2(v));
   // Ø je Feld als eigene Spalten — bei nur einem Feld wäre das identisch mit "Ø Gesamt"
   const showAvgFieldCols = isAvg && statFields.length > 1;
+
+  // Sortierbare Spalten (Klick auf die Überschrift); null = offizielle Reihenfolge (Platzierung)
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const info = useScoringInfo();
+  const sortValue = (r: (typeof ranked)[number], key: string): number =>
+    key === "__event" ? (turnierpunkteByUser[r.userId] ?? 0)
+      : key === "__table" ? (ligaPunkteByUser[r.userId] ?? 0)
+        : key === "__rounds" ? r.matchCount
+          : key === "__mw" ? (r.stats["Match Win"] ?? 0)
+            : (r.stats[key] ?? 0);
+  const shownRanked = sortKey ? [...ranked].sort((a, b) => sortValue(b, sortKey) - sortValue(a, sortKey)) : ranked;
+  const sortTh = (key: string, label: React.ReactNode, cls = "") => (
+    <th className={`text-center px-3 py-2.5 font-semibold ${cls}`} aria-sort={sortKey === key ? "descending" : "none"}>
+      <button type="button" onClick={() => setSortKey(k => (k === key ? null : key))}
+        className={`inline-flex items-center gap-0.5 uppercase tracking-wider hover:text-fg ${sortKey === key ? "text-primary-fg" : ""}`}
+        title={sortKey === key ? "Zurück zur Platzierung" : "Danach sortieren"}>
+        {label}{sortKey === key && <ChevronDown className="size-3" />}
+      </button>
+    </th>
+  );
+  // Hauptwert je Spieler für die Karten am Handy
+  const mainValue = (r: (typeof ranked)[number]): { label: string; value: string } => {
+    if (hasTurnierpunkte) return { label: "Eventpunkte", value: fmtUpTo2(turnierpunkteByUser[r.userId] ?? 0) };
+    if (isAvg) { const c = avgTotals.get(r.userId)?.combined; return { label: "Ø Gesamt", value: c != null ? formatFixed(c, 2) : "–" }; }
+    const f = statFields[0];
+    return { label: f ?? "Runden", value: f ? (r.stats[f] ? fmtUpTo2(r.stats[f]) : "–") : String(r.matchCount) };
+  };
 
   // Nach Rundennummer sortiert — nachgetragene Runden erscheinen an ihrer Stelle, nicht am Ende
   const playedMatches   = sortStatRounds(matches.filter(m => m.playedAt));
@@ -290,8 +318,8 @@ export default function FfaView({
       {/* ── Gesamtranking ───────────────────────────────────────────────── */}
       {ranked.length > 0 && (
         <div>
-          <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
+          <h2 className="text-base font-extrabold text-fg mb-3 flex flex-wrap items-center gap-2">
+            <Trophy className="size-4 text-coin" /> Gesamtranking
             {isLigaPunkteLive && (
               <span className="flex items-center gap-1.5 normal-case tracking-normal text-xs font-medium text-primary" title="Tabellenpunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
                 <span className="relative flex h-2 w-2">
@@ -301,16 +329,73 @@ export default function FfaView({
                 Tabellenpunkte live
               </span>
             )}
+            <span className="ml-auto">{info.button}</span>
           </h2>
-          <div className="glass rounded-2xl overflow-hidden">
+          {info.panel(<>
+            <p>
+              {isAvg
+                ? <>Es zählt der Durchschnitt über alle eingetragenen Runden ({avgWinnerDirection === "low" ? "niedriger ist besser" : "höher ist besser"}). Nicht eingetragene Werte zählen nicht als 0.</>
+                : hasTurnierpunkte
+                  ? <>Jeder Wert bringt Eventpunkte (Wert × Punkte pro Wert{placementPoints ? ", dazu Punkte für die Rundenplatzierung" : ""}). Die meisten Eventpunkte gewinnen.</>
+                  : <>Sortiert nach <b>{sortFields[0]}</b>{sortFields.length > 1 && <>, bei Gleichstand nach {sortFields.slice(1).join(", ")}</>}.</>}
+            </p>
+            {POINTS_GLOSSARY}
+            <p className="text-xs text-muted">Tipp: Auf eine Spaltenüberschrift tippen sortiert danach, nochmal tippen zurück zur Platzierung.</p>
+          </>)}
+
+          {/* Handy: eine Karte je Spieler, Details zum Aufklappen */}
+          <ol className="md:hidden space-y-2">
+            {shownRanked.map((r, i) => {
+              const isMe = r.userId === userId;
+              const place = placeByUser.get(r.userId) ?? (i + 1);
+              const main = mainValue(r);
+              const table = ligaPunkteByUser[r.userId] ?? 0;
+              return (
+                <li key={r.userId}>
+                  <details className={`group rounded-card border bg-surface shadow-card ${isMe ? "border-primary/40" : "border-line"}`}>
+                    <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+                      <span className="w-6 shrink-0 text-center">
+                        {!sortKey && place <= 3 ? <span className="text-base">{MEDAL[place - 1]}</span> : <span className="text-sm font-bold text-subtle tabular-nums">{place}</span>}
+                      </span>
+                      <RankedAvatar userId={r.user.id} src={r.user.image} alt={uname(r.user)} size={28} className="w-7 h-7" />
+                      <span className="min-w-0 flex-1">
+                        <span className={`block truncate text-sm font-bold ${isMe ? "text-primary-fg" : "text-fg"}`}>{uname(r.user)}{isMe && " (du)"}</span>
+                        <span className="block text-xs text-subtle">{r.matchCount} {r.matchCount === 1 ? "Runde" : "Runden"}{table > 0 && <> · <span className="text-primary-fg font-semibold">{isLigaPunkteLive ? "~" : ""}+{fmtUpTo2(table)} Tabellenpkt.</span></>}</span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className="block text-base font-extrabold tabular-nums text-fg">{main.value}</span>
+                        <span className="block text-[11px] text-subtle">{main.label}</span>
+                      </span>
+                      <ChevronDown className="size-4 shrink-0 text-subtle transition-transform group-open:rotate-180" />
+                    </summary>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-line px-4 py-3 text-xs">
+                      {statFields.map(f => (
+                        <div key={f} className="flex justify-between gap-2">
+                          <dt className="text-subtle">{isAvg ? `Ø ${f}` : f}</dt>
+                          <dd className="font-semibold tabular-nums text-fg">{isAvg ? fmtAvg(avgTotals.get(r.userId)?.fieldAvgs[f]) : (r.stats[f] ? fmtUpTo2(r.stats[f]) : "–")}</dd>
+                        </div>
+                      ))}
+                      {trackMatchWin && <div className="flex justify-between gap-2"><dt className="text-subtle">Match Wins</dt><dd className="font-semibold tabular-nums text-success">{r.stats["Match Win"] ?? 0}</dd></div>}
+                      {hasTurnierpunkte && <div className="flex justify-between gap-2"><dt className="text-subtle">Eventpunkte</dt><dd className="font-bold tabular-nums text-coin">{fmtUpTo2(turnierpunkteByUser[r.userId] ?? 0)}</dd></div>}
+                      <div className="flex justify-between gap-2"><dt className="text-subtle">Runden</dt><dd className="font-semibold tabular-nums text-fg">{r.matchCount}</dd></div>
+                    </dl>
+                  </details>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className="hidden md:block rounded-card border border-line bg-surface shadow-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[300px]">
                 <thead>
-                  <tr className="border-b border-line text-xs text-gray-500 uppercase tracking-wider">
+                  <tr className="border-b border-line text-xs text-subtle uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
                     {(!isAvg || showAvgFieldCols) && statFields.map(f => (
-                      <th key={f} className="text-center px-3 py-2.5 font-medium">{isAvg ? `Ø ${f}` : f}</th>
+                      isAvg
+                        ? <th key={f} className="text-center px-3 py-2.5 font-semibold">{`Ø ${f}`}</th>
+                        : <Fragment key={f}>{sortTh(f, f)}</Fragment>
                     ))}
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
@@ -318,18 +403,14 @@ export default function FfaView({
                     {!!placementPoints && (
                       <th className="text-center px-3 py-2.5 font-medium">Ø Platzierung</th>
                     )}
-                    {trackMatchWin && (
-                      <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
-                    )}
-                    {hasTurnierpunkte && (
-                      <th className="text-center px-3 py-2.5 font-medium text-amber-400">Eventpunkte</th>
-                    )}
-                    <th className="text-center px-3 py-2.5 font-medium text-primary/70">Tabellenpunkte</th>
-                    <th className="text-center px-3 py-2.5 font-medium">Runden</th>
+                    {trackMatchWin && sortTh("__mw", "Match Wins", "text-success")}
+                    {hasTurnierpunkte && sortTh("__event", "Eventpunkte", "text-coin")}
+                    {sortTh("__table", "Tabellenpunkte", "text-primary-fg")}
+                    {sortTh("__rounds", "Runden")}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {ranked.map((r, i) => {
+                  {shownRanked.map((r, i) => {
                     const isMe   = r.userId === userId;
                     const avgT     = avgTotals.get(r.userId);
                     const combined = avgT?.combined ?? null;
@@ -344,18 +425,18 @@ export default function FfaView({
                         <td className="px-4 py-3 text-center">
                           {place <= 3
                             ? <span className="text-base">{MEDAL[place - 1]}</span>
-                            : <span className="text-sm text-gray-600">{place}</span>}
+                            : <span className="text-sm text-subtle">{place}</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Link href={isMe ? "/profile" : `/profile/${r.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                               <RankedAvatar userId={r.user.id} src={r.user.image} alt={uname(r.user)} size={24} className="w-6 h-6" />
-                              <span className={`font-medium ${isMe ? "text-primary-fg" : "text-white"}`}>
+                              <span className={`font-medium ${isMe ? "text-primary-fg" : "text-fg"}`}>
                                 {uname(r.user)}{isMe && " (du)"}
                               </span>
                             </Link>
                             {r.role === "spectator" && (
-                              <Eye className="w-3 h-3 text-gray-500 shrink-0" />
+                              <Eye className="w-3 h-3 text-subtle shrink-0" />
                             )}
                             {isLigaPunkteLive && projectedWinnerIds.includes(r.userId) && (
                               <span
@@ -366,22 +447,22 @@ export default function FfaView({
                               </span>
                             )}
                             {excludedSet.has(r.userId) && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-muted bg-line px-1.5 py-0.5 rounded-full shrink-0">
                                 Ungewertet
                               </span>
                             )}
                             {votedSet.has(r.userId) && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success-soft px-1.5 py-0.5 rounded-full shrink-0">
                                 <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
                               </span>
                             )}
                             {isPollWinner && (
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-violet-300 bg-violet-500/15 px-1.5 py-0.5 rounded-full shrink-0">
                                 <Vote className="w-2.5 h-2.5" />{pollLabel ?? "Poll"}
                               </span>
                             )}
                             {wonPollLabels.map(label => (
-                              <span key={label} className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <span key={label} className="inline-flex items-center gap-1 text-xs font-semibold text-violet-300 bg-violet-500/15 px-1.5 py-0.5 rounded-full shrink-0">
                                 <Vote className="w-2.5 h-2.5" />{label}
                               </span>
                             ))}
@@ -428,7 +509,7 @@ export default function FfaView({
                         })}
                         {isAvg && (
                           <td className={`px-3 py-3 text-center tabular-nums font-bold ${
-                            combined !== null ? RANK_TEXT[place - 1] ?? "text-gray-400" : "text-gray-400"
+                            combined !== null ? RANK_TEXT[place - 1] ?? "text-muted" : "text-muted"
                           }`}>
                             {combined !== null ? formatFixed(combined, 2) : "–"}
                           </td>
@@ -436,7 +517,7 @@ export default function FfaView({
                         {!!placementPoints && (
                           <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center gap-0">
-                              <span className="tabular-nums font-semibold text-gray-300">
+                              <span className="tabular-nums font-semibold text-fg/90">
                                 {r.placementRounds > 0 ? fmtUpTo2((r.stats[PLACEMENT_STAT_KEY] ?? 0) / r.placementRounds) : "–"}
                               </span>
                               {r.placementPointsSum > 0 && (
@@ -446,7 +527,7 @@ export default function FfaView({
                           </td>
                         )}
                         {trackMatchWin && (
-                          <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
+                          <td className="px-3 py-3 text-center tabular-nums font-semibold text-success">
                             {r.stats["Match Win"] ?? 0}
                           </td>
                         )}
@@ -465,7 +546,7 @@ export default function FfaView({
                                   </summary>
                                   <div className="mt-1 space-y-0.5">
                                     {ligaPunkteBreakdownByUser[r.userId].map(item => (
-                                      <div key={item.label} className="text-[9px] text-gray-500 whitespace-nowrap leading-tight">
+                                      <div key={item.label} className="text-[9px] text-subtle whitespace-nowrap leading-tight">
                                         {item.label}: <span className="tabular-nums text-primary/80">{item.points > 0 ? "+" : ""}{fmtUpTo2(item.points)}</span>
                                       </div>
                                     ))}
@@ -476,7 +557,7 @@ export default function FfaView({
                                   title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
                                   {isLigaPunkteLive && "~"}+{fmtUpTo2(eventLigapunkte)} <RankPointsIcon size={13} />
                                 </span>
-                              : <span className="text-sm text-gray-600">–</span>}
+                              : <span className="text-sm text-subtle">–</span>}
                             {winnerBonusIfWon > 0 && (
                               <span className="text-[9px] text-primary/70 tabular-nums leading-none" title="Zusätzlicher Sieger-Bonus, falls das Turnier jetzt mit dieser Platzierung enden würde">
                                 +{winnerBonusIfWon} falls Sieger
@@ -484,7 +565,7 @@ export default function FfaView({
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>
+                        <td className="px-3 py-3 text-center text-subtle text-xs">{r.matchCount}</td>
                       </tr>
                     );
                   })}
@@ -492,12 +573,12 @@ export default function FfaView({
               </table>
             </div>
           </div>
-          <p className="text-xs text-gray-600 mt-1.5 px-1">
+          <p className="text-xs text-subtle mt-1.5 px-1">
             {isAvg
               ? <>Sortiert nach kombiniertem Durchschnitt aller Felder ({avgWinnerDirection === "low" ? "niedrigster" : "höchster"} Ø gewinnt) · nicht eingetragene Werte zählen nicht als 0</>
               : hasTurnierpunkte
                 ? <>Sortiert nach Eventpunkte</>
-                : <>Sortiert nach: <span className="text-gray-500">{sortFields[0]}</span>
+                : <>Sortiert nach: <span className="text-subtle">{sortFields[0]}</span>
                     {sortFields.length > 1 && <> · Tiebreaker: {sortFields.slice(1).join(", ")}</>}</>}
           </p>
         </div>
@@ -506,8 +587,8 @@ export default function FfaView({
       {/* Endtabellen-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
       {finalRankingNote && (
         <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
-          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-          <p className="text-xs text-gray-500 italic leading-relaxed">{finalRankingNote}</p>
+          <StickyNote className="w-3.5 h-3.5 text-subtle mt-0.5 shrink-0" />
+          <p className="text-xs text-subtle italic leading-relaxed">{finalRankingNote}</p>
         </div>
       )}
 
@@ -522,19 +603,19 @@ export default function FfaView({
               <div key={match.id} className="glass rounded-card px-4 py-3 flex items-center gap-3">
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
-                    <p className="text-sm font-bold text-white">{getBerlinDateParts(match.scheduledAt).day}</p>
-                    <p className="text-xs text-gray-500 uppercase">
+                    <p className="text-sm font-bold text-fg">{getBerlinDateParts(match.scheduledAt).day}</p>
+                    <p className="text-xs text-subtle uppercase">
                       {formatBerlinDate(match.scheduledAt, { month: "short" })}
                     </p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-subtle">
                       {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white">{statRoundLabel(match)}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{match.entries.length} Spieler</p>
-                  {match.notes && <p className="text-xs text-gray-600 mt-0.5 truncate">{match.notes}</p>}
+                  <p className="text-sm font-medium text-fg">{statRoundLabel(match)}</p>
+                  <p className="text-xs text-subtle mt-0.5">{match.entries.length} Spieler</p>
+                  {match.notes && <p className="text-xs text-subtle mt-0.5 truncate">{match.notes}</p>}
                 </div>
                 <div className="flex flex-wrap gap-1 shrink-0">
                   {match.entries.slice(0, 4).map(e => {
@@ -542,14 +623,14 @@ export default function FfaView({
                     const isMe = e.userId === userId;
                     return u ? (
                       <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${
-                        isMe ? "border-primary/40 text-primary-fg bg-primary-soft/60" : "border-line-strong text-gray-400 glass-heavy"
+                        isMe ? "border-primary/40 text-primary-fg bg-primary-soft/60" : "border-line-strong text-muted glass-heavy"
                       }`}>
                         {uname(u)}
                       </span>
                     ) : null;
                   })}
                   {match.entries.length > 4 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full border border-line-strong text-gray-500">
+                    <span className="text-xs px-2 py-0.5 rounded-full border border-line-strong text-subtle">
                       +{match.entries.length - 4}
                     </span>
                   )}
@@ -593,16 +674,16 @@ export default function FfaView({
                     onClick={() => toggle(match.id)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-sm font-medium text-white truncate">
+                      <span className="text-sm font-medium text-fg truncate">
                         Runde {match.position}
-                        {statRoundNote(match) && <span className="text-gray-400 font-normal"> · {statRoundNote(match)}</span>}
+                        {statRoundNote(match) && <span className="text-muted font-normal"> · {statRoundNote(match)}</span>}
                       </span>
                       {match.resultConfirmed === false && (
-                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-amber-900/30 text-amber-300 shrink-0"
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-warning-soft text-warning shrink-0"
                           title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>
                       )}
                       {match.playedAt && (
-                        <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0">
+                        <span className="text-xs text-subtle flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />
                           {formatBerlinDate(match.playedAt, { day: "2-digit", month: "2-digit" })}
                         </span>
@@ -614,15 +695,15 @@ export default function FfaView({
                         </span>
                       )}
                       {trackMatchWin && matchWin !== null && (
-                        <span className={`text-xs flex items-center gap-1 shrink-0 ${matchWin ? "text-emerald-400" : "text-gray-500"}`}>
+                        <span className={`text-xs flex items-center gap-1 shrink-0 ${matchWin ? "text-success" : "text-subtle"}`}>
                           <Trophy className="w-3 h-3" />
                           {matchWin ? "Sieg" : "Niederlage"}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-gray-500">{match.entries.length} Spieler</span>
-                      {isExp ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                      <span className="text-xs text-subtle">{match.entries.length} Spieler</span>
+                      {isExp ? <ChevronUp className="w-4 h-4 text-subtle" /> : <ChevronDown className="w-4 h-4 text-subtle" />}
                     </div>
                   </button>
 
@@ -630,7 +711,7 @@ export default function FfaView({
                     <div className="border-t border-line overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-line text-xs text-gray-500 uppercase tracking-wider bg-surface-2">
+                          <tr className="border-b border-line text-xs text-subtle uppercase tracking-wider bg-surface-2">
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
                             {(!isAvg || showAvgFieldCols) && statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>
@@ -658,25 +739,25 @@ export default function FfaView({
                                     <div className="flex items-center gap-1.5">
                                       {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
                                       {u && <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />}
-                                      <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-primary-fg" : "text-white"}`}>
+                                      <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-primary-fg" : "text-fg"}`}>
                                         {u ? <>{uname(u)}</> : "?"}{isMe && " (du)"}
                                       </span>
                                       {(proofsByEntry[`${match.id}:${e.userId}`] ?? []).map((url, i, all) => (
                                         <a key={url} href={url} target="_blank" rel="noopener noreferrer"
                                           title={`Nachweis${all.length > 1 ? ` ${i + 1}` : ""} ansehen (vom Admin bestätigt)`}
-                                          className="inline-flex items-center gap-0.5 text-gray-500 hover:text-primary-fg transition-colors">
+                                          className="inline-flex items-center gap-0.5 text-subtle hover:text-primary-fg transition-colors">
                                           <Camera className="w-3.5 h-3.5" />{all.length > 1 && <span className="text-[9px]">{i + 1}</span>}
                                         </a>
                                       ))}
                                     </div>
                                   </td>
                                   {(!isAvg || showAvgFieldCols) && statFields.map(f => (
-                                    <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
+                                    <td key={f} className="px-3 py-2.5 text-center text-fg/90 tabular-nums">
                                       {(() => { const v = readStatValue(stats, f); return v === null ? "–" : fmtUpTo2(v); })()}
                                     </td>
                                   ))}
                                   {isAvg && (
-                                    <td className={`px-3 py-2.5 text-center tabular-nums font-bold ${isWinner ? "text-amber-300" : "text-gray-400"}`}>
+                                    <td className={`px-3 py-2.5 text-center tabular-nums font-bold ${isWinner ? "text-amber-300" : "text-muted"}`}>
                                       {fmtAvg(avg)}
                                     </td>
                                   )}
@@ -695,7 +776,7 @@ export default function FfaView({
       )}
 
       {matches.length === 0 && (
-        <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
+        <div className="glass rounded-2xl p-10 text-center text-subtle text-sm">
           Noch keine Runden angelegt.
         </div>
       )}

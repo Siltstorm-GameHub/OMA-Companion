@@ -72,27 +72,29 @@ export function statusText(e: ManageEvent, now: Date = new Date()): string {
   return "Anmeldung offen";
 }
 
-export type ManageGroups = { action: { ev: ManageEvent; action: ManageAction }[]; upcoming: Record<DayBucket, ManageEvent[]>; past: ManageEvent[] };
+/** "running" = läuft gerade (Zeitraum-Event mitten drin oder schon gestartet), sonst nach Starttag */
+export type ManageBucket = "running" | DayBucket;
+export type ManageGroups = { action: { ev: ManageEvent; action: ManageAction }[]; upcoming: Record<ManageBucket, ManageEvent[]>; past: ManageEvent[] };
 
 /**
  * Teilt Events auf: "Braucht dich" (mit Aktion, Überfälliges zuerst), "Anstehend" nach
- * Heute / Diese Woche / Später (ohne die mit Aktion) und "Beendet" (neueste zuerst).
+ * Läuft gerade / Heute / Diese Woche / Später (ohne die mit Aktion) und "Beendet" (neueste zuerst).
  */
 export function groupManageEvents(events: ManageEvent[], now: Date = new Date()): ManageGroups {
   const action: ManageGroups["action"] = [];
-  const upcoming: ManageGroups["upcoming"] = { today: [], week: [], later: [] };
+  const upcoming: ManageGroups["upcoming"] = { running: [], today: [], week: [], later: [] };
   const past: ManageEvent[] = [];
   for (const ev of events) {
     const a = actionFor(ev, now);
     if (a) { action.push({ ev, action: a }); continue; }
     if (CLOSED.includes(ev.status) || isEnded(ev, now)) { past.push(ev); continue; }
-    const running = ev.startAt <= now;
-    upcoming[dayBucket(ev.startAt, now, running)].push(ev);
+    if (ev.startAt <= now || ev.status === "active") { upcoming.running.push(ev); continue; }
+    upcoming[dayBucket(ev.startAt, now)].push(ev);
   }
   action.sort((a, b) => Number(b.action.late) - Number(a.action.late)
     || (a.action.since?.getTime() ?? Infinity) - (b.action.since?.getTime() ?? Infinity)
     || a.ev.startAt.getTime() - b.ev.startAt.getTime());
-  for (const k of Object.keys(upcoming) as DayBucket[]) upcoming[k].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  for (const k of Object.keys(upcoming) as ManageBucket[]) upcoming[k].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
   past.sort((a, b) => b.startAt.getTime() - a.startAt.getTime());
   return { action, upcoming, past };
 }

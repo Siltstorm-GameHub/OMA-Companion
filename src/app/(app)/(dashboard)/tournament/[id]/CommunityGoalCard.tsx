@@ -64,20 +64,20 @@ export default function CommunityGoalCard({
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em] text-primary-fg"><Glyph name="target" className="size-3.5" /> {scopeLabel}</p>
-          <h3 className="text-base font-semibold text-white truncate">
+          <h3 className="text-base font-extrabold text-fg truncate">
             {goal.title || goalTargetLabel(goal)}
           </h3>
-          {avg && goal.title && <p className="text-xs text-gray-400 mt-0.5">{goalTargetLabel(goal)}</p>}
+          {avg && goal.title && <p className="text-xs text-muted mt-0.5">{goalTargetLabel(goal)}</p>}
           {avg && !settled && (
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-subtle mt-0.5">
               Zwischenstand — abgerechnet wird am Ende des Zeitraums
               {progress.missingParticipants > 0 && ` · noch ${progress.missingParticipants} Teilnehmer mit Werten nötig`}
             </p>
           )}
           {pace && (
-            <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-emerald-300" : pace.status === "on_track" ? "text-primary-fg" : "text-amber-300"}`}>
+            <p className={`text-xs font-semibold mt-0.5 ${pace.status === "ahead" ? "text-success" : pace.status === "on_track" ? "text-primary-fg" : "text-amber-300"}`}>
               <Glyph name={pace.status === "ahead" ? "rocket" : pace.status === "on_track" ? "check" : "warning"} className="inline size-3.5 align-[-2px]" /> {pace.label}
-              <span className="font-normal text-gray-500"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
+              <span className="font-normal text-subtle"> · Soll nach Zeit: {Math.round(pace.expectedPercent)} %</span>
             </p>
           )}
           {!!goal.rewardSeriesPoints && !reached && !settled && (
@@ -94,11 +94,11 @@ export default function CommunityGoalCard({
           )}
         </div>
         {reached ? (
-          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30">
+          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold text-coin bg-coin-soft border border-coin/30">
             <Glyph name="trophy" className="inline size-4 align-[-3px]" /> {avg && !settled ? "Liegt im Ziel" : "Ziel erreicht"}
           </span>
         ) : settled ? (
-          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 bg-line border border-line-strong">
+          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-fg/90 bg-line border border-line-strong">
             Ziel verfehlt
           </span>
         ) : null}
@@ -107,31 +107,31 @@ export default function CommunityGoalCard({
       {goal.scope === "community" && (
         <>
           <div className="flex items-baseline justify-between gap-2 mb-1.5">
-            <p className="text-2xl font-bold text-white tabular-nums">
-              {avgPrefix}{fmt(main.total)} <span className="text-sm font-normal text-gray-500">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
+            <p className="text-2xl font-bold text-fg tabular-nums">
+              {avgPrefix}{fmt(main.total)} <span className="text-sm font-normal text-subtle">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
             </p>
-            <p className="text-sm text-gray-400 tabular-nums">{Math.floor(main.percent)} %</p>
+            <p className="text-sm text-muted tabular-nums">{Math.floor(main.percent)} %</p>
           </div>
           <Bar percent={main.percent} reached={main.reached} />
           {!main.reached && !avg && (
-            <p className="text-xs text-gray-500 mt-1.5">Noch {fmt(goal.target - main.total)} {unit} bis zum Ziel.</p>
+            <p className="text-xs text-subtle mt-1.5">Noch {fmt(goal.target - main.total)} {unit} bis zum Ziel.</p>
           )}
           {!meetsGoal(main.total, goal) && avg && progress.contributorIds.length > 0 && (
-            <p className="text-xs text-gray-500 mt-1.5">
+            <p className="text-xs text-subtle mt-1.5">
               Der gemeinsame Ø muss noch um {fmt(Math.abs(goal.target - main.total))} {atMost ? "sinken" : "steigen"}.
             </p>
           )}
           {avg && progress.contributorIds.length > 0 && (
-            <p className="text-xs text-gray-500 mt-1">Aus {progress.contributorIds.length} Teilnehmern mit Werten.</p>
+            <p className="text-xs text-subtle mt-1">Aus {progress.contributorIds.length} Teilnehmern mit Werten.</p>
           )}
           {ranked.length > 0 && (
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1.5">{avg ? "Ø je Teilnehmer" : "Top-Beiträge"}</p>
+              <p className="text-xs uppercase tracking-wide text-subtle mb-1.5">{avg ? "Ø je Teilnehmer" : "Top-Beiträge"}</p>
               <ul className="space-y-1">
                 {ranked.slice(0, 5).map(([uid, v]) => (
-                  <li key={uid} className={`flex justify-between text-sm ${uid === userId ? "text-primary-fg" : "text-gray-300"}`}>
+                  <li key={uid} className={`flex justify-between text-sm ${uid === userId ? "text-primary-fg" : "text-fg/90"}`}>
                     <span className="truncate">{uname(userById.get(uid))}</span>
-                    <span className="tabular-nums text-gray-400">
+                    <span className="tabular-nums text-muted">
                       {avg ? `Ø ${fmt(v)}` : `${fmt(v)} · ${Math.round((v / Math.max(main.total, 1)) * 100)} %`}
                     </span>
                   </li>
@@ -155,11 +155,11 @@ export default function CommunityGoalCard({
             return (
               <div key={t}>
                 <div className="flex items-baseline justify-between gap-2 mb-1">
-                  <p className={`text-sm font-semibold ${t === "A" ? "text-sky-300" : "text-rose-300"}`}>
+                  <p className={`text-sm font-semibold ${t === "A" ? "text-sky-300" : "text-danger"}`}>
                     Team {t} {done && "🏆"}
                   </p>
-                  <p className="text-sm text-gray-300 tabular-nums">
-                    {avgPrefix}{fmt(v)} <span className="text-gray-500">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
+                  <p className="text-sm text-fg/90 tabular-nums">
+                    {avgPrefix}{fmt(v)} <span className="text-subtle">/ {avg && atMost ? "max. " : ""}{fmt(goal.target)} {unit}</span>
                   </p>
                 </div>
                 <Bar percent={pct} reached={done} color={t === "A" ? "sky" : "rose"} />
@@ -167,19 +167,19 @@ export default function CommunityGoalCard({
             );
           })}
           {byTeam.A + byTeam.B === 0 && progress.total > 0 && (
-            <p className="text-xs text-gray-500">Noch keinem Spieler ein Team zugeordnet — Werte zählen erst mit Team-Zuordnung.</p>
+            <p className="text-xs text-subtle">Noch keinem Spieler ein Team zugeordnet — Werte zählen erst mit Team-Zuordnung.</p>
           )}
         </div>
       )}
 
       {goal.scope === "solo" && (
         <div>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-subtle mb-2">
             Jeder für sich: {avg ? goalTargetLabel(goal) : `${fmt(goal.target)} ${unit}`} pro Spieler
             {progress.reachedUserIds.length > 0 && ` · ${progress.reachedUserIds.length} ${progress.reachedUserIds.length === 1 ? "hat" : "haben"} es geschafft`}
           </p>
           {ranked.length === 0 ? (
-            <p className="text-sm text-gray-500">Noch keine Werte eingetragen.</p>
+            <p className="text-sm text-subtle">Noch keine Werte eingetragen.</p>
           ) : (
             <ul className="space-y-2.5">
               {ranked.slice(0, 10).map(([uid, v]) => {
@@ -187,10 +187,10 @@ export default function CommunityGoalCard({
                 return (
                   <li key={uid}>
                     <div className="flex justify-between gap-2 text-sm mb-1">
-                      <span className={`truncate ${uid === userId ? "text-primary-fg font-medium" : "text-gray-300"}`}>
+                      <span className={`truncate ${uid === userId ? "text-primary-fg font-medium" : "text-fg/90"}`}>
                         {uname(userById.get(uid))} {done && "🏆"}
                       </span>
-                      <span className="tabular-nums text-gray-400">{avgPrefix}{fmt(v)} / {fmt(goal.target)}</span>
+                      <span className="tabular-nums text-muted">{avgPrefix}{fmt(v)} / {fmt(goal.target)}</span>
                     </div>
                     <Bar percent={goalPercent(v, goal)} reached={done} />
                   </li>

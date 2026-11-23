@@ -34,7 +34,7 @@ export function RejectControl({ kind, id, compact = false, onDone }: {
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)}
-        className={`shrink-0 inline-flex items-center gap-1 rounded-lg border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 font-semibold transition-colors ${compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"}`}>
+        className={`shrink-0 inline-flex items-center gap-1.5 rounded-control border border-danger/30 text-danger hover:bg-danger-soft font-semibold transition-colors ${compact ? "min-h-9 px-3 text-xs" : "min-h-10 px-4 text-sm"}`}>
         <X className="w-3.5 h-3.5" /> Ablehnen
       </button>
     );

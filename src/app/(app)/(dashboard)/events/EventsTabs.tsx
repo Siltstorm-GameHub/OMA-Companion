@@ -12,12 +12,15 @@ function EventsTabsInner({
   myEventsPanel,
   predictionsPanel,
   squadsPanel,
+  manageCount = 0,
 }: {
   eventsPanel: ReactNode;
   /** null = Gast (kein Tab "Meine Events") */
   myEventsPanel: ReactNode | null;
   predictionsPanel: ReactNode;
   squadsPanel: ReactNode;
+  /** Offene Aufgaben in der Verwaltung (Zahl am Reiter "Verwalten") */
+  manageCount?: number;
 }) {
   const searchParams = useSearchParams();
   // "duels" = alter Tab-Key (Links aus älteren Benachrichtigungen) → Vorhersagen
@@ -42,7 +45,7 @@ function EventsTabsInner({
           ...(myEventsPanel ? [{ key: "mine", label: "Meine Events", icon: User }] : []),
           { key: "predictions", label: "Vorhersagen", icon: Target },
           { key: "squads", label: "Squads", icon: Users },
-          ...(myEventsPanel ? [{ key: "manage", label: "Verwalten", icon: Settings }] : []),
+          ...(myEventsPanel ? [{ key: "manage", label: "Verwalten", icon: Settings, count: manageCount }] : []),
         ]}
       />
       <TabPanel tabKey="events" active={active}>{eventsPanel}</TabPanel>
@@ -58,6 +61,7 @@ export default function EventsTabs(props: {
   myEventsPanel: ReactNode | null;
   predictionsPanel: ReactNode;
   squadsPanel: ReactNode;
+  manageCount?: number;
 }) {
   return (
     <Suspense fallback={null}>

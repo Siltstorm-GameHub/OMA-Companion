@@ -19,6 +19,8 @@ import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import EventsTabs from "./EventsTabs";
+import { loadManageAttentionCount } from "@/lib/admin-inbox";
+import { getCaptainedSquadIds } from "@/lib/roles";
 import { attachCommentCounts } from "@/lib/event-comments";
 import MyEventsPanel from "./MyEventsPanel";
 import SquadsList from "../squads/SquadsList";
@@ -46,6 +48,11 @@ export default async function EventsPage() {
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
   const now    = new Date();
+
+  // Zahl am Reiter "Verwalten": was in der Verwaltung auf dich wartet (Mods: alles, Mitglieder: eigene)
+  const manageCountPromise = userId
+    ? (async () => loadManageAttentionCount(isMod ? null : { userId, captainedSquadIds: await getCaptainedSquadIds(userId) }, now))()
+    : Promise.resolve(0);
 
   const [events, hiddenEvents, viewer] = await Promise.all([
     prisma.event.findMany({
@@ -271,6 +278,7 @@ export default async function EventsPage() {
       />
 
       <EventsTabs
+        manageCount={await manageCountPromise}
         eventsPanel={<>
       <div className="space-y-5">
         {!hasAnything && (

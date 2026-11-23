@@ -1,5 +1,6 @@
 import React from "react";
 import { Glyph } from "@/components/ui/Glyph";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { eventHasPlacement, eventRewardOf, participationRewardOf } from "@/lib/event-placement";
 import PlaceMedal from "@/components/PlaceMedal";
 import { isOmaOriginal } from "@/lib/oma-original";
@@ -12,10 +13,9 @@ import { canManageEvent, getSessionUser } from "@/lib/roles";
 import { isAwaitingApproval } from "@/lib/community-events";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Users, ChevronDown, CalendarPlus, Lock, Gamepad2, MessageCircle } from "@/components/icons";
 import { GateButton } from "@/components/GuestGate";
-import { ArrowLeft, Swords, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, Settings } from "@/components/icons";
+import { ArrowLeft, Swords, Vote, EyeOff, Clapperboard, Settings, ExternalLink } from "@/components/icons";
 import { isPeriodEvent, periodInfo } from "@/lib/event-period";
 import { waitlistPosition } from "@/lib/event-waitlist";
 import RulesSection from "@/components/RulesSection";
@@ -23,11 +23,9 @@ import RankedAvatar from "@/components/RankedAvatar";
 import EventComments from "@/components/events/EventComments";
 import SectionJumpLink from "@/components/SectionJumpLink";
 import { getCommentCounts, getLatestCommentStatuses } from "@/lib/event-comments";
-import { statusBadge } from "@/lib/event-comments-shared";
-import StyledUserName, { StyledUserTitle } from "@/components/cosmetics/StyledUserName";
+import StyledUserName from "@/components/cosmetics/StyledUserName";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import RankPointsIcon from "@/components/RankPointsIcon";
-import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import { FORMAT_LABELS } from "@/lib/tournament-formats";
 import { formatBerlinDateTime, formatBerlinTime } from "@/lib/time";
@@ -35,16 +33,25 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { cachedInMemory } from "@/lib/memory-cache";
 import { TONE_CLASSES, dateBlock, eventPhase, parseRanking, startsInLabel } from "@/lib/event-display";
 import { SECTION_ORDER, isPrePhase, pagePhaseOf, type SectionKey } from "./event-page-layout";
-import EventHowTo, { howToSteps } from "./EventHowTo";
+import { EventTimeline, eventTimeline } from "./EventHowTo";
 import MyEventResult from "./MyEventResult";
 import ActionMoreMenu from "./ActionMoreMenu";
 import EventHero from "./EventHero";
+import EventFacts from "./EventFacts";
+import { FACT } from "./event-facts-style";
+import EventJumpBar from "./EventJumpBar";
+import EventParticipantList from "./EventParticipantList";
+import EventResults from "./EventResults";
+import EventStreams from "./EventStreams";
+import ForYouCard, { type ForYou } from "./ForYouCard";
+import StickyActionDock from "./StickyActionDock";
+import OpponentReportActions from "./OpponentReportActions";
+import LiveRefresh from "./LiveRefresh";
 import { checkInOpensAt, checkInState } from "@/lib/checkin";
 import { ineligibleCandidates } from "@/lib/event-polls-shared";
 import { loadSeriesContext } from "@/lib/series-context";
 import SeriesStrip from "./SeriesStrip";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
-import EventLiveBadge from "./EventLiveBadge";
 import EventSummarySection from "@/components/EventSummarySection";
 import EventPostsSection from "@/components/EventPostsSection";
 import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
@@ -389,10 +396,14 @@ export default async function TournamentDetailPage({
     : [];
 
   // Teilnehmerliste: Mitspieler zuerst, dann Zuschauer, jeweils getrennt voneinander
+  // Große Events (ab 20): der eigene Eintrag steht innerhalb seiner Gruppe ganz oben
+  const bigList = event.registrations.length >= 20;
   const sortedRegistrations = [...event.registrations].sort((a, b) => {
     const ra = a.role === "spectator" ? 1 : 0;
     const rb = b.role === "spectator" ? 1 : 0;
-    return ra - rb;
+    if (ra !== rb) return ra - rb;
+    if (bigList) return Number(b.userId === userId) - Number(a.userId === userId);
+    return 0;
   });
 
   // ── Umfragen (EventPoll) deduplizieren ──────────────────────────────────────
@@ -858,95 +869,22 @@ export default async function TournamentDetailPage({
       ])
     : [new Map<string, never>(), new Map<string, { total: number; unread: number }>()];
 
+  // Siege und gewonnene Umfragen je Teilnehmer (für die Liste)
+  const winsByUser: Record<string, number> = {};
+  for (const m of event.matches) if (m.winnerId) winsByUser[m.winnerId] = (winsByUser[m.winnerId] ?? 0) + 1;
+  const wonLabelsByUser: Record<string, string[]> = {};
+  for (const r of sortedRegistrations) {
+    const labels = [...(pollWinnerIds.includes(r.userId) && pollLabel ? [pollLabel] : []), ...(pollWinsByUser[r.userId] ?? [])];
+    if (labels.length > 0) wonLabelsByUser[r.userId] = labels;
+  }
   const participantList = (
-    <div className="glass rounded-2xl divide-y divide-line">
-      {sortedRegistrations.map(({ user, role }, i) => {
-        const isMe = user.id === userId;
-        const wins = event.matches.filter(m => m.winnerId === user.id).length;
-        const wonLabels = [
-          ...(pollWinnerIds.includes(user.id) && pollLabel ? [pollLabel] : []),
-          ...(pollWinsByUser[user.id] ?? []),
-        ];
-        const isSpectatorRow = role === "spectator";
-        const showDivider = isSpectatorRow && (i === 0 || sortedRegistrations[i - 1].role !== "spectator");
-        return (
-          <div key={user.id}>
-            {showDivider && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2">
-                <Eye className="w-3 h-3 text-gray-500" />
-                <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
-              </div>
-            )}
-            <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-primary-soft/60" : ""}`}>
-              <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-              <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-primary-fg" : "text-white"}`}>
-                  <span className="truncate"><StyledUserName userId={user.id} name={userName(user)} />{isMe && " (du)"}</span>
-                  {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
-                  {excludedUserIds.has(user.id) && (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0">
-                      Ungewertet
-                    </span>
-                  )}
-                  {(() => {
-                    const st = commentStatuses.get(user.id);
-                    if (!st || pagePhaseForStatus === "after") return null;
-                    const b = statusBadge(st.status, st.lateMin);
-                    return (
-                      <span className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-full shrink-0 ${b.className}`}>
-                        {b.label}
-                      </span>
-                    );
-                  })()}
-                  {votedUserIds.has(user.id) && (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
-                    </span>
-                  )}
-                </p>
-                <StyledUserTitle userId={user.id} className="block truncate leading-tight" />
-                {wonLabels.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {wonLabels.map(label => (
-                      <span key={label} className="flex items-center gap-0.5 text-xs font-semibold text-violet-400">
-                        <Vote className="w-2.5 h-2.5" /> {label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
-            </div>
-          </div>
-        );
-      })}
-      {externalVoters.length > 0 && (
-        <div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2">
-            <Vote className="w-3 h-3" style={{ color: "var(--color-primary)" }} />
-            <span className="text-xs text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
-          </div>
-          {externalVoters.map((user, i) => {
-            const isMe = user.id === userId;
-            return (
-              <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-primary-soft/60" : ""}`}>
-                <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                <RankedAvatar userId={user.id} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-primary-fg" : "text-white"}`}>
-                    <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
-                    </span>
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <EventParticipantList
+      registrations={sortedRegistrations} externalVoters={externalVoters} userId={userId}
+      winsByUser={winsByUser} wonLabelsByUser={wonLabelsByUser} excludedUserIds={excludedUserIds}
+      statuses={commentStatuses} showStatus={pagePhaseForStatus !== "after"} votedUserIds={votedUserIds}
+      readyIds={event.checkInEnabled && !isDrawn && event.status !== "finished" && event.startAt > new Date()
+        ? new Set(event.registrations.filter(r => r.role !== "spectator" && r.checkedInAt).map(r => r.userId)) : null}
+    />
   );
 
   // ══ Darstellung ══════════════════════════════════════════════════════════════
@@ -1006,18 +944,8 @@ export default async function TournamentDetailPage({
     !p.myVote && new Date(p.startAt) <= new Date() && new Date(p.endAt) > new Date()
     && (p.voterEligibility === "all" || isRegistered || isSpectator));
 
-  // ── Kopf: Cover mit Titel, Datum, Status ──
-  const heroNode = (
-    <EventHero
-      event={event} omaOriginal={isOmaOriginal(event)} heroDate={heroDate} seriesCtx={seriesCtx}
-      statusLabel={statusLabel} statusPill={statusTone.pill} phase={phaseInfo.phase}
-      showCountdown={isPrePhase(pagePhase)} startsIn={startsIn} myStatus={myStatus}
-      date={date} serverTimeFallback={serverTimeFallback} period={period}
-    />
-  );
-
   // ── Aktionsleiste: genau eine Hauptaktion je Phase, daneben Kalender/Discord/Zuschauer/Stream ──
-  const BTN_SECONDARY = "inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line transition-colors";
+  const BTN_SECONDARY = "flex min-h-10 items-center gap-2 rounded-control px-3 text-sm font-semibold text-fg hover:bg-surface-3 transition-colors";
   // Nach der Auslosung: eigener Einstieg direkt in der Aktionsleiste (nächstes Match, Freilos, nicht ausgelost)
   const myDrawInfo = (() => {
     if (!isDrawn || !userId || !isRegistered || pagePhase === "after") return null;
@@ -1040,89 +968,167 @@ export default async function TournamentDetailPage({
     };
   })();
 
-  const primaryAction = (() => {
-    // Spielwahl läuft und man hat noch nicht abgestimmt → "Abstimmen" als Hauptknopf
+  // Hauptknopf je Phase. `dock`: gehört auch in die feste Leiste am Handy (nicht "Dabei"/Hinweistexte)
+  const primary: { node: React.ReactNode; dock: boolean } | null = (() => {
+    // Spielwahl läuft und man hat noch nicht abgestimmt → "Spiel wählen" als Hauptknopf
     if (gameVote?.status === "open" && gameVote.canVote && gameVote.myCandidateIds.length === 0) {
-      return <a href="#spielwahl" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10"><Vote className="w-3.5 h-3.5" /> Spiel wählen</a>;
+      return { dock: true, node: <a href="#spielwahl" className={buttonClasses("primary", "md")}><Vote className="size-4" /> Spiel wählen</a> };
     }
     if (myPendingVote) {
-      return <a href="#abstimmung" className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10"><Vote className="w-3.5 h-3.5" /> Abstimmen</a>;
+      return { dock: true, node: <a href="#abstimmung" className={buttonClasses("primary", "md")}><Vote className="size-4" /> Abstimmen</a> };
     }
     if (pagePhase === "live" && reportMatches.length > 0) {
-      return <a href={myOpenReport ? "#dein-match" : "#ergebnis-melden"} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10">Ergebnis melden</a>;
+      return { dock: true, node: <a href={myOpenReport ? "#dein-match" : "#ergebnis-melden"} className={buttonClasses("primary", "md")}><Swords className="size-4" /> Ergebnis melden</a> };
     }
     if (pagePhase === "after" && isRegistered) {
-      return <a href="#clip" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10"><Clapperboard className="w-3.5 h-3.5" /> Clip einreichen</a>;
+      return { dock: false, node: <a href="#clip" className={buttonClasses("primary", "md")}><Clapperboard className="size-4" /> Clip einreichen</a> };
     }
     if (canRegister && isRegistered) {
-      return (
-        <RegisterButton eventId={event.id} isRegistered isFull={false} discordEventUrl={discordEventUrl} spectatorSwitch={event.spectatorMode && canUnregister}
-          coins={participationCoins} canUnregister={canUnregister} checkIn={event.checkInEnabled} />
-      );
+      return {
+        dock: false,
+        node: (
+          <RegisterButton eventId={event.id} isRegistered isFull={false} discordEventUrl={discordEventUrl} spectatorSwitch={event.spectatorMode && canUnregister}
+            coins={participationCoins} canUnregister={canUnregister} checkIn={event.checkInEnabled} />
+        ),
+      };
     }
     if (canRegister && joinClosed) {
-      return <span className="text-xs text-gray-500">{isDrawn ? "Ausgelost · Anmeldung geschlossen" : deadlinePassed && !regStarted ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span>;
+      return { dock: false, node: <span className="text-sm text-muted">{isDrawn ? "Ausgelost · Anmeldung geschlossen" : deadlinePassed && !regStarted ? "Anmeldeschluss vorbei" : "Anmeldung geschlossen"}</span> };
     }
     if (canRegister && !isRegistrationLocked && isSquadMember) {
-      return (
-        <RegisterButton eventId={event.id} isRegistered={false} isFull={isFullEvent} discordEventUrl={discordEventUrl}
-          joinLabel={regPeriodOpen && regStarted ? "Jetzt einsteigen" : "Anmelden"} coins={participationCoins}
-          waitlist={{ position: myWaitlistPos }} checkIn={event.checkInEnabled} />
-      );
+      return {
+        dock: true,
+        node: (
+          <RegisterButton eventId={event.id} isRegistered={false} isFull={isFullEvent} discordEventUrl={discordEventUrl}
+            joinLabel={regPeriodOpen && regStarted ? "Jetzt einsteigen" : "Anmelden"} coins={participationCoins}
+            waitlist={{ position: myWaitlistPos }} checkIn={event.checkInEnabled} />
+        ),
+      };
     }
     return null;
   })();
+  const primaryAction = primary?.node ?? null;
+
+  // ── (1) "Für dich": genau das Nächste, was dich betrifft ──
+  const checkInButton = isRegistered && event.checkInEnabled && event.status !== "finished" ? (
+    <CheckInButton
+      eventId={event.id}
+      startAt={event.startAt.toISOString()}
+      drawn={event.matches.length > 0 || (!!event.blocksTournament && event.blocksTournament.stage !== "pending")}
+      checkedIn={!!myReg?.checkedInAt}
+    />
+  ) : null;
+  const jumpBtn = (target: string, label: string, variant: "primary" | "secondary" = "primary") => (
+    <SectionJumpLink target={target} className={buttonClasses(variant, "md")}>{label}</SectionJumpLink>
+  );
+  const forYou: ForYou | null = (() => {
+    if (pagePhase === "after") return null; // danach: "Dein Ergebnis" (MyEventResult)
+    if (myPendingVote) return { tone: "teal", glyph: "vote", title: "Deine Stimme fehlt noch", text: "Die Abstimmung nach dem Event läuft.", action: jumpBtn("abstimmung", "Abstimmen") };
+    if (pagePhase === "voting") return null;
+    if (myWaitlistPos) return { tone: "amber", glyph: "clock", title: `Warteliste · Platz ${myWaitlistPos}`, text: "Wird ein Spielerplatz frei, rückst du automatisch nach und bekommst Bescheid." };
+    if (isSpectator) {
+      return {
+        tone: "teal", glyph: "eye", title: "Du schaust zu",
+        text: spectatorReward && spectatorReward.coins > 0
+          ? `+${spectatorReward.coins} Münzen, wenn du beim Abschluss als anwesend eingetragen bist.`
+          : isPrePhase(pagePhase) && startsIn ? `Startet ${startsIn}` : undefined,
+      };
+    }
+    if (!isRegistered) return null;
+    if (myKo.kind === "champion") return { tone: "gold", glyph: "trophy", title: "Du hast das Turnier gewonnen!", text: "Glückwunsch — die Belohnung gibt es mit dem Abschluss." };
+    // (7) Gegner hat gemeldet: direkt bestätigen oder widersprechen
+    const oppReport = myOpenReport?.isDuel ? myOpenReport.opponentReport : null;
+    const myStatusDone = myOpenSubmission && (myOpenSubmission.status === "approved" || myOpenSubmission.status === "corrected");
+    if (myOpenMatch && myOpenReport && oppReport && !myStatusDone) {
+      const p1 = myOpenReport.player1?.username ?? myOpenReport.player1?.name ?? "?";
+      const p2 = myOpenReport.player2?.username ?? myOpenReport.player2?.name ?? "?";
+      const score = `${p1} ${oppReport.score1 ?? "–"} : ${oppReport.score2 ?? "–"} ${p2}`;
+      const mine = myOpenSubmission && myOpenSubmission.status === "pending" ? myOpenSubmission : null;
+      if (mine && (mine.score1 !== oppReport.score1 || mine.score2 !== oppReport.score2)) {
+        return { tone: "amber", glyph: "warning", title: "Eure Meldungen passen nicht zusammen", text: `${oppReport.reporterName} meldet ${score}. Sprecht euch ab — sonst entscheidet ein Verwalter.`, action: jumpBtn("dein-match", "Ansehen", "secondary") };
+      }
+      if (!mine) {
+        return { tone: "teal", glyph: "swords", title: `${oppReport.reporterName} meldet ${oppReport.score1 ?? "–"} : ${oppReport.score2 ?? "–"} — stimmt das?`, text: score, action: <OpponentReportActions eventId={event.id} matchId={myOpenReport.id} /> };
+      }
+    }
+    if (myOpenMatch) {
+      const opponents = myOpenMatch.players.filter(p => p.id !== userId).map(p => p.username ?? p.name ?? "?");
+      const duel = !!myOpenReport?.isDuel || opponents.length === 1;
+      const when = myOpenMatch.live ? "läuft gerade" : myOpenMatch.scheduledAt
+        ? `${formatBerlinDateTime(new Date(myOpenMatch.scheduledAt), { weekday: "short", hour: "2-digit", minute: "2-digit" })} Uhr` : null;
+      return {
+        tone: "teal", glyph: "swords",
+        title: duel && opponents.length > 0 ? `Dein Match gegen ${opponents.join(", ")}` : `Dein nächstes Spiel: ${myOpenMatch.label}`,
+        text: [duel ? myOpenMatch.label : null, when].filter(Boolean).join(" · ") || undefined,
+        action: jumpBtn("dein-match", pagePhase === "live" ? "Ergebnis melden" : "Zum Match", pagePhase === "live" ? "primary" : "secondary"),
+      };
+    }
+    if (myKo.kind === "eliminated") {
+      return { tone: "muted", glyph: "cross", title: `Ausgeschieden im ${myKo.roundLabel}`, text: myKo.byUserId ? `gegen ${koNameOf(myKo.byUserId)} — danke fürs Mitspielen!` : "Danke fürs Mitspielen!" };
+    }
+    if (notDrawnMe) return { tone: "muted", glyph: "warning", title: "Nicht ausgelost", text: "Du bist bei der Auslosung nicht in den Spielplan gekommen." };
+    if (myDrawInfo?.tone === "info") return { tone: "teal", glyph: "swords", title: myDrawInfo.text, action: jumpBtn("turnier", "Zum Turnier", "secondary") };
+    if (checkInButton && myCheckInState === "open" && !myCheckedIn) {
+      return { tone: "amber", glyph: "clock", title: "Meld dich bereit", text: "Wer bei der Auslosung nicht bereit ist, kommt nicht in den Spielplan.", action: checkInButton };
+    }
+    const facts = [
+      isPrePhase(pagePhase) && startsIn ? `Startet ${startsIn}` : null,
+      checkInButton && myCheckInState === "not_yet_open" && !myCheckedIn ? "„Bin bereit“ kurz vor dem Start" : null,
+      participationCoins > 0 ? `+${participationCoins} Münzen nach dem Event` : null,
+    ].filter(Boolean);
+    return {
+      tone: "teal", glyph: "check",
+      title: myCheckedIn ? "Du bist dabei · bereit" : "Du bist dabei",
+      text: facts.length > 0 ? facts.join(" · ") : undefined,
+      action: checkInButton && (myCheckInState === "not_yet_open" || myCheckedIn) ? checkInButton : undefined,
+    };
+  })();
+  // (2) Feste Leiste am Handy: das Dringendste aus "Für dich", sonst der Hauptknopf
+  const dockAction = (forYou?.action && forYou.glyph !== "check") ? forYou.action : primary?.dock ? primary.node : null;
+  const dockTitle = forYou && forYou.action && forYou.glyph !== "check" ? forYou.title : event.title;
+
+  // Wer dabei ist (oder zuschaut), braucht den Termin im Kalender — direkt sichtbar statt im "Mehr"-Menü
+  const calendarInBar = (isRegistered || isSpectator) && isPrePhase(pagePhase);
   const actionBar = (
-    <div className="glass rounded-2xl px-4 py-3 mb-3 flex flex-wrap items-center gap-2">
+    <div id="aktion" className="scroll-mt-36 border-t border-line px-3 py-3 sm:px-4 flex flex-wrap items-center gap-2">
       {primaryAction}
-      {myDrawInfo && (
-        <a href="#turnier" className={`text-xs rounded-lg px-3 py-1.5 border ${myDrawInfo.tone === "info"
-          ? "bg-sky-500/10 border-sky-500/25 text-sky-200 hover:bg-sky-500/15"
-          : "bg-surface-2 border-line text-gray-400"}`}>
-          {myDrawInfo.text}
-        </a>
-      )}
-      {isRegistered && event.checkInEnabled && event.status !== "finished" && (
-        <CheckInButton
-          eventId={event.id}
-          startAt={event.startAt.toISOString()}
-          drawn={event.matches.length > 0 || (!!event.blocksTournament && event.blocksTournament.stage !== "pending")}
-          checkedIn={!!myReg?.checkedInAt}
-        />
-      )}
       {/* Zuschauen geht bis zum Abschluss der Spielphase — auch während das Event läuft */}
       {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !gamePhaseComplete) && (
         <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} reward={spectatorReward} />
       )}
       {canRegister && !isRegistered && !isSpectator && (isRegistrationLocked || !isSquadMember) && (
         isRegistrationLocked ? (
-          <span className="flex items-center gap-1 text-xs text-gray-500">
-            <Lock className="w-3.5 h-3.5" /> Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.
+          <span className="flex items-center gap-1.5 text-sm text-muted">
+            <Lock className="size-4 shrink-0" /> Der Veranstalter trägt die Teilnehmer selbst ein. Frag im Discord nach einem Platz.
           </span>
         ) : (
-          <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
-            <Lock className="w-3.5 h-3.5" /> Nur für Mitglieder des Squads · zum Squad
+          <Link href={`/squads/${restrictedSquadId}`} className="flex items-center gap-1.5 text-sm text-muted hover:text-fg">
+            <Lock className="size-4 shrink-0" /> Nur für Mitglieder des Squads · zum Squad
           </Link>
         )
       )}
       {period && !isRegistered && canRegister && (
-        <span className="text-xs text-gray-500">Einstieg jederzeit bis zum Ende möglich</span>
+        <span className="text-sm text-muted">Einstieg jederzeit bis zum Ende möglich</span>
       )}
       {event.status === "umfrage" && discordChannelUrl && initialPolls.length === 0 && (
-        <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 max-lg:min-h-10">
-          <Vote className="w-3.5 h-3.5" />
+        <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer" className={buttonClasses("primary", "md")}>
+          <Vote className="size-4" />
           {legacyPollConfig?.question ? `Jetzt für „${legacyPollConfig.question}“ abstimmen` : "Jetzt abstimmen"} ↗
         </a>
       )}
+      {calendarInBar && (
+        <a href={`/api/events/${event.id}/ics`} download className={buttonClasses("secondary", "md")}>
+          <CalendarPlus className="size-4" /> <span className="max-sm:sr-only">In den Kalender</span>
+        </a>
+      )}
       <span className="flex-1" />
-      {(pagePhase !== "after" || discordEventUrl || canStreamRegister) && (
+      {((pagePhase !== "after" && !calendarInBar) || discordEventUrl || canStreamRegister) && (
         <ActionMoreMenu>
-          {pagePhase !== "after" && (
-            <a href={`/api/events/${event.id}/ics`} download className={BTN_SECONDARY}><CalendarPlus className="w-3.5 h-3.5" /> In den Kalender</a>
+          {pagePhase !== "after" && !calendarInBar && (
+            <a href={`/api/events/${event.id}/ics`} download className={BTN_SECONDARY}><CalendarPlus className="size-4 text-subtle" /> In den Kalender</a>
           )}
           {discordEventUrl && (
-            <a href={discordEventUrl} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}>Auf Discord ansehen ↗</a>
+            <a href={discordEventUrl} target="_blank" rel="noopener noreferrer" className={BTN_SECONDARY}><ExternalLink className="size-4 text-subtle" /> Auf Discord ansehen</a>
           )}
           {canStreamRegister && <StreamRegisterButton eventId={eventId} isStreaming={isCommunityStreamer} />}
         </ActionMoreMenu>
@@ -1130,61 +1136,73 @@ export default async function TournamentDetailPage({
     </div>
   );
 
-  // ── Fakten in einer Zeile ──
-  const FACT = "inline-flex items-center gap-1.5 rounded-lg bg-line border border-line px-2.5 py-1 text-xs text-gray-300";
+  // ── Kopf: Cover mit Titel, Datum, Status — die Aktionsleiste hängt unten in derselben Karte ──
+  const heroNode = (
+    <EventHero
+      event={event} omaOriginal={isOmaOriginal(event)} heroDate={heroDate} seriesCtx={seriesCtx}
+      statusLabel={statusLabel} statusPill={statusTone.pill} phase={phaseInfo.phase}
+      showCountdown={isPrePhase(pagePhase)} startsIn={startsIn} myStatus={forYou ? null : myStatus}
+      date={date} serverTimeFallback={serverTimeFallback} period={period}
+      footer={actionBar}
+    />
+  );
+
+  // ── Fakten: die wichtigsten drei immer, der Rest hinter "Details" ──
   const factsRow = (
-    <div className="flex flex-wrap items-center gap-1.5 mb-5">
-      {!event.game && gameVote && (
-        <span className={`${FACT} text-violet-200`}><Vote className="w-3.5 h-3.5" /> Spiel wird per Spielwahl bestimmt</span>
-      )}
-      {event.game && (
-        <span className={FACT}>
-          <Gamepad2 className="w-3.5 h-3.5 text-gray-500" />
-          {gameListSlug
-            ? <Link href={`/spiele/${gameListSlug}`} className="hover:text-primary-fg underline decoration-white/20 underline-offset-2">{event.game}</Link>
-            : event.game}
-          {genreInfo && <span className="flex items-center gap-1 text-gray-500"><AppIcon kind="genre" name={genreInfo.value} size={12} />{genreInfo.label}</span>}
-        </span>
-      )}
-      {hasTournament && <span className={FACT}><Swords className="w-3.5 h-3.5 text-gray-500" />{FORMAT_LABELS[format] ?? format}</span>}
-      {event.category && <EventCategoryBadge category={event.category as EventCategory} />}
-      <span className={FACT}>
-        <Users className="w-3.5 h-3.5 text-gray-500" />
-        <span className="tabular-nums">{playerCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}</span> {event.maxPlayers ? "Plätze" : "dabei"}
-        {event.maxPlayers && (
-          <span className="ml-1 h-1 w-12 rounded-full bg-line overflow-hidden">
-            <span className={`block h-full rounded-full ${isFullEvent ? "bg-gray-500" : "bg-primary"}`} style={{ width: `${Math.min(100, Math.round(playerCount / event.maxPlayers * 100))}%` }} />
+    <EventFacts
+      primary={[
+        !event.game && gameVote ? <span className={`${FACT} text-fg`}><Vote className="size-3.5 text-primary-fg" /> Spiel wird per Spielwahl bestimmt</span> : null,
+        event.game ? (
+          <span className={FACT}>
+            <Gamepad2 className="size-3.5 text-subtle" />
+            {gameListSlug
+              ? <Link href={`/spiele/${gameListSlug}`} className="text-fg hover:text-primary-fg underline decoration-line-strong underline-offset-2">{event.game}</Link>
+              : <span className="text-fg">{event.game}</span>}
           </span>
-        )}
-      </span>
-      {hasHeroFirstPlace ? (
-        <span className={`${FACT} text-amber-200`} title={event.seriesId ? "Platzierungs-Bonus je Event: gibt es direkt nach diesem Termin" : "Preis für Platz 1"}>
-          {event.seriesId && <span className="font-semibold">Bonus</span>}
-          <PlaceMedal place={1} className="text-xs" />
-          {heroFirstPlaceCoins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{heroFirstPlaceCoins}</span>}
-          {heroFirstPlaceRankPts > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{heroFirstPlaceRankPts}</span>}
-        </span>
-      ) : participationCoins > 0 ? (
-        <span className={`${FACT} font-semibold text-amber-400`}>+{participationCoins} <CoinIcon size={12} /> fürs Mitmachen</span>
-      ) : null}
-      {/* Zuschauer: Anzahl und Belohnung fürs Zuschauen */}
-      {event.spectatorMode && (
-        <span className={FACT} title={spectatorReward ? "Belohnung fürs Zuschauen, wenn du beim Abschluss als anwesend markiert bist" : undefined}>
-          <Glyph name="eye" className="inline size-3.5 align-[-2px]" /> <span className="tabular-nums">{spectatorCount}</span> Zuschauer
-          {spectatorReward && spectatorReward.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400">· +{spectatorReward.coins} <CoinIcon size={12} /> fürs Zuschauen</span>}
-        </span>
-      )}
-      {/* Reihen-Termin: Preise der Endwertung — erst zum Abschluss der Reihe */}
-      {event.series && seriesFinalFirst && (
-        <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-line-strong`}
-          title="Platzierungs-Belohnungen der Reihe: gibt es zum Abschluss der Reihe">
-          Endwertung der Reihe: <PlaceMedal place={1} className="text-xs" />
-          {seriesFinalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{seriesFinalFirst.coins}</span>}
-          {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
-        </Link>
-      )}
-      <GameListInfo info={gameInfo} />
-    </div>
+        ) : null,
+        <span key="players" className={FACT}>
+          <Users className="size-3.5 text-subtle" />
+          <span className="tabular-nums text-fg">{playerCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}</span> {event.maxPlayers ? "Plätze" : "dabei"}
+          {event.maxPlayers && (
+            <span className="ml-1 h-1.5 w-12 rounded-full bg-surface-3 overflow-hidden">
+              <span className={`block h-full rounded-full ${isFullEvent ? "bg-gray-500" : "bg-primary"}`} style={{ width: `${Math.min(100, Math.round(playerCount / event.maxPlayers * 100))}%` }} />
+            </span>
+          )}
+        </span>,
+        hasHeroFirstPlace ? (
+          <span className={`${FACT} text-coin`} title={event.seriesId ? "Platzierungs-Bonus je Event: gibt es direkt nach diesem Termin" : "Preis für Platz 1"}>
+            {event.seriesId && <span className="font-semibold">Bonus</span>}
+            <PlaceMedal place={1} className="text-xs" />
+            {heroFirstPlaceCoins > 0 && <span className="flex items-center gap-0.5 font-bold text-coin"><CoinIcon size={12} />{heroFirstPlaceCoins}</span>}
+            {heroFirstPlaceRankPts > 0 && <span className="flex items-center gap-0.5 font-bold text-primary-fg"><RankPointsIcon size={12} />{heroFirstPlaceRankPts}</span>}
+          </span>
+        ) : participationCoins > 0 ? (
+          <span className={`${FACT} text-coin`}>+{participationCoins} <CoinIcon size={12} /> fürs Mitmachen</span>
+        ) : null,
+      ]}
+      more={[
+        genreInfo ? <span className={FACT}><AppIcon kind="genre" name={genreInfo.value} size={12} />{genreInfo.label}</span> : null,
+        hasTournament ? <span className={FACT}><Swords className="size-3.5 text-subtle" />{FORMAT_LABELS[format] ?? format}</span> : null,
+        event.category ? <EventCategoryBadge category={event.category as EventCategory} /> : null,
+        // Zuschauer: Anzahl und Belohnung fürs Zuschauen
+        event.spectatorMode ? (
+          <span className={FACT} title={spectatorReward ? "Belohnung fürs Zuschauen, wenn du beim Abschluss als anwesend markiert bist" : undefined}>
+            <Glyph name="eye" className="size-3.5" /> <span className="tabular-nums text-fg">{spectatorCount}</span> Zuschauer
+            {spectatorReward && spectatorReward.coins > 0 && <span className="flex items-center gap-0.5 font-bold text-coin">· +{spectatorReward.coins} <CoinIcon size={12} /> fürs Zuschauen</span>}
+          </span>
+        ) : null,
+        // Reihen-Termin: Preise der Endwertung — erst zum Abschluss der Reihe
+        event.series && seriesFinalFirst ? (
+          <Link href={`/events/series/${event.series.id}#regeln`} className={`${FACT} hover:border-line-strong`}
+            title="Platzierungs-Belohnungen der Reihe: gibt es zum Abschluss der Reihe">
+            Endwertung der Reihe: <PlaceMedal place={1} className="text-xs" />
+            {seriesFinalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-bold text-coin"><CoinIcon size={12} />{seriesFinalFirst.coins}</span>}
+            {seriesFinalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-bold text-primary-fg"><RankPointsIcon size={12} />{seriesFinalFirst.rankPoints}</span>}
+          </Link>
+        ) : null,
+        gameInfo ? <GameListInfo info={gameInfo} /> : null,
+      ]}
+    />
   );
 
   // ── Sprungleiste ──
@@ -1198,16 +1216,15 @@ export default async function TournamentDetailPage({
     { href: "#beitraege", label: "Beiträge", show: postCount > 0 },
     { href: "#regeln", label: "Regeln", show: !!event.rules },
   ].filter(l => l.show);
-  const jumpBar = (
-    <nav aria-label="Abschnitte" className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] lg:top-[4.5rem] z-20 -mx-4 sm:mx-0 px-4 sm:px-0 py-2.5 mb-4 bg-canvas flex gap-1.5 overflow-x-auto scrollbar-none">
-      {jumpLinks.map(l => (
-        <SectionJumpLink key={l.href} target={l.href.slice(1)}
-          className="shrink-0 inline-flex min-h-9 items-center rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-gray-200 hover:border-line-strong hover:bg-surface-2 transition-colors">
-          {l.label}
-        </SectionJumpLink>
-      ))}
-    </nav>
-  );
+  const unreadComments = commentCounts.get(event.id)?.unread ?? 0;
+  const openPollsForMe = initialPolls.filter(p => !p.myVote && new Date(p.startAt) <= new Date() && new Date(p.endAt) > new Date()).length;
+  const jumpBadge: Record<string, { text?: string; tone: "count" | "alert" | "live" } | undefined> = {
+    teilnehmer: { text: String(sortedRegistrations.length), tone: "count" },
+    absprachen: unreadComments > 0 ? { text: String(unreadComments), tone: "alert" } : undefined,
+    abstimmung: openPollsForMe > 0 || myPendingVote ? { text: `${Math.max(1, openPollsForMe)} offen`, tone: "alert" } : undefined,
+    turnier: pagePhase === "live" ? { tone: "live" } : undefined,
+  };
+  const jumpBar = <EventJumpBar links={jumpLinks.map(l => ({ target: l.href.slice(1), label: l.label, badge: jumpBadge[l.href.slice(1)] }))} />;
 
   // ── Community-Event abgeschlossen: kein Ergebnis, sondern "Mit dabei waren" + Umfrage-Highlights ──
   const isCommunityDone = !eventHasPlacement(event) && gamePhaseComplete;
@@ -1224,138 +1241,41 @@ export default async function TournamentDetailPage({
 
   // ── Ergebnis (Podest, dein Platz, Sieger der Abstimmungen) ──
   const showResults = isCommunityDone || podium.length > 0 || !!winner || pollWinnerCards.length > 0;
-  const PODIUM_STEP = [
-    { h: "h-10", bg: "bg-yellow-400/20", text: "text-yellow-300", ring: "ring-yellow-400/70", size: 44 },
-    { h: "h-7", bg: "bg-slate-300/15", text: "text-slate-300", ring: "ring-slate-300/60", size: 36 },
-    { h: "h-5", bg: "bg-orange-500/15", text: "text-orange-300", ring: "ring-orange-400/60", size: 36 },
-  ];
   const resultsNode = showResults ? (
-    <section aria-label="Ergebnis" className="glass rounded-2xl p-5 mb-5 border border-yellow-400/20 space-y-4">
-      {isCommunityDone ? (
-        <>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Glyph name="handshake" className="size-4 text-primary-fg" /> Mit dabei waren
-              <span className="text-xs font-normal text-gray-500">
-                {communityPeople.length - communitySpectatorCount}{communitySpectatorCount > 0 && ` + ${communitySpectatorCount} Zuschauer`}
-              </span>
-            </h2>
-            {myParticipationReward && (
-              <span className="flex items-center gap-1.5 rounded-lg bg-primary/15 px-2.5 py-1 text-xs font-semibold text-primary-fg tabular-nums">
-                Danke fürs Mitmachen
-                {myParticipationReward.coins > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.coins} <CoinIcon size={12} /></span>}
-                {myParticipationReward.rankPoints > 0 && <span className="flex items-center gap-0.5">· +{myParticipationReward.rankPoints} <RankPointsIcon size={12} /></span>}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500">Ohne Platzierung: kein Sieger, alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
-          {communityPeople.length > 0 && (
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
-              {communityPeople.map(({ user: u, spectator }) => {
-                const isMe = u.id === userId;
-                return (
-                  <span key={u.id} className="flex items-center gap-1.5 min-w-0">
-                    <RankedAvatar userId={u.id} src={u.image} alt={userName(u)} size={24} className="w-6 h-6" />
-                    <span className={`truncate text-xs font-medium ${isMe ? "text-primary-fg" : "text-gray-200"}`}>
-                      <StyledUserName userId={u.id} name={userName(u)} />{isMe && <span className="text-gray-500 ml-1">(du)</span>}
-                    </span>
-                    {spectator && (
-                      <span title="War als Zuschauer dabei" className="flex shrink-0 items-center gap-0.5 rounded bg-line px-1 py-px text-xs font-medium text-gray-400">
-                        <Eye className="w-3 h-3" /> Zuschauer
-                      </span>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </>
-      ) : (
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
-          <WinIcon size={18} /> {pagePhase === "after" ? "Ergebnis" : "Ergebnis (vorläufig)"}
-        </h2>
-      </div>
-      )}
-      {podium.length > 0 ? (
-        <div className="flex items-end justify-center gap-3 pt-2">
-          {[1, 0, 2].filter(i => podium[i]).map(i => {
-            const p = podium[i];
-            const st = PODIUM_STEP[i];
-            const isMe = p.id === userId;
-            return (
-              <div key={p.id} className="flex flex-col items-center gap-1 min-w-0 w-24">
-                <span className={`rounded-full ring-2 ${st.ring}`}>
-                  <RankedAvatar userId={p.id} src={p.user!.image} alt={userName(p.user!)} size={st.size} variant="flat" />
-                </span>
-                <span className={`max-w-full truncate text-xs font-semibold ${isMe ? "text-primary-fg" : "text-white"}`}>
-                  {userName(p.user!)}{isMe && " (du)"}
-                </span>
-                <div className={`${st.h} w-full rounded-t-md ${st.bg} ${st.text} flex items-start justify-center text-xs font-bold pt-0.5`}>{i + 1}</div>
-              </div>
-            );
-          })}
-        </div>
-      ) : winner ? (
-        <div className="flex items-center gap-3 bg-amber-900/20 border border-amber-800/30 rounded-xl p-3">
-          <WinIcon size={20} />
-          <div>
-            <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
-            <p className="text-white font-semibold">{userName(winner)}</p>
-          </div>
-        </div>
-      ) : null}
-      {isCommunityDone && pollWinnerCards.length > 0 && (
-        <p className="text-xs font-semibold uppercase tracking-wider text-violet-300/80">Highlights aus den Umfragen</p>
-      )}
-      {pollWinnerCards.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {pollWinnerCards.map(poll => (
-            <div key={poll.id} className="rounded-xl bg-violet-500/[0.06] border border-violet-500/15 px-3 py-2.5">
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-300 mb-1.5"><Vote className="w-3.5 h-3.5" /> {poll.label}</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-                {poll.winnerIds.map(uid => {
-                  const u = personById(uid);
-                  const name = u ? userName(u) : "Unbekannt";
-                  const isMe = uid === userId;
-                  return (
-                    <span key={uid} className="flex items-center gap-1.5">
-                      <RankedAvatar userId={u?.id} src={u?.image} alt={name} size={22} className="w-[22px] h-[22px]" />
-                      <span className={`text-sm font-medium ${isMe ? "text-primary-fg" : "text-violet-100"}`}>
-                        <StyledUserName userId={u?.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1">(du)</span>}
-                      </span>
-                    </span>
-                  );
-                })}
-              </div>
-              {poll.id === "legacy" && ((pollBonusCoins ?? 0) > 0 || (pollBonusRankPts ?? 0) > 0) && (
-                <p className="flex items-center gap-2 mt-1 text-xs text-violet-400/80">
-                  {(pollBonusCoins ?? 0) > 0 && <span className="flex items-center gap-0.5">+{pollBonusCoins} <CoinIcon size={11} /></span>}
-                  {(pollBonusRankPts ?? 0) > 0 && <span className="flex items-center gap-0.5">+{pollBonusRankPts} <RankPointsIcon size={11} /></span>}
-                </p>
-              )}
-              {poll.winnerIds.length > 1 && <p className="text-xs text-gray-500 mt-1">Gleichstand, alle {poll.winnerIds.length} erhalten dieselbe Belohnung.</p>}
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
+    <EventResults
+      userId={userId}
+      provisional={pagePhase !== "after"}
+      community={isCommunityDone ? { people: communityPeople, spectatorCount: communitySpectatorCount, myReward: myParticipationReward } : null}
+      podium={podium.map(p => ({
+        id: p.id, name: userName(p.user!), image: p.user!.image, isMe: p.id === userId,
+        href: p.id === userId ? "/profile" : `/profile/${p.id}`,
+      }))}
+      winner={podium.length === 0 ? winner : null}
+      pollCards={pollWinnerCards.map(poll => ({
+        id: poll.id, label: poll.label,
+        winners: poll.winnerIds.map(uid => {
+          const u = personById(uid);
+          return { id: u?.id ?? null, name: u ? userName(u) : "Unbekannt", image: u?.image ?? null };
+        }),
+        bonus: poll.id === "legacy" ? { coins: pollBonusCoins ?? 0, rankPoints: pollBonusRankPts ?? 0 } : null,
+      }))}
+    />
   ) : null;
 
   // ── Abstimmungen: ein Abschnitt für alt (Discord/Legacy) + neu (EventPoll) ──
   const pollsNode = hasPollStuff ? (
     <section id="abstimmung" aria-label="Abstimmung" className="mb-5 space-y-3 scroll-mt-36">
       {hasPendingPoll && (
-        <div className="glass rounded-2xl p-5 space-y-3 border border-violet-500/20">
+        <div className="rounded-card border border-violet-400/30 bg-surface shadow-card p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
             <Vote className="w-4 h-4 text-violet-400" />
-            <h2 className="text-sm font-semibold text-white">Abstimmung nach dem Event läuft: {pollLabel}</h2>
+            <h2 className="text-base font-extrabold text-fg">Abstimmung nach dem Event läuft: {pollLabel}</h2>
           </div>
           {((pollBonusCoins ?? 0) > 0 || (pollBonusRankPts ?? 0) > 0) && (
             <div className="flex items-center gap-2">
               {(pollBonusCoins ?? 0) > 0 && (
-                <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                <span className="flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-coin-soft text-coin">
                   Gewinner erhält +{pollBonusCoins} <CoinIcon size={13} />
                 </span>
               )}
@@ -1372,7 +1292,7 @@ export default async function TournamentDetailPage({
               const name = user.username ?? user.name ?? "Unbekannt";
               return (
                 <div key={user.id}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-primary/30" : ""}`}>
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-control bg-surface-2 border border-line ${isMe ? "ring-1 ring-primary/40" : ""}`}>
                   <RankedAvatar userId={user.id} src={user.image} alt={name} size={24} className="w-6 h-6" />
                   <span className={`text-sm ${isMe ? "text-primary-fg font-medium" : "text-gray-200"}`}>
                     <StyledUserName userId={user.id} name={name} />{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
@@ -1389,14 +1309,14 @@ export default async function TournamentDetailPage({
         <PollsSection eventId={event.id} userId={userId} initialPolls={initialPolls} myRole={myReg?.role ?? null} />
       )}
       {!gamePhaseComplete && initialPolls.length > 0 && (
-        <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
-          <Vote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-          <div className="text-xs text-gray-500 leading-relaxed">
+        <div className="rounded-card border border-line bg-surface shadow-card px-4 py-3 flex items-start gap-2.5">
+          <Vote className="size-4 text-violet-300 mt-0.5 shrink-0" />
+          <div className="text-sm text-muted leading-relaxed">
             <p>Nach Abschluss der Spielphase {initialPolls.length === 1 ? "startet folgende Umfrage" : "starten folgende Umfragen"}:</p>
             <ul className="mt-1 space-y-0.5">
               {initialPolls.map(p => (
-                <li key={p.id} className="text-gray-400">
-                  „{p.label}“{p.question ? <span className="text-gray-600"> – {p.question}</span> : null}
+                <li key={p.id} className="font-semibold text-fg">
+                  „{p.label}“{p.question ? <span className="font-normal text-subtle"> – {p.question}</span> : null}
                 </li>
               ))}
             </ul>
@@ -1415,54 +1335,36 @@ export default async function TournamentDetailPage({
     </section>
   ) : null;
 
-  // ── Streams ──
-  const streamNode = (streamingPartners.length > 0 || filteredCommunityStreamers.length > 0) ? (
-    <section aria-label="Streams" className="glass rounded-2xl px-4 py-3 mb-5 space-y-2" style={{ border: "1px solid rgba(145,70,255,0.18)" }}>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Tv2 className="w-3.5 h-3.5 text-[#9146ff] shrink-0" />
-        <span className="text-xs text-gray-400 font-medium">Live übertragen von:</span>
-        {streamingPartners.map(({ partner: p }) => (
-          <a key={p.id} href={`https://twitch.tv/${p.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110 max-lg:min-h-10"
-            style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}>
-            <Image src={p.logoUrl} alt={p.name} width={16} height={16} className="rounded-full shrink-0" />
-            {p.name}
-            <span className="opacity-50 text-xs">↗</span>
-          </a>
-        ))}
-        {filteredCommunityStreamers.map(({ user: u }) => (
-          u.twitchLogin ? (
-            <a key={u.id} href={`https://twitch.tv/${u.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110 max-lg:min-h-10"
-              style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}>
-              <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
-              {u.name ?? u.username}
-              <span className="opacity-50 text-xs">↗</span>
-            </a>
-          ) : (
-            <span key={u.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
-              style={{ background: "var(--color-surface-3)", border: "1px solid var(--color-line)", color: "#9ca3af" }}>
-              <RankedAvatar userId={u.id} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
-              {u.name ?? u.username}
-            </span>
-          )
-        ))}
-      </div>
-      {streamingPartners.length > 0 && (
-        <EventLiveBadge twitchLogins={streamingPartners.map(sp => sp.partner.twitchLogin.toLowerCase())} />
-      )}
-    </section>
-  ) : null;
+  // ── Streams ── (am großen Bildschirm in der Seitenspalte)
+  const streamPartners = streamingPartners.map(sp => sp.partner);
+  const streamUsers = filteredCommunityStreamers.map(cs => cs.user);
+  const streamNode = <EventStreams partners={streamPartners} streamers={streamUsers} className="mb-5 xl:hidden" />;
 
-  const descriptionNode = event.description ? (
-    <p className="glass rounded-2xl px-5 py-4 mb-5 text-sm text-gray-300 leading-relaxed whitespace-pre-line">{event.description}</p>
+  const descriptionCard = event.description ? (
+    <p className="rounded-card border border-line bg-surface shadow-card px-4 py-4 sm:px-5 mb-5 text-sm text-fg/90 leading-relaxed whitespace-pre-line">{event.description}</p>
   ) : null;
+  const collapseBackground = pagePhase === "after" && (!!event.description || !!event.rules);
+  const descriptionNode = collapseBackground ? (
+    // Sprung "Regeln" öffnet die Zeile (data-jump-target, siehe SectionJumpLink)
+    <details data-jump-target="regeln" className="group mb-5 scroll-mt-36">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-card border border-line bg-surface px-4 shadow-card hover:border-line-strong [&::-webkit-details-marker]:hidden">
+        <Glyph name="scroll" className="size-4 text-muted" />
+        <span className="text-base font-extrabold text-fg">{event.description && event.rules ? "Beschreibung & Regeln" : event.rules ? "Regeln" : "Beschreibung"}</span>
+        <span className="text-xs font-semibold text-subtle">Ablauf vor dem Event</span>
+        <ChevronDown className="ml-auto size-4 text-subtle transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="mt-3">
+        {descriptionCard}
+        <RulesSection id="regeln" rules={event.rules} className="mb-0" />
+      </div>
+    </details>
+  ) : descriptionCard;
 
   const gameVoteNode = gameVote ? (
     <GameVoteSection eventId={event.id} view={gameVote} canManage={canManageVote} addable={gameVoteAddable} rules={event.rules} format={event.format} isRegistered={isRegistered} isSpectator={isSpectator} />
   ) : null;
 
-  const rulesNode = <RulesSection id="regeln" rules={event.rules} preview={isPrePhase(pagePhase) ? 4 : 3} className="mb-5" />;
+  const rulesNode = collapseBackground ? null : <RulesSection id="regeln" rules={event.rules} preview={isPrePhase(pagePhase) ? 4 : 3} className="mb-5" />;
 
   const blocksNode = (event.blocksTournament || event.blocksChallenge) ? (
     <BlocksEventSection
@@ -1519,24 +1421,24 @@ export default async function TournamentDetailPage({
   const clipNode = (event.twitchClipUrl || (event.status === "finished" && isRegistered)) ? (
     <div id="clip" className="scroll-mt-36 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
       {event.twitchClipUrl && (
-        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(145,70,255,0.15)" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Clapperboard className="w-4 h-4 text-[#9146ff]" />
-            <span className="text-sm font-semibold text-gray-300">Event-Highlight</span>
+        <div className="rounded-card border border-[#9146ff]/30 bg-surface shadow-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clapperboard className="size-4 text-[#9146ff]" />
+            <span className="text-base font-extrabold text-fg">Event-Highlight</span>
           </div>
           <a href={event.twitchClipUrl} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-[#9146ff] hover:text-purple-300 transition-colors">
-            Clip auf Twitch ansehen ↗
+            className={buttonClasses("secondary", "md")}>
+            <ExternalLink className="size-4" /> Clip auf Twitch ansehen
           </a>
         </div>
       )}
       {event.status === "finished" && isRegistered && (
-        <div className="glass rounded-2xl p-4" style={{ border: "1px solid var(--color-line)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Clapperboard className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-semibold text-gray-300">Deinen Twitch-Clip einreichen</span>
+        <div className="rounded-card border border-line bg-surface shadow-card p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Clapperboard className="size-4 text-muted" />
+            <span className="text-base font-extrabold text-fg">Deinen Twitch-Clip einreichen</span>
           </div>
-          <p className="text-xs text-gray-500 mb-3">Hattest du einen guten Moment im Stream? Reiche deinen Clip ein.</p>
+          <p className="text-sm text-muted mb-3">Hattest du einen guten Moment im Stream? Reiche deinen Clip ein.</p>
           <ClipSubmitter eventId={event.id} existingClipUrl={myClipSubmission?.clipUrl ?? null} />
         </div>
       )}
@@ -1565,10 +1467,10 @@ export default async function TournamentDetailPage({
         )}
         {/* K.O.: kein offenes Match mehr — kurz sagen, wo man steht */}
         {!myOpenMatch && (myKo.kind === "eliminated" || myKo.kind === "champion") && (
-          <p className={`mb-4 rounded-xl border px-3 py-2 text-sm ${myKo.kind === "champion" ? "border-amber-500/30 bg-amber-500/[0.06] text-amber-200" : "border-line bg-surface-2 text-gray-300"}`}>
+          <p className={`mb-4 rounded-control border px-4 py-3 text-sm font-semibold ${myKo.kind === "champion" ? "border-coin/30 bg-coin-soft text-coin" : "border-line bg-surface text-muted"}`}>
             {myKo.kind === "champion"
               ? "Du hast das Turnier gewonnen — Glückwunsch!"
-              : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-white">{koNameOf(myKo.byUserId)}</span></>}.</>}
+              : <>Du bist im {myKo.roundLabel} ausgeschieden{myKo.byUserId && <> gegen <span className="text-fg">{koNameOf(myKo.byUserId)}</span></>}.</>}
           </p>
         )}
     </section>
@@ -1578,15 +1480,15 @@ export default async function TournamentDetailPage({
     <div id="turnier" className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5 scroll-mt-36">
       {/* Teilnehmerliste — mobil vor dem Start oben, danach eingeklappt unter der Turnieransicht */}
       {/* Nach dem Start eingeklappt (unten), damit Baum und Tabellen die volle Breite haben */}
-      <div id="teilnehmer" className={`lg:col-span-1 scroll-mt-36 ${collapseParticipantsOnMobile ? "hidden" : ""}`}>
+      <div id="teilnehmer" className={`lg:col-span-1 xl:hidden scroll-mt-36 ${collapseParticipantsOnMobile ? "hidden" : ""}`}>
         <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
-          <Users className="w-3.5 h-3.5" /> Teilnehmer
+          <Users className="size-4" /> Teilnehmer
         </h2>
         {participantList}
       </div>
 
       {/* Format-spezifische Ansicht */}
-      <div className={`min-w-0 ${collapseParticipantsOnMobile ? "lg:col-span-4" : "lg:col-span-3"}`}>
+      <div className={`min-w-0 xl:col-span-4 ${collapseParticipantsOnMobile ? "lg:col-span-4" : "lg:col-span-3"}`}>
         {/* Stand in Klartext — wie auf der Verwaltungsseite, ohne Werkzeuge */}
         {(duelStand?.total || statStand?.total) ? (() => {
           const played = duelStand?.played ?? statStand!.played;
@@ -1594,12 +1496,12 @@ export default async function TournamentDetailPage({
           const pct = Math.round((played / total) * 100);
           return (
             <section aria-label="Turnier-Stand" className="mb-4 space-y-1.5">
-              <p className="text-sm text-gray-300">
-                <span className="font-semibold text-white">{FORMAT_LABELS[format] ?? format}</span>
+              <p className="text-sm text-muted">
+                <span className="font-extrabold text-fg">{FORMAT_LABELS[format] ?? format}</span>
                 {event.status === "finished" ? " · beendet" : standStage ? ` · ${standStage}` : ""}
-                <span className="text-gray-500"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
+                <span className="text-subtle"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
               </p>
-              <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-2 rounded-full bg-surface-3 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
               </div>
             </section>
@@ -1608,10 +1510,10 @@ export default async function TournamentDetailPage({
 
         <NextMatches upcoming={upcomingMatches} canReport={reportMatches.length > 0} shownMineId={myOpenMatch?.id ?? null} />
         {!hasTournament && !communityGoalProgress && (
-          <div className="glass rounded-2xl p-8 text-center">
-            <Swords className="w-8 h-8 mx-auto mb-2 text-gray-700" />
-            <p className="text-gray-400 font-medium">Kein Spielplan für dieses Event</p>
-            <p className="text-gray-600 text-sm mt-1">Es läuft ohne Turnierbaum, alles Wichtige steht oben.</p>
+          <div className="rounded-card border border-dashed border-line-strong p-8 text-center">
+            <Swords className="size-8 mx-auto mb-2 text-subtle" />
+            <p className="font-bold text-fg">Kein Spielplan für dieses Event</p>
+            <p className="text-muted text-sm mt-1">Es läuft ohne Turnierbaum, alles Wichtige steht oben.</p>
           </div>
         )}
         {isElimination && (
@@ -1696,11 +1598,11 @@ export default async function TournamentDetailPage({
         {reviewData && reviewData.matches.length > 0 && (
           <div id="ergebnis-pruefen" className="scroll-mt-36 mt-5 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-amber-300">Ergebnis-Meldungen prüfen</h3>
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500 text-black font-semibold">
+              <h3 className="text-base font-extrabold text-fg">Ergebnis-Meldungen prüfen</h3>
+              <span className="rounded-full bg-warning px-2 text-xs font-bold leading-5 text-canvas">
                 {reviewData.matches.reduce((n, m) => n + m.submissions.length, 0)} offen
               </span>
-              <Link href={`/events/verwalten/${event.id}/results`} className="ml-auto text-xs text-gray-500 hover:text-gray-300">
+              <Link href={`/events/verwalten/${event.id}/results`} className="ml-auto text-xs font-semibold text-primary-fg hover:text-fg">
                 Alle Meldungen (auch erledigte) →
               </Link>
             </div>
@@ -1710,11 +1612,11 @@ export default async function TournamentDetailPage({
       </div>
 
       {collapseParticipantsOnMobile && (
-        <details data-jump-target="teilnehmer" className="lg:col-span-4 group scroll-mt-36">
-          <summary className="glass rounded-2xl px-4 py-3 flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
-            <Users className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className="text-sm font-semibold text-white">Teilnehmer</span>
-            <span className="text-xs text-gray-500 tabular-nums">
+        <details data-jump-target="teilnehmer" className="lg:col-span-4 xl:hidden group scroll-mt-36">
+          <summary className="rounded-card border border-line bg-surface shadow-card px-4 min-h-12 flex items-center gap-3 cursor-pointer select-none list-none hover:border-line-strong [&::-webkit-details-marker]:hidden">
+            <Users className="size-4 text-muted shrink-0" />
+            <span className="text-base font-extrabold text-fg">Teilnehmer</span>
+            <span className="text-xs font-semibold text-subtle tabular-nums">
               {sortedRegistrations.length}{eliminatedCount > 0 && ` · ${eliminatedCount} ausgeschieden`}
             </span>
             <span className="flex -space-x-1.5 ml-1 min-w-0 overflow-hidden">
@@ -1722,7 +1624,7 @@ export default async function TournamentDetailPage({
                 <RankedAvatar key={user.id} userId={user.id} src={user.image} alt={userName(user)} size={22} variant="flat" />
               ))}
             </span>
-            <ChevronDown className="w-4 h-4 text-gray-500 ml-auto shrink-0 transition-transform group-open:rotate-180" />
+            <ChevronDown className="size-4 text-subtle ml-auto shrink-0 transition-transform group-open:rotate-180" />
           </summary>
           <div className="mt-2">{participantList}</div>
         </details>
@@ -1743,12 +1645,12 @@ export default async function TournamentDetailPage({
       />
     </div>
   ) : (
-    <div id="absprachen" className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 text-sm text-gray-400">
+    <div id="absprachen" className="rounded-card border border-line bg-surface shadow-card px-4 py-3 mb-5 flex items-center gap-3 text-sm text-muted">
       <MessageCircle className="w-4 h-4 text-primary-fg shrink-0" />
       <span className="flex-1">Absprachen zum Event gibt es für Mitglieder.</span>
       <GateButton href={`/tournament/${event.id}`} title="Mitreden"
         message="Für die Absprachen brauchst du einen Platz auf unserem Discord-Server. So kommst du rein:"
-        className="text-xs px-3 py-1.5 rounded-lg font-semibold text-primary-ink bg-primary hover:bg-primary-hover transition-colors">
+        className={buttonClasses("primary", "sm")}>
         Mitreden
       </GateButton>
     </div>
@@ -1768,19 +1670,21 @@ export default async function TournamentDetailPage({
 
   // ── So läuft's ab (Turniere vor dem Start) ──
   // Für Zuschauer nicht (die Schritte betreffen Spieler)
-  const howToNode = hasTournament && isPrePhase(pagePhase) && !event.blocksTournament && !isSpectator ? (
-    <EventHowTo steps={howToSteps({
-      registered: isRegistered,
-      waitlistPos: myWaitlistPos,
-      checkInEnabled: event.checkInEnabled,
-      checkInOpensAt: event.checkInEnabled ? checkInOpensAt(event) : null,
-      checkedIn: myCheckedIn,
-      checkInOpen: myCheckInState === "open",
+  // (10) Ablauf-Leiste statt "So läuft's ab": für alle, in jeder Phase, mit Uhrzeiten
+  const timelineNode = !event.blocksTournament && !event.blocksChallenge ? (
+    <EventTimeline className="mb-3" steps={eventTimeline({
+      phase: pagePhase,
+      registrationClosesAt: event.registrationClosesAt ?? null,
+      checkInAt: event.checkInEnabled ? checkInOpensAt(event) : null,
       hasDraw: isDrawFormat(event.format),
       drawn: isDrawn,
-      started: event.startAt <= new Date(),
+      startAt: event.startAt,
+      endAt: event.endAt,
+      period: isPeriodEvent(event) && !!event.endAt,
+      hasVoting: hasPollStuff || pollWinnerCards.length > 0,
     })} />
   ) : null;
+  const howToNode = null;
 
   // ── Reihenfolge je Phase ──
   const sectionNodes: Record<SectionKey, React.ReactNode> = {
@@ -1790,34 +1694,54 @@ export default async function TournamentDetailPage({
     posts: postsNode, results: resultsNode, summary: summaryNode, clip: clipNode,
   };
 
+  // (4) Seitenspalte ab xl: Für dich, Streams, Teilnehmer — klebt beim Scrollen
+  const aside = (
+    <aside className="hidden xl:block" aria-label="Seitenspalte">
+      <div className="sticky top-[8.5rem] space-y-4 pb-4">
+        {forYou && <ForYouCard data={forYou} />}
+        <EventStreams partners={streamPartners} streamers={streamUsers} compact />
+        {sortedRegistrations.length > 0 && (
+          <section data-jump-target="teilnehmer" aria-label="Teilnehmer" className="scroll-mt-36">
+            <h2 className="mb-2 flex items-center gap-2 text-base font-extrabold text-fg">
+              <Users className="size-4" /> Teilnehmer
+              <span className="text-xs font-semibold text-subtle tabular-nums">
+                {playerCount}{event.maxPlayers ? `/${event.maxPlayers}` : ""}{spectatorCount > 0 ? ` · ${spectatorCount} Zuschauer` : ""}
+              </span>
+            </h2>
+            <div className="max-h-[calc(100vh-14rem)] overflow-y-auto scrollbar-none rounded-card">{participantList}</div>
+          </section>
+        )}
+      </div>
+    </aside>
+  );
+
   return (
-    <div id="uebersicht" className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit group">
-          <ArrowLeft className="w-4 h-4" /> Zurück
+    <div id="uebersicht" className={`px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto w-full min-w-0 ${dockAction ? "max-lg:pb-16" : ""}`}>
+      <div className="flex items-center justify-between mb-3">
+        <Link href="/events" className={buttonClasses("ghost", "sm", "-ml-3")}>
+          <ArrowLeft className="size-4" /> Alle Events
         </Link>
+        {(pagePhase === "drawn" || pagePhase === "live" || pagePhase === "voting") && <span className="ml-auto mr-2"><LiveRefresh /></span>}
         {canManage && (
-          <Link
-            href={`/events/verwalten/${event.id}`}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-line border border-line-strong text-gray-300 hover:text-white hover:bg-line transition-colors font-medium max-lg:min-h-10"
-          >
-            <Settings className="w-3.5 h-3.5" /> Verwalten
+          <Link href={`/events/verwalten/${event.id}`} className={buttonClasses("secondary", "sm")}>
+            <Settings className="size-4" /> Verwalten
           </Link>
         )}
       </div>
 
       {communityBy && (
-        <p className="text-xs text-violet-300/90 mb-3">
-          Mitglieder-Event von <span className="font-semibold">@{communityBy}</span>
-          {awaitingApproval && <span className="text-amber-300/90"> · wartet noch auf Freigabe durch einen Mod</span>}
+        <p className="flex flex-wrap items-center gap-1.5 text-sm text-muted mb-3">
+          <Glyph name="handshake" className="size-4 text-primary-fg" />
+          Mitglieder-Event von <span className="font-semibold text-fg">@{communityBy}</span>
+          {awaitingApproval && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-bold text-warning">wartet auf Freigabe durch einen Mod</span>}
         </p>
       )}
 
-      {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────── */}
+      {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ── */}
       {isHidden && isMod && (
-        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border border-primary/40 bg-primary-soft">
-          <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
-          <p className="text-sm text-primary-fg">
+        <div className="rounded-card px-4 py-3 mb-5 flex items-center gap-3 border border-warning/40 bg-warning-soft">
+          <EyeOff className="size-4 text-warning shrink-0" />
+          <p className="text-sm text-fg">
             <span className="font-semibold">Ausgeblendet</span> — {event.series?.hidden ? "die Eventreihe" : "dieses Event"} ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
           </p>
         </div>
@@ -1825,11 +1749,19 @@ export default async function TournamentDetailPage({
 
       {heroNode}
       {seriesCtx && <SeriesStrip ctx={seriesCtx} currentId={event.id} />}
-      {actionBar}
+      {timelineNode}
+      {forYou && <ForYouCard data={forYou} className="mb-3 xl:hidden" />}
       {factsRow}
       {jumpLinks.length > 2 && jumpBar}
 
-      {SECTION_ORDER[pagePhase].map(key => <React.Fragment key={key}>{sectionNodes[key]}</React.Fragment>)}
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start xl:gap-6">
+        <div className="min-w-0">
+          {SECTION_ORDER[pagePhase].map(key => <React.Fragment key={key}>{sectionNodes[key]}</React.Fragment>)}
+        </div>
+        {aside}
+      </div>
+
+      {dockAction && <StickyActionDock watchId="aktion" title={dockTitle}>{dockAction}</StickyActionDock>}
     </div>
   );
 }

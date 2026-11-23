@@ -1,6 +1,9 @@
 "use client";
 import PlaceMedal from "@/components/PlaceMedal";
 import Link from "next/link";
+import { useState } from "react";
+import { useScoringInfo } from "./ScoringInfo";
+import { Fragment } from "react";
 import { Trophy, Clock, StickyNote } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -73,79 +76,120 @@ export default function LigaView({
   // "Los"-Hinweis erst, wenn alle Spiele gespielt sind — vorher ist ein Gleichstand nur vorläufig
   const leagueComplete = matches.length > 0 && pendingCount === 0;
 
+  // Form: die letzten 3 gespielten Spiele je Spieler (neueste rechts) — S/U/N
+  const formOf = (uid: string): ("S" | "U" | "N")[] => matches
+    .filter(m => m.playedAt && (m.player1Id === uid || m.player2Id === uid) && m.score1 != null && m.score2 != null)
+    .sort((a, b) => a.round - b.round || a.position - b.position)
+    .slice(-3)
+    .map(m => {
+      const own = m.player1Id === uid ? m.score1! : m.score2!;
+      const other = m.player1Id === uid ? m.score2! : m.score1!;
+      return own > other ? "S" : own < other ? "N" : "U";
+    });
+  const FORM_CLS = { S: "bg-success text-canvas", U: "bg-warning text-canvas", N: "bg-danger text-canvas" } as const;
+  // Handy: Tore/Differenz erst nach Antippen einer Zeile
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  const info = useScoringInfo();
+
   return (
     <div className="space-y-6">
 
       {/* ── Tabelle ─────────────────────────────────────────────────── */}
       <div>
-        <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
-          <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
+        <h2 className="text-base font-extrabold text-fg mb-3 flex flex-wrap items-center gap-2">
+          <Trophy className="size-4 text-coin" /> Tabelle
+          <span className="ml-auto">{info.button}</span>
         </h2>
-        <div className="glass rounded-2xl overflow-hidden">
+        {info.panel(<>
+          <p>Sieg = <b>3 Punkte</b>, Unentschieden = <b>1 Punkt</b>, Niederlage = 0.</p>
+          <p>Bei Punktgleichheit entscheiden Tordifferenz, direkter Vergleich und Siege, zuletzt das Los (Anmelde-Reihenfolge).</p>
+          <p className="text-xs text-muted">Form: die letzten drei Spiele — S = Sieg, U = Unentschieden, N = Niederlage. Nur bestätigte und gemeldete Ergebnisse zählen; „vorläufig“ heißt: noch nicht bestätigt.</p>
+        </>)}
+        <div className="rounded-card border border-line bg-surface shadow-card overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[360px]">
+          <table className="w-full text-sm min-w-[340px]">
             <thead>
-              <tr className="border-b border-line text-xs text-gray-500 uppercase tracking-wider">
-                <th className="text-left px-3 py-2.5 font-medium">#</th>
-                <th className="text-left px-3 py-2.5 font-medium">Spieler</th>
-                <th className="text-center px-2 py-2.5 font-medium" title="Spiele">Sp</th>
-                <th className="text-center px-2 py-2.5 font-medium text-emerald-600" title="Siege">S</th>
-                <th className="text-center px-2 py-2.5 font-medium text-amber-600" title="Unentschieden">U</th>
-                <th className="text-center px-2 py-2.5 font-medium text-gray-600" title="Niederlagen">N</th>
-                <th className="text-center px-2 py-2.5 font-medium">Tore</th>
-                <th className="text-right px-3 py-2.5 font-medium">Pkt</th>
+              <tr className="border-b border-line text-xs text-subtle uppercase tracking-wider">
+                <th className="sticky left-0 z-10 bg-surface text-left px-3 py-2.5 font-semibold">Spieler</th>
+                <th className="text-center px-2 py-2.5 font-semibold" title="Spiele">Sp</th>
+                <th className="text-center px-2 py-2.5 font-semibold text-success" title="Siege">S</th>
+                <th className="text-center px-2 py-2.5 font-semibold text-warning" title="Unentschieden">U</th>
+                <th className="text-center px-2 py-2.5 font-semibold text-subtle" title="Niederlagen">N</th>
+                <th className="hidden sm:table-cell text-center px-2 py-2.5 font-semibold">Tore</th>
+                <th className="text-center px-2 py-2.5 font-semibold" title="Letzte drei Spiele">Form</th>
+                <th className="text-right px-3 py-2.5 font-semibold">Pkt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {standings.map((s, i) => {
                 const isMe = s.userId === userId;
                 const diff = s.scored - s.conceded;
+                const form = formOf(s.userId);
+                const rowOpen = openRow === s.userId;
                 return (
-                  <tr key={s.userId} className={`transition-colors ${isMe ? "bg-primary-soft/60" : "hover:bg-surface-2"}`}>
-                    <td className="px-4 py-3 text-center">
-                      {i < 3
-                        ? <span className="text-base">{MEDAL[i]}</span>
-                        : <span className="text-sm text-gray-600">{i + 1}</span>
-                      }
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  <Fragment key={s.userId}>
+                  <tr onClick={() => setOpenRow(r => (r === s.userId ? null : s.userId))}
+                    className={`cursor-pointer sm:cursor-default transition-colors ${isMe ? "bg-primary-soft" : "hover:bg-surface-2"}`}>
+                    {/* Spielerspalte klebt beim Seitwärts-Scrollen (deckende Fläche nötig) */}
+                    <td className={`sticky left-0 z-10 px-3 py-3 ${isMe ? "bg-primary-soft" : "bg-surface"}`}>
+                      <div className="flex items-center gap-2">
+                      <span className="w-5 shrink-0 text-center">
+                        {i < 3 ? <span className="text-base">{MEDAL[i]}</span> : <span className="text-sm font-semibold text-subtle tabular-nums">{i + 1}</span>}
+                      </span>
+                      <Link href={isMe ? "/profile" : `/profile/${s.userId}`} onClick={e => e.stopPropagation()} className="flex min-w-0 items-center gap-2 hover:opacity-80 transition-opacity">
                         <RankedAvatar userId={s.user.id} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
-                        <span className={`font-medium ${isMe ? "text-primary-fg" : "text-white"}`}>
+                        <span className={`max-w-[7.5rem] truncate sm:max-w-none font-semibold ${isMe ? "text-primary-fg" : "text-fg"}`}>
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
                       </Link>
+                      </div>
                       {excludedSet.has(s.userId) && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-muted bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-2">
                           Ungewertet
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-3 text-center text-gray-500 tabular-nums">{s.played}</td>
-                    <td className="px-2 py-3 text-center text-emerald-400 font-semibold tabular-nums">{s.w}</td>
+                    <td className="px-2 py-3 text-center text-subtle tabular-nums">{s.played}</td>
+                    <td className="px-2 py-3 text-center text-success font-semibold tabular-nums">{s.w}</td>
                     <td className="px-2 py-3 text-center text-amber-400 font-semibold tabular-nums">{s.d}</td>
-                    <td className="px-2 py-3 text-center text-gray-500 tabular-nums">{s.l}</td>
-                    <td className="px-2 py-3 text-center text-xs tabular-nums">
-                      <span className="text-gray-400">{s.scored}:{s.conceded}</span>
-                      <span className={`ml-1 text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-700" : "text-gray-700"}`}>
+                    <td className="px-2 py-3 text-center text-subtle tabular-nums">{s.l}</td>
+                    <td className="hidden sm:table-cell px-2 py-3 text-center text-xs tabular-nums">
+                      <span className="text-muted">{s.scored}:{s.conceded}</span>
+                      <span className={`ml-1 text-xs ${diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-subtle"}`}>
                         ({diff > 0 ? "+" : ""}{diff})
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-2 py-3">
+                      <span className="flex items-center justify-center gap-0.5" aria-label={form.length ? `Form: ${form.join(" ")}` : "Noch keine Spiele"}>
+                        {form.length === 0 && <span className="text-subtle">–</span>}
+                        {form.map((f, k) => <span key={k} className={`grid size-4 place-items-center rounded-full text-[9px] font-extrabold ${FORM_CLS[f]}`}>{f}</span>)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right">
                       {leagueComplete && s.decidedByLot && (
-                        <span className="mr-1.5 text-[9px] font-medium text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded"
+                        <span className="mr-1.5 text-[10px] font-bold text-warning bg-warning-soft px-1.5 py-0.5 rounded-full"
                           title="Punkte, Tore, direkter Vergleich und Siege gleich — entschieden per Losentscheid (Anmelde-Reihenfolge)">
                           Los
                         </span>
                       )}
-                      <span className="font-bold text-white text-base">{s.pts}</span>
+                      <span className="font-extrabold text-fg text-base tabular-nums">{s.pts}</span>
                     </td>
                   </tr>
+                  {rowOpen && (
+                    <tr className="sm:hidden bg-surface-2">
+                      <td colSpan={7} className="px-4 py-2 text-xs text-muted">
+                        Tore <b className="text-fg tabular-nums">{s.scored}:{s.conceded}</b>
+                        <span className={`ml-1 ${diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-subtle"}`}>({diff > 0 ? "+" : ""}{diff})</span>
+                        {" · "}{s.w} S · {s.d} U · {s.l} N
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
               {standings.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-gray-600 text-sm">
+                  <td colSpan={8} className="px-4 py-6 text-center text-subtle text-sm">
                     Noch keine Ergebnisse
                   </td>
                 </tr>
@@ -154,16 +198,14 @@ export default function LigaView({
           </table>
           </div>
         </div>
-        <p className="text-xs text-gray-700 mt-1.5 px-1">
-          Sieg = 3 Pkt · Unentschieden = 1 Pkt · Niederlage = 0 Pkt
-        </p>
+        <p className="text-xs text-subtle mt-1.5 px-1 sm:hidden">Zeile antippen für Tore und Bilanz</p>
       </div>
 
       {/* Tabellen-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
       {finalRankingNote && (
         <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
-          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-          <p className="text-xs text-gray-500 italic leading-relaxed">{finalRankingNote}</p>
+          <StickyNote className="w-3.5 h-3.5 text-subtle mt-0.5 shrink-0" />
+          <p className="text-xs text-subtle italic leading-relaxed">{finalRankingNote}</p>
         </div>
       )}
 
@@ -182,7 +224,7 @@ export default function LigaView({
             return (
               <div key={st} className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <span className="text-xs font-semibold text-muted uppercase tracking-wide">
                     Spieltag {st}
                   </span>
                   <span className="text-xs text-gray-700">
@@ -206,13 +248,13 @@ export default function LigaView({
                       >
                         {match.scheduledAt && !played && (
                           <div className="text-center shrink-0 w-12">
-                            <p className="text-sm font-bold text-white">
+                            <p className="text-sm font-bold text-fg">
                               {getBerlinDateParts(match.scheduledAt).day}
                             </p>
-                            <p className="text-xs text-gray-500 uppercase">
+                            <p className="text-xs text-subtle uppercase">
                               {formatBerlinDate(match.scheduledAt, { month: "short" })}
                             </p>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-subtle">
                               {formatBerlinTime(match.scheduledAt, { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
@@ -221,11 +263,11 @@ export default function LigaView({
                         <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                           {/* Player 1 */}
                           <div className={`flex items-center gap-2 flex-1 justify-end min-w-0 ${
-                            match.winnerId === match.player1Id ? "text-emerald-300" :
-                            match.winnerId && !isDraw          ? "text-gray-600"    :
+                            match.winnerId === match.player1Id ? "text-success" :
+                            match.winnerId && !isDraw          ? "text-subtle"    :
                             isDraw                             ? "text-amber-200"   :
                             p1 && p1.id === userId             ? "text-primary-fg"    :
-                                                                 "text-white"
+                                                                 "text-fg"
                           }`}>
                             <span className="text-sm font-medium truncate">{p1 ? <>{uname(p1)}</> : "TBD"}</span>
                             {p1 && <RankedAvatar userId={p1.id} src={p1.image} alt={uname(p1)} size={24} className="w-6 h-6" />}
@@ -243,28 +285,28 @@ export default function LigaView({
                                 </div>
                               ) : (
                                 <div>
-                                  <span className="text-sm font-bold text-white tabular-nums">
+                                  <span className="text-sm font-bold text-fg tabular-nums">
                                     {match.score1 ?? "–"} : {match.score2 ?? "–"}
                                   </span>
                                   {match.resultConfirmed === false && (
-                                    <p className="text-xs text-amber-300 mt-0.5" title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</p>
+                                    <p className="text-xs text-warning mt-0.5 inline-flex items-center gap-1" title="Von Spielern gemeldet, noch nicht bestätigt"><Clock className="size-3" />vorläufig</p>
                                   )}
                                 </div>
                               )
                             ) : (
                               isLive
-                                ? <span className="text-xs text-red-400 font-bold animate-pulse">LIVE</span>
-                                : <span className="text-xs text-gray-600 font-medium">vs</span>
+                                ? <span className="text-xs text-danger font-bold animate-pulse">LIVE</span>
+                                : <span className="text-xs text-subtle font-medium">vs</span>
                             )}
                           </div>
 
                           {/* Player 2 */}
                           <div className={`flex items-center gap-2 flex-1 min-w-0 ${
-                            match.winnerId === match.player2Id ? "text-emerald-300" :
-                            match.winnerId && !isDraw          ? "text-gray-600"    :
+                            match.winnerId === match.player2Id ? "text-success" :
+                            match.winnerId && !isDraw          ? "text-subtle"    :
                             isDraw                             ? "text-amber-200"   :
                             p2 && p2.id === userId             ? "text-primary-fg"    :
-                                                                 "text-white"
+                                                                 "text-fg"
                           }`}>
                             {p2 && <RankedAvatar userId={p2.id} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}
                             <span className="text-sm font-medium truncate">{p2 ? <>{uname(p2)}</> : "TBD"}</span>
@@ -273,7 +315,7 @@ export default function LigaView({
 
                         {played && !isDraw && match.winnerId && <WinIcon size={14} />}
                         {played && match.scheduledAt && (
-                          <div className="shrink-0 text-xs text-gray-600 flex items-center gap-1">
+                          <div className="shrink-0 text-xs text-subtle flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {formatBerlinDate(match.playedAt as string, { day: "2-digit", month: "2-digit" })}
                           </div>
@@ -295,7 +337,7 @@ export default function LigaView({
       )}
 
       {matches.length === 0 && (
-        <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
+        <div className="glass rounded-2xl p-10 text-center text-subtle text-sm">
           Noch keine Matches angelegt.
         </div>
       )}

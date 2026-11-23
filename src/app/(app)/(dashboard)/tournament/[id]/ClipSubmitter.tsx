@@ -50,10 +50,10 @@ export default function ClipSubmitter({ eventId, existingClipUrl }: Props) {
           <Clapperboard className="w-3.5 h-3.5" />
           Dein eingereichte Clip ansehen ↗
         </a>
-        <button onClick={() => setOpen(true)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors underline">
+        <button onClick={() => setOpen(true)} className="text-xs text-subtle hover:text-muted transition-colors underline">
           ändern
         </button>
-        <button onClick={remove} disabled={saving} className="text-xs text-gray-600 hover:text-red-400 transition-colors">
+        <button onClick={remove} disabled={saving} className="text-xs text-subtle hover:text-danger transition-colors">
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
@@ -71,13 +71,13 @@ export default function ClipSubmitter({ eventId, existingClipUrl }: Props) {
           className="flex-1 rounded-control px-3 py-2 text-sm text-fg bg-surface-2 border border-line focus:border-primary outline-none placeholder:text-subtle"
         />
         <button onClick={submit} disabled={saving || !clipUrl.trim()}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-[#9146ff]/15 border border-[#9146ff]/25 text-purple-300 hover:bg-[#9146ff]/25 disabled:opacity-50 transition-colors">
+          className="flex min-h-10 items-center gap-1.5 px-4 rounded-control text-sm font-semibold bg-[#9146ff]/15 border border-[#9146ff]/25 text-purple-300 hover:bg-[#9146ff]/25 disabled:opacity-50 transition-colors">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clapperboard className="w-3.5 h-3.5" />}
           Einreichen
         </button>
       </div>
       {saved && (
-        <button onClick={() => setOpen(false)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+        <button onClick={() => setOpen(false)} className="text-xs text-subtle hover:text-muted transition-colors">
           Abbrechen
         </button>
       )}

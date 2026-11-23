@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { LayoutGrid, Swords } from "@/components/icons";
+import { Clock, LayoutGrid, Swords } from "@/components/icons";
+import { useScoringInfo } from "./ScoringInfo";
 import RankedAvatar from "@/components/RankedAvatar";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
 import { aggregateKnockoutTies, computeGroupStandings, groupLabel } from "@/lib/tournaments/groupStage";
@@ -47,10 +48,11 @@ export default function GroupKnockoutView({
   const hasTwoLegs = ties.some(t => t.legs?.second);
   const standings = computeGroupStandings(members, groupMatches);
   const findUser = (id: string | null) => (id ? participants.find(p => p.userId === id)?.user : undefined);
+  const info = useScoringInfo();
 
   if (!groupMatches.length) {
     return (
-      <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
+      <div className="glass rounded-2xl p-10 text-center text-subtle text-sm">
         Die Gruppen wurden noch nicht ausgelost.
       </div>
     );
@@ -59,9 +61,15 @@ export default function GroupKnockoutView({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
-          <LayoutGrid className="w-3.5 h-3.5 text-primary-fg" /> Gruppenphase
+        <h2 className="text-base font-extrabold text-fg mb-3 flex flex-wrap items-center gap-2">
+          <LayoutGrid className="size-4 text-primary-fg" /> Gruppenphase
+          <span className="ml-auto">{info.button}</span>
         </h2>
+        {info.panel(<>
+          <p>In jeder Gruppe spielt jeder gegen jeden: Sieg = <b>3 Punkte</b>, Unentschieden = <b>1 Punkt</b>. Die Besten jeder Gruppe kommen in die K.O.-Runde.</p>
+          <p>Ab dort gilt: Wer gewinnt, kommt weiter. Bei Hin- und Rückspiel zählt das Gesamtergebnis.</p>
+          <p className="text-xs text-muted">Uhr-Symbol = vorläufig, von Spielern gemeldet und noch nicht bestätigt.</p>
+        </>)}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {standings.map((table, gi) => {
             const gMatches = groupMatches
@@ -73,12 +81,12 @@ export default function GroupKnockoutView({
             return (
               <div key={gi} className="glass rounded-2xl overflow-hidden">
                 <div className="px-4 py-2.5 border-b border-line flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white">{groupLabel(gi)}</span>
-                  <span className="text-xs text-gray-600">{played}/{gMatches.length} gespielt</span>
+                  <span className="text-sm font-semibold text-fg">{groupLabel(gi)}</span>
+                  <span className="text-xs text-subtle">{played}/{gMatches.length} gespielt</span>
                 </div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-gray-500 uppercase tracking-wider">
+                    <tr className="text-xs text-subtle uppercase tracking-wider">
                       <th className="text-left px-3 py-2 font-medium">#</th>
                       <th className="text-left px-2 py-2 font-medium">Spieler</th>
                       <th className="text-center px-1 py-2 font-medium" title="Spiele">Sp</th>
@@ -94,27 +102,27 @@ export default function GroupKnockoutView({
                       const diff = s.scored - s.conceded;
                       return (
                         <tr key={s.userId} className={isMe ? "bg-primary-soft/60" : qualifies ? "bg-emerald-900/10" : ""}>
-                          <td className={`px-3 py-2 text-xs ${qualifies ? "text-emerald-400 font-semibold" : "text-gray-600"}`}>{i + 1}</td>
+                          <td className={`px-3 py-2 text-xs ${qualifies ? "text-success font-semibold" : "text-subtle"}`}>{i + 1}</td>
                           <td className="px-2 py-2">
                             {u ? (
                               <Link href={isMe ? "/profile" : `/profile/${u.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
                                 <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />
-                                <span className={`truncate text-sm ${isMe ? "text-primary-fg font-medium" : "text-white"}`}>
+                                <span className={`truncate text-sm ${isMe ? "text-primary-fg font-medium" : "text-fg"}`}>
                                   {uname(u)}{isMe && " (du)"}
                                 </span>
                               </Link>
-                            ) : <span className="text-gray-600">?</span>}
+                            ) : <span className="text-subtle">?</span>}
                           </td>
-                          <td className="text-center px-1 py-2 text-gray-500 tabular-nums text-xs">{s.played}</td>
+                          <td className="text-center px-1 py-2 text-subtle tabular-nums text-xs">{s.played}</td>
                           <td className="text-center px-1 py-2 text-xs tabular-nums">
-                            <span className="text-gray-400">{s.scored}:{s.conceded}</span>
+                            <span className="text-muted">{s.scored}:{s.conceded}</span>
                             <span className={`ml-1 text-xs ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-700" : "text-gray-700"}`}>
                               ({diff > 0 ? "+" : ""}{diff})
                             </span>
                           </td>
-                          <td className="text-right px-3 py-2 font-bold text-white tabular-nums">
+                          <td className="text-right px-3 py-2 font-bold text-fg tabular-nums">
                             {groupComplete && s.decidedByLot && (
-                              <span className="mr-1.5 text-[9px] font-medium text-amber-400 bg-amber-900/30 px-1 py-0.5 rounded"
+                              <span className="mr-1.5 text-[10px] font-bold text-warning bg-warning-soft px-1.5 py-0.5 rounded-full"
                                 title="Punkte, Tore, direkter Vergleich und Siege gleich — entschieden per Losentscheid (Auslosungsreihenfolge)">
                                 Los
                               </span>
@@ -134,15 +142,15 @@ export default function GroupKnockoutView({
                     const isMine = m.player1Id === userId || m.player2Id === userId;
                     const isLive = !!m.startedAt && !m.playedAt;
                     const nameCls = (id: string | null) =>
-                      m.winnerId === id ? "text-emerald-300" : m.winnerId ? "text-gray-600" : isDraw ? "text-amber-200" : "text-gray-300";
+                      m.winnerId === id ? "text-success" : m.winnerId ? "text-subtle" : isDraw ? "text-amber-200" : "text-fg/90";
                     return (
                       <div key={m.id} className={`flex items-center gap-2 px-4 py-1.5 text-xs ${isMine ? "bg-primary-soft/60" : ""}`}>
-                        <span className={`text-xs w-6 shrink-0 ${isLive ? "text-red-400 font-bold animate-pulse" : "text-gray-700"}`}>{isLive ? "LIVE" : `${m.round}.`}</span>
+                        <span className={`text-xs w-6 shrink-0 ${isLive ? "text-danger font-bold animate-pulse" : "text-gray-700"}`}>{isLive ? "LIVE" : `${m.round}.`}</span>
                         <span className={`flex-1 truncate text-right ${nameCls(m.player1Id)}`}>{uname(p1)}</span>
-                        <span className={`w-12 text-center shrink-0 tabular-nums font-semibold ${isDraw ? "text-amber-400" : "text-white"}`}>
-                          {m.playedAt ? `${m.score1 ?? "–"}:${m.score2 ?? "–"}` : <span className="text-gray-600 font-normal">vs</span>}
+                        <span className={`w-12 text-center shrink-0 tabular-nums font-semibold ${isDraw ? "text-amber-400" : "text-fg"}`}>
+                          {m.playedAt ? `${m.score1 ?? "–"}:${m.score2 ?? "–"}` : <span className="text-subtle font-normal">vs</span>}
                           {m.playedAt && m.resultConfirmed === false && (
-                            <span className="text-amber-300 font-normal" title="Vorläufig: von Spielern gemeldet, noch nicht bestätigt">*</span>
+                            <span title="Vorläufig: von Spielern gemeldet, noch nicht bestätigt" className="ml-0.5 inline-flex align-middle"><Clock className="size-3 text-warning" /><span className="sr-only">vorläufig</span></span>
                           )}
                         </span>
                         <span className={`flex-1 truncate ${nameCls(m.player2Id)}`}>{uname(p2)}</span>
@@ -163,7 +171,7 @@ export default function GroupKnockoutView({
         <div className="space-y-4">
           <BracketView matches={knockoutMatches} participants={participants} userId={userId} holders={holders} />
           {hasTwoLegs && (
-            <p className="text-xs text-gray-600 -mt-2 px-1">Hin- und Rückspiel: angezeigt ist das Gesamtergebnis beider Spiele.</p>
+            <p className="text-xs text-subtle -mt-2 px-1">Hin- und Rückspiel: angezeigt ist das Gesamtergebnis beider Spiele.</p>
           )}
           {thirdPlace && (
             <div>
@@ -173,11 +181,11 @@ export default function GroupKnockoutView({
                   const u = findUser(id);
                   const won = !!thirdPlace.winnerId && thirdPlace.winnerId === id;
                   return (
-                    <div key={i} className={`flex items-center justify-between px-3 py-2 text-sm ${won ? "bg-amber-900/20" : ""}`}>
-                      <span className={`truncate ${won ? "text-amber-300 font-semibold" : u ? "text-white" : "text-gray-600 italic"}`}>
+                    <div key={i} className={`flex items-center justify-between px-3 py-2 text-sm ${won ? "bg-coin-soft" : ""}`}>
+                      <span className={`truncate ${won ? "text-coin font-bold" : u ? "text-fg" : "text-subtle italic"}`}>
                         {won && "🥉 "}{uname(u)}{id === userId ? " (du)" : ""}
                       </span>
-                      <span className="font-mono text-xs text-gray-400">{score ?? "–"}</span>
+                      <span className="font-mono text-xs text-muted">{score ?? "–"}</span>
                     </div>
                   );
                 })}
@@ -186,7 +194,7 @@ export default function GroupKnockoutView({
           )}
         </div>
       ) : (
-        <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">
+        <div className="glass rounded-2xl p-6 text-center text-subtle text-sm">
           <Swords className="w-6 h-6 mx-auto mb-2 text-gray-700" />
           Die K.O.-Runde startet nach Abschluss der Gruppenphase.
         </div>

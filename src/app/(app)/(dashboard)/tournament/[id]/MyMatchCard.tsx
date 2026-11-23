@@ -44,22 +44,22 @@ export default function MyMatchCard({
 
   return (
     <section aria-label="Dein Match"
-      className={`rounded-2xl p-4 border space-y-3 ${match.live ? "border-red-500/50 bg-red-950/20" : "border-primary/40 bg-surface"}`}>
+      className={`rounded-card p-4 border bg-surface shadow-card space-y-3 ${match.live ? "border-live/50" : "border-primary/40"}`}>
       {ConfirmDialogElement}
       <div>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-extrabold text-primary-fg flex items-center gap-1.5">
-            <Swords className="w-3.5 h-3.5" /> Dein Match · {match.label}
+          <p className="text-base font-extrabold text-fg flex items-center gap-1.5">
+            <Swords className="size-4 text-primary-fg" /> Dein Match · {match.label}
           </p>
-          {match.live && <span className="text-xs font-bold text-red-400 animate-pulse">● LÄUFT GERADE</span>}
+          {match.live && <span className="inline-flex items-center gap-1.5 rounded-full bg-live/15 px-2 py-0.5 text-xs font-bold text-live"><span className="size-1.5 rounded-full bg-live animate-pulse" />Läuft gerade</span>}
         </div>
-        <p className="mt-1.5 text-base text-white font-semibold">
+        <p className="mt-1.5 text-base text-fg font-semibold">
           {isDuel
             ? match.players.map(p => p.id === userId ? `${uname(p)} (du)` : uname(p)).join(" gegen ")
             : `${match.players.length} Spieler`}
         </p>
         {(when || nextHint) && (
-          <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+          <p className="text-xs text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
             {when && <><Clock className="w-3 h-3" /><span>{when}</span></>}
             {when && nextHint && <span>·</span>}
             {nextHint && <span>{nextHint}</span>}

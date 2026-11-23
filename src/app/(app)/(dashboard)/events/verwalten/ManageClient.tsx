@@ -4,12 +4,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
-  CalendarClock, Check, ChevronDown, ChevronRight, Copy, Edit2, ExternalLink, Eye, EyeOff, Flag, Loader2, Search, Trophy, UserCheck, Vote,
+  CalendarClock, Check, ChevronDown, Copy, Edit2, ExternalLink, Eye, EyeOff, Flag, Loader2, Search, Trophy, UserCheck, Vote, X,
 } from "@/components/icons";
 import SeriesIcon from "@/components/SeriesIcon";
+import { Card } from "@/components/ui/Card";
+import { Glyph } from "@/components/ui/Glyph";
+import { buttonClasses } from "@/components/ui/button-styles";
+import { FIELD_CLASSES } from "@/components/ui/field-styles";
 import { resolveSeriesColor } from "@/lib/series-icons";
-import { dateBlock, type DayBucket } from "@/lib/event-display";
-import { groupManageEvents, matchesQuery, statusText, type ManageAction, type ManageEvent } from "@/lib/event-manage";
+import { dateBlock } from "@/lib/event-display";
+import { groupManageEvents, matchesQuery, statusText, type ManageAction, type ManageBucket, type ManageEvent } from "@/lib/event-manage";
 import { formatBerlinDate } from "@/lib/time";
 import { RejectControl } from "./ApprovalBanner";
 
@@ -24,8 +28,11 @@ export type ManageSeriesDTO = {
 };
 /** Freigabe-Eintrag; `facts` = das Wichtigste auf einen Blick (Termin, Art, Anmeldungen, Belohnungen) */
 export type ManageApproval = { kind: "events" | "series"; id: string; title: string; by: string; since: string; facts: string[]; href: string };
+/** Ansicht-Chip für Mods (Alle / Meine / Von Mitgliedern) */
+export type ManageView = { key: string; label: string; href: string; count: number; active: boolean };
 
-const BUCKETS: { key: DayBucket; label: string }[] = [
+const BUCKETS: { key: ManageBucket; label: string }[] = [
+  { key: "running", label: "Läuft gerade" },
   { key: "today", label: "Heute" },
   { key: "week", label: "Diese Woche" },
   { key: "later", label: "Später" },
@@ -41,28 +48,50 @@ function since(d: Date | string, now: Date): string {
   return `seit ${days} ${days === 1 ? "Tag" : "Tagen"}`;
 }
 
-const BTN = "shrink-0 inline-flex items-center gap-1 rounded-lg border border-line-strong bg-line px-2.5 py-1 text-xs font-semibold text-gray-200 hover:bg-line hover:text-white transition-colors";
-const BTN_PRIMARY = "shrink-0 inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover px-2.5 py-1 text-xs font-semibold text-primary-ink transition-colors disabled:opacity-50";
+const ICON_BTN = "grid size-10 lg:size-8 shrink-0 place-items-center rounded-control text-subtle hover:bg-surface-3 hover:text-fg transition-colors";
 
-function Section({ title, count, children, tone }: { title: string; count?: number; children: ReactNode; tone?: "attention" }) {
+/** Drei Punkte (Pictoicons haben kein "Mehr"-Symbol) */
+function MoreDots({ className = "" }: { className?: string }) {
   return (
-    <section aria-label={title} className={`glass rounded-2xl p-4 ${tone === "attention" ? "ring-1 ring-amber-400/30" : ""}`}>
-      <h2 className="text-sm font-semibold text-white">
-        {title}{count != null && <span className="ml-1 font-normal text-gray-500">· {count}</span>}
-      </h2>
-      {children}
-    </section>
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="currentColor">
+      <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+    </svg>
   );
+}
+
+function Section({ title, count, extra, children, tone, className = "" }: {
+  title: ReactNode; count?: number; extra?: ReactNode; children: ReactNode; tone?: "attention"; className?: string;
+}) {
+  return (
+    <Card aria-label={typeof title === "string" ? title : undefined}
+      className={`min-w-0 ${tone === "attention" ? "border-warning/40" : ""} ${className}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="flex items-center gap-2 text-base font-extrabold text-fg">
+          {title}
+          {count != null && (
+            <span className={`rounded-full px-2 text-xs font-bold leading-5 tabular-nums ${tone === "attention" ? "bg-warning text-canvas" : "bg-surface-3 text-muted"}`}>{count}</span>
+          )}
+        </h2>
+        {extra}
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+/** Zwischenüberschrift innerhalb eines Abschnitts */
+function SubHead({ children, tone }: { children: ReactNode; tone?: "danger" }) {
+  return <p className={`mt-3 mb-0.5 text-xs font-bold uppercase tracking-wide ${tone === "danger" ? "text-danger" : "text-subtle"}`}>{children}</p>;
 }
 
 function Tag({ children, tone = "gray", title }: { children: ReactNode; tone?: "gray" | "amber" | "rose" | "teal"; title?: string }) {
   const cls = {
-    gray: "text-gray-400 bg-line border-line",
-    amber: "text-amber-300 bg-amber-500/10 border-amber-500/20",
-    rose: "text-rose-300 bg-rose-500/10 border-rose-500/20",
-    teal: "text-primary-fg bg-primary/10 border-primary/20",
+    gray: "bg-surface-3 text-muted",
+    amber: "bg-warning-soft text-warning",
+    rose: "bg-danger-soft text-danger",
+    teal: "bg-primary-soft text-primary-fg",
   }[tone];
-  return <span title={title} className={`shrink-0 rounded border px-1.5 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
+  return <span title={title} className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{children}</span>;
 }
 
 /** Status-Markierungen einer Event-Zeile — auf dem Handy unter dem Titel, ab Tablet rechts daneben */
@@ -76,14 +105,15 @@ function EventTags({ ev, status }: { ev: ManageEvent; status: string }) {
       {ev.goal && (
         <Tag tone={ev.goal.reached ? "teal" : ev.goal.settled ? "rose" : "gray"}
           title={ev.goal.settled ? (ev.goal.reached ? "Community-Ziel geschafft" : "Community-Ziel verfehlt") : "Community-Ziel: Stand"}>
-          🎯 {ev.goal.settled && !ev.goal.reached ? "verfehlt" : ev.goal.reached ? "geschafft" : `${Math.floor(ev.goal.percent)} %`}
+          <Glyph name="target" className="size-3.5" />
+          {ev.goal.settled && !ev.goal.reached ? "verfehlt" : ev.goal.reached ? "geschafft" : `${Math.floor(ev.goal.percent)} %`}
         </Tag>
       )}
     </>
   );
 }
 
-/** ⋯-Menü einer Event-Zeile: öffentliche Seite, duplizieren, ein-/ausblenden */
+/** Mehr-Menü einer Event-Zeile: öffentliche Seite, duplizieren, ein-/ausblenden */
 function RowMenu({ ev }: { ev: ManageEvent }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -110,19 +140,18 @@ function RowMenu({ ev }: { ev: ManageEvent }) {
     else toast.error((await res.json().catch(() => null))?.error ?? "Das hat nicht geklappt");
   }
 
-  const item = "flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-200 hover:bg-line";
+  const item = "flex min-h-10 w-full items-center gap-2.5 px-3 text-left text-sm text-fg hover:bg-surface-3 transition-colors";
   return (
     <div ref={ref} className="relative shrink-0">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Weitere Aktionen" aria-expanded={open}
-        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-line flex items-center justify-center text-base leading-none">
-        ⋯
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Weitere Aktionen" aria-expanded={open} className={ICON_BTN}>
+        <MoreDots className="size-4" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-52 overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl">
-          <Link role="menuitem" href={`/tournament/${ev.id}`} className={item}><ExternalLink className="w-3.5 h-3.5 text-gray-500" /> Öffentliche Seite</Link>
-          <Link role="menuitem" href={`/events/verwalten/neu?from=${ev.id}`} className={item}><Copy className="w-3.5 h-3.5 text-gray-500" /> Duplizieren</Link>
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-56 overflow-hidden rounded-control border border-line-strong bg-surface-2 py-1 shadow-card">
+          <Link role="menuitem" href={`/tournament/${ev.id}`} className={item}><ExternalLink className="size-4 text-subtle" /> Öffentliche Seite</Link>
+          <Link role="menuitem" href={`/events/verwalten/neu?from=${ev.id}`} className={item}><Copy className="size-4 text-subtle" /> Duplizieren</Link>
           <button role="menuitem" type="button" onClick={toggleHidden} disabled={busy} className={`${item} border-t border-line`}>
-            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : ev.hidden ? <Eye className="w-3.5 h-3.5 text-gray-500" /> : <EyeOff className="w-3.5 h-3.5 text-gray-500" />}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : ev.hidden ? <Eye className="size-4 text-subtle" /> : <EyeOff className="size-4 text-subtle" />}
             {ev.hidden ? "Wieder einblenden" : "Ausblenden"}
           </button>
         </div>
@@ -131,56 +160,92 @@ function RowMenu({ ev }: { ev: ManageEvent }) {
   );
 }
 
+/** Kalenderblock wie auf der Events-Seite */
+function DateTile({ date, now }: { date: Date; now: Date }) {
+  const b = dateBlock(date, now);
+  return (
+    <span className="w-12 shrink-0 rounded-control border border-line bg-surface-2 py-1 text-center leading-tight">
+      <span className="block text-[0.65rem] font-bold uppercase tracking-wide text-subtle">{b.weekday}</span>
+      <span className="block text-base font-extrabold text-fg tabular-nums">{b.day}</span>
+      <span className="block text-[0.65rem] font-semibold text-muted tabular-nums">{b.time}</span>
+    </span>
+  );
+}
+
 function EventLine({ ev, now, right }: { ev: ManageEvent; now: Date; right?: ReactNode }) {
-  const b = dateBlock(ev.startAt, now);
   const status = statusText(ev, now);
   const color = ev.series ? resolveSeriesColor(ev.series.icon) : null;
   return (
     <li className="flex items-center gap-3 py-2.5">
-      <span className="w-11 shrink-0 text-center leading-tight">
-        <span className="block text-xs text-gray-500">{b.weekday}</span>
-        <span className="block text-base font-bold text-white tabular-nums">{b.day}</span>
-        <span className="block text-xs text-gray-500 tabular-nums">{b.time}</span>
-      </span>
+      <DateTile date={ev.startAt} now={now} />
       <Link href={`/events/verwalten/${ev.id}`} className="group min-w-0 flex-1">
         <span className="flex items-center gap-1.5 min-w-0">
           {color && <span className="w-1 h-3.5 rounded-full shrink-0" style={{ background: color }} />}
-          <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{ev.title}</span>
+          <span className="truncate text-sm font-bold text-fg group-hover:text-primary-fg">{ev.title}</span>
         </span>
-        <span className="block truncate text-xs text-gray-500">
+        <span className="block truncate text-xs text-subtle">
           {ev.series ? `${ev.series.name} · Termin ${ev.series.index} von ${ev.series.total}` : ev.game ?? "Kein Spiel festgelegt"}
           {ev.createdBy && ` · von ${ev.createdBy}`}
         </span>
         <span className="mt-1 flex flex-wrap gap-1 sm:hidden empty:hidden"><EventTags ev={ev} status={status} /></span>
       </Link>
       <span className="hidden sm:flex items-center gap-1"><EventTags ev={ev} status={status} /></span>
-      <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
-        ev.players === 0 ? "bg-amber-500/10 text-amber-300" : "bg-line text-gray-300"
-      }`} title="Anmeldungen als Spieler">
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${
+        ev.players === 0 ? "bg-warning-soft text-warning" : "bg-surface-3 text-muted"
+      }`} title={ev.players === 0 ? "Noch niemand angemeldet" : "Anmeldungen als Spieler"}>
         {ev.maxPlayers ? `${ev.players}/${ev.maxPlayers}` : ev.players}
       </span>
       {right ?? (
-        <>
-          <Link href={`/events/verwalten/${ev.id}`} aria-label="Bearbeiten" className="w-7 h-7 rounded-lg text-gray-500 hover:text-white hover:bg-line flex items-center justify-center shrink-0">
-            <Edit2 className="w-3.5 h-3.5" />
-          </Link>
+        <span className="flex shrink-0 items-center">
+          {/* Am Handy reicht der Titel als Link — so bleibt mehr Platz für den Namen */}
+          <Link href={`/events/verwalten/${ev.id}`} aria-label="Bearbeiten" className={`${ICON_BTN} max-sm:hidden`}><Edit2 className="size-4" /></Link>
           <RowMenu ev={ev} />
-        </>
+        </span>
       )}
     </li>
   );
 }
 
 const ACTION_ICON: Record<ManageAction["kind"], typeof Trophy> = { tournament: Trophy, poll: Vote, complete: CalendarClock };
+const ICON_TILE = "grid size-10 shrink-0 place-items-center rounded-control";
+
+/** Eine Zeile unter "Braucht dich": Symbol, Text, Knöpfe */
+function AttentionRow({ icon, tone, title, href, hint, hintTone, children }: {
+  icon: ReactNode; tone: string; title: string; href?: string; hint: ReactNode; hintTone?: "danger"; children: ReactNode;
+}) {
+  const text = (
+    <>
+      <span className={`block truncate text-sm font-bold text-fg ${href ? "group-hover:text-primary-fg" : ""}`}>{title}</span>
+      <span className={`block truncate text-xs ${hintTone === "danger" ? "font-semibold text-danger" : "text-subtle"}`}>{hint}</span>
+    </>
+  );
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+      <span className={`${ICON_TILE} ${tone}`}>{icon}</span>
+      {href
+        ? <Link href={href} className="group min-w-0 flex-1 basis-48">{text}</Link>
+        : <span className="min-w-0 flex-1 basis-48">{text}</span>}
+      {children}
+    </li>
+  );
+}
 
 /**
- * Events → Verwalten: "Braucht dich", "Anstehend" (Heute / Diese Woche / Später, filterbar nach Reihe),
- * Eventreihen und Beendete — alles mit einer gemeinsamen Suche. Logik in lib/event-manage.ts.
+ * Events → Verwalten: Kopf (Anlegen, Ansichten), "Braucht dich" (gegliedert: Überfällig, Freigaben,
+ * Turniere & Umfragen, Abschließen, Saisons), Eventreihen (Klick filtert "Anstehend"), "Anstehend"
+ * (Läuft gerade / Heute / Diese Woche / Später) und Beendete — mit gemeinsamer Suche.
+ * Logik in lib/event-manage.ts.
  */
-export default function ManageClient({ isStaff, nowIso, events, series, approvals, pastLimit }: {
+export default function ManageClient({ isStaff, nowIso, events, series, approvals, pastLimit, createActions, views, limits }: {
   isStaff: boolean; nowIso: string; events: ManageEventDTO[]; series: ManageSeriesDTO[]; approvals: ManageApproval[];
   /** gesetzt, wenn bei Beendeten nur die letzten N geladen sind */
   pastLimit: number | null;
+  /** Knöpfe "Neues Event" / "Neue Eventreihe" (auch in der Leer-Ansicht) */
+  createActions: ReactNode;
+  /** Mods: Ansichten mit Anzahl offener Events */
+  views: ManageView[] | null;
+  /** Mitglieder: Limit-Karte */
+  limits: ReactNode;
 }) {
   const router = useRouter();
   const now = new Date(nowIso);
@@ -188,8 +253,9 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   const [pastOpen, setPastOpen] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [approving, setApproving] = useState<string | null>(null);
-  // Filter "Anstehend" nach einer Reihe ("" = alle Events)
+  // Filter "Anstehend" nach einer Reihe ("" = alle Events) — gesetzt per Klick auf eine Reihe
   const [seriesFilter, setSeriesFilter] = useState("");
+  const upcomingRef = useRef<HTMLDivElement>(null);
 
   const all: ManageEvent[] = events.map((e) => ({ ...e, startAt: new Date(e.startAt), endAt: e.endAt ? new Date(e.endAt) : null }));
   const q = query.trim().toLowerCase();
@@ -199,15 +265,16 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
   // Saisonabschluss (Endwertung, Auszahlung) machen nur Mods — Mitglieder sehen den Stand in der Reihen-Liste
   const seasonsDone = isStaff ? seriesShown.filter((s) => s.seasonDone) : [];
   const newSeasons = seriesShown.filter((s) => s.newSeasonDue);
+  const late = groups.action.filter((a) => a.action.late);
+  const running = groups.action.filter((a) => !a.action.late && a.action.kind !== "complete");
+  const toComplete = groups.action.filter((a) => !a.action.late && a.action.kind === "complete");
   const attentionCount = approvalsShown.length + seasonsDone.length + newSeasons.length + groups.action.length;
   const filterSeries = series.find((s) => s.id === seriesFilter) ?? null;
   const inFilter = (ev: ManageEvent) => !filterSeries || ev.series?.id === filterSeries.id;
-  const upcoming: Record<DayBucket, ManageEvent[]> = {
-    today: groups.upcoming.today.filter(inFilter),
-    week: groups.upcoming.week.filter(inFilter),
-    later: groups.upcoming.later.filter(inFilter),
-  };
-  const upcomingCount = upcoming.today.length + upcoming.week.length + upcoming.later.length;
+  const upcoming = Object.fromEntries(
+    BUCKETS.map(({ key }) => [key, groups.upcoming[key].filter(inFilter)]),
+  ) as Record<ManageBucket, ManageEvent[]>;
+  const upcomingCount = BUCKETS.reduce((n, { key }) => n + upcoming[key].length, 0);
   const pastShown = showAllPast || q ? groups.past : groups.past.slice(0, PAST_VISIBLE);
 
   async function approve(a: ManageApproval) {
@@ -221,118 +288,179 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
     }
   }
 
+  function pickSeries(id: string) {
+    const next = seriesFilter === id ? "" : id;
+    setSeriesFilter(next);
+    // Auf dem Handy steht "Anstehend" unter den Reihen — dorthin scrollen, damit man das Ergebnis sieht
+    if (next && window.matchMedia("(max-width: 1023px)").matches) {
+      upcomingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   const empty = all.length === 0 && series.length === 0 && approvals.length === 0;
+  const summary = [
+    attentionCount > 0 ? `${attentionCount} ${attentionCount === 1 ? "braucht" : "brauchen"} dich` : "Nichts offen",
+    `${groups.upcoming.running.length + groups.upcoming.today.length + groups.upcoming.week.length + groups.upcoming.later.length} anstehend`,
+    series.length > 0 ? `${series.filter((s) => !s.archived).length} ${series.filter((s) => !s.archived).length === 1 ? "Reihe" : "Reihen"}` : null,
+  ].filter(Boolean).join(" · ");
+
+  const actionRow = (ev: ManageEvent, action: ManageAction) => {
+    const I = ACTION_ICON[action.kind];
+    const tone = action.late ? "bg-danger-soft text-danger" : action.kind === "tournament" ? "bg-coin-soft text-coin" : action.kind === "poll" ? "bg-violet-500/15 text-violet-300" : "bg-surface-3 text-muted";
+    return (
+      <AttentionRow key={`e-${ev.id}`} icon={<I className="size-5" />} tone={tone} title={ev.title} href={`/events/verwalten/${ev.id}`}
+        hint={<>{action.label}{action.since && ` · ${since(action.since, now)}`}</>} hintTone={action.late ? "danger" : undefined}>
+        <Link href={action.href} className={buttonClasses(action.late ? "primary" : "secondary", "sm")}>{action.button}</Link>
+      </AttentionRow>
+    );
+  };
 
   return (
-    <div className="space-y-4">
-      {/* ── Suche ── */}
-      {!empty && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Titel, Spiel, Reihe oder Person"
-            aria-label="Events durchsuchen"
-            className="w-full rounded-control bg-surface-2 border border-line pl-8 pr-3 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
+    <div className="space-y-5">
+      {/* ── Kopf: Titel, Stand, Anlegen; Mods: Ansichten ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-extrabold tracking-tight text-fg">Events verwalten</h2>
+          {!empty && <p className="mt-0.5 text-sm text-muted">{summary}</p>}
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{createActions}</div>
+      </div>
+
+      {limits}
+
+      {(views || !empty) && (
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          {views && (
+            <nav aria-label="Ansicht" className="flex gap-1.5 overflow-x-auto scrollbar-none">
+              {views.map((v) => (
+                <Link key={v.key} href={v.href} aria-current={v.active ? "true" : undefined}
+                  className={`shrink-0 inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+                    v.active ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted hover:border-line-strong hover:bg-surface-2 hover:text-fg"
+                  }`}>
+                  {v.label}
+                  <span className={`text-xs tabular-nums ${v.active ? "text-primary-fg/80" : "text-subtle"}`}>{v.count}</span>
+                </Link>
+              ))}
+            </nav>
+          )}
+          {!empty && (
+            <div className="relative w-full sm:ml-auto sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-subtle" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Titel, Spiel, Reihe oder Person"
+                aria-label="Events durchsuchen" className={`${FIELD_CLASSES} min-h-10 pl-9`} />
+            </div>
+          )}
         </div>
       )}
 
       {empty && (
-        <div className="glass rounded-2xl p-8 text-center">
-          <p className="text-sm text-gray-300">{isStaff ? "In dieser Ansicht gibt es keine Events." : "Du hast noch kein Event angelegt."}</p>
-          <p className="mt-1 text-xs text-gray-500">Leg oben ein Event oder eine Eventreihe an. Danach kannst du es hier bearbeiten und abschließen.</p>
-        </div>
+        <Card className="flex flex-col items-center gap-3 py-10 text-center">
+          <span className={`${ICON_TILE} bg-primary-soft text-primary-fg`}><Glyph name="calendar" className="size-5" /></span>
+          <div>
+            <p className="text-base font-extrabold text-fg">{isStaff ? "In dieser Ansicht gibt es keine Events" : "Du hast noch kein Event angelegt"}</p>
+            <p className="mt-1 text-sm text-muted">Leg ein Event oder eine Eventreihe an. Danach bearbeitest und schließt du es hier ab.</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">{createActions}</div>
+        </Card>
       )}
 
       {/* ── Braucht dich ── */}
       {attentionCount > 0 && (
         <Section title="Braucht dich" count={attentionCount} tone="attention">
-          <ul className="mt-1 divide-y divide-line">
-            {approvalsShown.map((a) => (
-              <li key={`a-${a.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                <span className="w-8 h-8 shrink-0 rounded-lg border border-primary/20 bg-primary/10 text-primary-fg flex items-center justify-center"><UserCheck className="w-4 h-4" /></span>
-                {/* basis-56: auf schmalen Bildschirmen rutschen die Knöpfe in eine eigene Zeile */}
-                <span className="min-w-0 flex-1 basis-56">
-                  <span className="block truncate text-sm font-medium text-white">{a.title}</span>
-                  <span className="block truncate text-xs text-gray-500">
-                    {a.kind === "series" ? "Reihe" : "Event"} von {a.by} · wartet {since(a.since, now).replace("seit ", "")}
-                  </span>
-                  {a.facts.length > 0 && (
-                    <span className="mt-0.5 block text-xs text-gray-400">{a.facts.join(" · ")}</span>
-                  )}
-                </span>
-                {/* "contents": die Knöpfe sind direkte Flex-Kinder der Zeile — so öffnet das Ablehnen-Feld
-                    (basis-full) in voller Breite unter der Zeile */}
-                <span className="contents">
-                  <Link href={a.href} className={BTN}>Ansehen</Link>
-                  <button type="button" onClick={() => approve(a)} disabled={approving === a.id} className={BTN_PRIMARY}>
-                    {approving === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Freigeben
-                  </button>
-                  <RejectControl kind={a.kind} id={a.id} compact />
-                </span>
-              </li>
-            ))}
-            {seasonsDone.map((s) => (
-              <li key={`s-${s.id}`} className="flex items-center gap-3 py-2.5">
-                <span className="w-8 h-8 shrink-0 rounded-lg border border-violet-500/20 bg-violet-500/10 text-violet-300 flex items-center justify-center"><Flag className="w-4 h-4" /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-white">{s.name}</span>
-                  <span className="block truncate text-xs text-gray-500">Alle {s.total} Termine gespielt · Endwertung offen</span>
-                </span>
-                <Link href={`/events/verwalten/reihen/${s.id}/complete`} className={BTN}>Saison abschließen</Link>
-              </li>
-            ))}
-            {newSeasons.map((s) => (
-              <li key={`n-${s.id}`} className="flex items-center gap-3 py-2.5">
-                <span className="w-8 h-8 shrink-0 rounded-lg border border-primary/20 bg-primary/10 text-primary-fg flex items-center justify-center"><Flag className="w-4 h-4" /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-white">{s.name}</span>
-                  <span className="block truncate text-xs text-gray-500">Saison abgeschlossen · noch keine neue Saison</span>
-                </span>
-                <Link href={`/events/verwalten/reihen/${s.id}/new-season`} className={BTN}>Neue Saison</Link>
-              </li>
-            ))}
-            {groups.action.map(({ ev, action }) => {
-              const I = ACTION_ICON[action.kind];
-              const tone = action.late ? "border-red-500/20 bg-red-500/10 text-red-300" : action.kind === "tournament" ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-sky-500/20 bg-sky-500/10 text-sky-300";
-              return (
-                <li key={`e-${ev.id}`} className="flex items-center gap-3 py-2.5">
-                  <span className={`w-8 h-8 shrink-0 rounded-lg border flex items-center justify-center ${tone}`}><I className="w-4 h-4" /></span>
-                  <Link href={`/events/verwalten/${ev.id}`} className="min-w-0 flex-1 group">
-                    <span className="block truncate text-sm font-medium text-white group-hover:text-teal-200">{ev.title}</span>
-                    <span className={`block truncate text-xs ${action.late ? "text-red-300" : "text-gray-500"}`}>
-                      {action.label}{action.since && ` · ${since(action.since, now)}`}
+          {late.length > 0 && (
+            <>
+              <SubHead tone="danger">Überfällig</SubHead>
+              <ul className="divide-y divide-line">{late.map(({ ev, action }) => actionRow(ev, action))}</ul>
+            </>
+          )}
+
+          {approvalsShown.length > 0 && (
+            <>
+              <SubHead>Freigaben</SubHead>
+              <ul className="divide-y divide-line">
+                {approvalsShown.map((a) => (
+                  <AttentionRow key={`a-${a.id}`} icon={<UserCheck className="size-5" />} tone="bg-primary-soft text-primary-fg"
+                    title={a.title} href={a.href}
+                    hint={`${a.kind === "series" ? "Reihe" : "Event"} von ${a.by} · wartet ${since(a.since, now).replace("seit ", "")}`}>
+                    {/* "contents": die Knöpfe sind direkte Flex-Kinder der Zeile — so öffnet das Ablehnen-Feld
+                        (basis-full) in voller Breite unter der Zeile */}
+                    <span className="contents">
+                      <button type="button" onClick={() => approve(a)} disabled={approving === a.id} className={buttonClasses("primary", "sm")}>
+                        {approving === a.id ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Freigeben
+                      </button>
+                      <RejectControl kind={a.kind} id={a.id} compact />
                     </span>
-                  </Link>
-                  <Link href={action.href} className={BTN}>{action.button}</Link>
-                </li>
-              );
-            })}
-          </ul>
+                    {a.facts.length > 0 && (
+                      <span className="flex basis-full flex-wrap gap-1 sm:pl-[3.25rem]">
+                        {a.facts.map((f) => <Tag key={f}>{f}</Tag>)}
+                      </span>
+                    )}
+                  </AttentionRow>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {running.length > 0 && (
+            <>
+              <SubHead>Turniere &amp; Umfragen</SubHead>
+              <ul className="divide-y divide-line">{running.map(({ ev, action }) => actionRow(ev, action))}</ul>
+            </>
+          )}
+
+          {toComplete.length > 0 && (
+            <>
+              <SubHead>Abschließen</SubHead>
+              <ul className="divide-y divide-line">{toComplete.map(({ ev, action }) => actionRow(ev, action))}</ul>
+            </>
+          )}
+
+          {(seasonsDone.length > 0 || newSeasons.length > 0) && (
+            <>
+              <SubHead>Saisons</SubHead>
+              <ul className="divide-y divide-line">
+                {seasonsDone.map((s) => (
+                  <AttentionRow key={`s-${s.id}`} icon={<Flag className="size-5" />} tone="bg-violet-500/15 text-violet-300"
+                    title={s.name} hint={`Alle ${s.total} Termine gespielt · Endwertung offen`}>
+                    <Link href={`/events/verwalten/reihen/${s.id}/complete`} className={buttonClasses("secondary", "sm")}>Saison abschließen</Link>
+                  </AttentionRow>
+                ))}
+                {newSeasons.map((s) => (
+                  <AttentionRow key={`n-${s.id}`} icon={<Flag className="size-5" />} tone="bg-primary-soft text-primary-fg"
+                    title={s.name} hint="Saison abgeschlossen · noch keine neue Saison">
+                    <Link href={`/events/verwalten/reihen/${s.id}/new-season`} className={buttonClasses("secondary", "sm")}>Neue Saison</Link>
+                  </AttentionRow>
+                ))}
+              </ul>
+            </>
+          )}
         </Section>
       )}
 
       {/* ── Eventreihen und Anstehend — große Bildschirme nebeneinander ── */}
       {(seriesShown.length > 0 || upcomingCount > 0 || (!empty && !q)) && (
-        <div className={`grid gap-4 items-start ${seriesShown.length > 0 ? "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" : ""}`}>
+        <div className={`grid gap-5 items-start ${seriesShown.length > 0 ? "lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]" : ""}`}>
           {seriesShown.length > 0 && (
-            <section aria-label="Eventreihen" className="glass rounded-2xl p-4 lg:sticky lg:top-[5.5rem]">
-              <h2 className="text-sm font-semibold text-white">
-                Eventreihen <span className="ml-1 font-normal text-gray-500">· {seriesShown.length}</span>
-              </h2>
-              <ul className="mt-1 divide-y divide-line">
+            <Section title="Eventreihen" count={seriesShown.length} className="lg:sticky lg:top-[5.5rem]"
+              extra={<span className="ml-auto text-xs text-subtle">Klick filtert die Termine</span>}>
+              <ul className="mt-2 space-y-1">
                 {seriesShown.map((s) => {
                   const color = resolveSeriesColor(s.icon);
                   const pct = s.total > 0 ? Math.round((s.played / s.total) * 100) : 0;
+                  const on = seriesFilter === s.id;
                   return (
-                    <li key={s.id}>
-                      <Link href={`/events/verwalten/reihen/${s.id}`}
-                        className="group flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-surface-2 transition-colors">
-                        <span className="w-1 h-9 rounded-full shrink-0" style={{ background: color }} />
+                    <li key={s.id} className={`flex items-center gap-1 rounded-control border transition-colors ${
+                      on ? "border-primary/40 bg-primary-soft" : "border-transparent hover:bg-surface-2"
+                    }`}>
+                      <button type="button" onClick={() => pickSeries(s.id)} aria-pressed={on}
+                        className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left">
+                        <span className="w-1 h-10 rounded-full shrink-0" style={{ background: color }} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5 min-w-0">
-                            <SeriesIcon name={s.icon} className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate text-sm font-medium text-white group-hover:text-teal-200">{s.name}</span>
+                            <SeriesIcon name={s.icon} className="size-4 shrink-0" />
+                            <span className={`truncate text-sm font-bold ${on ? "text-primary-fg" : "text-fg"}`}>{s.name}</span>
                           </span>
-                          <span className="block truncate text-xs text-gray-500">
+                          <span className="block truncate text-xs text-subtle">
                             {s.archived ? `Saison abgeschlossen · ${s.total} Termine` : s.total > 0 ? `${s.played} von ${s.total} gespielt` : "Noch keine Termine"}
                             {s.archived ? "" : s.seasonDone ? (isStaff ? " · Endwertung offen" : " · ein Mod schließt die Saison ab")
                               : s.next ? ` · nächster ${formatBerlinDate(s.next, { weekday: "short", day: "numeric", month: "numeric" })}`
@@ -345,57 +473,54 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                               {s.hidden && !s.rejected && <Tag tone="rose">Ausgeblendet</Tag>}
                             </span>
                           )}
-                          <span className="mt-1 block h-1 w-full rounded-full bg-line overflow-hidden" aria-hidden>
+                          <span className="mt-1.5 block h-1 w-full rounded-full bg-surface-3 overflow-hidden" aria-hidden>
                             <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
                           </span>
                         </span>
-                        <ChevronRight className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-gray-300" />
+                      </button>
+                      <Link href={`/events/verwalten/reihen/${s.id}`} aria-label={`${s.name} bearbeiten`} className={`${ICON_BTN} mr-1`}>
+                        <Edit2 className="size-4" />
                       </Link>
                     </li>
                   );
                 })}
               </ul>
-            </section>
+            </Section>
           )}
 
-          <section aria-label="Anstehend" className="glass rounded-2xl p-4 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-sm font-semibold text-white">
-                Anstehend <span className="ml-1 font-normal text-gray-500">· {upcomingCount}</span>
-              </h2>
-              {series.length > 0 && (
-                <label className="ml-auto flex items-center gap-1.5 text-xs text-gray-500">
-                  Zeigen:
-                  <select value={seriesFilter} onChange={(e) => setSeriesFilter(e.target.value)}
-                    className="max-w-[12rem] rounded-control bg-surface-2 border border-line px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-primary">
-                    <option value="">Alle Events</option>
-                    {series.map((s) => <option key={s.id} value={s.id}>Nur {s.name}</option>)}
-                  </select>
-                </label>
-              )}
-            </div>
-            {upcomingCount === 0 ? (
-              <p className="mt-2 text-sm text-gray-500">{filterSeries ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
-            ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
-              <div key={key} className="mt-2">
-                <p className="text-xs font-semibold text-gray-500">{label}</p>
-                <ul className="divide-y divide-line">
-                  {upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
-                </ul>
-              </div>
-            ))}
-          </section>
+          <div ref={upcomingRef} className="min-w-0 scroll-mt-36">
+            <Section title="Anstehend" count={upcomingCount}
+              extra={filterSeries && (
+                <button type="button" onClick={() => setSeriesFilter("")}
+                  className="ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full border border-primary/40 bg-primary-soft px-3 text-xs font-semibold text-primary-fg hover:text-fg">
+                  Nur {filterSeries.name} <X className="size-3.5" />
+                </button>
+              )}>
+              {upcomingCount === 0 ? (
+                <p className="mt-2 text-sm text-muted">{filterSeries ? "Für diese Reihe ist kein Termin geplant." : "Kein Event geplant."}</p>
+              ) : BUCKETS.map(({ key, label }) => upcoming[key].length > 0 && (
+                <div key={key}>
+                  <SubHead>{label}</SubHead>
+                  <ul className="divide-y divide-line">
+                    {upcoming[key].map((ev) => <EventLine key={ev.id} ev={ev} now={now} />)}
+                  </ul>
+                </div>
+              ))}
+            </Section>
+          </div>
         </div>
       )}
 
       {/* ── Beendet ── */}
       {groups.past.length > 0 && (
-        <section aria-label="Beendet" className="glass rounded-2xl p-4">
+        <Card aria-label="Beendet">
           <button type="button" onClick={() => setPastOpen((o) => !o)} aria-expanded={pastOpen || !!q}
-            className="flex w-full items-center gap-2 text-sm font-semibold text-white">
-            Beendet <span className="font-normal text-gray-500">· {groups.past.length}{pastLimit && !q ? ` (letzte ${pastLimit})` : ""}</span>
+            className="flex w-full items-center gap-2 text-left">
+            <span className="text-base font-extrabold text-fg">Beendet</span>
+            <span className="rounded-full bg-surface-3 px-2 text-xs font-bold leading-5 tabular-nums text-muted">{groups.past.length}</span>
+            {pastLimit && !q && <span className="text-xs text-subtle">letzte {pastLimit}</span>}
             {groups.past.some((e) => !e.completed) && <Tag tone="amber">Ergebnisse fehlen</Tag>}
-            <ChevronDown className={`ml-auto w-4 h-4 text-gray-500 transition-transform ${pastOpen || q ? "rotate-180" : ""}`} />
+            <ChevronDown className={`ml-auto size-4 text-subtle transition-transform ${pastOpen || q ? "rotate-180" : ""}`} />
           </button>
           {(pastOpen || !!q) && (
             <>
@@ -403,21 +528,21 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
                 {pastShown.map((ev) => (
                   <EventLine key={ev.id} ev={ev} now={now}
                     right={
-                      <>
-                        {!ev.completed && <Link href={`/events/verwalten/${ev.id}/complete`} className={BTN}>Ergebnisse</Link>}
+                      <span className="flex shrink-0 items-center gap-1">
+                        {!ev.completed && <Link href={`/events/verwalten/${ev.id}/complete`} className={buttonClasses("secondary", "sm")}>Ergebnisse</Link>}
                         <RowMenu ev={ev} />
-                      </>
+                      </span>
                     } />
                 ))}
               </ul>
               {!showAllPast && !q && groups.past.length > PAST_VISIBLE && (
-                <button type="button" onClick={() => setShowAllPast(true)} className="mt-2 text-xs font-semibold text-primary-fg hover:text-teal-200">
+                <button type="button" onClick={() => setShowAllPast(true)} className="mt-2 text-sm font-semibold text-primary-fg hover:text-fg">
                   Alle {groups.past.length} anzeigen
                 </button>
               )}
             </>
           )}
-        </section>
+        </Card>
       )}
     </div>
   );

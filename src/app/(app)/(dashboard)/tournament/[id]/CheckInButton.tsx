@@ -64,14 +64,14 @@ export default function CheckInButton({
 
   if (state === "not_yet_open") {
     return (
-      <span className="text-xs text-gray-400" title="Wer bei der Auslosung nicht bereit ist, kommt nicht in den Turnierbaum.">
+      <span className="text-xs text-muted" title="Wer bei der Auslosung nicht bereit ist, kommt nicht in den Turnierbaum.">
         <Glyph name="clock" className="inline size-4 align-[-3px]" /> „Bin bereit“ ab {formatBerlinDateTime(new Date(opensAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
       </span>
     );
   }
   if (state === "closed") {
     return (
-      <span className={`text-xs ${checkedIn ? "text-primary-fg" : "text-gray-500"}`}>
+      <span className={`text-xs ${checkedIn ? "text-primary-fg" : "text-subtle"}`}>
         {checkedIn ? "✓ Bereit" : "Bereit-Meldung geschlossen"}
       </span>
     );
@@ -79,16 +79,16 @@ export default function CheckInButton({
   return (
     <div className="flex flex-col items-start gap-1">
       <button type="button" onClick={toggle} disabled={loading}
-        className={`flex items-center gap-1.5 text-sm font-semibold rounded-xl px-4 py-2 border transition-colors disabled:opacity-50 ${
+        className={`flex min-h-10 items-center gap-1.5 text-sm font-bold rounded-control px-4 border transition-colors disabled:opacity-50 ${
           checkedIn
-            ? "bg-primary/15 border-primary/40 text-primary-fg hover:bg-primary/25"
-            : "bg-amber-500 border-amber-400 text-gray-950 hover:bg-amber-400 animate-pulse"
+            ? "bg-primary-soft border-primary/40 text-primary-fg hover:border-primary/60"
+            : "bg-warning border-warning text-canvas hover:brightness-110 animate-pulse"
         }`}>
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : checkedIn ? <Check className="w-4 h-4" /> : null}
         {checkedIn ? "Bereit (zurücknehmen)" : "Bin bereit"}
       </button>
       {!checkedIn && (
-        <span className="text-xs text-gray-400">Bis zur Auslosung möglich. Wer nicht bereit ist, wird nicht ausgelost.</span>
+        <span className="text-xs text-muted">Bis zur Auslosung möglich. Wer nicht bereit ist, wird nicht ausgelost.</span>
       )}
       {ConfirmDialogElement}
     </div>

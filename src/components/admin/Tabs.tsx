@@ -9,6 +9,8 @@ export interface TabItem {
   icon?: LucideIcon;
   /** Overrides the default active-state classes for "pill" variant (e.g. a per-tab accent color). */
   activeClassName?: string;
+  /** Kleine Zahl hinter dem Namen (z. B. offene Aufgaben); 0/undefined = keine */
+  count?: number;
 }
 
 interface TabsProps {
@@ -48,6 +50,11 @@ export function Tabs({ tabs, active, onChange, variant = "underline", className 
           >
             {Icon && <Icon className="w-3.5 h-3.5" />}
             {tab.label}
+            {!!tab.count && tab.count > 0 && (
+              <span className="ml-0.5 min-w-5 rounded-full bg-warning px-1.5 text-center text-xs font-bold leading-5 tabular-nums text-canvas" aria-label={`${tab.count} offen`}>
+                {tab.count > 99 ? "99+" : tab.count}
+              </span>
+            )}
           </button>
         );
       })}

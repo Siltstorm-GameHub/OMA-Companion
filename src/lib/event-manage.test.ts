@@ -37,7 +37,7 @@ describe("Verwalten: Aktionen", () => {
 });
 
 describe("Verwalten: Gruppen", () => {
-  test("Braucht dich, Heute/Woche/Später, Beendet", () => {
+  test("Braucht dich, Läuft gerade, Heute/Woche/Später, Beendet", () => {
     const g = groupManageEvents([
       ev({ id: "later", startAt: at(24 * 10) }),
       ev({ id: "today", startAt: at(3) }),
@@ -52,7 +52,8 @@ describe("Verwalten: Gruppen", () => {
       ev({ id: "fullPast", status: "closed", startAt: at(-1) }),
     ], NOW);
     assert.deepEqual(g.action.map((a) => a.ev.id), ["overdue", "fresh", "fullPast"]);
-    assert.deepEqual(g.upcoming.today.map((e) => e.id), ["running", "today"]);
+    assert.deepEqual(g.upcoming.running.map((e) => e.id), ["running"]);
+    assert.deepEqual(g.upcoming.today.map((e) => e.id), ["today"]);
     assert.deepEqual(g.upcoming.week.map((e) => e.id), ["full", "week"]);
     assert.deepEqual(g.upcoming.later.map((e) => e.id), ["later"]);
     assert.deepEqual(g.past.map((e) => e.id), ["done"]);

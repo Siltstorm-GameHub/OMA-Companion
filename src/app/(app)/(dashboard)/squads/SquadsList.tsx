@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Users } from "@/components/icons";
-import { Crown } from "@/components/icons";
+import { Crown, Users } from "@/components/icons";
+import { Glyph } from "@/components/ui/Glyph";
+import { resolveSeriesColor } from "@/lib/series-icons";
 import { prisma } from "@/lib/prisma";
 import SeriesIcon from "@/components/SeriesIcon";
 import { EmptyState } from "@/components/EmptyState";
@@ -24,35 +25,46 @@ export default async function SquadsList() {
       {squads.length === 0 ? (
         <EmptyState type="generic" title="Noch keine Squads" description="Es wurden noch keine Squads angelegt." />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {squads.map(s => (
-            <Link key={s.id} href={`/squads/${s.id}`}
-              className="group rounded-xl overflow-hidden border border-line bg-surface-2 hover:border-line-strong transition-colors">
-              {s.coverImageUrl ? (
-                <div className="relative h-20 overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}
-                  <img src={s.coverImageUrl} alt="" className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, color-mix(in srgb, var(--color-surface) 75%, transparent), transparent 65%)" }} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {squads.map(s => {
+            const color = resolveSeriesColor(s.icon);
+            const captains = s.memberships.map(m => m.user.username ?? m.user.name ?? "?");
+            return (
+              <Link key={s.id} href={`/squads/${s.id}`}
+                className="group overflow-hidden rounded-card border border-line bg-surface shadow-card transition-colors hover:border-line-strong">
+                {/* Cover; ohne Bild eine Fläche in der Squad-Farbe mit großem Symbol — so sind alle Kacheln gleich hoch */}
+                <div className="relative h-24 overflow-hidden">
+                  {s.coverImageUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}
+                      <img src={s.coverImageUrl} alt="" className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, color-mix(in srgb, var(--color-surface) 80%, transparent), transparent 70%)" }} />
+                    </>
+                  ) : (
+                    <div className="grid h-full place-items-center" style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${color} 22%, var(--color-surface-2)), var(--color-surface-2))` }}>
+                      <SeriesIcon name={s.icon} className="size-10 opacity-80" />
+                    </div>
+                  )}
                 </div>
-              ) : null}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <SeriesIcon name={s.icon} className="w-5 h-5 shrink-0" />
-                  <p className="text-sm font-semibold text-white truncate">{s.name}</p>
-                </div>
-                {s.game && <p className="text-xs text-gray-500 mb-2">{s.game}</p>}
-                <p className="text-xs text-gray-600 flex items-center gap-1 mb-2">
-                  <Users className="w-3 h-3" /> {s._count.memberships} Mitglieder
-                </p>
-                {s.memberships.length > 0 && (
-                  <p className="text-xs text-amber-400/80 flex items-center gap-1 truncate">
-                    <Crown className="w-3 h-3 shrink-0" />
-                    {s.memberships.map(m => m.user.username ?? m.user.name ?? "?").join(", ")}
+                <div className="space-y-1.5 p-4">
+                  <div className="flex items-center gap-2">
+                    <SeriesIcon name={s.icon} className="size-5 shrink-0" />
+                    <p className="text-base font-extrabold text-fg truncate group-hover:text-primary-fg transition-colors">{s.name}</p>
+                  </div>
+                  <p className="flex items-center gap-1.5 text-xs text-subtle">
+                    {s.game && <><Glyph name="gamepad" className="size-3.5" /><span className="truncate">{s.game}</span><span aria-hidden>·</span></>}
+                    <Users className="size-3.5 shrink-0" /> {s._count.memberships} {s._count.memberships === 1 ? "Mitglied" : "Mitglieder"}
                   </p>
-                )}
-              </div>
-            </Link>
-          ))}
+                  {captains.length > 0 && (
+                    <p className="flex items-center gap-1.5 text-xs text-muted truncate">
+                      <Crown className="size-3.5 shrink-0 text-coin" />
+                      <span className="truncate">{captains.join(", ")}</span>
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </>

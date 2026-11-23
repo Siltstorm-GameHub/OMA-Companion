@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ProofUploader from "@/components/match-results/ProofUploader";
-import { ChevronDown } from "@/components/icons";
+import { Check, ChevronDown, X } from "@/components/icons";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 type U = { id: string; name: string | null; username: string | null };
@@ -45,15 +45,79 @@ export type MySubmission = {
 const uname = (u: U | null) => u?.username ?? u?.name ?? "?";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  pending:   { label: "Wird geprüft",    cls: "bg-amber-900/40 text-amber-300" },
-  processing:{ label: "Wird geprüft",    cls: "bg-amber-900/40 text-amber-300" },
-  approved:  { label: "Übernommen",      cls: "bg-emerald-900/40 text-emerald-300" },
-  corrected: { label: "Korrigiert",      cls: "bg-blue-900/40 text-blue-300" },
-  rejected:  { label: "Abgelehnt",       cls: "bg-red-900/40 text-red-300" },
+  pending:   { label: "Wird geprüft",    cls: "bg-warning-soft text-warning" },
+  processing:{ label: "Wird geprüft",    cls: "bg-warning-soft text-warning" },
+  approved:  { label: "Übernommen",      cls: "bg-success-soft text-success" },
+  corrected: { label: "Korrigiert",      cls: "bg-primary-soft text-primary-fg" },
+  rejected:  { label: "Abgelehnt",       cls: "bg-danger-soft text-danger" },
 };
 
 const inputCls =
-  "w-full px-3 py-2 rounded-xl bg-surface-2 border border-line-strong text-sm text-white focus:border-primary/40 focus:outline-none";
+  "w-full min-h-10 px-3 rounded-control bg-surface-2 border border-line text-sm text-fg focus:border-primary focus:outline-none";
+
+/** Öffnet das Meldeformular eines Matches von außen (z. B. "Stimmt nicht" in der "Für dich"-Karte) */
+export const OPEN_REPORT_EVENT = "oma:open-report";
+
+/** Tor-Zähler mit großen −/+ Knöpfen statt kleinem Zahlenfeld (Daumen-freundlich) */
+function ScoreStepper({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const n = value === "" ? null : Number(value);
+  const set = (v: number) => onChange(String(Math.max(0, v)));
+  const BTN = "grid size-11 shrink-0 place-items-center rounded-control border border-line-strong bg-surface-2 text-xl font-bold text-fg hover:bg-surface-3 active:scale-95 transition disabled:opacity-40";
+  return (
+    <div className="min-w-0 space-y-1.5 text-center">
+      <p className="truncate text-sm font-bold text-fg">{label}</p>
+      <div className="flex items-center justify-center gap-2">
+        <button type="button" aria-label={`${label}: eins weniger`} className={BTN} disabled={!n} onClick={() => set((n ?? 0) - 1)}>−</button>
+        <input inputMode="numeric" pattern="[0-9]*" aria-label={`Tore ${label}`} value={value}
+          onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, ""))} placeholder="0"
+          className="h-11 w-14 rounded-control border border-line bg-surface-2 text-center text-2xl font-extrabold tabular-nums text-fg focus:border-primary focus:outline-none" />
+        <button type="button" aria-label={`${label}: eins mehr`} className={BTN} onClick={() => set((n ?? 0) + 1)}>+</button>
+      </div>
+    </div>
+  );
+}
+
+/** Nummerierter Schritt im Meldeformular; ✓, sobald erledigt */
+function Step({ n, title, done, children }: { n: number; title: string; done: boolean; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-subtle">
+        <span className={`grid size-5 place-items-center rounded-full text-[11px] font-extrabold ${done ? "bg-primary text-primary-ink" : "bg-surface-3 text-muted"}`}>
+          {done ? <Check className="size-3" /> : n}
+        </span>
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/** Verlauf einer Meldung: gemeldet → bestätigt (Gegner oder Verwalter) → endgültig */
+function SubmissionTimeline({ s }: { s: MySubmission }) {
+  const done = s.status === "approved" || s.status === "corrected";
+  const rejected = s.status === "rejected";
+  const byBoth = !!s.reviewNote?.startsWith("Von beiden Spielern");
+  const steps = [
+    { label: "Gemeldet", state: "done" as const },
+    { label: rejected ? "Abgelehnt" : done ? (byBoth ? "Vom Gegner bestätigt" : "Vom Verwalter geprüft") : "Wartet auf Gegner oder Verwalter", state: rejected ? "bad" as const : done ? "done" as const : "current" as const },
+    { label: "Zählt", state: done ? "done" as const : "todo" as const },
+  ];
+  return (
+    <ol className="flex items-center gap-1.5 text-xs font-semibold" aria-label="Stand deiner Meldung">
+      {steps.map((st, i) => (
+        <li key={i} className="flex min-w-0 items-center gap-1.5">
+          {i > 0 && <span className={`h-px w-3 shrink-0 ${st.state === "todo" ? "bg-line-strong" : "bg-primary/60"}`} aria-hidden />}
+          <span className={`grid size-4 shrink-0 place-items-center rounded-full ${
+            st.state === "done" ? "bg-primary text-primary-ink" : st.state === "bad" ? "bg-danger text-canvas" : st.state === "current" ? "bg-warning text-canvas" : "bg-surface-3 text-subtle"
+          }`}>
+            {st.state === "done" ? <Check className="size-2.5" /> : st.state === "bad" ? <X className="size-2.5" /> : null}
+          </span>
+          <span className={`truncate ${st.state === "todo" ? "text-subtle" : st.state === "bad" ? "text-danger" : "text-fg"}`}>{st.label}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function MatchForm({
   eventId, m, subject, s, statFields, locked, beforeSubmit, bare = false,
@@ -88,6 +152,18 @@ export function MatchForm({
   const [busy, setBusy] = useState(false);
   // In der Karte "Dein Match" bleibt das Formular zu, bis man auf "Ergebnis melden" tippt
   const [open, setOpen] = useState(!s && !bare);
+  useEffect(() => {
+    const onOpen = (e: Event) => { if ((e as CustomEvent<string>).detail === m.id) setOpen(true); };
+    window.addEventListener(OPEN_REPORT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_REPORT_EVENT, onOpen);
+  }, [m.id]);
+  // Am Handy öffnet das Formular als Panel von unten — Hintergrund solange nicht scrollen
+  useEffect(() => {
+    if (!open || !bare || window.matchMedia("(min-width: 1024px)").matches) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open, bare]);
 
   /** Ergebnis des Gegners bestätigen — stimmen beide Meldungen überein, gilt es sofort (ohne Admin) */
   async function confirmOpponent() {
@@ -142,18 +218,18 @@ export function MatchForm({
     <div className={bare ? "space-y-3" : "rounded-xl border border-line p-3 space-y-3"}>
       {bare ? (
         s && (
-          <p className="flex items-center gap-2 text-xs text-gray-400">
-            Deine Meldung{m.isDuel && s.score1 != null && <> {s.score1} : {s.score2}</>}
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS[s.status]?.cls ?? ""}`}>
-              {STATUS[s.status]?.label ?? s.status}
-            </span>
-          </p>
+          <div className="space-y-1.5">
+            <p className="text-xs text-muted">
+              Deine Meldung{m.isDuel && s.score1 != null && <> <span className="font-bold text-fg tabular-nums">{s.score1} : {s.score2}</span></>}
+            </p>
+            <SubmissionTimeline s={s} />
+          </div>
         )
       ) : (
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-white truncate">
+          <p className="text-sm font-medium text-fg truncate">
             {m.label}
-            {!m.isDuel && subject && <span className="text-gray-400 font-normal"> · {uname(subject)}</span>}
+            {!m.isDuel && subject && <span className="text-muted font-normal"> · {uname(subject)}</span>}
           </p>
           {s && (
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS[s.status]?.cls ?? ""}`}>
@@ -163,115 +239,130 @@ export function MatchForm({
         </div>
       )}
 
-      {s?.reviewNote && <p className="text-xs text-gray-400">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Verwalter: ${s.reviewNote}`}</p>}
+      {s?.reviewNote && <p className="text-xs text-muted">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Verwalter: ${s.reviewNote}`}</p>}
 
       {/* Widerspruch: eigene Meldung und die des Gegners passen nicht zusammen */}
       {!locked && conflict && opp && s && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 space-y-1.5">
-          <p className="text-xs text-amber-200 font-semibold">Eure Meldungen passen nicht zusammen</p>
-          <p className="text-xs text-amber-200/90">
+        <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2 space-y-1.5">
+          <p className="text-xs text-warning font-bold">Eure Meldungen passen nicht zusammen</p>
+          <p className="text-xs text-fg/90">
             Du: {uname(m.player1)} {s.score1 ?? "–"} : {s.score2 ?? "–"} {uname(m.player2)}<br />
             {opp.reporterName}: {uname(m.player1)} {opp.score1 ?? "–"} : {opp.score2 ?? "–"} {uname(m.player2)}
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <button onClick={confirmOpponent} disabled={busy}
-              className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium disabled:opacity-50">
+              className="min-h-9 px-3.5 rounded-control bg-warning text-canvas hover:brightness-110 text-sm font-bold disabled:opacity-50">
               Seins stimmt — übernehmen
             </button>
-            <span className="text-xs text-amber-200/70">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
+            <span className="text-xs text-muted">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
           </div>
         </div>
       )}
 
       {/* Gegner hat schon gemeldet: mit einem Klick bestätigen (kein eigener Screenshot nötig) */}
       {!locked && m.isDuel && m.opponentReport && !conflict && s?.status !== "approved" && s?.status !== "corrected" && (
-        <div className="rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 space-y-1.5">
-          <p className="text-xs text-teal-200">
-            {m.opponentReport.reporterName} hat gemeldet: {uname(m.player1)} {m.opponentReport.score1 ?? "–"} : {m.opponentReport.score2 ?? "–"} {uname(m.player2)}
+        <div className="rounded-control border border-primary/30 bg-primary-soft px-3 py-2 space-y-1.5">
+          <p className="text-sm text-primary-fg">
+            <span className="font-bold">{m.opponentReport.reporterName}</span> hat gemeldet: {uname(m.player1)} <span className="font-extrabold tabular-nums">{m.opponentReport.score1 ?? "–"} : {m.opponentReport.score2 ?? "–"}</span> {uname(m.player2)}
             {m.opponentReport.advancerId && <> · weiter: {m.opponentReport.advancerId === m.player1?.id ? uname(m.player1) : uname(m.player2)}</>}
           </p>
           <div className="flex items-center gap-3">
             <button onClick={confirmOpponent} disabled={busy}
-              className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink text-xs font-medium disabled:opacity-50">
+              className="min-h-9 px-3.5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold disabled:opacity-50">
               Stimmt — bestätigen
             </button>
-            <span className="text-xs text-gray-500">Stimmt nicht? Dann unten selbst melden — ein Verwalter entscheidet.</span>
+            <button type="button" onClick={() => setOpen(true)} className="min-h-9 px-3.5 rounded-control border border-line-strong bg-surface-2 text-sm font-semibold text-fg hover:bg-surface-3">
+              Stimmt nicht — selbst melden
+            </button>
           </div>
         </div>
       )}
 
-      {locked && <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>}
+      {locked && <p className="text-xs text-subtle">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>}
       {!locked && (s?.status === "approved" || s?.status === "corrected") && !open && (
-        <p className="text-xs text-gray-500">Bis zum Abschluss der aktiven Eventphase kannst du die Meldung korrigieren — sie wird dann erneut von einem Verwalter geprüft.</p>
+        <p className="text-xs text-subtle">Bis zum Abschluss der aktiven Eventphase kannst du die Meldung korrigieren — sie wird dann erneut von einem Verwalter geprüft.</p>
       )}
 
       {!locked && !open && (
-        <button onClick={() => setOpen(true)} className="text-xs text-primary-fg hover:underline">
-          {!s ? "Ergebnis selbst melden" : s.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
+        <button onClick={() => setOpen(true)}
+          className={!s ? "min-h-10 px-4 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold" : "text-sm font-semibold text-primary-fg hover:text-fg"}>
+          {!s ? "Ergebnis melden" : s.status === "rejected" ? "Neu melden" : "Meldung korrigieren"}
         </button>
       )}
 
       {!locked && open && (
-        <div className="space-y-3">
-          {m.isDuel ? (
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs text-gray-400 space-y-1">
-                {uname(m.player1)}
-                <NumberInput min={0} value={score1} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
-              </label>
-              <label className="text-xs text-gray-400 space-y-1">
-                {uname(m.player2)}
-                <NumberInput min={0} value={score2} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
-              </label>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {statFields.map((f) => (
-                <label key={f} className="text-xs text-gray-400 space-y-1">
-                  {f}
-                  <NumberInput
-                    min={0}
-                    value={stats[f] ?? ""}
-                    onChange={(e) => setStats({ ...stats, [f]: e.target.value })}
-                    className={inputCls}
-                  />
+        <>
+          {/* Hintergrund des Panels (nur am Handy, nur in "Dein Match") */}
+          {bare && <div className="fixed inset-0 z-40 bg-canvas/70 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
+          <div className={bare
+            ? "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:max-h-[88vh] max-lg:overflow-y-auto max-lg:rounded-t-card max-lg:border-t max-lg:border-line-strong max-lg:bg-surface max-lg:p-4 max-lg:pb-[max(env(safe-area-inset-bottom),1rem)] max-lg:shadow-card space-y-4"
+            : "space-y-4"}
+            role={bare ? "dialog" : undefined} aria-label={bare ? "Ergebnis melden" : undefined}>
+            {bare && (
+              <div className="flex items-center justify-between gap-2 lg:hidden">
+                <p className="text-base font-extrabold text-fg">Ergebnis melden</p>
+                <button type="button" onClick={() => setOpen(false)} aria-label="Schließen" className="grid size-10 place-items-center rounded-control text-subtle hover:bg-surface-3 hover:text-fg">
+                  <X className="size-5" />
+                </button>
+              </div>
+            )}
+
+            <Step n={1} title={m.isDuel ? "Ergebnis" : "Werte"} done={m.isDuel ? score1 !== "" && score2 !== "" : Object.values(stats).some(v => v !== "")}>
+              {m.isDuel ? (
+                <div className="grid grid-cols-2 gap-3 rounded-control bg-surface-2/60 p-3">
+                  <ScoreStepper label={uname(m.player1)} value={score1} onChange={setScore1} />
+                  <ScoreStepper label={uname(m.player2)} value={score2} onChange={setScore2} />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {statFields.map((f) => (
+                    <label key={f} className="text-xs text-muted space-y-1">
+                      {f}
+                      <NumberInput
+                        min={0}
+                        value={stats[f] ?? ""}
+                        onChange={(e) => setStats({ ...stats, [f]: e.target.value })}
+                        className={inputCls}
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {askAdvancer && m.player1 && m.player2 && (
+                <label className="block text-xs text-muted space-y-1">
+                  {m.leg === 2 ? "Nur bei Gleichstand im Gesamtergebnis: wer kam weiter?" : "Gleichstand — wer kam nach Elfmeterschießen weiter?"}
+                  <select value={advancerId} onChange={(e) => setAdvancerId(e.target.value)} className={inputCls}>
+                    <option value="">{m.leg === 2 ? "— kein Gleichstand" : "Bitte wählen"}</option>
+                    <option value={m.player1.id}>{uname(m.player1)}</option>
+                    <option value={m.player2.id}>{uname(m.player2)}</option>
+                  </select>
                 </label>
-              ))}
-            </div>
-          )}
+              )}
+            </Step>
 
-          {askAdvancer && m.player1 && m.player2 && (
-            <label className="block text-xs text-gray-400 space-y-1">
-              {m.leg === 2 ? "Nur bei Gleichstand im Gesamtergebnis: wer kam weiter?" : "Gleichstand — wer kam nach Elfmeterschießen weiter?"}
-              <select value={advancerId} onChange={(e) => setAdvancerId(e.target.value)} className={inputCls}>
-                <option value="">{m.leg === 2 ? "— kein Gleichstand" : "Bitte wählen"}</option>
-                <option value={m.player1.id}>{uname(m.player1)}</option>
-                <option value={m.player2.id}>{uname(m.player2)}</option>
-              </select>
-            </label>
-          )}
+            <Step n={2} title="Nachweis (Screenshot, max. 4)" done={urls.length > 0}>
+              <ProofUploader value={urls} onChange={setUrls} />
+            </Step>
 
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Nachweis (Screenshots, max. 4)</p>
-            <ProofUploader value={urls} onChange={setUrls} />
+            <Step n={3} title="Senden" done={false}>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={500}
+                placeholder="Anmerkung (optional)"
+                className={inputCls}
+              />
+              <button
+                onClick={submit}
+                disabled={busy}
+                className="w-full sm:w-auto min-h-11 px-5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold disabled:opacity-50"
+              >
+                {busy ? "Sende…" : s ? "Meldung aktualisieren" : "Ergebnis senden"}
+              </button>
+            </Step>
           </div>
-
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            maxLength={500}
-            placeholder="Anmerkung (optional)"
-            className={inputCls}
-          />
-
-          <button
-            onClick={submit}
-            disabled={busy}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50"
-          >
-            {busy ? "Sende…" : s ? "Meldung aktualisieren" : "Ergebnis melden"}
-          </button>
-        </div>
+        </>
       )}
     </div>
   );
@@ -280,7 +371,7 @@ export function MatchForm({
 /** Kurzer Hinweis zum Melden, Details zum Aufklappen */
 export function ReportHint() {
   return (
-    <details className="text-xs text-gray-500 group">
+    <details className="text-xs text-subtle group">
       <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
         Mit Screenshot melden — sofort sichtbar. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-primary-fg group-open:hidden">Mehr</span>
       </summary>
@@ -359,19 +450,19 @@ function MultiForm({
     }
   }
 
-  if (locked) return <p className="text-xs text-gray-500">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>;
+  if (locked) return <p className="text-xs text-subtle">Die aktive Eventphase ist abgeschlossen — keine Änderungen mehr möglich.</p>;
 
   return (
     <div className="rounded-xl border border-line p-3 space-y-3">
-      <p className="text-sm font-medium text-white">{m.label} · Sammelmeldung</p>
-      <p className="text-xs text-gray-500">
+      <p className="text-sm font-medium text-fg">{m.label} · Sammelmeldung</p>
+      <p className="text-xs text-subtle">
         Ein Screenshot zeigt die Ergebnisse mehrerer Spieler? Trag hier die Werte aller sichtbaren Spieler ein —
         leere Zeilen werden übersprungen. Jeder Spieler bekommt eine eigene Meldung mit diesem Nachweis.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-xs text-gray-500 uppercase tracking-wider">
+            <tr className="text-xs text-subtle uppercase tracking-wider">
               <th className="text-left py-1 pr-2 font-medium">Spieler</th>
               {statFields.map(f => <th key={f} className="text-left py-1 px-1 font-medium">{f}</th>)}
             </tr>
@@ -379,7 +470,7 @@ function MultiForm({
           <tbody>
             {m.players.map(p => (
               <tr key={p.id}>
-                <td className="py-1 pr-2 text-gray-300 whitespace-nowrap">{uname(p)}{p.id === userId ? " (du)" : ""}</td>
+                <td className="py-1 pr-2 text-fg/90 whitespace-nowrap">{uname(p)}{p.id === userId ? " (du)" : ""}</td>
                 {statFields.map(f => (
                   <td key={f} className="py-1 px-1 min-w-[80px]">
                     <NumberInput min={0} value={rows[p.id]?.[f] ?? ""}
@@ -394,14 +485,14 @@ function MultiForm({
       </div>
 
       <div>
-        <p className="text-xs text-gray-400 mb-1">Nachweis (Screenshots, max. 4) — gilt für alle eingetragenen Spieler</p>
+        <p className="text-xs text-muted mb-1">Nachweis (Screenshots, max. 4) — gilt für alle eingetragenen Spieler</p>
         <ProofUploader value={urls} onChange={setUrls} />
       </div>
 
       <input value={note} onChange={e => setNote(e.target.value)} maxLength={500} placeholder="Anmerkung (optional)" className={inputCls} />
 
       <button onClick={submit} disabled={busy}
-        className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
+        className="min-h-10 px-4 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold disabled:opacity-50">
         {busy ? "Sende…" : filled.length > 0 ? `Für ${filled.length} Spieler melden` : "Ergebnisse melden"}
       </button>
     </div>
@@ -461,14 +552,14 @@ export default function MatchResultSubmit({
         className="w-full flex items-center justify-between gap-2 p-4 text-left"
       >
         <span className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-white">Ergebnis melden</span>
+          <span className="text-base font-extrabold text-fg">Ergebnis melden</span>
           {pendingCount > 0 && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-300">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning-soft text-warning">
               {pendingCount} in Prüfung
             </span>
           )}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-4 h-4 text-muted transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
       {expanded && (
@@ -476,7 +567,7 @@ export default function MatchResultSubmit({
           <ReportHint />
 
           <div className={`grid gap-2 ${match.isDuel ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
-            <label className="text-xs text-gray-400 space-y-1">
+            <label className="text-xs text-muted space-y-1">
               Match / Runde
               <select
                 value={match.id}
@@ -487,23 +578,23 @@ export default function MatchResultSubmit({
                 className={inputCls}
               >
                 {matches.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-gray-900">
+                  <option key={m.id} value={m.id} className="bg-surface-2">
                     {m.label}{m.mine ? " (du)" : ""}{m.played ? " ✓" : ""}
                   </option>
                 ))}
               </select>
             </label>
             {!match.isDuel && (
-              <label className="text-xs text-gray-400 space-y-1">
+              <label className="text-xs text-muted space-y-1">
                 Spieler
                 <select value={isMulti ? MULTI : subject?.id ?? ""} onChange={(e) => setSubjectId(e.target.value)} className={inputCls}>
                   {match.players.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-gray-900">
+                    <option key={p.id} value={p.id} className="bg-surface-2">
                       {uname(p)}{p.id === userId ? " (du)" : ""}
                     </option>
                   ))}
                   {match.players.length > 1 && (
-                    <option value={MULTI} className="bg-gray-900">Mehrere Spieler (ein Screenshot)</option>
+                    <option value={MULTI} className="bg-surface-2">Mehrere Spieler (ein Screenshot)</option>
                   )}
                 </select>
               </label>

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { Trophy } from "@/components/icons";
+import { useEffect, useRef, useState } from "react";
+import { Clock, Trophy } from "@/components/icons";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
@@ -10,6 +10,7 @@ import StyledUserName from "@/components/cosmetics/StyledUserName";
 import { formatBerlinDateTime } from "@/lib/time";
 import { knockoutRoundLabel } from "@/lib/tournaments/groupStage";
 import { feederMatches } from "@/lib/tournaments/player-path";
+import { useScoringInfo } from "./ScoringInfo";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
@@ -53,9 +54,32 @@ export default function BracketView({
 }) {
   // Angetippte Paarung: Details unter dem Baum
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // "Mein Weg": nur eigene Paarungen hervorheben (andere abgeblendet bzw. am Handy ausgeblendet)
+  const [onlyMine, setOnlyMine] = useState(false);
+  const totalR = matches.length ? Math.max(...matches.map(m => m.round)) : 0;
+  // Laufende Runde: erste mit offenem (oder laufendem) Match, sonst die letzte
+  const currentRound = (() => {
+    for (let r = 1; r <= totalR; r++) {
+      if (matches.some(m => m.round === r && !m.winnerId && (m.startedAt || (m.player1Id && m.player2Id)))) return r;
+    }
+    return totalR;
+  })();
+  const [mobileRound, setMobileRound] = useState(currentRound);
+  const info = useScoringInfo();
+  const treeRef = useRef<HTMLDivElement>(null);
+  const hasMine = matches.some(m => m.player1Id === userId || m.player2Id === userId);
+  // Baum beim Öffnen zur eigenen (sonst laufenden) Runde scrollen
+  useEffect(() => {
+    const el = treeRef.current;
+    if (!el) return;
+    const mine = matches.filter(m => m.player1Id === userId || m.player2Id === userId);
+    const target = mine.length ? Math.max(...mine.map(m => m.round)) : currentRound;
+    const col = el.querySelector<HTMLElement>(`[data-round="${target}"]`);
+    if (col && col.offsetLeft > el.clientWidth * 0.6) el.scrollLeft = col.offsetLeft - 24;
+  }, [matches, userId, currentRound]);
   if (!matches.length) {
     return (
-      <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
+      <div className="glass rounded-2xl p-10 text-center text-subtle text-sm">
         Noch keine Matches angelegt.
       </div>
     );
@@ -74,22 +98,78 @@ export default function BracketView({
   const findUser = (id: string | null) =>
     id ? participants.find(p => p.userId === id)?.user : undefined;
 
+  const isMine = (m: Match) => m.player1Id === userId || m.player2Id === userId;
+  const select = (id: string) => setSelectedId(cur => (cur === id ? null : id));
+  const mobileList = onlyMine
+    ? matches.filter(isMine).sort((a, b) => a.round - b.round)
+    : (byRound[mobileRound - 1] ?? []).filter((m): m is Match => !!m);
+
   return (
     <div>
-      <h2 className="text-base font-extrabold text-fg mb-3 flex items-center gap-2">
-        <Trophy className="w-3.5 h-3.5 text-amber-400" /> Turnierbaum
-        <span className="ml-auto normal-case tracking-normal font-normal text-xs text-gray-600">Paarung antippen für Details</span>
+      <h2 className="text-base font-extrabold text-fg mb-3 flex flex-wrap items-center gap-2">
+        <Trophy className="size-4 text-coin" /> Turnierbaum
+        {hasMine && (
+          <button type="button" onClick={() => setOnlyMine(v => !v)} aria-pressed={onlyMine}
+            className={`ml-auto inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+              onlyMine ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted hover:text-fg"
+            }`}>
+            Mein Weg
+          </button>
+        )}
+        <span className={hasMine ? "" : "ml-auto"}>{info.button}</span>
       </h2>
-      <div className="overflow-x-auto pb-2">
+      {info.panel(<>
+        <p>K.O.-System: Wer sein Match gewinnt, kommt eine Runde weiter — wer verliert, ist raus.</p>
+        <p>Bei Gleichstand gibt der Meldende an, wer (z. B. nach Elfmeterschießen) weiterkommt. Bei Hin- und Rückspiel zählt das Gesamtergebnis.</p>
+        <p className="text-xs text-muted">Paarung antippen zeigt Termin, Einzelspiele und den Weg dorthin. „vorläufig“ = von Spielern gemeldet, noch nicht bestätigt.</p>
+      </>)}
+
+      {/* Handy: eine Runde nach der anderen (Reiter), Karten in voller Breite */}
+      <div className="lg:hidden">
+        {!onlyMine && (
+          <div role="tablist" aria-label="Runden" className="-mx-1 mb-3 flex gap-1.5 overflow-x-auto scrollbar-none px-1">
+            {byRound.map((_, i) => {
+              const r = i + 1;
+              const on = r === mobileRound;
+              return (
+                <button key={r} type="button" role="tab" aria-selected={on} onClick={() => setMobileRound(r)}
+                  className={`shrink-0 inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+                    on ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted"
+                  }`}>
+                  {knockoutRoundLabel(r, totalRounds)}
+                  {r === currentRound && <span className="size-1.5 rounded-full bg-live" aria-label="läuft" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="space-y-2">
+          {mobileList.length === 0 && <p className="text-sm text-muted">Hier ist noch keine Paarung angelegt.</p>}
+          {mobileList.map(match => (
+            <div key={match.id}>
+              {onlyMine && <p className="mb-1 text-xs font-bold uppercase tracking-wide text-subtle">{knockoutRoundLabel(match.round, totalRounds)}</p>}
+              <MatchCard match={match} userId={userId} findUser={findUser} holders={holders} wide
+                selected={selectedId === match.id} onSelect={() => select(match.id)} />
+              {selectedId === match.id && (
+                <MatchDetails match={match} matches={matches} totalRounds={totalRounds} userId={userId}
+                  findUser={findUser} onClose={() => setSelectedId(null)} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ab Tablet/Desktop: der ganze Baum */}
+      <div ref={treeRef} className="hidden lg:block overflow-x-auto pb-2">
         <div className="flex min-w-max">
           {byRound.map((roundMatches, roundIdx) => {
             const round = roundIdx + 1;
             const slotH = Math.pow(2, roundIdx) * SLOT;
             const isLastRound = round === totalRounds;
             return (
-              <div key={round} className="flex">
+              <div key={round} className="flex" data-round={round}>
                 <div className="flex flex-col">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest text-center"
+                  <p className="text-xs font-semibold text-subtle uppercase tracking-widest text-center"
                     style={{ height: LABEL_H }}>
                     {knockoutRoundLabel(round, totalRounds)}
                   </p>
@@ -97,7 +177,8 @@ export default function BracketView({
                     <div key={match?.id ?? `empty-${round}-${idx}`} className="flex items-center justify-center" style={{ height: slotH }}>
                       {match
                         ? <MatchCard match={match} userId={userId} findUser={findUser} holders={holders}
-                            selected={selectedId === match.id} onSelect={() => setSelectedId(id => id === match.id ? null : match.id)} />
+                            dimmed={onlyMine && !isMine(match)}
+                            selected={selectedId === match.id} onSelect={() => select(match.id)} />
                         : <div className="w-52" style={{ height: CARD_H }} />}
                     </div>
                   ))}
@@ -122,8 +203,10 @@ export default function BracketView({
         </div>
       </div>
       {selected && (
+        <div className="hidden lg:block">
         <MatchDetails match={selected} matches={matches} totalRounds={totalRounds} userId={userId}
           findUser={findUser} onClose={() => setSelectedId(null)} />
+        </div>
       )}
     </div>
   );
@@ -151,44 +234,44 @@ function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }
     ? formatBerlinDateTime(match.scheduledAt, { weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
   const person = (u: User | undefined, id: string | null) => u
-    ? <Link href={id === userId ? "/profile" : `/profile/${u.id}`} className="text-white hover:underline">{uname(u)}{id === userId ? " (du)" : ""}</Link>
-    : <span className="text-gray-500 italic">{isBye ? "Freilos" : "offen"}</span>;
+    ? <Link href={id === userId ? "/profile" : `/profile/${u.id}`} className="text-fg hover:underline">{uname(u)}{id === userId ? " (du)" : ""}</Link>
+    : <span className="text-subtle italic">{isBye ? "Freilos" : "offen"}</span>;
 
   return (
-    <section aria-label="Paarung" className="glass rounded-2xl p-4 mt-3 space-y-2">
+    <section aria-label="Paarung" className="rounded-card border border-line bg-surface shadow-card p-4 mt-2 space-y-2">
       <div className="flex items-center gap-2">
-        <p className="min-w-0 flex-1 text-xs font-semibold uppercase tracking-widest text-gray-500">
+        <p className="min-w-0 flex-1 text-xs font-bold uppercase tracking-wide text-subtle">
           {match.title ?? `${knockoutRoundLabel(match.round, totalRounds)} · Match ${match.position}`}
         </p>
-        <button type="button" onClick={onClose} className="text-xs text-gray-500 hover:text-gray-300">Schließen</button>
+        <button type="button" onClick={onClose} className="min-h-8 px-2 text-xs font-semibold text-subtle hover:text-fg">Schließen</button>
       </div>
       <p className="text-base font-semibold">
-        {person(p1, match.player1Id)} <span className="text-gray-500 font-normal">gegen</span> {person(p2, match.player2Id)}
+        {person(p1, match.player1Id)} <span className="text-subtle font-normal">gegen</span> {person(p2, match.player2Id)}
         {match.score1 != null && !isBye && (
-          <span className="ml-2 font-mono text-sm text-gray-300">{match.score1} : {match.score2}</span>
+          <span className="ml-2 font-mono text-sm text-fg/90">{match.score1} : {match.score2}</span>
         )}
       </p>
-      <p className={`text-xs ${isLive ? "text-red-400 font-semibold" : "text-gray-400"}`}>
-        {status}{when && <span className="text-gray-500"> · {when}</span>}
+      <p className={`text-xs ${isLive ? "text-danger font-semibold" : "text-muted"}`}>
+        {status}{when && <span className="text-subtle"> · {when}</span>}
       </p>
       {match.legs?.second && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           Hinspiel {match.legs.first.playedAt ? `${scoreOf(match.legs.first, match.player1Id) ?? 0}:${scoreOf(match.legs.first, match.player2Id) ?? 0}` : "offen"}
           {" · "}Rückspiel {match.legs.second.playedAt ? `${scoreOf(match.legs.second, match.player1Id) ?? 0}:${scoreOf(match.legs.second, match.player2Id) ?? 0}` : "offen"}
         </p>
       )}
       {feeders.length > 0 && (
         <div className="border-t border-line pt-2 space-y-0.5">
-          <p className="text-xs text-gray-500">Weg hierher</p>
+          <p className="text-xs text-subtle">Weg hierher</p>
           {feeders.map(f => {
             const a = findUser(f.player1Id), b = findUser(f.player2Id);
             const fBye = !!f.winnerId && (!f.player1Id || !f.player2Id);
             return (
-              <p key={f.id} className="text-xs text-gray-400">
+              <p key={f.id} className="text-xs text-muted">
                 {fBye
                   ? <>{uname(findUser(f.winnerId))} per Freilos</>
                   : f.winnerId
-                    ? <><span className="text-white">{uname(findUser(f.winnerId))}</span> schlug {uname(f.winnerId === f.player1Id ? b : a)}{f.score1 != null && <> {scoreOf(f, f.winnerId)}:{scoreOf(f, f.winnerId === f.player1Id ? f.player2Id : f.player1Id)}{f.score1 === f.score2 && " n.E."}</>}</>
+                    ? <><span className="text-fg">{uname(findUser(f.winnerId))}</span> schlug {uname(f.winnerId === f.player1Id ? b : a)}{f.score1 != null && <> {scoreOf(f, f.winnerId)}:{scoreOf(f, f.winnerId === f.player1Id ? f.player2Id : f.player1Id)}{f.score1 === f.score2 && " n.E."}</>}</>
                     : <>{uname(a)} gegen {uname(b)} — noch offen</>}
                 {won(f, userId) && <span className="text-primary-fg"> (du)</span>}
               </p>
@@ -201,8 +284,12 @@ function MatchDetails({ match, matches, totalRounds, userId, findUser, onClose }
 }
 
 function MatchCard({
-  match, userId, findUser, holders, selected, onSelect,
+  match, userId, findUser, holders, selected, onSelect, wide = false, dimmed = false,
 }: {
+  /** volle Breite (Handy-Liste) */
+  wide?: boolean;
+  /** "Mein Weg" aktiv und nicht die eigene Paarung */
+  dimmed?: boolean;
   match: Match;
   userId: string;
   findUser: (id: string | null) => User | undefined;
@@ -240,10 +327,10 @@ function MatchCard({
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={`${uname(p1)} gegen ${uname(p2)} — Details`}
-      className={`w-52 rounded-xl border overflow-hidden flex flex-col text-left transition-[filter] hover:brightness-125 ${
+      className={`${wide ? "w-full" : "w-52"} rounded-control border overflow-hidden flex flex-col text-left transition hover:brightness-125 ${dimmed ? "opacity-25" : ""} ${
         selected ? "ring-2 ring-primary/60" : ""
       } ${
-        isLive    ? "border-red-500/60" :
+        isLive    ? "border-live/50" :
         isMyMatch ? "border-primary/40" :
         isBye     ? "border-line opacity-60" :
         match.winnerId ? "border-line opacity-70" :
@@ -270,12 +357,12 @@ function MatchCard({
                 size={20}
                 className="w-5 h-5"
               />
-              <span className={`text-xs truncate max-w-[100px] ${
-                isWinner ? "text-emerald-300 font-semibold" :
-                isLoser  ? "text-gray-600" :
+              <span className={`text-xs truncate ${wide ? "max-w-[60vw]" : "max-w-[100px]"} ${
+                isWinner ? "text-success font-semibold" :
+                isLoser  ? "text-subtle line-through decoration-line-strong" :
                 isMe     ? "text-primary-fg font-medium" :
-                user     ? "text-white" :
-                           "text-gray-600 italic"
+                user     ? "text-fg" :
+                           "text-subtle italic"
               }`}>
                 {user
                   ? <>{/* Sieg/Niederlage-Farbe hat Vorrang; offene Matches zeigen die Namensfarbe */}
@@ -287,12 +374,12 @@ function MatchCard({
               {isWinner && <WinIcon size={12} />}
               {!isBye && (
                 <span className={`font-mono text-xs font-semibold ${
-                  isWinner ? "text-emerald-300" :
-                  isLoser  ? "text-gray-700"   :
-                             "text-gray-400"
+                  isWinner ? "text-success" :
+                  isLoser  ? "text-subtle/60"   :
+                             "text-muted"
                 }`}>
                   {score !== null ? score : pending ? "–" : ""}
-                  {isWinner && afterPenalties && <span className="ml-0.5 text-[9px] font-normal text-gray-500">n.E.</span>}
+                  {isWinner && afterPenalties && <span className="ml-0.5 text-[9px] font-normal text-subtle">n.E.</span>}
                 </span>
               )}
             </span>
@@ -300,7 +387,7 @@ function MatchCard({
         );
         const rowCls = `flex-1 flex items-center justify-between px-2.5 ${
           idx === 0 ? "border-b border-line" : ""
-        } ${isWinner ? "bg-emerald-900/20" : "glass"}`;
+        } ${isWinner ? "bg-success-soft" : "bg-surface"}`;
         // Profil-Links stehen in den Details — die ganze Karte öffnet die Paarung
         return (
           <span key={idx} className={rowCls}>
@@ -309,9 +396,9 @@ function MatchCard({
         );
       })}
       {(footer || isLive || isBye || provisional) && (
-        <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-line text-[10px] text-gray-500 bg-surface-2">
-          {isLive && <span className="font-bold text-red-400 animate-pulse">● LIVE</span>}
-          {provisional && <span className="text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt">vorläufig</span>}
+        <span className="px-2 h-5 shrink-0 flex items-center justify-center gap-1.5 border-t border-line text-[10px] text-subtle bg-surface-2">
+          {isLive && <span className="flex items-center gap-1 font-bold text-live"><span className="size-1.5 rounded-full bg-live animate-pulse" />LIVE</span>}
+          {provisional && <span className="flex items-center gap-1 text-warning" title="Von Spielern gemeldet, noch nicht bestätigt"><Clock className="size-3" />vorläufig</span>}
           {isBye && <span>kampflos weiter</span>}
           {!isBye && footer && <span className="truncate">{footer}</span>}
         </span>

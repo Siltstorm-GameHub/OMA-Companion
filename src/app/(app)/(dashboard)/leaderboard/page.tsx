@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Podium } from "@/components/ui/Podium";
 import { RankCell } from "@/components/ui/Table";
 import { HeartColor as Heart } from "@/components/icons-color";
 import type { Metadata } from "next";
@@ -209,12 +210,6 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     );
   };
 
-  // Podium wie auf der Übersicht: 2 · 1 · 3, Avatar mit Medaillen-Ring, Platz-Badge und Sockel
-  const PODIUM = [
-    { idx: 1, size: 64, ring: "ring-gray-300", badge: "bg-gray-300 text-canvas", stand: "h-20" },
-    { idx: 0, size: 84, ring: "ring-coin", badge: "bg-coin text-canvas", stand: "h-28" },
-    { idx: 2, size: 64, ring: "ring-amber-700", badge: "bg-amber-700 text-fg", stand: "h-14" },
-  ];
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
@@ -290,32 +285,20 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
 
       {/* ── Podest ── */}
       {podium.length === 3 && (
-        <div className="grid grid-cols-3 items-end gap-2 sm:gap-4 rounded-card border border-line bg-surface px-3 pt-6 sm:px-6">
-          {PODIUM.map(cfg => {
-            const e = podium[cfg.idx];
+        <Podium size="lg" className="rounded-card border border-line bg-surface px-3 pt-6 sm:px-6"
+          entries={podium.flatMap(e => {
             const p = personOf.get(e.id);
-            if (!p) return null;
-            const isMe = e.id === userId;
+            if (!p) return [];
             const name = p.username ?? p.name ?? "?";
-            return (
-              <GateLink key={e.id} href={isMe ? "/profile" : `/profile/${e.id}`} className="group flex min-w-0 flex-col items-center text-center">
-                <span className="relative">
-                  <span className={`block rounded-full ring-[3px] ${cfg.ring}`}>
-                    <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={cfg.size} rounded="full" />
-                  </span>
-                  <span className={`absolute -bottom-2 left-1/2 grid size-7 -translate-x-1/2 place-items-center rounded-full text-sm font-extrabold ${cfg.badge}`}>{cfg.idx + 1}</span>
-                </span>
-                <p className={`mt-4 max-w-full truncate text-sm sm:text-base font-extrabold ${isMe ? "text-primary-fg" : "text-fg"} group-hover:text-primary-fg`}>
-                  <CosmeticName nameColor={looks.get(e.id)?.nameColor}>{name}</CosmeticName>
-                  <WanderpocalBadgeServer userId={e.id} holdersMap={holdersMap} />
-                </p>
-                <p className="text-sm font-bold text-muted tabular-nums">{fmt(e.points)}</p>
-                {view === "gesamt" && <span className="mt-1 h-4"><RankDeltaBadge delta={rankDelta(e)} /></span>}
-                <span className={`mt-3 w-full rounded-t-control bg-surface-2 ${cfg.stand}`} aria-hidden />
-              </GateLink>
-            );
-          })}
-        </div>
+            return [{
+              id: e.id, name, image: p.image, isMe: e.id === userId,
+              href: e.id === userId ? "/profile" : `/profile/${e.id}`,
+              avatar: (size: number) => <RankedAvatar userId={e.id} look={looks.get(e.id)} src={p.image} alt={name} size={size} rounded="full" />,
+              nameNode: <><CosmeticName nameColor={looks.get(e.id)?.nameColor}>{name}</CosmeticName><WanderpocalBadgeServer userId={e.id} holdersMap={holdersMap} /></>,
+              value: <span className="text-sm">{fmt(e.points)}</span>,
+              below: view === "gesamt" ? <span className="mt-1 h-4"><RankDeltaBadge delta={rankDelta(e)} /></span> : undefined,
+            }];
+          })} />
       )}
 
       {/* ── Liste ab Platz 4 + dein Ausschnitt ── */}

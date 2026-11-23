@@ -142,53 +142,53 @@ export default function GameVoteSection({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-base font-extrabold text-fg flex items-center gap-2"><Glyph name="vote" className="size-4 text-primary-fg" /> Spielwahl</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-muted mt-0.5">
             {view.status === "prepared" && <>Die Abstimmung startet am {fmt(view.opensAt)} und läuft bis {fmt(view.closesAt)}. Stammspieler bekommen dann eine Meldung.</>}
             {view.status === "open" && <>Läuft bis {fmt(view.closesAt)} · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>}
             {view.status === "closed" && (winner
-              ? <>Gewählt: <span className="text-white font-semibold">{winner.name}</span> · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>
+              ? <>Gewählt: <span className="text-fg font-semibold">{winner.name}</span> · {view.voterCount} {view.voterCount === 1 ? "hat" : "haben"} abgestimmt</>
               : <>Abstimmung beendet — die Wahl hat kein Spiel ergeben. Der Veranstalter legt es fest.</>)}
           </p>
           {view.status === "closed" && view.decidedByLabel && winner && (
-            <p className="text-xs text-gray-500 mt-0.5">Entschieden durch: {view.decidedByLabel}</p>
+            <p className="text-xs text-subtle mt-0.5">Entschieden durch: {view.decidedByLabel}</p>
           )}
         </div>
         {view.status === "closed" && view.rulesPending && (
-          <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-200">
+          <span className="text-xs px-2.5 py-1 rounded-full bg-coin-soft font-semibold text-coin">
             {noWinner ? "Spiel folgt" : "Regeln folgen"}
           </span>
         )}
       </div>
 
       {view.status === "prepared" && canManage && (
-        <p className="text-xs text-sky-200/90 rounded-lg border border-sky-400/20 bg-sky-500/5 px-3 py-2">
+        <p className="text-xs text-muted rounded-control border border-line bg-surface-2 px-3 py-2">
           Noch nicht gestartet: Du kannst die Kandidaten bis dahin tauschen (unten hinzufügen bzw. 🗑 entfernen).
         </p>
       )}
 
       {open && (
-        <div className="text-xs text-gray-400 space-y-1.5">
+        <div className="text-xs text-muted space-y-1.5">
           <p>
             {view.canVote
-              ? <>Hak <span className="text-white">alle Spiele</span> an, die du spielen würdest — du kannst deine Auswahl bis zum Ende ändern.</>
+              ? <>Hak <span className="text-fg">alle Spiele</span> an, die du spielen würdest — du kannst deine Auswahl bis zum Ende ändern.</>
               : view.squadName
                 ? <>Abstimmen dürfen nur Mitglieder von {view.squadName}.</>
                 : <>Melde dich an, um abzustimmen.</>}
             {view.voteCoins > 0 && view.canVote && <> Fürs Abstimmen gibt es <span className="text-amber-300">+{view.voteCoins} Münzen</span>, wenn du zum Ende als Mitspieler angemeldet bist.</>}
           </p>
           {view.canVote && firstVote && !isRegistered && (
-            <label className="flex items-center gap-2 cursor-pointer select-none text-gray-300">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-fg/90">
               <input type="checkbox" checked={join} onChange={e => setJoin(e.target.checked)} className="rounded" />
               Mit meiner Stimme auch als Mitspieler anmelden
-              {!join && <span className="text-gray-500">(nur abstimmen{isSpectator ? ", du bleibst Zuschauer" : ""})</span>}
+              {!join && <span className="text-subtle">(nur abstimmen{isSpectator ? ", du bleibst Zuschauer" : ""})</span>}
             </label>
           )}
-          {view.countsHidden && <p className="text-gray-500">{COUNTS_HIDDEN_TEXT[view.showCounts] ?? "Zwischenstand später"}.</p>}
+          {view.countsHidden && <p className="text-subtle">{COUNTS_HIDDEN_TEXT[view.showCounts] ?? "Zwischenstand später"}.</p>}
         </div>
       )}
 
       {view.buyHint && winner && (
-        <div className="rounded-xl bg-primary/10 border border-primary/25 px-3 py-2.5 text-xs text-teal-100">
+        <div className="rounded-xl bg-primary/10 border border-primary/25 px-3 py-2.5 text-xs text-primary-fg">
           🛒 <span className="font-semibold">So kommst du an {winner.name}:</span> {view.buyHint}{" "}
           <Link href={`/spiele/${winner.slug}`} className="underline underline-offset-2">Zur Spielseite</Link>
         </div>
@@ -201,16 +201,16 @@ export default function GameVoteSection({
           return (
             <div key={c.id}
               className={`flex gap-3 rounded-xl border p-2.5 transition-colors ${
-                isWinner ? "border-emerald-400/50 bg-emerald-500/10" : picked ? "border-primary/40 bg-primary/[0.07]" : "border-line bg-surface-2"
+                isWinner ? "border-emerald-400/50 bg-success-soft" : picked ? "border-primary/40 bg-primary/[0.07]" : "border-line bg-surface-2"
               }`}>
-              <GameCover game={c.name} coverUrl={c.coverUrl} className="w-24 aspect-[16/9] shrink-0" rounded="rounded-lg" fallbackVariant="plain" />
+              <GameCover game={c.name} coverUrl={c.coverUrl} className="w-24 aspect-[16/9] shrink-0" rounded="rounded-control" fallbackVariant="plain" />
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-1.5">
                   {c.place !== null && view.status === "closed" && (
-                    <span className={`text-xs font-bold ${c.place === 1 ? "text-emerald-300" : "text-gray-500"}`}>{c.place}.</span>
+                    <span className={`text-xs font-bold ${c.place === 1 ? "text-success" : "text-subtle"}`}>{c.place}.</span>
                   )}
-                  <Link href={`/spiele/${c.slug}`} className="text-sm font-semibold text-white truncate hover:underline">{c.name}</Link>
-                  {isWinner && <Trophy className="w-3.5 h-3.5 text-emerald-300 shrink-0" />}
+                  <Link href={`/spiele/${c.slug}`} className="text-sm font-semibold text-fg truncate hover:underline">{c.name}</Link>
+                  {isWinner && <Trophy className="w-3.5 h-3.5 text-success shrink-0" />}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {c.origin === "carryover" && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-200">Knapp verpasst</span>}
@@ -218,25 +218,25 @@ export default function GameVoteSection({
                     ? <span className="text-xs px-1.5 py-0.5 rounded bg-lime-400/10 text-lime-200">Kostenlos</span>
                     : c.subscriptionLabels.length > 0
                       ? <span className="text-xs px-1.5 py-0.5 rounded bg-lime-400/10 text-lime-200">{c.subscriptionLabels.join(" / ")}</span>
-                      : c.priceLabel && <span className="text-xs px-1.5 py-0.5 rounded bg-line text-gray-300">{c.discountPercent > 0 ? `−${c.discountPercent} % · ` : ""}{c.priceLabel}</span>}
+                      : c.priceLabel && <span className="text-xs px-1.5 py-0.5 rounded bg-line text-fg/90">{c.discountPercent > 0 ? `−${c.discountPercent} % · ` : ""}{c.priceLabel}</span>}
                 </div>
-                {c.fitLabel && <p className="text-xs text-gray-500 line-clamp-2">{c.fitLabel}</p>}
+                {c.fitLabel && <p className="text-xs text-subtle line-clamp-2">{c.fitLabel}</p>}
               </div>
               <div className="flex flex-col items-end justify-between gap-1 shrink-0">
                 {open && view.canVote ? (
                   <button type="button" onClick={() => toggle(c.id)} aria-pressed={picked}
-                    className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                      picked ? "bg-primary text-primary-ink" : "bg-line text-gray-300 hover:bg-line"
+                    className={`inline-flex items-center gap-1 min-h-9 rounded-control px-3 text-xs font-semibold transition-colors ${
+                      picked ? "bg-primary text-primary-ink" : "bg-line text-fg/90 hover:bg-line"
                     } max-lg:min-h-10`}>
                     {picked && <Check className="w-3.5 h-3.5" />} Würde ich spielen
                   </button>
                 ) : <span />}
                 {view.status !== "prepared" && !view.countsHidden && (
-                  <span className="text-xs text-gray-500">{c.approvals} {c.approvals === 1 ? "Stimme" : "Stimmen"}</span>
+                  <span className="text-xs text-subtle">{c.approvals} {c.approvals === 1 ? "Stimme" : "Stimmen"}</span>
                 )}
                 {canManage && view.status !== "closed" && (
                   <button type="button" title="Kandidat entfernen" disabled={saving} onClick={() => removeCandidate(c)}
-                    className="p-1 rounded text-gray-600 hover:text-primary-fg disabled:opacity-40">
+                    className="p-1 rounded text-subtle hover:text-primary-fg disabled:opacity-40">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -247,12 +247,12 @@ export default function GameVoteSection({
       </div>
 
       {open && view.canVote && (pending || saving) && (
-        <p className="text-xs text-gray-500">Wird gespeichert …</p>
+        <p className="text-xs text-subtle">Wird gespeichert …</p>
       )}
 
       {canManage && view.status !== "closed" && (
         <div className="flex gap-2 items-center flex-wrap border-t border-line pt-3">
-          <span className="text-xs text-gray-500">Verwalten:</span>
+          <span className="text-xs text-subtle">Verwalten:</span>
           <select value={addId} onChange={e => setAddId(e.target.value)}
             className="flex-1 min-w-[180px] bg-surface-2 border border-line rounded-control px-2.5 py-1.5 text-sm text-fg">
             <option value="">Spiel aus der Spieleliste hinzufügen …</option>
@@ -302,22 +302,22 @@ function RulesForm({ eventId, view, rules, format, allGames }: {
     }
   }
 
-  const input = "w-full bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-primary/40";
+  const input = "w-full bg-line border border-line-strong rounded-control px-2.5 py-1.5 text-sm text-fg focus:outline-none focus:border-primary/40";
   return (
     <div className="border-t border-line pt-3 space-y-2.5">
-      <p className="text-sm font-semibold text-white">{allGames ? "Spiel festlegen" : "Regeln festlegen"}</p>
-      <p className="text-xs text-gray-500">
+      <p className="text-sm font-semibold text-fg">{allGames ? "Spiel festlegen" : "Regeln festlegen"}</p>
+      <p className="text-xs text-subtle">
         {allGames
           ? "Die Wahl hat kein Spiel ergeben. Such eins aus der Spieleliste aus. "
           : "Vorbelegt mit den Regeln, die diese Reihe zuletzt für das Spiel hatte. "}
         Erst nach der Freigabe kann ausgelost werden; die Reihe merkt sich Regeln{format ? " und Format" : ""} für das nächste Mal.
       </p>
       {!allGames && view.decidedByLabel && (
-        <p className={`text-xs rounded-lg px-2.5 py-1.5 ${close || view.decidedBy === "no_votes" ? "bg-amber-500/10 text-amber-200" : "bg-surface-2 text-gray-400"}`}>
+        <p className={`text-xs rounded-control px-2.5 py-1.5 ${close || view.decidedBy === "no_votes" ? "bg-warning-soft text-warning" : "bg-surface-2 text-muted"}`}>
           Ergebnis: {view.decidedByLabel}.{close ? " Knapp — du kannst auch ein anderes Spiel nehmen." : ""}
         </p>
       )}
-      <label className="block text-xs text-gray-400 space-y-1">
+      <label className="block text-xs text-muted space-y-1">
         <span>Spiel</span>
         <select value={gameId} onChange={e => setGameId(e.target.value)} className={input}>
           {allGames ? (
@@ -331,14 +331,14 @@ function RulesForm({ eventId, view, rules, format, allGames }: {
         </select>
       </label>
       {format && (
-        <label className="block text-xs text-gray-400 space-y-1">
+        <label className="block text-xs text-muted space-y-1">
           <span>Format</span>
           <select value={fmtValue} onChange={e => setFmtValue(e.target.value)} className={input}>
             {SERIES_FORMAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
       )}
-      <label className="block text-xs text-gray-400 space-y-1">
+      <label className="block text-xs text-muted space-y-1">
         <span>Regelwerk</span>
         <textarea value={text} onChange={e => setText(e.target.value)} rows={5} className={input} placeholder="Regeln für dieses Spiel …" />
       </label>

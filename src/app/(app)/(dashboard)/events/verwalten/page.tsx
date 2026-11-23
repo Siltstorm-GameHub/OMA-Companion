@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireEventArea, eventScopeWhere, seriesScopeWhere } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { Plus } from "@/components/icons";
+import { Plus, Repeat } from "@/components/icons";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { APPROVAL_PENDING, APPROVAL_REJECTED, getCreatorUsage, pendingApprovalEventWhere } from "@/lib/community-events";
 import { getCommunityLimits } from "@/lib/community-event-limits";
@@ -37,7 +38,7 @@ function rewardSummary(p: ReturnType<typeof eventPayout>): string {
 
 /**
  * Events → Reiter "Verwalten". Kopf mit Anlegen und — für Mitglieder — ihren Limits; für Mods die
- * Ansichten Alle / Meine / Von Mitgliedern. Darunter (ManageClient): "Braucht dich" (Freigaben,
+ * Ansichten Alle / Meine / Von Mitgliedern (mit Anzahl offener Events). Darunter (ManageClient): "Braucht dich" (Freigaben,
  * Abschlüsse, Turniere, Saisonabschlüsse), "Anstehend" nach Heute / Diese Woche / Später, Eventreihen
  * mit Fortschritt und Beendete — mit Suche.
  */
@@ -207,63 +208,44 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
   const canCreateEvent = isStaff || usage.openEvents < limits.maxOpenEvents;
   const canCreateSeries = isStaff || usage.activeSeries < limits.maxActiveSeries;
 
-  return (
-    <div className="space-y-4">
-      {/* ── Kopf: Anlegen, Limits (Mitglieder), Ansicht (Mods) ── */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {canCreateEvent ? (
-            <Link href="/events/verwalten/neu?mode=event"
-              className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg max-lg:min-h-10">
-              <Plus className="w-4 h-4" /> Neues Event
-            </Link>
-          ) : (
-            <span className="rounded-lg border border-line px-3 py-1.5 text-sm text-gray-500">
-              <Plus className="inline w-4 h-4 -mt-0.5" /> Neues Event
-            </span>
-          )}
-          {canCreateSeries ? (
-            <Link href="/events/verwalten/neu?mode=series"
-              className="flex items-center gap-1.5 text-sm font-medium text-violet-200 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 transition-colors px-3 py-1.5 rounded-lg max-lg:min-h-10">
-              <Plus className="w-4 h-4" /> Neue Eventreihe
-            </Link>
-          ) : (
-            <span className="rounded-lg border border-line px-3 py-1.5 text-sm text-gray-500">
-              <Plus className="inline w-4 h-4 -mt-0.5" /> Neue Eventreihe
-            </span>
-          )}
-        </div>
-        {isStaff && (
-          <nav aria-label="Ansicht" className="lg:ml-auto flex gap-1">
-            {VIEWS.map((v) => (
-              <Link key={v.key} href={v.href} aria-current={v.key === view ? "true" : undefined}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  v.key === view ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
-                }`}>
-                {v.label}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
+  // Mods: Anzahl offener Events je Ansicht (für die Chips "Alle · 12")
+  const viewCounts: Record<View, number> | null = isStaff
+    ? await Promise.all([
+        prisma.event.count({ where: { status: { notIn: ["finished", "archived"] } } }),
+        prisma.event.count({ where: { status: { notIn: ["finished", "archived"] }, ...eventScopeWhere(own) } }),
+        prisma.event.count({ where: { status: { notIn: ["finished", "archived"] }, approvalStatus: { not: null } } }),
+      ]).then(([alle, meine, community]) => ({ alle, meine, community }))
+    : null;
 
-      {/* Mitglieder: wie viele Events/Reihen angelegt und wie viele noch möglich. Der Grund für
-          gesperrte Knöpfe steht hier sichtbar (ein title-Tooltip erscheint auf dem Handy nicht). */}
-      {!isStaff && (
+  // Gesperrte Knöpfe (Limit erreicht): sichtbar, aber ausgegraut — der Grund steht in der Limit-Karte
+  const disabled = `${buttonClasses("secondary", "md")} pointer-events-none opacity-40`;
+  const createActions = (
+    <>
+      {canCreateEvent
+        ? <Link href="/events/verwalten/neu?mode=event" className={buttonClasses("primary", "md")}><Plus className="size-4" /> Neues Event</Link>
+        : <span aria-disabled className={disabled}><Plus className="size-4" /> Neues Event</span>}
+      {canCreateSeries
+        ? <Link href="/events/verwalten/neu?mode=series" className={buttonClasses("secondary", "md")}><Repeat className="size-4" /> Neue Eventreihe</Link>
+        : <span aria-disabled className={disabled}><Repeat className="size-4" /> Neue Eventreihe</span>}
+    </>
+  );
+
+  return (
+    <ManageClient
+      isStaff={isStaff}
+      nowIso={now.toISOString()}
+      events={[...openEvents, ...pastEvents].map(toDTO)}
+      series={seriesDTO}
+      approvals={approvals}
+      pastLimit={pastEvents.length >= PAST_LIMIT ? PAST_LIMIT : null}
+      createActions={createActions}
+      views={viewCounts ? VIEWS.map((v) => ({ ...v, count: viewCounts[v.key], active: v.key === view })) : null}
+      limits={!isStaff ? (
         <LimitMeter
           openEvents={usage.openEvents} maxOpenEvents={limits.maxOpenEvents}
           activeSeries={usage.activeSeries} maxActiveSeries={limits.maxActiveSeries}
         />
-      )}
-
-      <ManageClient
-        isStaff={isStaff}
-        nowIso={now.toISOString()}
-        events={[...openEvents, ...pastEvents].map(toDTO)}
-        series={seriesDTO}
-        approvals={approvals}
-        pastLimit={pastEvents.length >= PAST_LIMIT ? PAST_LIMIT : null}
-      />
-    </div>
+      ) : null}
+    />
   );
 }

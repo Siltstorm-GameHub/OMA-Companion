@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import GameCover from "@/components/GameCover";
+import { Podium } from "@/components/ui/Podium";
 import CoinIcon from "@/components/CoinIcon";
 import { GateLink } from "@/components/GuestGate";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
@@ -136,12 +137,6 @@ export function UpcomingEventsModule({ events }: { events: HomeUpcoming[] }) {
 
 export type HomeRankRow = { id: string; name: string; image: string | null; rankPoints: number };
 
-const PODIUM = [
-  // Reihenfolge auf dem Podium: 2 · 1 · 3
-  { place: 2, ring: "ring-gray-300", badge: "bg-gray-300 text-canvas", stand: "h-10" },
-  { place: 1, ring: "ring-coin", badge: "bg-coin text-canvas", stand: "h-14" },
-  { place: 3, ring: "ring-amber-700", badge: "bg-amber-700 text-fg", stand: "h-7" },
-] as const;
 
 function RankAvatar({ u, size, ring }: { u: HomeRankRow; size: number; ring?: string }) {
   const cls = `shrink-0 rounded-full object-cover ${ring ? `ring-2 ${ring}` : ""}`;
@@ -164,28 +159,18 @@ export function RankingModule({
   wanderpokal: { title: string; holders: string } | null;
 }) {
   if (top.length === 0) return null;
-  const podium = PODIUM.map((p) => ({ ...p, u: top[p.place - 1] })).filter((p) => p.u);
   const rest = top.slice(3);
   return (
     <section aria-label="Rangliste">
       <ModuleHeader title="Rangliste" href="/leaderboard" />
       <div className={`${CARD} overflow-hidden`}>
         {/* Podium */}
-        <ol className="grid grid-cols-3 items-end gap-2 px-3 pt-4">
-          {podium.map(({ place, ring, badge, stand, u }) => (
-            <li key={u.id} className="min-w-0">
-              <GateLink href={`/profile/${u.id}`} className="group flex flex-col items-center text-center">
-                <span className="relative">
-                  <RankAvatar u={u} size={place === 1 ? 52 : 42} ring={ring} />
-                  <span className={`absolute -bottom-1.5 left-1/2 grid size-5 -translate-x-1/2 place-items-center rounded-full text-xs font-extrabold ${badge}`}>{place}</span>
-                </span>
-                <span className="mt-2.5 w-full truncate text-sm font-bold text-fg group-hover:text-primary-fg">{u.name}</span>
-                <span className="text-xs font-semibold tabular-nums text-muted">{u.rankPoints.toLocaleString("de-DE")}</span>
-                <span className={`mt-2 w-full rounded-t-control bg-surface-2 ${stand}`} aria-hidden />
-              </GateLink>
-            </li>
-          ))}
-        </ol>
+        <Podium size="sm" className="px-3 pt-4"
+          entries={top.slice(0, 3).map(u => ({
+            id: u.id, name: u.name, image: u.image, href: `/profile/${u.id}`,
+            avatar: (size: number) => <RankAvatar u={u} size={size} />,
+            value: u.rankPoints.toLocaleString("de-DE"),
+          }))} />
         {/* Plätze 4–5 */}
         {rest.length > 0 && (
           <ol className="divide-y divide-line border-t border-line">

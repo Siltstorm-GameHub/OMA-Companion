@@ -34,8 +34,8 @@ function deadlineLabel(iso: string): string {
 /** Pott-Regeln zum Aufklappen */
 function PotRules() {
   return (
-    <details className="text-xs text-gray-500">
-      <summary className="cursor-pointer select-none hover:text-gray-300">So funktioniert der Pott</summary>
+    <details className="text-xs text-subtle">
+      <summary className="cursor-pointer select-none hover:text-fg/90">So funktioniert der Pott</summary>
       <ul className="mt-1.5 space-y-1 list-disc pl-4">
         <li>Dein Einsatz wird sofort abgebucht. Ändern oder löschen geht bis zum Start, dann gibt es ihn zurück.</li>
         <li>Alle Einsätze bilden den Pott. Wer richtig liegt, teilt ihn, gestaffelt nach Einsatz: Je Mitspieler kannst du höchstens deinen eigenen Einsatz gewinnen.</li>
@@ -120,11 +120,11 @@ export default function EventWinnerPredictionWidget({
   if (prediction?.resolved && prediction.correct === null) {
     return (
       <div className="glass rounded-2xl p-4 flex items-center gap-3 border border-line">
-        <Target className="w-4 h-4 text-gray-500 shrink-0" />
-        <p className="flex-1 min-w-0 text-sm text-gray-300">
+        <Target className="w-4 h-4 text-subtle shrink-0" />
+        <p className="flex-1 min-w-0 text-sm text-fg/90">
           Einsatz zurück: Dein Tipp auf {uname(prediction.predictedUser)} wurde nicht gewertet (kein Sieger oder der Spieler hat nicht mitgespielt).
         </p>
-        <span className="flex items-center gap-1 text-sm font-semibold text-gray-300 shrink-0">±0 <CoinIcon size={14} /></span>
+        <span className="flex items-center gap-1 text-sm font-semibold text-fg/90 shrink-0">±0 <CoinIcon size={14} /></span>
       </div>
     );
   }
@@ -136,18 +136,18 @@ export default function EventWinnerPredictionWidget({
     }
     return (
       <div className={`glass rounded-2xl p-4 flex items-center gap-3 ${
-        prediction.correct ? "border border-emerald-500/20" : "border border-line"
+        prediction.correct ? "border border-success/30" : "border border-line"
       }`}>
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-          prediction.correct ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-line border border-line-strong"
+          prediction.correct ? "bg-success-soft border border-success/30" : "bg-line border border-line-strong"
         }`}>
-          <Target className={`w-4 h-4 ${prediction.correct ? "text-emerald-400" : "text-gray-500"}`} />
+          <Target className={`w-4 h-4 ${prediction.correct ? "text-success" : "text-subtle"}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-white">
+          <p className="text-sm text-fg">
             <span className="inline-flex items-center gap-1.5"><Glyph name={prediction.correct ? "check" : "cross"} />{prediction.correct ? "Richtig getippt!" : "Leider daneben"}</span>
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-subtle">
             Du hast auf {uname(prediction.predictedUser)} getippt · Einsatz {prediction.wager} <CoinIcon size={10} className="inline" />
           </p>
         </div>
@@ -156,7 +156,7 @@ export default function EventWinnerPredictionWidget({
             +{prediction.coinsAwarded} <CoinIcon size={14} />
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-sm font-semibold text-gray-500 shrink-0">
+          <span className="flex items-center gap-1 text-sm font-semibold text-subtle shrink-0">
             -{prediction.wager} <CoinIcon size={14} />
           </span>
         )}
@@ -168,12 +168,12 @@ export default function EventWinnerPredictionWidget({
   if (prediction && !editing) {
     return (
       <div className="glass rounded-2xl p-4 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
-          <Target className="w-4 h-4 text-violet-400" />
+        <div className="size-10 rounded-control bg-primary-soft flex items-center justify-center shrink-0">
+          <Target className="size-5 text-primary-fg" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-white">Du tippst auf <span className="font-semibold">{uname(prediction.predictedUser)}</span></p>
-          <p className="text-xs text-gray-500 flex items-center gap-1 flex-wrap">
+          <p className="text-sm text-fg">Du tippst auf <span className="font-semibold">{uname(prediction.predictedUser)}</span></p>
+          <p className="text-xs text-subtle flex items-center gap-1 flex-wrap">
             Einsatz: {prediction.wager} <CoinIcon size={10} />
             {!locked && lockAt && <span>· ändern bis {deadlineLabel(lockAt)}</span>}
           </p>
@@ -182,7 +182,7 @@ export default function EventWinnerPredictionWidget({
           )}
         </div>
         {!locked && (
-          <button onClick={startEditing} className="text-xs text-gray-500 hover:text-white transition-colors shrink-0">
+          <button onClick={startEditing} className="text-xs text-subtle hover:text-fg transition-colors shrink-0">
             Ändern
           </button>
         )}
@@ -192,7 +192,7 @@ export default function EventWinnerPredictionWidget({
 
   if (locked) {
     return prediction ? null : (
-      <div className="glass rounded-2xl p-4 text-center text-sm text-gray-500">
+      <div className="glass rounded-2xl p-4 text-center text-sm text-subtle">
         Tipp-Abgabe für dieses Event ist gesperrt.
       </div>
     );
@@ -201,11 +201,11 @@ export default function EventWinnerPredictionWidget({
   return (
     <div className="glass rounded-2xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Target className="w-4 h-4 text-violet-400 shrink-0" />
-        <p className="text-sm font-semibold text-white">Wer gewinnt dieses Event?</p>
-        {lockAt && !editing && <span className="ml-auto text-xs text-gray-500">Tippen bis {deadlineLabel(lockAt)}</span>}
+        <Target className="size-5 text-primary-fg shrink-0" />
+        <p className="text-base font-extrabold text-fg">Wer gewinnt dieses Event?</p>
+        {lockAt && !editing && <span className="ml-auto text-xs text-subtle">Tippen bis {deadlineLabel(lockAt)}</span>}
         {editing && (
-          <button onClick={() => { setEditing(false); setSelected(null); }} className="ml-auto text-gray-500 hover:text-white">
+          <button onClick={() => { setEditing(false); setSelected(null); }} className="ml-auto text-subtle hover:text-fg">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -213,22 +213,22 @@ export default function EventWinnerPredictionWidget({
 
       {selected ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-control bg-primary-soft/60 border border-primary/25">
             <RankedAvatar userId={selected.id} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
-            <span className="flex-1 text-sm text-white">{uname(selected)}</span>
-            <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
+            <span className="flex-1 text-sm text-fg">{uname(selected)}</span>
+            <button onClick={() => setSelected(null)} className="text-subtle hover:text-fg">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           <label className="block">
-            <span className="text-xs text-gray-500">Einsatz ({minWager}–{maxWager} Münzen)</span>
+            <span className="text-xs text-subtle">Einsatz ({minWager}–{maxWager} Münzen)</span>
             <NumberInput
               min={minWager}
               max={maxWager}
               value={wager}
               onChange={e => setWager(Math.max(minWager, Math.min(maxWager, parseInt(e.target.value, 10) || minWager)))}
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-line border border-line-strong text-white text-sm focus:outline-none focus:border-violet-500/50"
+              className="mt-1 w-full min-h-10 px-3 rounded-control bg-surface-2 border border-line text-fg text-sm focus:outline-none focus:border-primary"
             />
           </label>
 
@@ -238,7 +238,7 @@ export default function EventWinnerPredictionWidget({
           <button
             onClick={submit}
             disabled={submitting}
-            className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold transition-colors"
+            className="w-full min-h-11 rounded-control bg-primary hover:bg-primary-hover disabled:opacity-40 text-primary-ink text-sm font-bold transition-colors"
           >
             {submitting ? "Speichert…" : "Tipp abgeben"}
           </button>
@@ -249,7 +249,7 @@ export default function EventWinnerPredictionWidget({
           <div className="flex flex-wrap gap-1.5">
             {players.map(u => (
               <button key={u.id} type="button" onClick={() => setSelected(u)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-1 text-xs text-gray-200 hover:border-violet-400/40 hover:bg-violet-500/10 max-lg:min-h-10">
+                className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-2 py-1 text-xs text-fg hover:border-primary/40 hover:bg-primary-soft max-lg:min-h-10">
                 <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={18} className="w-[18px] h-[18px]" />
                 {uname(u)}
               </button>
@@ -257,7 +257,7 @@ export default function EventWinnerPredictionWidget({
           </div>
         )}
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-3.5 h-3.5 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
@@ -270,7 +270,7 @@ export default function EventWinnerPredictionWidget({
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-line text-left">
                   <RankedAvatar userId={u.id} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
-                  <span className="text-sm text-white">{uname(u)}</span>
+                  <span className="text-sm text-fg">{uname(u)}</span>
                 </button>
               ))}
             </div>

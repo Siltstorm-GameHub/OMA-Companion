@@ -13,7 +13,7 @@ import { timelineWindow, type SeriesContext } from "@/lib/series-context";
 export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; currentId: string }) {
   const index = ctx.position - 1;
   const win = timelineWindow(ctx.events, index, 9);
-  const NAV = "inline-flex items-center gap-1 rounded-lg border border-line bg-line px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:bg-line transition-colors max-w-[11rem]";
+  const NAV = "inline-flex min-h-9 items-center gap-1 rounded-control border border-line-strong bg-surface-2 px-3 text-xs font-semibold text-fg hover:bg-surface-3 transition-colors max-w-[11rem]";
 
   return (
     <section aria-label={`Eventreihe ${ctx.name}`} className="glass rounded-2xl px-3 sm:px-4 py-3 mb-3 border-l-4 flex flex-wrap items-center gap-x-4 gap-y-3"
@@ -27,7 +27,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
         ) : <span className="w-8" />}
 
         <ol className="flex items-center" aria-label={`Termin ${ctx.position} von ${ctx.total}`}>
-          {win.hiddenBefore > 0 && <li className="text-xs text-gray-600 mr-1">+{win.hiddenBefore}</li>}
+          {win.hiddenBefore > 0 && <li className="text-xs text-subtle mr-1">+{win.hiddenBefore}</li>}
           {win.items.map((e, i) => {
             const current = e.id === currentId;
             const dot = current
@@ -36,7 +36,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
                 ? <span className="block h-2.5 w-2.5 rounded-full bg-primary" />
                 : e.state === "live"
                   ? <span className="block h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
-                  : <span className="block h-2.5 w-2.5 rounded-full bg-white/20" />;
+                  : <span className="block h-2.5 w-2.5 rounded-full bg-line-strong" />;
             return (
               <li key={e.id} className="flex items-center">
                 {i > 0 && <span className={`h-0.5 w-2.5 sm:w-3.5 ${e.state === "done" ? "bg-primary/60" : "bg-line"}`} />}
@@ -48,7 +48,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
               </li>
             );
           })}
-          {win.hiddenAfter > 0 && <li className="text-xs text-gray-600 ml-1">+{win.hiddenAfter}</li>}
+          {win.hiddenAfter > 0 && <li className="text-xs text-subtle ml-1">+{win.hiddenAfter}</li>}
         </ol>
 
         {ctx.next ? (
@@ -59,7 +59,7 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
       </div>
 
       {/* Dein Stand + Endwertung */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 min-w-0">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted min-w-0">
         {ctx.myPlace ? (
           <span>Du: <span className="font-semibold text-primary-fg">Platz {ctx.myPlace}</span> von {ctx.tableSize} · {ctx.myPoints} Punkte</span>
         ) : (
@@ -68,14 +68,14 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
         {ctx.finalFirst && (
           <span className="flex items-center gap-1" title="Belohnung für Platz 1 der Endwertung — zum Abschluss der Reihe">
             Endwertung 1. Platz:
-            {ctx.finalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-semibold text-amber-400"><CoinIcon size={12} />{ctx.finalFirst.coins.toLocaleString("de-DE")}</span>}
+            {ctx.finalFirst.coins > 0 && <span className="flex items-center gap-0.5 font-bold text-coin"><CoinIcon size={12} />{ctx.finalFirst.coins.toLocaleString("de-DE")}</span>}
             {ctx.finalFirst.rankPoints > 0 && <span className="flex items-center gap-0.5 font-semibold text-primary"><RankPointsIcon size={12} />{ctx.finalFirst.rankPoints}</span>}
           </span>
         )}
       </div>
 
       <Link href={`/events/series/${ctx.id}`}
-        className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-black hover:brightness-110 transition max-lg:min-h-10"
+        className="ml-auto inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-semibold text-black hover:brightness-110 transition max-lg:min-h-10"
         style={{ background: ctx.color }}>
         Zur Reihe <ChevronRight className="w-3.5 h-3.5" />
       </Link>

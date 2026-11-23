@@ -1,41 +1,37 @@
-import Link from "next/link";
-import { ChevronRight } from "@/components/icons";
-import { Target } from "@/components/icons";
+import { Card } from "@/components/ui/Card";
+import { Glyph } from "@/components/ui/Glyph";
 
-export default function PredictionStreakCard({
-  current,
-  best,
-  pendingCount,
-}: {
+function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-control bg-surface-2 px-3 py-2.5 text-center">
+      <p className={`text-2xl font-extrabold leading-none tabular-nums ${tone}`}>{value}</p>
+      <p className="mt-1 text-xs font-semibold text-subtle">{label}</p>
+    </div>
+  );
+}
+
+/** Reiter "Vorhersagen": Serie (aktuell / beste) und offene Tipps auf einen Blick. */
+export default function PredictionStreakCard({ current, best, pendingCount }: {
   current: number;
   best: number;
   pendingCount: number;
 }) {
   return (
-    <div className="animate-slide-up">
-      <div className="flex items-center justify-between mb-2.5">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-          <Target className="w-3.5 h-3.5 text-violet-500/70" /> Event-Sieger-Vorhersagen
-        </h2>
-        <Link href="/events" className="text-xs flex items-center gap-0.5 text-primary hover:text-primary-fg transition-colors">
-          Turniere <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
-      <div className="surface overflow-hidden px-3.5 py-3 flex items-center gap-4"
-        style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-        <div className="flex-1">
-          <p className="text-xs text-gray-600 uppercase tracking-widest">Aktuelle Serie</p>
-          <p className="text-xl font-extrabold tabular-nums text-violet-300">{current}</p>
-        </div>
-        <div className="flex-1">
-          <p className="text-xs text-gray-600 uppercase tracking-widest">Beste Serie</p>
-          <p className="text-xl font-extrabold tabular-nums text-gray-300">{best}</p>
-        </div>
-        <div className="flex-1 text-right">
-          <p className="text-xs text-gray-600 uppercase tracking-widest">Ausstehend</p>
-          <p className="text-xl font-extrabold tabular-nums text-amber-400">{pendingCount}</p>
+    <Card aria-label="Deine Vorhersage-Serie" className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="grid size-9 place-items-center rounded-control bg-primary-soft text-primary-fg"><Glyph name="fire" className="size-5" /></span>
+        <div className="min-w-0">
+          <p className="text-base font-extrabold text-fg">Deine Serie</p>
+          <p className="text-xs text-subtle">
+            {current > 0 ? `${current} richtige Tipps in Folge` : "Tipp richtig, dann wächst deine Serie"}
+          </p>
         </div>
       </div>
-    </div>
+      <div className="flex gap-2">
+        <Stat label="Aktuell" value={current} tone="text-primary-fg" />
+        <Stat label="Beste" value={best} tone="text-fg" />
+        <Stat label="Offen" value={pendingCount} tone={pendingCount > 0 ? "text-warning" : "text-subtle"} />
+      </div>
+    </Card>
   );
 }

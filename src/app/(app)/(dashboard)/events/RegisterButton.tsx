@@ -146,7 +146,7 @@ export default function RegisterButton({
   // Event läuft schon: angemeldet, aber nicht mehr abmeldbar
   if (registered && !canUnregister) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold bg-primary/10 text-primary-fg border border-primary/25"
+      <span className="inline-flex min-h-9 items-center gap-1.5 text-sm px-3.5 rounded-control font-bold bg-primary-soft text-primary-fg border border-primary/30"
         title="Das Event läuft schon. Abmelden geht nicht mehr, sag dem Veranstalter Bescheid.">
         <Check className="w-3 h-3" /> Dabei
       </span>
@@ -158,10 +158,10 @@ export default function RegisterButton({
       return (
         <>
           <button type="button" onClick={toggleWaitlist} disabled={loading}
-            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold border transition-colors disabled:opacity-70 ${
+            className={`inline-flex min-h-9 items-center gap-1.5 text-sm px-3.5 rounded-control font-bold border transition-colors disabled:opacity-70 ${
               waitPos !== null
-                ? "bg-amber-500/10 text-amber-300 border-amber-500/25 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/25"
-                : "bg-line text-gray-200 border-line-strong hover:bg-line"
+                ? "bg-warning-soft text-warning border-warning/30 hover:bg-danger-soft hover:text-danger hover:border-danger/30"
+                : "bg-surface-2 text-fg border-line-strong hover:bg-surface-3"
             } max-lg:min-h-10`}>
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3" />}
             {waitPos !== null ? `Warteliste · Platz ${waitPos}` : "Voll · auf die Warteliste"}
@@ -171,11 +171,11 @@ export default function RegisterButton({
       );
     }
     return waitlistHref ? (
-      <Link href={waitlistHref} className="text-xs px-3 py-1.5 rounded-lg bg-line text-gray-400 border border-line hover:text-white">
+      <Link href={waitlistHref} className="inline-flex min-h-9 items-center text-sm font-semibold px-3.5 rounded-control bg-surface-2 text-muted border border-line hover:text-fg max-lg:min-h-10">
         Voll · Warteliste
       </Link>
     ) : (
-      <span className="text-xs px-3 py-1.5 rounded-lg bg-line text-gray-500 border border-line">
+      <span className="inline-flex min-h-9 items-center text-sm font-semibold px-3.5 rounded-control bg-surface-2 text-subtle border border-line">
         Voll
       </span>
     );
@@ -188,9 +188,9 @@ export default function RegisterButton({
           onClick={handleClick}
           disabled={loading}
           aria-pressed={registered}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all active:scale-95 ${
+          className={`flex min-h-9 items-center gap-1.5 text-sm px-3.5 rounded-control font-bold transition-all active:scale-95 ${
             registered
-              ? "bg-primary/10 text-primary-fg hover:bg-red-500/10 hover:text-red-400 border border-primary/25 hover:border-red-500/25"
+              ? "bg-primary-soft text-primary-fg hover:bg-danger-soft hover:text-danger border border-primary/30 hover:border-danger/30"
               : "bg-primary hover:bg-primary-hover text-primary-ink"
           } disabled:opacity-70 max-lg:min-h-10`}
         >
@@ -225,7 +225,7 @@ export default function RegisterButton({
           href={discordEventUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs text-primary-fg hover:text-teal-200 transition-colors whitespace-nowrap"
+          className="flex items-center gap-1 text-xs font-semibold text-primary-fg hover:text-fg transition-colors whitespace-nowrap"
         >
           <ExternalLink className="w-3 h-3" />
           Auf Discord anmelden

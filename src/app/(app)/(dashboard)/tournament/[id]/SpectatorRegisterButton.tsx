@@ -54,9 +54,9 @@ export default function SpectatorRegisterButton({ eventId, isSpectator, reward }
         onClick={toggle}
         disabled={loading}
         title="Abmelden als Zuschauer"
-        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-400 transition-colors border border-line hover:border-red-500/30 px-3 py-1.5 rounded-xl max-lg:min-h-10"
+        className="flex min-h-10 items-center gap-1.5 text-sm font-semibold text-muted hover:text-danger transition-colors border border-line bg-surface-2 hover:border-danger/30 px-3.5 rounded-control"
       >
-        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 text-emerald-400" />}
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="size-4 text-success" />}
         Als Zuschauer angemeldet
       </button>
     );
@@ -66,11 +66,11 @@ export default function SpectatorRegisterButton({ eventId, isSpectator, reward }
     <button
       onClick={toggle}
       disabled={loading}
-      className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-white transition-colors border border-line hover:border-line-strong px-3 py-1.5 rounded-xl max-lg:min-h-10"
+      className="flex min-h-10 items-center gap-1.5 text-sm font-semibold text-fg transition-colors border border-line-strong bg-surface-2 hover:bg-surface-3 px-3.5 rounded-control"
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
       Als Zuschauer anmelden
-      {rewardText && <span className="text-xs text-amber-300">{rewardText}</span>}
+      {rewardText && <span className="text-xs font-bold text-coin">{rewardText}</span>}
     </button>
   );
 }

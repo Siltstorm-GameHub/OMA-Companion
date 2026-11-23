@@ -2,6 +2,7 @@
 // Ausgelagert aus page.tsx (die Seite war über 1.800 Zeilen lang) — reine Darstellung, alle Werte als Props.
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import GameCover from "@/components/GameCover";
 import ClientTime from "@/components/ClientTime";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -34,13 +35,15 @@ export type EventHeroProps = {
   date: Date;
   serverTimeFallback: string;
   period: ReturnType<typeof periodInfo> | null;
+  /** Aktionsleiste, direkt unter dem Bild in derselben Karte */
+  footer?: ReactNode;
 };
 
 export default function EventHero({
-  event, omaOriginal, heroDate, seriesCtx, statusLabel, statusPill, phase, showCountdown, startsIn, myStatus, date, serverTimeFallback, period,
+  event, omaOriginal, heroDate, seriesCtx, statusLabel, statusPill, phase, showCountdown, startsIn, myStatus, date, serverTimeFallback, period, footer,
 }: EventHeroProps) {
   return (
-      <section aria-label={event.title} className="relative overflow-hidden rounded-card border border-line mb-3">
+      <section aria-label={event.title} className="relative overflow-hidden rounded-card border border-line bg-surface shadow-card mb-3">
         {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
             → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
         <div className="relative w-full aspect-[16/9] sm:aspect-[16/6]">
@@ -80,7 +83,7 @@ export default function EventHero({
                 </span>
               )}
               {myStatus && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${myStatus.tone === "teal" ? "bg-primary/15 text-primary-fg" : myStatus.tone === "amber" ? "bg-amber-400/15 text-amber-300" : "bg-line text-gray-300"}`} style={{ textShadow: "none" }}>
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${myStatus.tone === "teal" ? "bg-primary/15 text-primary-fg" : myStatus.tone === "amber" ? "bg-warning-soft text-warning" : "bg-surface-3 text-muted"}`} style={{ textShadow: "none" }}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> {myStatus.label}
                 </span>
               )}
@@ -95,7 +98,7 @@ export default function EventHero({
               {omaOriginal && <OmaTitlePrefix title={event.title} />}
               {event.title}
             </h1>
-            <p className="mt-1.5 text-sm text-gray-200">
+            <p className="mt-1.5 text-sm font-semibold text-fg/90">
               {formatBerlinDate(date, { weekday: "long", day: "2-digit", month: "long" })}
               {" · "}<ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
               {event.endAt && !period && <> – {formatBerlinTime(event.endAt, { hour: "2-digit", minute: "2-digit" })} Uhr</>}
@@ -108,6 +111,7 @@ export default function EventHero({
             </div>
           )}
         </div>
+        {footer}
       </section>
   );
 }

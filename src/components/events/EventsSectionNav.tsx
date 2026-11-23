@@ -11,7 +11,11 @@ const TABS = [
   { key: "manage", label: "Verwalten", href: "/events/verwalten", icon: Settings },
 ] as const;
 
-export default function EventsSectionNav({ active }: { active: (typeof TABS)[number]["key"] }) {
+export default function EventsSectionNav({ active, manageCount = 0 }: {
+  active: (typeof TABS)[number]["key"];
+  /** Offene Aufgaben in der Verwaltung (Zahl am Reiter "Verwalten") */
+  manageCount?: number;
+}) {
   return (
     <nav aria-label="Events" className="flex gap-1 border-b border-line overflow-x-auto scrollbar-none whitespace-nowrap">
       {TABS.map((t) => {
@@ -19,10 +23,15 @@ export default function EventsSectionNav({ active }: { active: (typeof TABS)[num
         return (
           <Link key={t.key} href={t.href} aria-current={on ? "page" : undefined}
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              on ? "border-primary text-white" : "border-transparent text-gray-500 hover:text-gray-300"
+              on ? "border-primary text-fg" : "border-transparent text-subtle hover:text-muted"
             }`}>
             <t.icon className="w-3.5 h-3.5" />
             {t.label}
+            {t.key === "manage" && manageCount > 0 && (
+              <span className="ml-0.5 min-w-5 rounded-full bg-warning px-1.5 text-center text-xs font-bold leading-5 tabular-nums text-canvas" aria-label={`${manageCount} offen`}>
+                {manageCount > 99 ? "99+" : manageCount}
+              </span>
+            )}
           </Link>
         );
       })}
