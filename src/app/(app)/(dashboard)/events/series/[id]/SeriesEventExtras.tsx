@@ -24,14 +24,13 @@ export default function SeriesEventExtras({
       {partners.length > 0 && <Tv2 className="w-3 h-3 text-[#9146ff] shrink-0" aria-label="Wird gestreamt von" />}
       {partners.map(sp => (
         <a key={sp.partner.id} href={`https://twitch.tv/${sp.partner.twitchLogin}`} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-lg font-medium hover:brightness-110 transition-all"
-          style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}>
+          className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border border-[#9146ff]/30 bg-[#9146ff]/15 text-[#c4a3ff] hover:bg-[#9146ff]/25 transition-colors">
           <Image src={sp.partner.logoUrl} alt="" width={12} height={12} className="rounded-full shrink-0" />
           {sp.partner.name}
         </a>
       ))}
       {bonus.length > 0 && (
-        <span className="flex items-center gap-1.5 text-xs px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300"
+        <span className="flex items-center gap-1.5 text-xs px-1.5 py-0.5 rounded-full bg-coin-soft text-coin font-semibold"
           title="Platzierungs-Bonus je Event: gibt es direkt nach diesem Termin">
           <span className="font-semibold">Bonus</span>
           {bonus.slice(0, 3).map(b => (

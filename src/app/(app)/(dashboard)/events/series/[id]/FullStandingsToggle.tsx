@@ -48,21 +48,21 @@ export default function FullStandingsToggle({ defaultExpanded, ...props }: Props
     <div className="space-y-3">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 glass rounded-2xl px-5 py-4 hover:bg-surface-2 transition-colors group">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+        className="w-full flex min-h-12 items-center gap-2 rounded-card border border-line bg-surface shadow-card px-5 hover:bg-surface-2 transition-colors group">
+        <div className="w-8 h-8 rounded-control bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
           <BarChart2 className="w-4 h-4 text-primary" />
         </div>
         <div className="flex-1 text-left min-w-0">
-          <p className="text-sm font-semibold text-white group-hover:text-teal-200 transition-colors">
+          <p className="text-sm font-semibold text-fg group-hover:text-primary-fg transition-colors">
             Vollständige Tabelle
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-subtle mt-0.5">
             {open ? "Ausblenden" : "Alle Statistiken & Veränderungen anzeigen"}
           </p>
         </div>
         {open
-          ? <ChevronUp className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors shrink-0" />
-          : <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors shrink-0" />
+          ? <ChevronUp className="w-4 h-4 text-subtle group-hover:text-primary transition-colors shrink-0" />
+          : <ChevronDown className="w-4 h-4 text-subtle group-hover:text-primary transition-colors shrink-0" />
         }
       </button>
 

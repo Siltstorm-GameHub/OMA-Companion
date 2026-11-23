@@ -51,28 +51,29 @@ type ArchivedSeason = {
   podium: { place: number; user: { id: string; name: string | null; username: string | null; image: string | null } }[];
 };
 
-const PODIUM_RING = ["ring-amber-400/70", "ring-gray-300/60", "ring-orange-500/60"];
+// Medaillenfarben wie beim Podest (components/ui/Podium)
+const PODIUM_RING = MEDAL.map(m => m.ring);
 
 function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archivedSeasons: ArchivedSeason[] }) {
   if (!archivedSeasons.length) return null;
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-        <Archive className="w-3.5 h-3.5 text-gray-600" /> Vergangene Saisons
+      <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+        <Archive className="size-4 text-muted" /> Vergangene Saisons
       </h2>
-      <div className="glass rounded-2xl overflow-hidden divide-y divide-line">
+      <div className="rounded-card border border-line bg-surface shadow-card overflow-hidden divide-y divide-line">
         {archivedSeasons.map(s => (
           <Link key={s.id} href={`/events/series/${s.id}`}
             className={`flex items-center gap-3.5 px-4 py-3 hover:bg-surface-2 transition-colors group ${s.id === currentId ? "bg-surface-2" : ""}`}>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Archive className="w-3.5 h-3.5 text-amber-400" />
+            <div className="size-10 rounded-control bg-coin-soft flex items-center justify-center shrink-0">
+              <Archive className="size-4 text-coin" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate group-hover:text-primary-fg transition-colors">
+              <p className="text-sm font-bold text-fg truncate group-hover:text-primary-fg transition-colors">
                 {s.name}
-                {s.id === currentId && <span className="ml-2 text-xs text-gray-600">(diese Saison)</span>}
+                {s.id === currentId && <span className="ml-2 text-xs text-subtle">(diese Saison)</span>}
               </p>
-              <p className="text-xs text-gray-600 mt-0.5">
+              <p className="text-xs text-subtle mt-0.5">
                 {s.firstEventAt
                   ? new Date(s.firstEventAt).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
                   : "–"}
@@ -85,22 +86,22 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
               {s.podium.length > 0 && (
                 <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
                   {s.podium.map(({ place, user }) => (
-                    <span key={user.id} className={`flex items-center gap-1 text-xs ${place === 1 ? "text-amber-300 font-semibold" : "text-gray-400"}`}>
-                      {place === 1 && <Crown className="w-3 h-3 text-amber-400" />}
+                    <span key={user.id} className={`flex items-center gap-1 text-xs ${place === 1 ? "text-coin font-bold" : "text-muted"}`}>
+                      {place === 1 && <Crown className="size-3.5 text-coin" />}
                       {user.image
                         ? <img src={user.image} alt="" className={`w-4 h-4 rounded-full object-cover ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />
                         : <span className={`w-4 h-4 rounded-full bg-gray-700 ring-1 ${PODIUM_RING[place - 1] ?? ""}`} />}
-                      <span className="text-gray-600">{place}.</span> {user.username ?? user.name ?? "?"}
+                      <span className="text-subtle">{place}.</span> {user.username ?? user.name ?? "?"}
                     </span>
                   ))}
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full text-coin bg-coin-soft">
                 Saison {s.seasonNumber ?? "–"}
               </span>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-primary transition-colors" />
+              <ChevronRight className="w-3.5 h-3.5 text-subtle group-hover:text-primary transition-colors" />
             </div>
           </Link>
         ))}
@@ -121,13 +122,13 @@ function SeasonSwitcher({ currentId, seasons }: {
         const current = s.id === currentId;
         return (
           <Link key={s.id} href={`/events/series/${s.id}`} title={s.name} aria-current={current ? "page" : undefined}
-            className={`shrink-0 text-xs rounded-full px-3 py-1.5 border transition-colors whitespace-nowrap ${
+            className={`shrink-0 inline-flex min-h-9 items-center text-sm font-semibold rounded-full px-3.5 border transition-colors whitespace-nowrap ${
               current
-                ? "bg-primary/15 border-primary/40 text-teal-200 font-semibold"
-                : "border-line text-gray-400 hover:text-white hover:border-line-strong"
+                ? "bg-primary-soft border-primary/40 text-primary-fg"
+                : "border-line bg-surface text-muted hover:text-fg hover:border-line-strong"
             }`}>
             Saison {s.seasonNumber ?? i + 1}
-            {s.status === "active" && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 align-middle" title="Aktuelle Saison" />}
+            {s.status === "active" && <span className="ml-1.5 inline-block size-1.5 rounded-full bg-success align-middle" title="Aktuelle Saison" />}
           </Link>
         );
       })}
@@ -670,8 +671,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const seasonTable = (
     <div className="space-y-3">
       {hasDelta && gamePhaseCompleteEvents[0] && (
-        <p className="flex items-center gap-1 text-xs text-emerald-500/80">
-          <TrendingUp className="w-3 h-3" /> Veränderung nach {gamePhaseCompleteEvents[0].title}
+        <p className="flex items-center gap-1 text-xs font-semibold text-success">
+          <TrendingUp className="size-3.5" /> Veränderung nach {gamePhaseCompleteEvents[0].title}
         </p>
       )}
       <SeriesStandingsTable
@@ -691,7 +692,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         mode="compact"
       />
       {standings.length === 0 && (
-        <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
+        <div className="rounded-card border border-dashed border-line-strong px-4 py-6 text-center text-sm text-muted">
           {isArchived ? "Keine Ergebnisse" : "Noch keine Ergebnisse"}
         </div>
       )}
@@ -721,7 +722,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       label: <span className="inline-flex items-center gap-1"><Crown className="w-3 h-3" /> All-Time</span>,
       panel: (
         <div id="all-time" className="space-y-2 scroll-mt-24">
-          <p className="text-xs text-gray-500">{groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</p>
+          <p className="text-xs text-subtle">{groupSeasons.length} Saisons zusammengezählt · Ø Platz aus den abgeschlossenen Saisons</p>
           <FullStandingsToggle
             rows={allTimeStandings}
             users={allTimeUsers}
@@ -747,26 +748,26 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   // Belohnungen im Kopf: Endwertung der Reihe (zum Abschluss) + Bonus je Termin (direkt nach jedem Event)
   const finalTop = (seriesPayout.seriesFinal ?? []).slice().sort((a, b) => a.place - b.place).slice(0, 3);
   const rewardsBlock = (finalTop.length > 0 || seriesPayout.placements.length > 0) ? (
-    <div className="rounded-xl border border-amber-400/20 bg-amber-500/[0.05] px-3 py-2.5 space-y-2">
+    <div className="rounded-control border border-coin/30 bg-coin-soft px-3 py-2.5 space-y-2">
       {finalTop.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-amber-300">Belohnung der Eventreihe <span className="font-normal text-gray-500">· zum Abschluss</span></p>
+          <p className="text-xs font-bold text-coin">Belohnung der Eventreihe <span className="font-semibold text-muted">· zum Abschluss</span></p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
             {finalTop.map(r => (
-              <span key={r.place} className="flex items-center gap-1 text-sm font-semibold text-white tabular-nums">
+              <span key={r.place} className="flex items-center gap-1 text-sm font-semibold text-fg tabular-nums">
                 <PlaceMedal place={r.place} />
-                {r.coins > 0 && <span className="flex items-center gap-0.5 text-amber-400"><CoinIcon size={13} />{r.coins.toLocaleString("de-DE")}</span>}
-                {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-primary"><RankPointsIcon size={13} />{r.rankPoints}</span>}
+                {r.coins > 0 && <span className="flex items-center gap-0.5 text-coin"><CoinIcon size={13} />{r.coins.toLocaleString("de-DE")}</span>}
+                {r.rankPoints > 0 && <span className="flex items-center gap-0.5 text-primary-fg"><RankPointsIcon size={13} />{r.rankPoints}</span>}
               </span>
             ))}
           </div>
         </div>
       )}
       {seriesPayout.placements.length > 0 && (
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           <span>Bonus je Termin:</span>
           {seriesPayout.placements.slice(0, 3).map(p => (
-            <span key={p.place} className="flex items-center gap-0.5 text-amber-300 tabular-nums">
+            <span key={p.place} className="flex items-center gap-0.5 font-semibold text-coin tabular-nums">
               <PlaceMedal place={p.place} /><CoinIcon size={11} />{p.coins.toLocaleString("de-DE")}
             </span>
           ))}
@@ -776,19 +777,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   ) : null;
 
   return (
-    <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="px-5 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto w-full min-w-0 space-y-5 animate-fade-in">
 
       {/* ── Back ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <Link href="/events"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Zurück zu Events
+        <Link href="/events" className={buttonClasses("ghost", "sm", "-ml-3")}>
+          <ArrowLeft className="size-4" /> Alle Events
         </Link>
         {/* Aktive Saison-Link (wenn gerade auf archivierter Saison) */}
         {isArchived && activeSibling && (
           <Link href={`/events/series/${activeSibling.id}`}
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-fg border border-primary/20 hover:border-primary/40 rounded-lg px-3 py-1.5 transition-all max-lg:min-h-10">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Zur aktuellen Saison →
+            className={buttonClasses("secondary", "sm")}>
+            <CheckCircle2 className="size-4 text-success" /> Zur aktuellen Saison
           </Link>
         )}
       </div>
@@ -801,16 +801,16 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────────── */}
       {series.hidden && isMod && (
-        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-rose-500/20 bg-rose-500/[0.04]">
-          <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
-          <p className="text-sm text-rose-300">
+        <div className="rounded-card px-4 py-3 flex items-center gap-3 border border-warning/40 bg-warning-soft">
+          <EyeOff className="size-4 text-warning shrink-0" />
+          <p className="text-sm text-fg">
             <span className="font-semibold">Ausgeblendet</span> — diese Reihe ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
           </p>
         </div>
       )}
 
       {/* ── Kopf: Cover mit Name + nächster Termin (bzw. Gesamtsieger einer archivierten Saison) ── */}
-      <section aria-label={series.name} className="glass rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]">
+      <section aria-label={series.name} className="rounded-card border border-line bg-surface shadow-card overflow-hidden grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]">
         {/* Cover-Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels → Default. Events der Reihe
             ohne eigenes Cover erben dieses Cover auf ihrer eigenen Detailseite (tournament/[id]/page.tsx). */}
         <div className="relative aspect-[16/8] lg:aspect-auto lg:min-h-[240px] overflow-hidden">
@@ -855,62 +855,62 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         <div className="flex flex-col gap-2 p-4 sm:p-5 border-t lg:border-t-0 lg:border-l border-line">
           {isArchived ? (
             <>
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
-                <Archive className="w-3.5 h-3.5" /> Saison abgeschlossen
-                {series.archivedAt && <span className="normal-case tracking-normal font-normal text-amber-400/60">· {formatBerlinDate(series.archivedAt, { day: "2-digit", month: "long", year: "numeric" })}</span>}
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-coin">
+                <Archive className="size-4" /> Saison abgeschlossen
+                {series.archivedAt && <span className="normal-case tracking-normal font-semibold text-muted">· {formatBerlinDate(series.archivedAt, { day: "2-digit", month: "long", year: "numeric" })}</span>}
               </p>
               {overallWinners.length > 0 ? (
                 <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-300 shrink-0" />
-                  <p className="text-lg font-bold text-white">{overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}</p>
+                  <Trophy className="size-6 text-coin shrink-0" />
+                  <p className="text-lg font-extrabold text-fg">{overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}</p>
                 </div>
               ) : (
-                <p className="text-sm text-gray-400">Kein Gesamtsieger eingetragen.</p>
+                <p className="text-sm text-muted">Kein Gesamtsieger eingetragen.</p>
               )}
               {activeSibling && (
-                <Link href={`/events/series/${activeSibling.id}`} className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover max-lg:min-h-10">
+                <Link href={`/events/series/${activeSibling.id}`} className={buttonClasses("primary", "md", "mt-auto w-fit")}>
                   Zur aktuellen Saison
                 </Link>
               )}
             </>
           ) : nextCard && nextSource ? (
             <>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <p className="text-xs font-bold uppercase tracking-wide text-subtle">
                 {nextCard.phase.phase === "live" || nextCard.phase.phase === "period" ? "Läuft gerade" : "Nächster Termin"}
               </p>
-              <Link href={nextCard.href} className="text-lg font-bold text-white leading-snug hover:underline line-clamp-2">
+              <Link href={nextCard.href} className="text-lg font-extrabold text-fg leading-snug hover:text-primary-fg line-clamp-2">
                 {nextCard.title}
               </Link>
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-fg/90">
                 {nextCard.date.top === "HEUTE" ? "Heute" : nextCard.date.top === "MORGEN" ? "Morgen" : `${nextCard.date.weekday.charAt(0)}${nextCard.date.weekday.slice(1).toLowerCase()} ${nextCard.date.day}.`}
                 {" · "}{nextCard.date.time} Uhr
-                {nextStartsIn && <span className="text-primary-fg"> · {nextStartsIn}</span>}
+                {nextStartsIn && <span className="font-bold text-primary-fg"> · {nextStartsIn}</span>}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-subtle">
                 {nextCard.playerCount}{nextCard.maxPlayers ? `/${nextCard.maxPlayers}` : ""} dabei
-                {nextCard.friendNames.length > 0 && <> · <span className="text-gray-300">{nextCard.friendNames.join(", ")}</span></>}
-                {nextCard.urgency && <> · <span className="text-amber-300">{nextCard.urgency}</span></>}
+                {nextCard.friendNames.length > 0 && <> · <span className="text-fg/90">{nextCard.friendNames.join(", ")}</span></>}
+                {nextCard.urgency && <> · <span className="font-semibold text-warning">{nextCard.urgency}</span></>}
               </p>
               {rewardsBlock && <div className="pt-1">{rewardsBlock}</div>}
               <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
                 <EventCardActions ev={nextSource} card={nextCard} viewer={viewer} userId={userId} />
                 <a href={`/api/events/${nextSource.id}/ics`} download
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-line px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-line max-lg:min-h-10">
-                  <CalendarPlus className="w-3.5 h-3.5" /> Kalender
+                  className={buttonClasses("secondary", "sm")}>
+                  <CalendarPlus className="size-4" /> In den Kalender
                 </a>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Nächster Termin</p>
-              <p className="text-sm text-gray-400">Gerade ist kein Termin geplant. Schau bald wieder vorbei.</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-subtle">Nächster Termin</p>
+              <p className="text-sm text-muted">Gerade ist kein Termin geplant. Schau bald wieder vorbei.</p>
               {rewardsBlock && <div className="mt-auto pt-2">{rewardsBlock}</div>}
             </>
           )}
         </div>
 
         {series.description && (
-          <p className="lg:col-span-2 px-4 sm:px-5 py-3 border-t border-line text-sm text-gray-400 leading-relaxed">{series.description}</p>
+          <p className="lg:col-span-2 px-4 sm:px-5 py-3 border-t border-line text-sm text-fg/90 leading-relaxed whitespace-pre-line">{series.description}</p>
         )}
       </section>
 
@@ -918,10 +918,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {activePollGroups.length > 0 && (
         <div className="space-y-3">
           {activePollGroups.map(group => (
-            <div key={group.eventId} className="glass rounded-2xl p-5 space-y-3">
+            <div key={group.eventId} className="rounded-card border border-line bg-surface shadow-card p-4 sm:p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-500 uppercase tracking-widest">{group.eventTitle}</span>
-                <Link href={`/tournament/${group.eventId}`} className="text-xs text-gray-600 hover:text-primary transition-colors">
+                <span className="text-xs font-bold text-subtle uppercase tracking-wide">{group.eventTitle}</span>
+                <Link href={`/tournament/${group.eventId}`} className="text-xs font-semibold text-primary-fg hover:text-fg transition-colors">
                   Zum Event →
                 </Link>
               </div>
@@ -946,8 +946,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── Tabelle (Reiter) | Dein Stand + Termine ───────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
         <section aria-label="Tabelle" className="lg:col-span-3 space-y-3 min-w-0">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
+          <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+            <Trophy className="size-4 text-coin" /> Tabelle
           </h2>
           <SectionTabs ariaLabel="Tabelle" tabs={tableTabs} />
         </section>
@@ -966,18 +966,19 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── So funktioniert's: Regeln, Punktesystem, Pokal ────────────────────── */}
       {(series.rules || punkteItems.length > 0 || (isTournamentSeries && seriesPokale.length === 0 && !isArchived)) && (
         <section id="regeln" aria-label="So funktioniert's" className="space-y-3 scroll-mt-24">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-primary" /> So funktioniert&apos;s
+          <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
+            <Zap className="size-4 text-primary-fg" /> So funktioniert&apos;s
           </h2>
           {punkteItems.length > 0 && (
-            <div className="glass rounded-2xl p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-2.5">Punktesystem</p>
+            <div className="rounded-card border border-line bg-surface shadow-card p-4 sm:p-5">
+              <p className="text-base font-extrabold text-fg mb-1">Punktesystem</p>
+              <p className="text-xs text-muted mb-3">So sammelst du Tabellenpunkte für diese Eventreihe. Wer am Ende vorn liegt, bekommt die Belohnung der Reihe.</p>
               <div className="flex flex-wrap gap-2">
                 {punkteItems.map((p, i) => (
-                  <span key={i} className="flex items-center gap-2 glass-heavy rounded-card px-2.5 py-1.5" title={p.who}>
+                  <span key={i} className="flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface-2 px-3" title={p.who}>
                     <span className="text-sm">{p.emoji}</span>
-                    <span className="text-xs text-gray-300">{p.label}</span>
-                    <span className="text-xs font-bold text-primary">{p.pts}</span>
+                    <span className="text-xs font-semibold text-fg">{p.label}</span>
+                    <span className="text-xs font-extrabold text-primary-fg">{p.pts}</span>
                   </span>
                 ))}
               </div>

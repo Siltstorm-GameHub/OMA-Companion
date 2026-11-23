@@ -25,13 +25,13 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
   const next = events.find(e => e.state === "live" || e.state === "next");
 
   return (
-    <section aria-label="Saison-Verlauf" className="glass rounded-2xl px-4 py-3">
+    <section aria-label="Saison-Verlauf" className="rounded-card border border-line bg-surface shadow-card px-4 py-3">
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <h2 className="text-xs font-semibold text-gray-400">
-          Saison-Verlauf <span className="text-gray-600 font-normal tabular-nums">· {doneCount} von {events.length} gespielt</span>
+        <h2 className="text-xs font-semibold text-muted">
+          Saison-Verlauf <span className="text-subtle font-normal tabular-nums">· {doneCount} von {events.length} gespielt</span>
         </h2>
         {next && (
-          <Link href={`/tournament/${next.id}`} className="text-xs font-medium text-primary-fg hover:text-teal-200">
+          <Link href={`/tournament/${next.id}`} className="text-xs font-medium text-primary-fg hover:text-primary-fg">
             {next.state === "live" ? "Läuft gerade" : `Nächster: ${shortDate(next.startAt)}`} →
           </Link>
         )}
@@ -48,7 +48,7 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
                 className="group flex flex-col items-center gap-1 shrink-0 w-8">
                 {e.state === "done" ? (
                   e.winner ? (
-                    <span className="rounded-full ring-2 ring-primary/80 group-hover:ring-teal-300">
+                    <span className="rounded-full ring-2 ring-primary/80 group-hover:ring-primary-fg">
                       <RankedAvatar userId={e.winner.id} src={e.winner.image} alt={e.winner.username ?? e.winner.name ?? "?"} size={22} variant="flat" className="w-[22px] h-[22px]" />
                     </span>
                   ) : (
@@ -57,11 +57,11 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
                 ) : e.state === "live" ? (
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-red-400"><span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /></span>
                 ) : e.state === "next" ? (
-                  <span className="h-[22px] w-[22px] rounded-full border-2 border-teal-300 bg-primary/15 group-hover:bg-primary/30" />
+                  <span className="h-[22px] w-[22px] rounded-full border-2 border-primary-fg bg-primary-soft group-hover:bg-primary/30" />
                 ) : (
                   <span className="mt-[5px] h-3 w-3 rounded-full bg-white/[0.15] group-hover:bg-white/30" />
                 )}
-                <span className={`text-xs tabular-nums whitespace-nowrap ${e.state === "next" || e.state === "live" ? "text-primary-fg font-semibold" : "text-gray-600"}`}>
+                <span className={`text-xs tabular-nums whitespace-nowrap ${e.state === "next" || e.state === "live" ? "text-primary-fg font-semibold" : "text-subtle"}`}>
                   {shortDate(e.startAt)}
                 </span>
               </Link>

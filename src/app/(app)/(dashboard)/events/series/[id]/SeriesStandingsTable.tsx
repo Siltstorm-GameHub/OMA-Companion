@@ -90,7 +90,7 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
   }
   if (delta.rankDelta > 0) {
     return (
-      <span className="flex items-center gap-0.5 text-xs font-semibold text-emerald-400 leading-none">
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-success leading-none">
         <TrendingUp className="w-2.5 h-2.5" />
         {delta.rankDelta}
       </span>
@@ -98,25 +98,25 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
   }
   if (delta.rankDelta < 0) {
     return (
-      <span className="flex items-center gap-0.5 text-xs font-semibold text-red-400 leading-none">
+      <span className="flex items-center gap-0.5 text-xs font-semibold text-danger leading-none">
         <TrendingDown className="w-2.5 h-2.5" />
         {Math.abs(delta.rankDelta)}
       </span>
     );
   }
-  return <Minus className="w-2.5 h-2.5 text-gray-700" />;
+  return <Minus className="w-2.5 h-2.5 text-subtle/60" />;
 }
 
 function StatDelta({ value, delta, pointsPer }: { value: number; delta: number | undefined; pointsPer?: number }) {
   const pts = delta != null && delta > 0 && pointsPer ? delta * pointsPer : 0;
   return (
     <div className="flex flex-col items-center gap-0">
-      <span className="text-sm text-gray-300 tabular-nums leading-tight">
-        {value > 0 ? value.toLocaleString("de-DE") : <span className="text-gray-700">–</span>}
+      <span className="text-sm text-fg/90 tabular-nums leading-tight">
+        {value > 0 ? value.toLocaleString("de-DE") : <span className="text-subtle/60">–</span>}
       </span>
       {delta != null && delta > 0 && (
-        <span className="text-[9px] text-emerald-500 tabular-nums leading-none">
-          +{delta}{pts > 0 && <span className="text-emerald-600/70"> · +{pts} Pkt.</span>}
+        <span className="text-[9px] text-success tabular-nums leading-none">
+          +{delta}{pts > 0 && <span className="text-success/70"> · +{pts} Pkt.</span>}
         </span>
       )}
     </div>
@@ -124,16 +124,16 @@ function StatDelta({ value, delta, pointsPer }: { value: number; delta: number |
 }
 
 function PointsCell({ value, rank, delta }: { value: number; rank: number; delta?: number }) {
-  if (value <= 0) return <span className="text-gray-700 font-normal text-xs">–</span>;
+  if (value <= 0) return <span className="text-subtle/60 font-normal text-xs">–</span>;
   return (
     <div className="flex flex-col items-end gap-0">
       <span className={`text-sm font-bold tabular-nums leading-tight ${
-        rank === 1 ? "text-amber-400" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : "text-white"
+        rank === 1 ? "text-coin" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-700" : "text-fg"
       }`}>
         {value.toLocaleString("de-DE")}
       </span>
       {!!delta && (
-        <span className={`text-[9px] tabular-nums leading-none ${delta > 0 ? "text-emerald-500" : "text-red-500"}`}>
+        <span className={`text-[9px] tabular-nums leading-none ${delta > 0 ? "text-success" : "text-danger"}`}>
           {delta > 0 ? "+" : ""}{delta.toLocaleString("de-DE")}
         </span>
       )}
@@ -147,7 +147,7 @@ function SeasonBadge({ label }: { label: string }) {
   return (
     <span title={champion ? "Gesamtsieger der Vorsaison" : `${label.replace("Vorsaison ", "Platz ")} der Vorsaison`}
       className={`ml-1.5 shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${
-        champion ? "text-amber-300 bg-amber-500/10 border-amber-500/30" : "text-gray-400 bg-line border-line-strong"
+        champion ? "text-coin bg-coin-soft border-coin/30" : "text-muted bg-surface-3 border-line-strong"
       }`}>
       {champion && <Crown className="w-2.5 h-2.5" />}{label}
     </span>
@@ -223,9 +223,9 @@ export default function SeriesStandingsTable({
         {/* Legend */}
         {hasDelta && lastEventTitle && (
           <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
-            <TrendingUp className="w-3 h-3 text-emerald-500/60" />
-            <span className="text-xs text-gray-600">
-              Veränderung nach: <span className="text-gray-500">{lastEventTitle}</span>
+            <TrendingUp className="w-3 h-3 text-success/70" />
+            <span className="text-xs text-subtle">
+              Veränderung nach: <span className="text-subtle">{lastEventTitle}</span>
             </span>
           </div>
         )}
@@ -251,7 +251,7 @@ export default function SeriesStandingsTable({
               className="grid items-center px-4 py-3 border-b border-line last:border-0 hover:bg-surface-2 transition-colors"
               style={{
                 gridTemplateColumns: fullGridCols,
-                background: isMe ? "rgb(22 48 45 / 0.7)" : "",
+                background: isMe ? "var(--color-primary-soft)" : "",
                 borderLeft: isMe ? "3px solid var(--color-primary)" : "3px solid transparent",
               }}>
               <div className="flex items-center justify-center"><RankCell rank={rank} /></div>
@@ -266,10 +266,10 @@ export default function SeriesStandingsTable({
                   {name}
                   {isMe && <span className="text-xs text-primary ml-1.5 shrink-0">(du)</span>}
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
-                  {row.hasLegacy && <span className="text-xs text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
+                  {row.hasLegacy && <span className="text-xs text-subtle ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
                   {row.disqualifiedEventCount > 0 && (
                     <span
-                      className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 bg-line px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-muted bg-surface-3 px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
                       title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Tabellenpunkte`}
                     >
                       <Ban className="w-2.5 h-2.5" /> {row.disqualifiedEventCount}
@@ -286,10 +286,10 @@ export default function SeriesStandingsTable({
               </div>
               {hasSpectatorTracking && (
                 <div className="text-center">
-                  <span className="text-sm text-gray-300 tabular-nums leading-tight">
+                  <span className="text-sm text-fg/90 tabular-nums leading-tight">
                     {row.spectatorParticipations > 0
                       ? row.spectatorParticipations.toLocaleString("de-DE")
-                      : <span className="text-gray-700">–</span>}
+                      : <span className="text-subtle/60">–</span>}
                   </span>
                 </div>
               )}
@@ -312,7 +312,7 @@ export default function SeriesStandingsTable({
                       <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}
                     </span>
                   ) : (
-                    <span className="text-gray-700">–</span>
+                    <span className="text-subtle/60">–</span>
                   )}
                 </div>
               ) : (
@@ -321,10 +321,10 @@ export default function SeriesStandingsTable({
                     <span className="text-sm text-purple-300 tabular-nums leading-tight">
                       {(row.stats[e.field] ?? 0) > 0
                         ? row.stats[e.field].toLocaleString("de-DE")
-                        : <span className="text-gray-700">–</span>}
+                        : <span className="text-subtle/60">–</span>}
                     </span>
                     {delta?.statDeltas[e.field] != null && delta.statDeltas[e.field] > 0 && (
-                      <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.statDeltas[e.field]}</span>
+                      <span className="text-[9px] text-success tabular-nums leading-none">+{delta.statDeltas[e.field]}</span>
                     )}
                   </div>
                 </div>
@@ -354,9 +354,9 @@ export default function SeriesStandingsTable({
       <div>
         {hasDelta && lastEventTitle && (
           <div className="px-4 py-2 border-b border-line flex items-center gap-1.5">
-            <TrendingUp className="w-3 h-3 text-emerald-500/60" />
-            <span className="text-xs text-gray-600 truncate">
-              nach: <span className="text-gray-500">{lastEventTitle}</span>
+            <TrendingUp className="w-3 h-3 text-success/70" />
+            <span className="text-xs text-subtle truncate">
+              nach: <span className="text-subtle">{lastEventTitle}</span>
             </span>
           </div>
         )}
@@ -381,7 +381,7 @@ export default function SeriesStandingsTable({
               className="grid min-h-14 items-center px-4 py-2.5 border-b border-line last:border-0 hover:bg-surface-2"
               style={{
                 gridTemplateColumns: compactCols,
-                background: isMe ? "rgb(22 48 45 / 0.7)" : "",
+                background: isMe ? "var(--color-primary-soft)" : "",
                 borderLeft: isMe ? "3px solid var(--color-primary)" : "3px solid transparent",
               }}>
               <div className="flex items-center justify-center"><RankCell rank={rank} /></div>
@@ -398,7 +398,7 @@ export default function SeriesStandingsTable({
                   {badges?.[row.userId] && <SeasonBadge label={badges[row.userId]} />}
                   {row.disqualifiedEventCount > 0 && (
                     <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>
-                      <Ban className="w-3 h-3 text-gray-500" />
+                      <Ban className="w-3 h-3 text-subtle" />
                     </span>
                   )}
                   {(dominionStreaks?.[row.userId] ?? 0) > 0 && (
@@ -417,7 +417,7 @@ export default function SeriesStandingsTable({
                 </div>
               ) : (
                 <div className="text-center">
-                  <span className="text-sm text-gray-400 tabular-nums">
+                  <span className="text-sm text-muted tabular-nums">
                     {fallbackStatField ? (row.stats[fallbackStatField] ?? 0) : row.participations}
                   </span>
                 </div>
@@ -459,7 +459,7 @@ export default function SeriesStandingsTable({
         {hasExtraData && (
           <button
             onClick={() => setExpanded(e => !e)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-gray-500 hover:text-gray-300 border-t border-line transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-subtle hover:text-fg/90 border-t border-line transition-colors"
           >
             {expanded
               ? <><ChevronUp className="w-3.5 h-3.5" /> Einfache Ansicht</>

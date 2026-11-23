@@ -12,12 +12,12 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+      <h2 className="text-base font-extrabold text-fg flex items-center gap-2">
         <CalendarDays className="w-3.5 h-3.5" /> Events
       </h2>
 
       {!hasAny && (
-        <div className="glass rounded-card px-4 py-8 text-center text-sm text-gray-600">
+        <div className="rounded-card border border-dashed border-line-strong px-4 py-8 text-center text-sm text-muted">
           Noch keine Events in dieser Reihe
         </div>
       )}
@@ -26,7 +26,7 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
         {upcoming}
 
         {upcoming.length === 0 && past.length > 0 && (
-          <p className="text-xs text-gray-600 text-center py-1">Keine aktiven oder kommenden Events</p>
+          <p className="text-xs text-subtle text-center py-1">Keine aktiven oder kommenden Events</p>
         )}
 
         {past.length > 0 && (
@@ -34,16 +34,16 @@ export default function SeriesEventList({ upcoming, past }: { upcoming: ReactNod
             <button
               onClick={() => setPastOpen(o => !o)}
               aria-expanded={pastOpen}
-              className="w-full flex items-center gap-2 glass rounded-card px-4 py-3 hover:bg-surface-2 transition-colors group">
-              <span className="flex-1 text-left text-xs font-medium text-gray-500 group-hover:text-gray-300 transition-colors">
+              className="w-full flex min-h-12 items-center gap-2 rounded-card border border-line bg-surface px-4 hover:bg-surface-2 transition-colors group">
+              <span className="flex-1 text-left text-xs font-medium text-subtle group-hover:text-fg/90 transition-colors">
                 Vergangene Events
               </span>
-              <span className="text-xs text-gray-600 px-1.5 py-0.5 rounded-full bg-line tabular-nums">
+              <span className="text-xs font-bold text-muted px-2 py-0.5 rounded-full bg-surface-3 tabular-nums">
                 {past.length}
               </span>
               {pastOpen
-                ? <ChevronUp className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors" />
-                : <ChevronDown className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                ? <ChevronUp className="w-3.5 h-3.5 text-subtle group-hover:text-muted transition-colors" />
+                : <ChevronDown className="w-3.5 h-3.5 text-subtle group-hover:text-muted transition-colors" />
               }
             </button>
 
