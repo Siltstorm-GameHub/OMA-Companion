@@ -6,12 +6,13 @@ import { eventDiscordUrl, type EventCardSource } from "@/lib/event-card-data";
 import type { EventViewerContext } from "@/lib/event-viewer";
 import type { EventCardData } from "./EventCard";
 
-const VIOLET = "rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400 transition-colors";
-const TEAL = "rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-ink hover:bg-primary-hover transition-colors";
+// Eine Knopffarbe für alle Aktionen (Teal) — dass gerade abgestimmt wird, zeigt die lila Pille auf der Karte.
+const TEAL = "inline-flex min-h-9 items-center rounded-control bg-primary px-3.5 text-sm font-bold text-primary-ink hover:bg-primary-hover transition-colors";
+const VIOLET = TEAL;
 
 /**
  * Die EINE Aktion einer Event-Kachel je nach Zustand — gleich auf Events-Seite, Eventreihe und
- * "Meine Events": Abstimmen/Mitwählen (violett), Anmelden/Einsteigen (teal), Gast-Hinweis oder
+ * "Meine Events": Abstimmen/Mitwählen, Anmelden/Einsteigen (alle teal), Gast-Hinweis oder
  * Schloss bei gesperrter Anmeldung.
  */
 export default function EventCardActions({

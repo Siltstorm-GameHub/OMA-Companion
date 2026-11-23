@@ -129,6 +129,14 @@ export default function EventCard({
               <Check className="w-3 h-3" /> Dabei
             </span>
           )}
+          {ev.kind && (
+            <span
+              title={ev.kind === "community" ? "Ohne Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
+              aria-label={EVENT_KIND_LABEL[ev.kind].label}
+              className={`absolute bottom-2 left-2 grid size-8 place-items-center rounded-full bg-canvas/90 shadow-card ${ev.kind === "community" ? "text-violet-300" : "text-coin"}`}>
+              <Glyph name={ev.kind === "community" ? "handshake" : "trophy"} className="size-4" />
+            </span>
+          )}
           {ev.phase.phase === "period" && ev.phase.progress != null && (
             <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/40" title={`${Math.round(ev.phase.progress * 100)} % des Zeitraums vorbei`}>
               <div className="h-full bg-primary/80" style={{ width: `${ev.phase.progress * 100}%` }} />
@@ -160,26 +168,27 @@ export default function EventCard({
         {/* Signale: Zustand, Dringlichkeit, Relevanz — nur was vom Normalfall abweicht */}
         <div className="flex items-center gap-1 flex-wrap min-w-0">
           {signal && (
-            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-xs font-medium ${tone.pill} ${ev.phase.phase === "live" ? "hidden" : ""}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${tone.pill} ${ev.phase.phase === "live" ? "hidden" : ""} ${ev.phase.phase === "poll" ? "ring-1 ring-violet-400/50" : ""}`}>
               {ev.phase.phase === "period" && <Timer className="w-3 h-3" />}
+              {(ev.phase.phase === "poll" || ev.phase.phase === "gamevote") && <Glyph name="vote" className="size-3.5" />}
               {signal}
             </span>
           )}
-          {ev.urgency && <span className={`inline-flex items-center rounded px-1.5 py-px text-xs font-medium ${TONE_CLASSES.amber.pill}`}>{ev.urgency}</span>}
+          {ev.urgency && <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${TONE_CLASSES.amber.pill}`}>{ev.urgency}</span>}
           {/* "Dein Spiel"/"Dein Squad" bewusst ohne Abzeichen — wirken nur auf Sortierung und Filter */}
           {ev.isRegistered && (
             <span className={`${row ? "" : "hidden"} inline-flex items-center gap-1 rounded px-1.5 py-px text-xs font-medium ${past ? TONE_CLASSES.muted.pill : TONE_CLASSES.teal.pill}`}>
               <Check className="w-3 h-3" />{past ? "Mitgespielt" : "Dabei"}
             </span>
           )}
-          {ev.kind && (
+          {ev.kind && row && (
             <span
               title={ev.kind === "community" ? "Keine Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
               className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-xs font-medium ${ev.kind === "community" ? "bg-violet-500/15 text-violet-300" : "bg-amber-500/15 text-amber-300"}`}>
               <Glyph name={ev.kind === "community" ? "handshake" : "trophy"} className="size-3.5" />{EVENT_KIND_LABEL[ev.kind].label}
             </span>
           )}
-          {ev.metaLine && <span className={`${row ? "inline" : "hidden sm:inline"} text-xs text-gray-500 truncate`}>{ev.metaLine}</span>}
+          {ev.metaLine && row && <span className="text-xs text-gray-500 truncate">{ev.metaLine}</span>}
         </div>
 
         {/* Belegung (nur Kachel) + Mitspieler */}
@@ -188,7 +197,7 @@ export default function EventCard({
             <div className={`h-full rounded-full ${ev.urgency?.startsWith("Noch") ? "bg-amber-400" : dimmed ? "bg-gray-500" : "bg-primary"}`} style={{ width: `${fillPct}%` }} />
           </div>
         )}
-        {ev.avatars.length > 0 && (
+        {ev.avatars.length > 0 && row && (
           <div className="flex items-center gap-2 min-w-0">
             <div className="relative z-10 shrink-0"><AvatarStack users={ev.avatars} max={3} size="xs" /></div>
             <span className="text-xs text-gray-500 truncate">
@@ -204,7 +213,14 @@ export default function EventCard({
         {/* Fuß: Plätze + Münzen | Aktion */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <span className="flex items-center gap-2 text-xs text-gray-400 tabular-nums min-w-0">
-            <span className="flex items-center gap-1"><Users className="w-3 h-3" />{ev.playerCount}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""}</span>
+            {!row && ev.avatars.length > 0
+              ? (
+                <span className="flex items-center gap-1.5 min-w-0" title={ev.friendNames.length > 0 ? `${ev.friendNames.join(", ")}${othersCount > 0 ? ` und ${othersCount} weitere` : ""}` : `${ev.playerCount} dabei`}>
+                  <span className="relative z-10 shrink-0"><AvatarStack users={ev.avatars} max={3} size="xs" /></span>
+                  <span className="text-gray-300">{ev.playerCount}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""}</span>
+                </span>
+              )
+              : <span className="flex items-center gap-1"><Users className="w-3 h-3" />{ev.playerCount}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""}</span>}
             {ev.coins > 0 && !past && <span className="flex items-center gap-0.5 font-semibold text-amber-400">+{ev.coins}<CoinIcon size={11} /></span>}
             {ev.comments && ev.comments.unread > 0 ? (
               <span className="flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-px font-semibold text-primary-fg" title="Neue Nachrichten in den Absprachen">

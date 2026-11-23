@@ -139,9 +139,9 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
 }
 
 /**
- * Dauerhafter Hinweis für Gäste. Klebt unterhalb der fixierten Navigation, damit
- * er beim Scrollen sichtbar bleibt (Offsets entsprechen dem `pt` von <main> in
- * DashboardChrome).
+ * Dauerhafter Hinweis für Gäste oben auf der Seite. Bewusst nicht mehr klebend — er verdeckte
+ * beim Scrollen die klebenden Abschnitts-Überschriften (z. B. "Heute" auf der Events-Seite)
+ * und die Seitenleiste/Kopfzeile bietet "Anmelden" ohnehin dauerhaft.
  */
 export function GuestBanner() {
   const { isGuest, inviteUrl, openGate } = useGuestGate();
@@ -149,7 +149,7 @@ export function GuestBanner() {
 
   return (
     <div
-      className="sticky z-30 mx-3 sm:mx-6 top-[4.25rem] lg:top-[5.25rem] mb-3 lg:mb-4 rounded-card border border-primary/40 bg-surface shadow-pop"
+      className="mx-3 sm:mx-6 mb-3 lg:mb-4 rounded-card border border-primary/40 bg-surface shadow-card"
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-3.5 py-2.5">
         <div className="flex-1 min-w-0">

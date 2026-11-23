@@ -28,7 +28,7 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 import EventCard, { type EventCardData } from "@/components/events/EventCard";
 import NextEventHero from "@/components/events/NextEventHero";
 import RecentResultCard, { type RecentResultData } from "@/components/events/RecentResultCard";
-import EventFilterShell, { type EventFilterGame } from "@/components/events/EventFilterShell";
+import EventFilterShell, { type EventFilterGame, type EventFilterDay } from "@/components/events/EventFilterShell";
 import { EVENT_CARD_INCLUDE, eventDiscordUrl, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import { dayBucket, parseRanking, placementOf, startsInLabel } from "@/lib/event-display";
@@ -143,24 +143,37 @@ export default async function EventsPage() {
       ?? visibleUpcoming.find(i => (i.ev.status === "open" || i.ev.status === "closed") && isUserRegistered(i.ev, userId))
     : undefined;
 
-  // ── Gruppen: Heute / Diese Woche / danach pro Monat ──
+  // ── Gruppen: Läuft gerade / Heute / Diese Woche / danach pro Monat ──
+  // "Läuft gerade" = laufendes Turnier, Abstimmungsphase oder ein schon gestartetes Zeitraum-Event
+  // (Woche/Monat). Früher standen diese unter "Heute", obwohl sie z. B. "bis 30." laufen.
   const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: BERLIN_TZ });
   const groups: { key: string; label: string; items: Item[] }[] = [];
+  const isRunningNow = (i: Item) =>
+    i.ev.status === "active" || i.ev.status === "umfrage" || i.ev.startAt.getTime() <= now.getTime();
   const groupOf = (i: Item) => {
-    const running = i.ev.status === "active" || i.ev.status === "umfrage";
-    const bucket = dayBucket(i.ev.startAt, now, running);
+    if (isRunningNow(i)) return { key: "running", label: "Läuft gerade" };
+    const bucket = dayBucket(i.ev.startAt, now, false);
     if (bucket === "today") return { key: "today", label: "Heute" };
     if (bucket === "week") return { key: "week", label: "Diese Woche" };
     const p = getBerlinDateParts(i.ev.startAt);
     const label = MONTH_FORMATTER.format(i.ev.startAt);
     return { key: `${p.year}-${p.month}`, label: label.charAt(0).toUpperCase() + label.slice(1) };
   };
+  const moreInGroup = new Map<string, number>();
   for (const item of visibleUpcoming) {
     const g = groupOf(item);
     let group = groups.find(x => x.key === g.key);
     if (!group) { group = { ...g, items: [] }; groups.push(group); }
+    const sid = item.ev.seriesId;
+    if (sid && !isUserRegistered(item.ev, userId) && group.items.some(x => x.ev.seriesId === sid)) {
+      const k = `${g.key}:${sid}`;
+      moreInGroup.set(k, (moreInGroup.get(k) ?? 0) + 1);
+      continue;
+    }
     group.items.push(item);
   }
+  // Ausgeblendete Termine trotzdem im Wochen-Streifen zählen (Tag-Filter zeigt dann die Reihen-Karte)
+  const dayKeyOf = (d: Date) => { const p = getBerlinDateParts(d); return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`; };
 
   // ── Spiel-Chips: die häufigsten Spiele unter den anstehenden Events ──
   const gameCounts = new Map<string, { label: string; n: number }>();
@@ -171,11 +184,46 @@ export default async function EventsPage() {
     const cur = gameCounts.get(key);
     gameCounts.set(key, { label: cur?.label ?? i.ev.game, n: (cur?.n ?? 0) + 1 });
   }
-  const gameChips: EventFilterGame[] = [...gameCounts.entries()]
+  const topGames = [...gameCounts.entries()]
     .filter(([, v]) => v.n >= 1)
     .sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label, "de"))
-    .slice(0, MAX_GAME_CHIPS)
-    .map(([key, v]) => ({ key, label: v.label }));
+    .slice(0, MAX_GAME_CHIPS);
+  const longNames = topGames.filter(([, v]) => v.label.length > 16).map(([key]) => key);
+  const aliasRows = longNames.length
+    ? await prisma.game.findMany({ where: { nameKey: { in: longNames } }, select: { nameKey: true, aliases: true } })
+    : [];
+  const shortOf = new Map(aliasRows.map(r => {
+    const best = [...r.aliases].filter(a => a.trim().length >= 2).sort((a, b) => a.length - b.length)[0];
+    return [r.nameKey, best] as const;
+  }));
+  const gameChips: EventFilterGame[] = topGames.map(([key, v]) => {
+    const short = shortOf.get(key);
+    // Ohne Alias: lange Namen kürzen (Untertitel nach ":" oder vorangestellter Herausgeber weg)
+    const fallback = v.label.length > 16 ? v.label.replace(/^Tom Clancy's\s+/i, "").replace(/\s*[:–-].*$/, "") : v.label;
+    return { key, label: short && short.length < fallback.length ? short : fallback, title: v.label };
+  });
+
+  // (9) Wochen-Streifen: die nächsten 7 Tage mit Anzahl der Events (laufende Zeitraum-Events zählen an jedem Tag)
+  const dayKeysOf = (i: Item) => {
+    const start = i.ev.startAt.getTime();
+    const end = i.ev.endAt ? i.ev.endAt.getTime() : start;
+    const keys: string[] = [];
+    for (let d = 0; d < 7; d++) {
+      const dayStart = new Date(now.getTime() + d * 86_400_000);
+      const key = dayKeyOf(dayStart);
+      const startKey = dayKeyOf(new Date(start));
+      const endKey = dayKeyOf(new Date(Math.max(end, start)));
+      if (key >= startKey && key <= endKey) keys.push(key);
+    }
+    return keys;
+  };
+  const weekDays: EventFilterDay[] = Array.from({ length: 7 }, (_, d) => {
+    const date = new Date(now.getTime() + d * 86_400_000);
+    const key = dayKeyOf(date);
+    const count = visibleUpcoming.filter(i => dayKeysOf(i).includes(key)).length;
+    const wd = new Intl.DateTimeFormat("de-DE", { weekday: "short", timeZone: BERLIN_TZ }).format(date).replace(".", "");
+    return { key, weekday: d === 0 ? "Heute" : wd, day: getBerlinDateParts(date).day, count };
+  });
 
   // ── Kürzlich beendet: Treppchen + eigene Platzierung ──
   // Community-Events haben keine Platzierung (lib/event-placement.ts) — kein Treppchen, kein eigener Platz
@@ -209,7 +257,11 @@ export default async function EventsPage() {
 
       <PageHeader
         title="Events"
-        description={openCount > 0 ? <><span className="font-semibold text-primary-fg">{openCount}</span> offene Events · Turniere, Community-Abende und Reihen</> : "Turniere, Community-Abende und Reihen"}
+        description={openCount === 0
+          ? "Turniere, Community-Abende und Reihen"
+          : userId
+            ? <><span className="font-semibold text-primary-fg">{openCount}</span> offene Events · Turniere, Community-Abende und Reihen</>
+            : <>Vorschau: <span className="font-semibold text-primary-fg">{visibleUpcoming.length} von {openCount}</span> offenen Events — alle siehst du nach dem Login</>}
         actions={<>
           <GateLink href="/events/verwalten/neu" className={buttonClasses("primary", "md")}>
             <Plus className="w-4 h-4" /> Neues Event
@@ -249,7 +301,7 @@ export default async function EventsPage() {
         )}
 
         {visibleUpcoming.length > 0 && (
-          <EventFilterShell games={gameChips} loggedIn={!!userId}>
+          <EventFilterShell games={gameChips} days={weekDays} loggedIn={!!userId}>
             {groups.map(group => (
               <section key={group.key} data-ev-section aria-label={group.label} className="mb-5 last:mb-0">
                 <h2 className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] lg:top-[4.5rem] z-20 flex items-center gap-3 py-2 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-xs font-semibold text-gray-300 tracking-wide">
@@ -265,14 +317,20 @@ export default async function EventsPage() {
                         data-registered={card.isRegistered ? "1" : undefined}
                         data-mine={card.relevance.length > 0 ? "1" : undefined}
                         data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}
-                        data-kind={card.kind}>
+                        data-kind={card.kind}
+                        data-days={dayKeysOf(item).join(" ")}>
                         <ScrollReveal className="h-full">
                           <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />}
-                            extra={item.ev.seriesId && (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) > 0 ? (
-                              <Link href={`/events/series/${item.ev.seriesId}`} className="text-xs text-primary-fg hover:text-white">
-                                <Repeat className="inline size-3.5 align-[-2px]" /> +{moreCyclesBySeries.get(item.ev.seriesId)} weitere {moreCyclesBySeries.get(item.ev.seriesId) === 1 ? "Zyklus" : "Zyklen"} · Anmeldung offen
-                              </Link>
-                            ) : undefined} />
+                            extra={(() => {
+                              if (!item.ev.seriesId) return undefined;
+                              const more = (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) + (moreInGroup.get(`${group.key}:${item.ev.seriesId}`) ?? 0);
+                              if (more <= 0) return undefined;
+                              return (
+                                <Link href={`/events/series/${item.ev.seriesId}`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-fg hover:text-fg">
+                                  <Repeat className="size-3.5" /> +{more} {more === 1 ? "weiterer Termin" : "weitere Termine"} dieser Reihe
+                                </Link>
+                              );
+                            })()} />
                         </ScrollReveal>
                       </div>
                     );
