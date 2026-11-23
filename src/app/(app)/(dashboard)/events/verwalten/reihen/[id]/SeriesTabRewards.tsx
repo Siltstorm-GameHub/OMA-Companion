@@ -18,12 +18,12 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
           {/* Belohnungen */}
           <Section title="Belohnungen (Endplatzierung der Eventreihe)">
             <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center text-xs text-subtle px-1">
                 <span>Platzierung</span><span className="text-center">Punkte</span><span className="text-center">Münzen</span>
               </div>
               {placementRewards.map(r => (
                 <div key={r.place} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-                  <span className="text-sm text-gray-300 flex items-center gap-1.5">
+                  <span className="text-sm text-fg/90 flex items-center gap-1.5">
                     <PlaceMedal place={r.place} /> {r.place}. Platz
                   </span>
                   <div className="flex items-center gap-1">
@@ -45,10 +45,10 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                   Für Mitglieder-Reihen hängt die Obergrenze der Endwertung von der Zahl der Termine ab. Zu hohe Werte werden beim Saisonabschluss gekürzt.
                 </p>
               )}
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-subtle">
                 Wird bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben — nicht mehr pro einzelnem Event.
               </p>
-              <p className="text-xs text-gray-500 pt-1 border-t border-line">
+              <p className="text-xs text-subtle pt-1 border-t border-line">
                 Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Reihentabellen-Konfiguration" weiter unten.
               </p>
               <Checkbox
@@ -85,25 +85,25 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                 <LimitHint value={statSpectatorCoins} max={rewardLimits?.spectatorCoins} />
               </Field>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Wird jeweils direkt bei Abschluss des einzelnen Events vergeben, nicht erst am Ende der Reihe.
             </p>
           </Section>
 
           {/* Platzierungs-Bonus je Event */}
           <Section title="Platzierungs-Bonus je Event">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Für die Platzierung im jeweiligen Einzel-Event: zusätzliche Münzen und/oder Tabellenpunkte für die Reihentabelle
             </p>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs text-subtle uppercase tracking-wider">
                 <span className="w-24 shrink-0" />
                 <span className="flex items-center gap-1 w-24"><Coins className="w-3 h-3 text-amber-400" /> Münzen</span>
                 <span className="flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpunkte</span>
               </div>
               {eventPlacementCoins.map(r => (
                 <div key={r.place} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
+                  <span className="text-sm text-fg/90 flex items-center gap-1.5 w-24 shrink-0">
                     <PlaceMedal place={r.place} /> {r.place}. Platz
                   </span>
                   <div className="w-24">
@@ -118,7 +118,7 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Wird direkt bei Abschluss des jeweiligen Events anhand seiner Finalen Platzierung vergeben (bei
               Gleichstand bekommen alle Gleichplatzierten die Punkte dieses Platzes), unabhängig von der
               Endplatzierung der gesamten Reihe. Die Platzierung ergibt sich aus dem Sieger-Stat des Events.
@@ -130,7 +130,7 @@ export default function SeriesTabRewards({ ctx }: { ctx: SeriesDetail }) {
           {/* Geänderte Einstellungen auf bereits beendete Events anwenden */}
           {!isArchived && series.status !== "finished" && series.status !== "closed" && (
             <Section title="Bereits abgeschlossene Events">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-subtle">
                 Änderungen an Punkten und Statistiken gelten zunächst nur für noch nicht abgeschlossene Events — jedes
                 beendete Event behält die Einstellungen von seinem Abschluss. Hiermit werden alle beendeten Events der
                 Reihe mit den aktuell gespeicherten Einstellungen neu berechnet (einzeln geht es über „Ergebnisse“ am Event).

@@ -161,14 +161,14 @@ export function buildEventStatConfig(fields: string[], form: EventStatConfigForm
 // Von Hand nur vor dem Abschluss: "Umfragephase"/"Beendet" setzt ausschließlich der Abschluss
 export const STATUS_OPTIONS = ["open", "active"];
 export const STATUS_STYLES: Record<string, string> = {
-  open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
-  active:   "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  open:     "text-primary-fg bg-primary-soft border-primary/30",
+  active:   "text-success bg-success-soft border-success/30",
   umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
-  finished: "text-gray-500 bg-surface-2 border-line",
+  finished: "text-subtle bg-surface-2 border-line",
 };
-export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
-export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
-export const labelCls = "text-xs text-gray-500 mb-1 block";
+export const inputCls = "w-full rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const numCls   = "w-24 rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const labelCls = "text-xs text-subtle mb-1 block";
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
   try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
@@ -212,8 +212,8 @@ export const STATUS_LABELS_DE: Record<string, string> = { open: "Anmeldung offen
 /** Karte einer Formular-Gruppe (Grunddaten, Zeit und Teilnahme, …) */
 export function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="rounded-2xl border border-line bg-gray-900/50 p-4 space-y-3">
-      <h2 className="text-sm font-semibold text-white">{title}</h2>
+    <section aria-label={title} className="rounded-card border border-line bg-surface-2/50 p-4 space-y-3">
+      <h2 className="text-sm font-semibold text-fg">{title}</h2>
       {children}
     </section>
   );
@@ -223,8 +223,8 @@ export function Switch({ checked, onChange, label, hint }: { checked: boolean; o
   return (
     <label className="flex items-start justify-between gap-3 cursor-pointer">
       <span className="min-w-0">
-        <span className="block text-sm text-gray-300">{label}</span>
-        {hint && <span className="block text-xs text-gray-500">{hint}</span>}
+        <span className="block text-sm text-fg/90">{label}</span>
+        {hint && <span className="block text-xs text-subtle">{hint}</span>}
       </span>
       <input type="checkbox" role="switch" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
       <span aria-hidden className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-white/[0.12] transition-colors peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4" />
@@ -247,12 +247,12 @@ export function HeaderMenu({ duplicateHref, deleteLabel, onDelete }: { duplicate
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(o => !o)} aria-label="Weitere Aktionen" aria-expanded={open}
-        className="h-[30px] w-8 rounded-lg border border-line-strong text-gray-300 hover:text-white hover:border-line-strong flex items-center justify-center">⋯</button>
+        className="h-[30px] w-8 rounded-control border border-line-strong text-fg/90 hover:text-fg hover:border-line-strong flex items-center justify-center">⋯</button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl">
-          <Link role="menuitem" href={duplicateHref} className={`${item} text-gray-200`}><Copy className="w-3.5 h-3.5 text-gray-500" /> Duplizieren</Link>
+        <div role="menu" className="absolute right-0 top-full z-30 mt-1 w-48 overflow-hidden rounded-control border border-line-strong bg-surface-2 shadow-xl">
+          <Link role="menuitem" href={duplicateHref} className={`${item} text-fg`}><Copy className="w-3.5 h-3.5 text-subtle" /> Duplizieren</Link>
           {deleteLabel && (
-            <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className={`${item} border-t border-line text-red-300`}>
+            <button role="menuitem" type="button" onClick={() => { setOpen(false); onDelete(); }} className={`${item} border-t border-line text-danger`}>
               <Trash2 className="w-3.5 h-3.5" /> {deleteLabel}
             </button>
           )}

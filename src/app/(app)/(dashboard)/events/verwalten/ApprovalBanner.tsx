@@ -40,16 +40,16 @@ export function RejectControl({ kind, id, compact = false, onDone }: {
     );
   }
   return (
-    <div className="basis-full flex flex-col gap-2 rounded-lg border border-rose-500/25 bg-rose-500/[0.05] p-2.5">
+    <div className="basis-full flex flex-col gap-2 rounded-control border border-danger/30 bg-danger-soft p-2.5">
       <label className="text-xs text-rose-200" htmlFor={`reject-${id}`}>Grund (sieht der Ersteller)</label>
       <textarea id={`reject-${id}`} value={reason} onChange={(e) => setReason(e.target.value)} rows={2} maxLength={500} autoFocus
         placeholder="z.B. Termin überschneidet sich mit dem Clan-Abend"
-        className="w-full rounded-control bg-black/20 border border-line px-2.5 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+        className="w-full rounded-control bg-surface-2 border border-line px-2.5 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
+      {error && <p className="text-xs text-danger">{error}</p>}
       <div className="flex gap-2 justify-end">
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-white px-2">Abbrechen</button>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted hover:text-fg px-2">Abbrechen</button>
         <button type="button" onClick={reject} disabled={busy || !reason.trim()}
-          className="inline-flex items-center gap-1 rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 max-lg:min-h-10">
+          className="inline-flex items-center gap-1 rounded-control bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-semibold text-fg disabled:opacity-50 max-lg:min-h-10">
           {busy ? "Lehnt ab…" : "Ablehnen und Ersteller informieren"}
         </button>
       </div>
@@ -91,20 +91,20 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
 
   if (rejected) {
     return (
-      <div className="mb-4 rounded-xl border border-rose-500/25 bg-rose-500/[0.07] px-4 py-3 flex items-center gap-3 flex-wrap">
+      <div className="mb-4 rounded-control border border-danger/30 bg-danger-soft px-4 py-3 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[220px]">
-          <p className="text-sm font-semibold text-rose-300">Nicht freigegeben</p>
+          <p className="text-sm font-semibold text-danger">Nicht freigegeben</p>
           <p className="text-xs text-rose-100/80">Grund: {rejectedNote || "kein Grund angegeben"}</p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             {inheritedFromSeries
               ? "Die Eventreihe dieses Termins wurde abgelehnt. Reich die Reihe erneut ein."
               : `Die ${noun} ist ausgeblendet. Überarbeite sie und reich sie danach erneut ein.`}
           </p>
-          {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
+          {error && <p className="text-xs text-danger mt-1">{error}</p>}
         </div>
         {!inheritedFromSeries && (
           <button type="button" onClick={() => post("resubmit")} disabled={busy}
-            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink transition-colors disabled:opacity-50 max-lg:min-h-10">
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink transition-colors disabled:opacity-50 max-lg:min-h-10">
             {busy ? "Reicht ein…" : "Erneut einreichen"}
           </button>
         )}
@@ -113,7 +113,7 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 flex items-center gap-3 flex-wrap">
+    <div className="mb-4 rounded-control border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 flex items-center gap-3 flex-wrap">
       <div className="flex-1 min-w-[220px]">
         <p className="text-sm font-semibold text-amber-300">Wartet auf Mod-Freigabe</p>
         <p className="text-xs text-amber-100/80">
@@ -122,12 +122,12 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
             : `Die ${noun} ist in der App schon sichtbar.`}
           {" "}Discord-Ankündigung und Push folgen erst nach der Freigabe.
         </p>
-        {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
+        {error && <p className="text-xs text-danger mt-1">{error}</p>}
       </div>
       {canApprove && !inheritedFromSeries && (
         <>
           <button type="button" onClick={() => post("approve")} disabled={busy}
-            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 max-lg:min-h-10">
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-control bg-emerald-600 hover:bg-emerald-500 text-fg transition-colors disabled:opacity-50 max-lg:min-h-10">
             <Check className="w-3.5 h-3.5" /> {busy ? "Gibt frei…" : "Freigeben"}
           </button>
           <RejectControl kind={kind} id={id} />

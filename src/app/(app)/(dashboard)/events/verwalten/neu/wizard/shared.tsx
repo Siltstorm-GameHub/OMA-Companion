@@ -94,12 +94,12 @@ export const STEP_LABELS_EVENT  = ["Art & Kategorie", "Grunddaten", "Format", "B
 export const STEP_LABELS_SERIES = ["Art & Kategorie", "Reihen-Info", "Termine", "Statistiken & Events", "Reihen-Belohnungen", "Zusammenfassung"];
 
 export const CATEGORIES: { value: EventCategory; label: string; desc: string; emoji: string; color: string; border: string; bg: string }[] = [
-  { value: "competitive",     label: "Kompetitiv", desc: "Ernsthaft spielen, Leistung zählt",              emoji: "🏆", color: "text-red-400",    border: "border-red-500/40",    bg: "bg-red-500/10" },
+  { value: "competitive",     label: "Kompetitiv", desc: "Ernsthaft spielen, Leistung zählt",              emoji: "🏆", color: "text-danger",    border: "border-danger/30",    bg: "bg-danger-soft" },
   { value: "fun",             label: "Fun",        desc: "Spaßrunde, Lachen ist wichtiger als Gewinnen",   emoji: "🎉", color: "text-amber-400",  border: "border-amber-400/40",  bg: "bg-amber-500/10" },
-  { value: "casual",          label: "Casual",     desc: "Entspannt zusammen zocken, ohne Druck",          emoji: "🛋️", color: "text-emerald-400",border: "border-emerald-500/40",bg: "bg-emerald-500/10" },
+  { value: "casual",          label: "Casual",     desc: "Entspannt zusammen zocken, ohne Druck",          emoji: "🛋️", color: "text-success",border: "border-success/30",bg: "bg-success-soft" },
   { value: "training",        label: "Training",   desc: "Üben und voneinander lernen",                    emoji: "🎓", color: "text-indigo-400", border: "border-indigo-500/40", bg: "bg-indigo-500/10" },
   { value: "community_event", label: "Community",  desc: "Aktion für alle, z.B. ein Spieleabend",          emoji: "🤝", color: "text-violet-400", border: "border-violet-500/40", bg: "bg-violet-500/10" },
-  { value: "special",         label: "Special",    desc: "Besonderer Anlass, z.B. Jubiläum oder Feiertag", emoji: "⭐", color: "text-yellow-400", border: "border-yellow-400/40", bg: "bg-yellow-500/10" },
+  { value: "special",         label: "Special",    desc: "Besonderer Anlass, z.B. Jubiläum oder Feiertag", emoji: "⭐", color: "text-coin", border: "border-coin/40", bg: "bg-coin-soft" },
 ];
 
 export const PLATFORMS: { value: string; label: string; icon: string }[] = [
@@ -123,9 +123,9 @@ export const RECURRENCE_OPTS: { value: string; label: string; desc: string }[] =
   { value: "monthly",   label: "Monatlich",      desc: "Einmal pro Monat" },
 ];
 
-export const inputCls   = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
+export const inputCls   = "w-full rounded-control px-3 py-2.5 text-sm text-fg outline-none";
 export const inputStyle = { background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 18%, transparent)" };
-export const labelCls   = "text-xs text-gray-500 mb-1 block";
+export const labelCls   = "text-xs text-subtle mb-1 block";
 
 // Vorlage aus einem bestehenden Event ("Event duplizieren", siehe new/page.tsx) — Datum/Uhrzeit
 // werden bewusst NICHT übernommen, sondern als Vorschlag eine Woche später vorbelegt.
@@ -171,7 +171,7 @@ export function LimitHint({ value, max }: { value: number; max: number | null | 
   if (max == null) return null;
   const over = value > max;
   return (
-    <p className={`mt-1 text-xs ${over ? "text-amber-300" : "text-gray-500"}`}>
+    <p className={`mt-1 text-xs ${over ? "text-amber-300" : "text-subtle"}`}>
       {over ? `Höchstens ${max}, wird beim Speichern auf ${max} gekürzt` : `max. ${max}`}
     </p>
   );

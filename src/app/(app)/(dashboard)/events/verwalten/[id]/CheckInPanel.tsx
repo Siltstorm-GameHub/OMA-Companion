@@ -22,17 +22,17 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
   }
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+    <div className="rounded-control border border-primary/20 bg-primary/5 p-4 space-y-2">
       <label className="flex items-center gap-2 cursor-pointer select-none">
         <input type="checkbox" checked={checkInEnabled}
           onChange={e => setCheckInEnabled(e.target.checked)}
           className="rounded shrink-0" />
-        <span className="text-sm text-white">Check-in vor Turnierstart</span>
+        <span className="text-sm text-fg">Check-in vor Turnierstart</span>
         {checkInEnabled && (
-          <span className="text-xs text-gray-400 ml-auto">{checkedInIds.size}/{registeredIds.size} bereit</span>
+          <span className="text-xs text-muted ml-auto">{checkedInIds.size}/{registeredIds.size} bereit</span>
         )}
       </label>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-subtle">
         Spieler melden sich selbst auf der Eventseite („Bin bereit“). Das geht ab {CHECK_IN_MINUTES} Minuten vor dem
         Start bis zur Auslosung; die Spieler bekommen dazu eine Meldung. Ist der Check-in an, werden nur bereite Spieler
         ausgelost. Wer nicht bereit war, gilt beim Abschluss als nicht da. Gespeichert wird der Schalter über die Leiste unten.
@@ -42,13 +42,13 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
       )}
 
       {savedOn && !drawn && notReady.length > 0 && (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 space-y-2">
+        <div className="rounded-control border border-amber-500/25 bg-amber-500/5 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <p className="text-xs text-amber-200 flex-1">
               {notReady.length} von {registeredIds.size} noch nicht bereit. Sie werden bei der Auslosung nicht berücksichtigt.
             </p>
             <button type="button" onClick={() => checkIn(notReady.map(u => u.id))} disabled={!!busy}
-              className="text-xs px-2 py-1 rounded-md border border-line-strong text-gray-300 hover:bg-line disabled:opacity-50 shrink-0">
+              className="text-xs px-2 py-1 rounded-md border border-line-strong text-fg/90 hover:bg-line disabled:opacity-50 shrink-0">
               {busy === "all" ? <Loader2 className="w-3 h-3 animate-spin" /> : "Alle einchecken"}
             </button>
           </div>
@@ -57,7 +57,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
               <li key={u.id}>
                 <button type="button" onClick={() => checkIn([u.id])} disabled={!!busy}
                   title="Von Hand einchecken"
-                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-line border border-line text-gray-200 hover:border-primary/40 hover:text-teal-200 disabled:opacity-50 max-lg:min-h-10">
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-line border border-line text-fg hover:border-primary/40 hover:text-primary-fg disabled:opacity-50 max-lg:min-h-10">
                   {busy === u.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                   {userName(u)}
                 </button>

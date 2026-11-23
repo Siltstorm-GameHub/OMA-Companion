@@ -29,7 +29,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
   // Mitglieder-Events (Ersteller ohne Mod-Rolle): Hinweis auf Freigabe und Obergrenzen
   const communityHint = props.isCommunity && (
-    <div className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 space-y-1">
+    <div className="mb-6 rounded-control border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 text-xs text-amber-100/90 space-y-1">
       <p className="font-semibold text-amber-300">Mitglieder-Event</p>
       <p>Dein Event ist sofort in der App sichtbar. Auf Discord angekündigt und per Push gemeldet wird es erst, nachdem ein Mod es freigegeben hat.</p>
       <p>Für Belohnungen (Münzen, Rang-Punkte) gibt es Obergrenzen. Du siehst sie direkt an den Feldern.</p>
@@ -38,16 +38,16 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
   // Gefundener lokaler Entwurf: übernehmen oder verwerfen (siehe wizard/draft.ts)
   const draftBanner = pendingDraft && (
-    <div className="mb-6 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 flex items-center gap-3 flex-wrap">
-      <p className="text-sm text-teal-200 flex-1 min-w-[200px]">
+    <div className="mb-6 rounded-control border border-primary/30 bg-primary/10 px-4 py-3 flex items-center gap-3 flex-wrap">
+      <p className="text-sm text-primary-fg flex-1 min-w-[200px]">
         Ungespeicherter Entwurf vom {formatBerlinDateTime(new Date(pendingDraft.savedAt), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} Uhr
         {typeof pendingDraft.values.title === "string" && pendingDraft.values.title ? ` („${pendingDraft.values.title}“)` : ""} gefunden.
       </p>
       <button type="button" onClick={restoreDraft}
-        className="text-xs font-semibold text-primary-ink bg-primary hover:bg-primary-hover rounded-lg px-3 py-1.5">
+        className="text-xs font-semibold text-primary-ink bg-primary hover:bg-primary-hover rounded-control px-3 py-1.5">
         Wiederherstellen
       </button>
-      <button type="button" onClick={discardDraft} className="text-xs text-gray-400 hover:text-white">
+      <button type="button" onClick={discardDraft} className="text-xs text-muted hover:text-fg">
         Verwerfen
       </button>
     </div>
@@ -60,24 +60,24 @@ export default function EventSetupWizard(props: EventWizardProps) {
         {draftBanner}
         {communityHint}
         <div className="mb-8">
-          <h1 className="text-xl font-bold text-white mb-1">Neues Event erstellen</h1>
-          <p className="text-sm text-gray-500">Wähle, was du erstellen möchtest.</p>
+          <h1 className="text-xl font-bold text-fg mb-1">Neues Event erstellen</h1>
+          <p className="text-sm text-subtle">Wähle, was du erstellen möchtest.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button type="button" onClick={() => setWizardMode("event")}
-            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all text-center">
+            className="flex flex-col items-center gap-3 rounded-card p-6 border-2 border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all text-center">
             <span className="text-4xl">📅</span>
             <div>
               <p className="text-base font-semibold text-primary-fg">Einzelnes Event</p>
-              <p className="text-xs text-gray-500 mt-1">Einmaliger Termin, optional einer bestehenden Reihe zuordnen</p>
+              <p className="text-xs text-subtle mt-1">Einmaliger Termin, optional einer bestehenden Reihe zuordnen</p>
             </div>
           </button>
           <button type="button" onClick={() => setWizardMode("series")}
-            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 transition-all text-center">
+            className="flex flex-col items-center gap-3 rounded-card p-6 border-2 border-primary/35 bg-primary-soft/60 hover:bg-primary-soft transition-all text-center">
             <span className="text-4xl">🔁</span>
             <div>
-              <p className="text-base font-semibold text-violet-300">Neue Eventreihe</p>
-              <p className="text-xs text-gray-500 mt-1">Wiederkehrende Reihe mit Reihentabelle und gemeinsamen Belohnungen</p>
+              <p className="text-base font-semibold text-primary-fg">Neue Eventreihe</p>
+              <p className="text-xs text-subtle mt-1">Wiederkehrende Reihe mit Reihentabelle und gemeinsamen Belohnungen</p>
             </div>
           </button>
 
@@ -112,7 +112,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
         <div className="h-3 w-px bg-line" />
         <div className="flex items-center gap-2">
           {isSeriesMode
-            ? <Repeat className="w-4 h-4 text-violet-400" />
+            ? <Repeat className="w-4 h-4 text-primary-fg" />
             : <CalendarDays className="w-4 h-4 text-primary" />}
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
             {seasonPrefill
@@ -126,22 +126,22 @@ export default function EventSetupWizard(props: EventWizardProps) {
       {communityHint}
 
       {eventTemplate && (
-        <p className="text-xs text-gray-500 -mt-3 mb-6">
+        <p className="text-xs text-subtle -mt-3 mb-6">
           Kopie von „{eventTemplate.sourceTitle}“ — Einstellungen und Belohnungen sind übernommen, Teilnehmer
           und Ergebnisse nicht. Datum ist eine Woche später vorgeschlagen, bitte prüfen.
         </p>
       )}
 
       {gamePrefill && !eventTemplate && (
-        <p className="text-xs text-gray-500 -mt-3 mb-6">
+        <p className="text-xs text-subtle -mt-3 mb-6">
           {gamePrefill.slug
-            ? <>Spiel aus der Spieleliste übernommen: <span className="text-gray-300">{gamePrefill.name}</span>. Titel, Termin und Format legst du jetzt fest.</>
-            : <>OMA Blocks ist ausgewählt — als <span className="text-gray-300">Live-Turnier im Versus-Modus</span> oder Community-Challenge. Titel und Termin legst du jetzt fest.</>}
+            ? <>Spiel aus der Spieleliste übernommen: <span className="text-fg/90">{gamePrefill.name}</span>. Titel, Termin und Format legst du jetzt fest.</>
+            : <>OMA Blocks ist ausgewählt — als <span className="text-fg/90">Live-Turnier im Versus-Modus</span> oder Community-Challenge. Titel und Termin legst du jetzt fest.</>}
         </p>
       )}
 
       {seasonPrefill && (
-        <p className="text-xs text-gray-500 -mt-3 mb-6">
+        <p className="text-xs text-subtle -mt-3 mb-6">
           Vorausgefüllt aus „{seasonPrefill.oldSeriesName}". Alles ist editierbar — Start- und Enddatum bitte prüfen.
         </p>
       )}

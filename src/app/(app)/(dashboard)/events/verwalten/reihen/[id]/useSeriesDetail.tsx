@@ -392,7 +392,7 @@ export function useSeriesDetail({
 
   // Hinweis über gesperrten Einstellungen einer abgeschlossenen Saison
   const lockedNotice = isArchived ? (
-    <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 border border-amber-500/20 bg-amber-500/[0.06]">
+    <div className="flex items-start gap-2 rounded-control px-3 py-2.5 border border-amber-500/20 bg-amber-500/[0.06]">
       <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
       <p className="text-xs text-amber-200/80">
         Diese Saison ist abgeschlossen. Punkteregeln, Belohnungen, Umfragen, Spiel und Format sind gesperrt, damit Endtabelle und
@@ -404,15 +404,15 @@ export function useSeriesDetail({
   // All-Time-Tabelle: Stat-Felder verschiedener Saisons zusammenführen (gilt für die ganze Saison-Gruppe)
   const aliasSection = seasonCount > 1 && groupStatFields.length > 1 ? (
     <Section title="All-Time: Stat-Felder zusammenführen">
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-subtle">
         Wurde ein Stat zwischen den Saisons umbenannt, kannst du hier festlegen, dass er in der All-Time-Tabelle als ein Feld zählt.
         Gilt für alle Saisons dieser Reihe.
       </p>
       <div className="space-y-1.5">
         {groupStatFields.map(field => (
           <div key={field} className="flex items-center gap-2 text-xs">
-            <span className="flex-1 text-gray-300 truncate">{field}</span>
-            <span className="text-gray-600">zählt als</span>
+            <span className="flex-1 text-fg/90 truncate">{field}</span>
+            <span className="text-subtle">zählt als</span>
             <select value={statAliases[field] ?? ""}
               onChange={e => setStatAliases(prev => {
                 const next = { ...prev };

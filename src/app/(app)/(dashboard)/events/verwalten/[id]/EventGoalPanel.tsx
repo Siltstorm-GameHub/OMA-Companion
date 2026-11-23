@@ -55,19 +55,19 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
 
   const option = (value: Mode, label: string, hint: string) => (
     <button type="button" onClick={() => setMode(value)}
-      className={`flex-1 min-w-[150px] text-left rounded-lg p-2.5 border transition-colors ${
+      className={`flex-1 min-w-[150px] text-left rounded-control p-2.5 border transition-colors ${
         mode === value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
       }`}>
-      <span className={`block text-sm font-semibold ${mode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
-      <span className="block text-xs text-gray-500">{hint}</span>
+      <span className={`block text-sm font-semibold ${mode === value ? "text-primary-fg" : "text-fg/90"}`}>{label}</span>
+      <span className="block text-xs text-subtle">{hint}</span>
     </button>
   );
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+    <div className="rounded-control border border-primary/20 bg-primary/5 p-4 space-y-3">
       <div>
-        <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel dieses Termins</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-sm font-semibold text-primary-fg">🎯 Community-Ziel dieses Termins</p>
+        <p className="text-xs text-subtle">
           Termine übernehmen automatisch das Ziel der Eventreihe. Hier kannst du es für diesen einen Termin ändern.
         </p>
       </div>
@@ -85,7 +85,7 @@ export default function EventGoalPanel({ eventId, source, ownGoal, seriesGoal, s
 
       <div className="flex justify-end">
         <button type="button" onClick={save} disabled={saving}
-          className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-lg disabled:opacity-50 max-lg:min-h-10">
+          className="flex items-center gap-1.5 text-sm font-medium text-primary-ink bg-primary hover:bg-primary-hover transition-colors px-3 py-1.5 rounded-control disabled:opacity-50 max-lg:min-h-10">
           <Save className="w-4 h-4" /> {saving ? "Speichert…" : "Speichern"}
         </button>
       </div>

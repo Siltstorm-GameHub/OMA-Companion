@@ -62,17 +62,17 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
     }
   }
 
-  const input = "w-20 bg-line border border-line-strong rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-primary/40";
+  const input = "w-20 bg-line border border-line-strong rounded-control px-2 py-1 text-sm text-fg focus:outline-none focus:border-primary/40";
   const num = (k: keyof typeof GAME_VOTE_LIMITS) => (
     <input type="number" min={GAME_VOTE_LIMITS[k][0]} max={GAME_VOTE_LIMITS[k][1]} value={cfg[k]} className={input}
       onChange={e => set(k, Number(e.target.value))} />
   );
 
   return (
-    <section className="glass rounded-2xl p-5 mt-5 space-y-4">
+    <section className="glass rounded-card p-5 mt-5 space-y-4">
       <div>
-        <h2 className="text-base font-bold text-white">🗳️ Spielwahl</h2>
-        <p className="text-xs text-gray-400 mt-1 max-w-2xl">
+        <h2 className="text-base font-bold text-fg">🗳️ Spielwahl</h2>
+        <p className="text-xs text-muted mt-1 max-w-2xl">
           Mitglieder wählen das Spiel jedes Termins: Beim Anlegen des nächsten Termins entsteht ein Platzhalter ohne Spiel und eine
           Abstimmung mit Kandidaten aus der Spieleliste (nach Passt-Wert, Platz 2 und 3 der letzten Wahl sind wieder dabei). Wer
           abstimmt, ist automatisch als Mitspieler angemeldet. Nach der Wahl legt ein Mod die Regeln fest — erst dann kann ausgelost werden.
@@ -80,7 +80,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-white">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <input type="checkbox" checked={cfg.enabled} onChange={e => set("enabled", e.target.checked)} />
         Spiel per Abstimmung wählen lassen
       </label>
@@ -89,9 +89,9 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
       )}
 
       {cfg.enabled && (
-        <div className="grid gap-3 sm:grid-cols-2 text-xs text-gray-300">
+        <div className="grid gap-3 sm:grid-cols-2 text-xs text-fg/90">
           <div className="space-y-1.5">
-            <p className="text-gray-500 uppercase tracking-wider text-xs">Beginn der Abstimmung</p>
+            <p className="text-subtle uppercase tracking-wider text-xs">Beginn der Abstimmung</p>
             <label className="flex items-center gap-2">
               <input type="radio" checked={cfg.opensMode === "on_create"} onChange={() => set("opensMode", "on_create")} />
               Sobald der Termin angelegt ist
@@ -102,7 +102,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
             </label>
           </div>
           <div className="space-y-1.5">
-            <p className="text-gray-500 uppercase tracking-wider text-xs">Ende der Abstimmung</p>
+            <p className="text-subtle uppercase tracking-wider text-xs">Ende der Abstimmung</p>
             <label className="flex items-center gap-2">{num("closesHoursBefore")} Stunden vor Start</label>
             {cfg.closesHoursBefore < TIGHT_CLOSE_HOURS && (
               <p className="text-amber-200">Knapp: Es bleibt wenig Zeit für Regeln und zum Installieren oder Kaufen.</p>
@@ -119,7 +119,7 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
               <option value="after_vote">erst nach der eigenen Stimme</option>
               <option value="after_end">erst nach dem Ende</option>
             </select>
-            <span className="text-gray-500">Später sichtbar = weniger Mitläufer-Effekt.</span>
+            <span className="text-subtle">Später sichtbar = weniger Mitläufer-Effekt.</span>
           </label>
         </div>
       )}
@@ -127,10 +127,10 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
 
       {initial.enabled && upcoming.length > 0 && (
         <div className="border-t border-line pt-3 space-y-2">
-          <p className="text-xs text-gray-400">Kommende Termine ohne Spielwahl:</p>
+          <p className="text-xs text-muted">Kommende Termine ohne Spielwahl:</p>
           {upcoming.map(e => (
             <div key={e.id} className="flex items-center gap-3 text-xs">
-              <span className="flex-1 min-w-0 truncate text-white">{e.title} <span className="text-gray-500">· {fmt(e.startAt)}{e.game ? ` · ${e.game}` : ""}</span></span>
+              <span className="flex-1 min-w-0 truncate text-fg">{e.title} <span className="text-subtle">· {fmt(e.startAt)}{e.game ? ` · ${e.game}` : ""}</span></span>
               <Button size="sm" variant="ghost" disabled={saving} onClick={() => start(e.id)}>Spielwahl starten</Button>
             </div>
           ))}

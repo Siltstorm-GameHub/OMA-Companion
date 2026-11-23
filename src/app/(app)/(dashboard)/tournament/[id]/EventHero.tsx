@@ -42,11 +42,13 @@ export type EventHeroProps = {
 export default function EventHero({
   event, omaOriginal, heroDate, seriesCtx, statusLabel, statusPill, phase, showCountdown, startsIn, myStatus, date, serverTimeFallback, period, footer,
 }: EventHeroProps) {
+  // Kein overflow-hidden an der Karte: das Menü "Mehr" der Aktionsleiste (footer) ragt nach unten heraus.
+  // Abgeschnitten (für die runden Ecken) wird nur das Bild.
   return (
-      <section aria-label={event.title} className="relative overflow-hidden rounded-card border border-line bg-surface shadow-card mb-3">
+      <section aria-label={event.title} className="relative rounded-card border border-line bg-surface shadow-card mb-3">
         {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
             → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
-        <div className="relative w-full aspect-[16/9] sm:aspect-[16/6]">
+        <div className={`relative w-full aspect-[16/9] sm:aspect-[16/6] overflow-hidden ${footer ? "rounded-t-card" : "rounded-card"}`}>
           <GameCover
             game={event.game}
             coverUrl={event.coverImageUrl ?? event.series?.coverImageUrl ?? null}

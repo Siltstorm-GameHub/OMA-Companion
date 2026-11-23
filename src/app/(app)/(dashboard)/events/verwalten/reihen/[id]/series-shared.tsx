@@ -6,8 +6,8 @@ import { Eye, EyeOff } from "@/components/icons";
 
 // Aus SeriesDetailClient.tsx ausgelagert: Typen, Konstanten und kleine Bausteine, die Hook und Reiter teilen.
 
-export const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
-export const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const inputCls = "w-full rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
+export const numCls   = "w-24 rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 export const PLATFORMS: { value: string; label: string; icon: string }[] = [
   { value: "PC",     label: "PC",     icon: "🖥️" },
   { value: "Xbox",   label: "Xbox",   icon: "🟢" },
@@ -89,11 +89,11 @@ export const DEFAULT_POLL_ITEM: PollConfig = {
 };
 export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   // Gleiche Begriffe wie in der Übersicht "Verwalten" (lib/event-manage.ts statusText)
-  open:     { label: "Anmeldung offen", cls: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
-  closed:   { label: "Voll",            cls: "text-blue-300 bg-blue-500/10 border-blue-500/20" },
-  active:   { label: "Läuft",           cls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  open:     { label: "Anmeldung offen", cls: "text-primary-fg bg-primary-soft border-primary/30" },
+  closed:   { label: "Voll",            cls: "text-primary-fg bg-primary-soft border-primary/30" },
+  active:   { label: "Läuft",           cls: "text-success bg-success-soft border-success/30" },
   umfrage:  { label: "Umfragephase",    cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-  finished: { label: "Beendet",         cls: "text-gray-500 bg-surface-2 border-line" },
+  finished: { label: "Beendet",         cls: "text-subtle bg-surface-2 border-line" },
 };
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
@@ -149,7 +149,7 @@ export function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean 
       className={`shrink-0 p-1.5 rounded transition-colors disabled:opacity-40 ${
         hidden
           ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-          : "text-gray-600 hover:text-gray-400 hover:bg-line"
+          : "text-subtle hover:text-muted hover:bg-line"
       }`}
     >
       {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -160,9 +160,9 @@ export type SquadOption = { id: string; name: string };
 /* ── Small helper components ── */
 export function Section({ title, children, overflowVisible }: { title: string; children: React.ReactNode; overflowVisible?: boolean }) {
   return (
-    <div className={`rounded-xl border border-line bg-gray-900/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
+    <div className={`rounded-control border border-line bg-surface-2/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
       <div className="px-4 py-2.5 border-b border-line">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
+        <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">{title}</h3>
       </div>
       <div className="px-4 py-3 space-y-3">{children}</div>
     </div>
@@ -171,7 +171,7 @@ export function Section({ title, children, overflowVisible }: { title: string; c
 export function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs text-gray-500 flex items-center gap-1.5">{label}</label>
+      <label className="text-xs text-subtle flex items-center gap-1.5">{label}</label>
       {children}
     </div>
   );
@@ -180,7 +180,7 @@ export function Checkbox({ checked, onChange, label }: { checked: boolean; onCha
   return (
     <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="rounded accent-primary" />
-      <span className="text-xs text-gray-500">{label}</span>
+      <span className="text-xs text-subtle">{label}</span>
     </label>
   );
 }

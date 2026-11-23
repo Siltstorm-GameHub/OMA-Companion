@@ -115,12 +115,12 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <Link href={`/events/verwalten/${event.id}`} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors">
+        <Link href={`/events/verwalten/${event.id}`} className="inline-flex items-center gap-1 text-xs text-subtle hover:text-fg/90 transition-colors">
           <ChevronLeft className="w-3.5 h-3.5" />
           {event.series && <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />}
           {event.title}
         </Link>
-        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Turnier</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-fg tracking-tight">Turnier</h1>
       </div>
 
       <TournamentManager

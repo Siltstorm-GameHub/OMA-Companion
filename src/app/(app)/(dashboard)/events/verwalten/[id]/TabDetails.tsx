@@ -32,27 +32,27 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
           <div className="space-y-4 min-w-0">
             {/* Reihen-Termin ohne Turnier (z.B. versehentlich gelöscht) — sonst gäbe es keinen Weg zurück */}
             {isSeriesEvent && !hasTournament && (
-              <div className="rounded-xl p-4 border border-red-500/20 bg-red-500/5 space-y-3">
-                <p className="text-sm font-medium text-red-300 flex items-center gap-1.5">
+              <div className="rounded-control p-4 border border-danger/30 bg-danger-soft space-y-3">
+                <p className="text-sm font-medium text-danger flex items-center gap-1.5">
                   <AlertTriangle className="w-4 h-4" /> Kein Turnier vorhanden
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-subtle">
                   Dieser Termin hat kein Format, deshalb fehlt der Reiter „Spielplan“. Format wählen und erstellen,
                   um ihn wiederherzustellen. Vorherige Matches und Ergebnisse lassen sich dabei nicht wiederherstellen.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {TMT_FORMATS.map(f => (
                     <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
-                      className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
-                        tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                      className={`text-left px-3 py-2.5 rounded-control border transition-colors ${
+                        tmtFormat === f.value ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 bg-gray-800 text-muted hover:border-gray-600"
                       }`}>
                       <p className="text-xs font-medium leading-tight">{f.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                      <p className="text-xs text-subtle mt-0.5 leading-tight">{f.desc}</p>
                     </button>
                   ))}
                 </div>
                 <button onClick={() => saveTmtSettings()} disabled={tmtLoading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
+                  className="w-full flex items-center justify-center gap-2 rounded-control py-2.5 text-sm font-semibold text-fg bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
                   <Trophy className="w-4 h-4" />
                   {tmtLoading ? "Wird erstellt…" : "Format anlegen und Reiter wiederherstellen"}
                 </button>
@@ -62,7 +62,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
             {/* ── Grunddaten ── */}
             <Panel title="Grunddaten">
               {isSeriesEvent ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-subtle">
                   Titel, Spiel, Regeln und Belohnungen kommen aus der Eventreihe{" "}
                   <Link href={backHref} className="text-primary hover:text-primary-fg">{event.series.name}</Link>.
                 </p>
@@ -96,7 +96,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                       {eventKind === "community" && !kindLocked && (
                         <p className="mt-1 text-xs text-violet-300/80">Keine Platzierung — alle Teilnehmer bekommen nur die Teilnahme-Belohnung.</p>
                       )}
-                      {kindLocked && <p className="mt-1 text-xs text-gray-500">Nach dem Abschluss nicht mehr änderbar.</p>}
+                      {kindLocked && <p className="mt-1 text-xs text-subtle">Nach dem Abschluss nicht mehr änderbar.</p>}
                     </div>
                     <div>
                       <label className={labelCls}>Kategorie</label>
@@ -115,11 +115,11 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                         {GENRES.map(g => (
                           <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
-                            className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                            className={`flex flex-col items-center gap-1.5 rounded-control p-2 border transition-all ${
                               genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                             }`}>
                             <AppIcon kind="genre" name={g.value} size={28} />
-                            <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
+                            <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-subtle"}`}>{g.label}</span>
                           </button>
                         ))}
                       </div>
@@ -171,7 +171,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 <div>
                   <label className={labelCls}>Anmeldeschluss (optional)</label>
                   <input type="datetime-local" value={registrationClosesAt} onChange={e => setRegistrationClosesAt(e.target.value)} className={inputCls} />
-                  <p className="text-xs text-gray-500 mt-1">Leer = Anmeldung bis zum Start. Praktisch bei Turnieren, damit vor der Auslosung niemand mehr dazukommt.</p>
+                  <p className="text-xs text-subtle mt-1">Leer = Anmeldung bis zum Start. Praktisch bei Turnieren, damit vor der Auslosung niemand mehr dazukommt.</p>
                   {registrationClosesAt && startAt && registrationClosesAt > startAt && (
                     <p className="text-xs text-amber-300 mt-1">Liegt nach dem Start, die Anmeldung schließt trotzdem schon beim Start.</p>
                   )}
@@ -185,7 +185,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 hint={spectatorMode ? "Mitglieder können sich bis zum Abschluss als Zuschauer anmelden (Belohnung im Reiter Belohnungen)" : "Nur Spieler"} />
               {squads.length > 0 && (
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-gray-300">Nur für ein Squad</span>
+                  <span className="text-sm text-fg/90">Nur für ein Squad</span>
                   <select value={squadId} onChange={e => setSquadId(e.target.value)}
                     className="rounded-control px-2.5 py-1.5 text-xs text-fg outline-none bg-surface-2 border border-line max-w-[55%]">
                     <option value="">Für alle offen</option>
@@ -214,29 +214,29 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                 <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
                   placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
               </div>
-              <div className="rounded-lg border border-line bg-surface-2">
+              <div className="rounded-control border border-line bg-surface-2">
                 <button type="button" onClick={() => setPartnersOpen(o => !o)} aria-expanded={partnersOpen}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left">
                   <Tv2 className="w-4 h-4 text-[#9146ff]" />
-                  <span className="text-sm text-gray-300">Streaming-Partner</span>
-                  <span className="ml-auto truncate text-xs text-gray-500">
+                  <span className="text-sm text-fg/90">Streaming-Partner</span>
+                  <span className="ml-auto truncate text-xs text-subtle">
                     {selectedPartnerIds.length === 0 ? "keine" : selectedPartners.length > 0 ? selectedPartners.map(p => p.name).join(", ") : `${selectedPartnerIds.length} ausgewählt`}
                   </span>
                 </button>
                 {partnersOpen && (
                   <div className="border-t border-line px-3 py-2 space-y-1.5">
                     {!partnersLoaded ? (
-                      <p className="text-xs text-gray-600">Lädt…</p>
+                      <p className="text-xs text-subtle">Lädt…</p>
                     ) : allPartners.length === 0 ? (
-                      <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Twitch &amp; Clips → Partner anlegen.</p>
+                      <p className="text-xs text-subtle">Keine Partner eingetragen. Im Admin-Bereich unter Twitch &amp; Clips → Partner anlegen.</p>
                     ) : allPartners.map(p => (
                       <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
                         <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
                           onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
-                          className="rounded accent-violet-500" />
+                          className="rounded accent-primary" />
                         <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
-                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
-                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
+                        <span className="text-sm text-fg/90 group-hover:text-fg transition-colors">{p.name}</span>
+                        <span className="text-xs text-subtle">twitch.tv/{p.twitchLogin}</span>
                       </label>
                     ))}
                   </div>
@@ -257,26 +257,26 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
           {/* ── Rechte Spalte: Vorschau, Sichtbarkeit, Erweitert ── */}
           <aside className="space-y-4 min-w-0">
             <Panel title="So sieht es aus">
-              <div className="overflow-hidden rounded-xl border border-line bg-surface-2">
+              <div className="overflow-hidden rounded-control border border-line bg-surface-2">
                 <div className="relative">
                   <GameCover game={game || title} coverUrl={coverImageUrl || null} className="w-full aspect-[1200/630]" rounded="rounded-none" fallbackVariant="plain" />
                   <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)" }}>
-                    <p className="truncate text-sm font-semibold text-white">{title || "Ohne Titel"}</p>
+                    <p className="truncate text-sm font-semibold text-fg">{title || "Ohne Titel"}</p>
                   </div>
                 </div>
-                <p className="px-2.5 py-2 text-xs text-gray-400">
+                <p className="px-2.5 py-2 text-xs text-muted">
                   {startAt ? formatBerlinDate(fromDatetimeLocalBerlin(startAt), { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "kein Termin"}
                   {" · "}{playerCount}{maxPlayers ? `/${maxPlayers}` : ""} Spieler
                   {!event.series && participationCoins > 0 && <> · +{participationCoins} Münzen</>}
                 </p>
               </div>
-              {!coverImageUrl && <p className="text-xs text-gray-600">Ohne eigenes Bild zeigt die App das Spiel-Cover.</p>}
+              {!coverImageUrl && <p className="text-xs text-subtle">Ohne eigenes Bild zeigt die App das Spiel-Cover.</p>}
             </Panel>
 
             <Panel title="Sichtbarkeit">
               {lockedByMod ? (
                 // Von einem Mod ausgeblendet: nur ein Mod kann es wieder einblenden (api/admin/events)
-                <p className="rounded-lg border border-rose-500/20 bg-rose-500/[0.06] px-3 py-2 text-xs text-rose-200">
+                <p className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-xs text-rose-200">
                   Ein Mod hat dieses Event ausgeblendet. Nur ein Mod kann es wieder einblenden.
                 </p>
               ) : (
@@ -298,30 +298,30 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
               {event.completionData ? (
                 // Abgeschlossen: der Status kommt aus dem Abschluss — zurück geht es nur über "Abschluss aufheben"
                 <div className="space-y-1.5">
-                  <p className="text-xs text-gray-500">Abschluss aufheben</p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-subtle">Abschluss aufheben</p>
+                  <p className="text-xs text-subtle">
                     Bucht alle Belohnungen dieses Abschlusses zurück (Teilnahme, Platzierung, Zuschauer, Umfragen, Reihentabelle).
                     Danach kannst du das Event neu abschließen.
                   </p>
                   <button type="button" onClick={undoCompletion} disabled={loading}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 disabled:opacity-50">
+                    className="text-xs font-semibold px-3 py-1.5 rounded-control border border-danger/30 text-danger hover:bg-danger-soft disabled:opacity-50">
                     Abschluss aufheben
                   </button>
                 </div>
               ) : isModerator && (
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500">Status von Hand setzen</p>
+                <p className="text-xs text-subtle">Status von Hand setzen</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {STATUS_OPTIONS.map(s => (
                     <button key={s} type="button" onClick={() => pickStatus(s)}
                       className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
-                        status === s ? STATUS_STYLES[s] : "text-gray-600 border-line hover:text-gray-400"
+                        status === s ? STATUS_STYLES[s] : "text-subtle border-line hover:text-muted"
                       }`}>
                       {STATUS_LABELS_DE[s]}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-600">Normalerweise nicht nötig: Der Ablauf oben ergibt sich aus Startzeit und Abschluss. Beendet wird ein Event über „Event abschließen“.</p>
+                <p className="text-xs text-subtle">Normalerweise nicht nötig: Der Ablauf oben ergibt sich aus Startzeit und Abschluss. Beendet wird ein Event über „Event abschließen“.</p>
               </div>
               )}
               {isModerator && !isSeriesEvent && (
@@ -338,7 +338,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                     emptyLabel={seriesDiscord ? "Wie Eventreihe" : "Standard (News-Kanal)"} />
                 </div>
               )}
-              <p className="text-xs text-gray-600">Duplizieren und {isUpcoming ? "Absagen" : "Löschen"} findest du oben im ⋯-Menü.</p>
+              <p className="text-xs text-subtle">Duplizieren und {isUpcoming ? "Absagen" : "Löschen"} findest du oben im ⋯-Menü.</p>
             </Panel>
           </aside>
         </div>

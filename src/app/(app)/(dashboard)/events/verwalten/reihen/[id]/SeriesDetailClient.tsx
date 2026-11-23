@@ -28,26 +28,26 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
   return (
     <div className="space-y-4">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+      <div className="flex items-center gap-2 text-sm text-subtle">
+        <Link href="/events/verwalten" className="flex items-center gap-1 hover:text-fg/90 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Eventreihen
         </Link>
         <span>/</span>
-        <span className="text-gray-300">{series.name}</span>
+        <span className="text-fg/90">{series.name}</span>
       </div>
 
       {/* Neue-Saison-Hinweis (archiviert, aber noch keine aktive Folgesaison) */}
       {series.status === "archived" && !hasActiveSibling && (
-        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-primary/20 bg-primary/[0.06]">
+        <div className="flex items-center gap-3 rounded-control px-4 py-3 border border-primary/20 bg-primary/[0.06]">
           <Repeat className="w-4 h-4 text-primary shrink-0" />
-          <p className="flex-1 text-sm text-teal-200">
+          <p className="flex-1 text-sm text-primary-fg">
             Diese Saison ist archiviert, es wurde aber noch keine neue Saison gestartet.
             {!isModerator && " Eine neue Saison richtet ein Mod ein."}
           </p>
           {isModerator && (
             <Link
               href={`/events/verwalten/reihen/${series.id}/new-season`}
-              className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-primary-fg hover:text-teal-200 border border-primary/30 hover:border-primary/50 rounded-lg px-3 py-1.5 transition-all max-lg:min-h-10"
+              className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-primary-fg hover:text-primary-fg border border-primary/30 hover:border-primary/50 rounded-control px-3 py-1.5 transition-all max-lg:min-h-10"
             >
               Neue Saison einrichten <ChevronRight className="w-3.5 h-3.5" />
             </Link>
@@ -59,15 +59,15 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
       <div className="relative flex items-start justify-between gap-4 flex-wrap pl-4">
         <div className="absolute left-0 top-0.5 bottom-0.5 w-1 rounded-r-full" style={{ background: seriesColor }} />
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+          <div className="w-10 h-10 rounded-control flex items-center justify-center shrink-0 mt-0.5"
             style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
             <SeriesIcon name={icon} className="w-5 h-5" />
           </div>
           <div className="space-y-1 min-w-0">
             {/* Name, Beschreibung und Regeln bearbeitest du im Reiter "Allgemein" */}
             <h1 className="text-2xl font-bold break-words" style={{ color: seriesColor }}>{name || series.name}</h1>
-            {description && <p className="text-sm text-gray-500">{description}</p>}
-            <p className="text-xs text-gray-500">
+            {description && <p className="text-sm text-subtle">{description}</p>}
+            <p className="text-xs text-subtle">
               {hidden ? "Ausgeblendet" : "Sichtbar"} · {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
             </p>
           </div>
@@ -76,7 +76,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             href={`/events/series/${series.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-line hover:border-line-strong rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
+            className="flex items-center gap-1.5 text-xs text-subtle hover:text-fg/90 border border-line hover:border-line-strong rounded-control px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
@@ -84,14 +84,14 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           {!isModerator ? null : series.status === "archived" ? (
             <Link
               href={`/events/verwalten/reihen/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
+              className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-primary-fg border border-primary/35 hover:border-primary/35 rounded-control px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
             >
               <Vote className="w-3.5 h-3.5" /> Abschluss bearbeiten
             </Link>
           ) : (
             <Link
               href={`/events/verwalten/reihen/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-control px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
             >
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
@@ -113,7 +113,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeSettingsTab === tab.key
                     ? "text-primary-fg border-b-2 border-primary -mb-px"
-                    : "text-gray-500 hover:text-gray-300"
+                    : "text-subtle hover:text-fg/90"
                 }`}>
                 {!isModerator && tab.key === "stats" ? "Mehr" : tab.label}
               </button>
@@ -140,17 +140,17 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         {/* ── Right column: Events ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">
               Events dieser Reihe
             </h2>
             {isArchived ? (
-              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span className="flex items-center gap-1.5 text-xs text-subtle">
                 <Lock className="w-3 h-3" /> Saison abgeschlossen — keine neuen Termine
               </span>
             ) : (
             <button
               onClick={openGenerateModal} disabled={generatingNext}
-              className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-white border border-primary/40 hover:bg-primary-hover rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10"
+              className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-fg border border-primary/40 hover:bg-primary-hover rounded-control px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
               {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin anlegen" : "Termin hinzufügen"}
@@ -159,13 +159,13 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           </div>
 
           {series.events.length === 0 ? (
-            <div className="text-center py-8 text-gray-600 text-sm border border-line rounded-xl">
+            <div className="text-center py-8 text-subtle text-sm border border-line rounded-control">
               Noch keine Events in dieser Reihe
             </div>
           ) : (
-            <div className="rounded-xl overflow-hidden border border-line">
+            <div className="rounded-control overflow-hidden border border-line">
               {sortedSeriesEvents.map((ev, i) => {
-                const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-gray-500" };
+                const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-subtle" };
                 const isFinished = ev.status === "finished";
                 const isFirstFinished = isFinished && sortedSeriesEvents[i - 1]?.status !== "finished";
                 const date = formatBerlinDate(ev.startAt, {
@@ -182,16 +182,16 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                     } ${ev.hidden ? "opacity-60" : ""}`}
                   >
                     <Link href={`/events/verwalten/${ev.id}`} className="flex-1 min-w-0 group">
-                      <p className="text-sm text-white truncate flex items-center gap-2 flex-wrap group-hover:text-teal-200">
+                      <p className="text-sm text-fg truncate flex items-center gap-2 flex-wrap group-hover:text-primary-fg">
                         {ev.title}
-                        <span className="text-gray-500 font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
+                        <span className="text-subtle font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
                           <span className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
                             <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-600">{date}</p>
+                      <p className="text-xs text-subtle">{date}</p>
                     </Link>
                     {attention && (
                       <Link href={attention.href} title={attention.label}
@@ -200,7 +200,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       </Link>
                     )}
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-subtle">
                         {ev._count.registrations}{ev.maxPlayers ? `/${ev.maxPlayers}` : ""} Spieler
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${st.cls}`}>
@@ -218,16 +218,16 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
 
       {/* Danger Zone — Löschen bleibt Moderatoren/Admins vorbehalten, auch für Captains ihres eigenen Squads */}
       {(isModerator || memberCanDelete) && (
-      <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
-        <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
+      <div className="rounded-control border border-red-900/30 bg-danger-soft p-4 space-y-3">
+        <p className="text-xs font-semibold text-danger uppercase tracking-widest">Danger Zone</p>
 
         {isModerator && isArchived && (
           <div className="space-y-2 pb-3 border-b border-red-900/30">
             {!undoConfirm ? (
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-gray-300 font-medium">Abschluss rückgängig machen</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm text-fg/90 font-medium">Abschluss rückgängig machen</p>
+                  <p className="text-xs text-subtle mt-0.5">
                     {canUndoCompletion
                       ? "Die Saison wird wieder aktiv, Endplatzierungs- und Abstimmungs-Belohnungen werden zurückgebucht, der Eventreihen-Pokal entfällt."
                       : "Nicht mehr möglich — es gibt bereits eine spätere Saison."}
@@ -240,23 +240,23 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       variant: "danger", confirmLabel: "Abschluss aufheben",
                     })) await undoCompletion();
                   }} disabled={!canUndoCompletion || undoing}
-                  className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none max-lg:min-h-10">
+                  className="flex items-center gap-1.5 text-sm text-danger border border-red-800/40 hover:border-red-600/60 hover:bg-danger-soft px-3 py-1.5 rounded-control transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none max-lg:min-h-10">
                   <RefreshCw className="w-3.5 h-3.5" /> Aufheben
                 </button>
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-sm text-red-300">
-                  Abschluss von <span className="font-semibold text-white">„{series.name}“</span> wirklich aufheben? Alle Münzen und Rang-Punkte aus
+                <p className="text-sm text-danger">
+                  Abschluss von <span className="font-semibold text-fg">„{series.name}“</span> wirklich aufheben? Alle Münzen und Rang-Punkte aus
                   Endplatzierung und Saison-Abstimmung werden den Usern wieder abgezogen. Beim Abschluss gelöschte Termine kommen nicht zurück.
                 </p>
                 <div className="flex items-center justify-end gap-2">
                   <button onClick={() => setUndoConfirm(false)} disabled={undoing}
-                    className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors">
+                    className="text-sm text-muted hover:text-fg px-3 py-1.5 rounded-control border border-line hover:border-line-strong transition-colors">
                     Abbrechen
                   </button>
                   <button onClick={undoCompletion} disabled={undoing}
-                    className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+                    className="text-sm font-semibold text-fg bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-control transition-colors disabled:opacity-50">
                     {undoing ? "Wird aufgehoben…" : "Ja, Abschluss aufheben"}
                   </button>
                 </div>
@@ -268,30 +268,30 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         {!deleteConfirm ? (
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-300 font-medium">Eventreihe löschen</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-sm text-fg/90 font-medium">Eventreihe löschen</p>
+              <p className="text-xs text-subtle mt-0.5">
                 Löscht die Reihe und alle {series.events.length} zugehörigen Event(s) unwiderruflich.
               </p>
             </div>
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0 max-lg:min-h-10"
+              className="flex items-center gap-1.5 text-sm text-danger border border-red-800/40 hover:border-red-600/60 hover:bg-danger-soft px-3 py-1.5 rounded-control transition-colors shrink-0 max-lg:min-h-10"
             >
               <Trash2 className="w-3.5 h-3.5" /> Löschen
             </button>
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-red-300">
-              Bist du sicher? Die Reihe <span className="font-semibold text-white">„{series.name}“</span> und
-              alle <span className="font-semibold text-white">{series.events.length} zugehörigen Events</span> (inkl.
+            <p className="text-sm text-danger">
+              Bist du sicher? Die Reihe <span className="font-semibold text-fg">„{series.name}“</span> und
+              alle <span className="font-semibold text-fg">{series.events.length} zugehörigen Events</span> (inkl.
               Anmeldungen, Turniere &amp; Matches) werden unwiderruflich gelöscht.
             </p>
-            {isModerator && <div className="space-y-2 rounded-lg border border-line bg-black/20 p-3">
-              <p className="text-xs text-gray-500">
+            {isModerator && <div className="space-y-2 rounded-control border border-line bg-surface-2 p-3">
+              <p className="text-xs text-subtle">
                 Bereits vergebene Belohnungen aus abgeschlossenen Events dieser Reihe:
               </p>
-              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-fg/90 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={deleteRevertCoins}
@@ -301,7 +301,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
                 Vergebene Münzen den Usern wieder abziehen
               </label>
-              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-fg/90 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={deleteRevertRankPoints}
@@ -311,21 +311,21 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                 <RankPointsIcon size={12} />
                 Vergebene Rang-Punkte den Usern wieder abziehen
               </label>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-subtle">
                 Unangeklickt behalten User ihre bisher erhaltenen Münzen/Rang-Punkte aus dieser Reihe.
               </p>
             </div>}
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(false)}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors"
+                className="text-sm text-muted hover:text-fg px-3 py-1.5 rounded-control border border-line hover:border-line-strong transition-colors"
               >
                 Abbrechen
               </button>
               <button
                 onClick={deleteSeries}
                 disabled={deleting}
-                className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                className="text-sm font-semibold text-fg bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-control transition-colors disabled:opacity-50"
               >
                 {deleting ? "Löschen…" : "Ja, endgültig löschen"}
               </button>
@@ -337,11 +337,11 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
 
       {showGenerateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-xl border border-line bg-gray-900 p-4 space-y-3">
-            <p className="text-sm font-semibold text-white flex items-center gap-1.5">
+          <div className="w-full max-w-sm rounded-control border border-line bg-surface-2 p-4 space-y-3">
+            <p className="text-sm font-semibold text-fg flex items-center gap-1.5">
               <CalendarPlus className="w-4 h-4 text-primary-fg" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               {recurrenceType
                 ? "Vorgeschlagen anhand der Wiederholungsregel — du kannst das Datum bei Bedarf anpassen, ohne die feste Wiederholung der Reihe zu verändern."
                 : "Diese Reihe hat keine automatische Wiederholung — wähle das Datum für den neuen Termin manuell."}
@@ -356,14 +356,14 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <button
                 onClick={() => setShowGenerateModal(false)}
                 disabled={generatingNext}
-                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-line hover:border-line-strong transition-colors disabled:opacity-50"
+                className="text-sm text-muted hover:text-fg px-3 py-1.5 rounded-control border border-line hover:border-line-strong transition-colors disabled:opacity-50"
               >
                 Abbrechen
               </button>
               <button
                 onClick={generateNextEvent}
                 disabled={generatingNext || !generateDateStr}
-                className="text-sm font-semibold text-primary-ink bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                className="text-sm font-semibold text-primary-ink bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-control transition-colors disabled:opacity-50"
               >
                 {generatingNext ? "Erstellt…" : "Termin erstellen"}
               </button>
@@ -374,15 +374,15 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
       {/* ── Speicherleiste: erscheint bei ungespeicherten Änderungen ── */}
       {settingsDirty && (
         <div className="sticky bottom-20 lg:bottom-4 z-30">
-          <div className="flex items-center gap-3 rounded-xl border border-amber-400/40 bg-gray-900/95 px-3 py-2.5 shadow-card">
+          <div className="flex items-center gap-3 rounded-control border border-amber-400/40 bg-surface-2/95 px-3 py-2.5 shadow-card">
             <span className="h-2 w-2 shrink-0 rounded-full bg-amber-400" />
-            <span className="flex-1 min-w-0 truncate text-sm text-gray-200">Ungespeicherte Änderungen an der Reihe</span>
+            <span className="flex-1 min-w-0 truncate text-sm text-fg">Ungespeicherte Änderungen an der Reihe</span>
             <button type="button" onClick={discardSettings} disabled={saving}
-              className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-line disabled:opacity-50">
+              className="shrink-0 rounded-control px-3 py-1.5 text-xs font-semibold text-fg/90 hover:text-fg hover:bg-line disabled:opacity-50">
               Verwerfen
             </button>
             <button type="button" onClick={saveSettings} disabled={saving}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-hover px-3.5 py-1.5 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
+              className="shrink-0 inline-flex items-center gap-1.5 rounded-control bg-primary hover:bg-primary-hover px-3.5 py-1.5 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
               <Save className="w-3.5 h-3.5" /> {saving ? "Speichert…" : "Speichern"}
             </button>
           </div>

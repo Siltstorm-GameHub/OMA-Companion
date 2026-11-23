@@ -7,7 +7,7 @@ import type { SeriesComplete } from "./useSeriesComplete";
 export default function SeriesCompleteOpenEvents({ ctx }: { ctx: SeriesComplete }) {
   const { openEvents, startNewSeason, setOpenEventsAction, effectiveOpenEventsAction } = ctx;
   return (
-    <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
+    <div className="rounded-control p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)" }}>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-semibold text-amber-300">
@@ -16,9 +16,9 @@ export default function SeriesCompleteOpenEvents({ ctx }: { ctx: SeriesComplete 
               </div>
               <ul className="space-y-1">
                 {openEvents.map(ev => (
-                  <li key={ev.id} className="text-xs text-gray-400 flex items-center gap-2">
+                  <li key={ev.id} className="text-xs text-muted flex items-center gap-2">
                     <span className="truncate flex-1">{ev.title}</span>
-                    <span className="text-gray-600 shrink-0">
+                    <span className="text-subtle shrink-0">
                       {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Berlin" })}
                       {ev.registrations > 0 && ` · ${ev.registrations} Anm.`}
                     </span>
@@ -39,8 +39,8 @@ export default function SeriesCompleteOpenEvents({ ctx }: { ctx: SeriesComplete 
                       disabled={value === "move" && !startNewSeason}
                       onChange={() => setOpenEventsAction(value)} />
                     <span>
-                      <span className="text-xs text-white">{label}</span>
-                      <span className="block text-xs text-gray-500">{hint}</span>
+                      <span className="text-xs text-fg">{label}</span>
+                      <span className="block text-xs text-subtle">{hint}</span>
                     </span>
                   </label>
                 ))}

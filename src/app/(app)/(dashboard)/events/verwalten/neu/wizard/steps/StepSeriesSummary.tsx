@@ -24,29 +24,29 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
   return (
     <div className="space-y-4">
       {seasonPrefill && (
-        <div className={`rounded-xl p-4 border text-sm space-y-1.5 ${changes.length > 0 ? "border-amber-500/30 bg-amber-500/[0.05]" : "border-line bg-surface-2"}`}>
+        <div className={`rounded-control p-4 border text-sm space-y-1.5 ${changes.length > 0 ? "border-amber-500/30 bg-amber-500/[0.05]" : "border-line bg-surface-2"}`}>
           <p className="text-xs font-semibold uppercase tracking-wider mb-1 text-amber-300">
             Gegenüber „{seasonPrefill.oldSeriesName}“ {changes.length > 0 ? `geändert (${changes.length})` : "unverändert"}
           </p>
           {changes.length === 0 ? (
-            <p className="text-xs text-gray-500">Alle Einstellungen werden 1:1 aus der Vorsaison übernommen.</p>
+            <p className="text-xs text-subtle">Alle Einstellungen werden 1:1 aus der Vorsaison übernommen.</p>
           ) : (
             <ul className="space-y-0.5">
-              {changes.map((c, i) => <li key={i} className="text-xs text-gray-300">• {c}</li>)}
+              {changes.map((c, i) => <li key={i} className="text-xs text-fg/90">• {c}</li>)}
             </ul>
           )}
         </div>
       )}
-      <div className={`rounded-2xl p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
+      <div className={`rounded-card p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
         <div className="flex items-center gap-3 mb-3">
           <span className="text-2xl">🔁</span>
           {catCfg && <AppIcon kind="category" name={catCfg.value} size={40} className="text-3xl" />}
           <div>
             <p className={`text-lg font-bold ${catCfg?.color}`}>{seriesName || "Eventreihe"}</p>
-            <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Turnier-Reihe" : "Community-Reihe"}</p>
+            <p className="text-xs text-subtle">{catCfg?.label} · {eventType === "tournament" ? "Turnier-Reihe" : "Community-Reihe"}</p>
           </div>
         </div>
-        <div className="space-y-1 text-sm text-gray-300">
+        <div className="space-y-1 text-sm text-fg/90">
           {fixedGame && <p>🎮 {fixedGame}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
           {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === seriesFormat)?.label}</p>}
           <p>🔄 Wiederholung: {recLabel}</p>
@@ -58,13 +58,13 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
           {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
           {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
           {((w.seriesOmaOriginal && !w.isCommunity) || (!w.variousGames && isBlocksGame(w.fixedGame))) && <p className="text-primary-fg font-semibold">OMA Original · Logo auf allen Termin-Covern</p>}
-          {seriesHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
-          {seriesRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
-          {seriesSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === seriesSquadId)?.name}</p>}
+          {seriesHidden && <p className="text-primary-fg">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
+          {seriesRegistrationLocked && <p className="text-primary-fg">🔐 Selbst-Anmeldung deaktiviert</p>}
+          {seriesSquadId && <p className="text-primary-fg">🛡️ Nur für Squad: {squads.find(s => s.id === seriesSquadId)?.name}</p>}
         </div>
       </div>
-      <div className="rounded-xl p-4 border border-line bg-surface-2 text-sm space-y-1.5 text-gray-400">
-        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Standard-Belohnungen</p>
+      <div className="rounded-control p-4 border border-line bg-surface-2 text-sm space-y-1.5 text-muted">
+        <p className="text-xs text-subtle font-semibold uppercase tracking-wider mb-2">Standard-Belohnungen</p>
         <p>✅ Teilnahme: {participationCoins} Münzen{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
         {placements.map(p => (
           <p key={p.place}>🏅 {p.place}. Platz: {p.coins} Münzen{p.rankPoints > 0 ? ` + ${p.rankPoints} RP` : ""}</p>

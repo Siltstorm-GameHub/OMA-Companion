@@ -54,7 +54,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
         {game !== BLOCKS_GAME && (
           <button type="button" onClick={() => { setGame(BLOCKS_GAME); setEventType("tournament"); }}
-            className="mt-1.5 inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200">
+            className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary-fg hover:text-fg">
             🧱 Event für unser App-Spiel OMA Blocks (Versus-Turnier oder Challenge)
           </button>
         )}
@@ -77,11 +77,11 @@ export default function StepEventData({ w }: { w: EventWizard }) {
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {GENRES.map(g => (
               <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
-                className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                className={`flex flex-col items-center gap-1.5 rounded-control p-2 border transition-all ${
                   genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-gray-500"}`}>{g.label}</span>
+                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-subtle"}`}>{g.label}</span>
               </button>
             ))}
           </div>
@@ -123,8 +123,8 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         />
       )}
 
-      <div className="rounded-xl p-4 border border-line bg-surface-2 space-y-2">
-        <p className="text-sm text-gray-200">Veröffentlichung</p>
+      <div className="rounded-control p-4 border border-line bg-surface-2 space-y-2">
+        <p className="text-sm text-fg">Veröffentlichung</p>
         {(w.isCommunity ? [
           // Mitglieder: angekündigt wird erst nach der Mod-Freigabe (lib/community-events.ts)
           ["now", "Sofort veröffentlichen", "Direkt in der App sichtbar. Discord-Ankündigung und Push folgen, sobald ein Mod es freigegeben hat."],
@@ -137,10 +137,10 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         ] as const).map(([value, label, hint]) => (
           <label key={value} className="flex items-start gap-3 cursor-pointer select-none">
             <input type="radio" name="publishMode" checked={publishMode === value} onChange={() => setPublishMode(value)}
-              className="w-4 h-4 mt-0.5 accent-violet-500 shrink-0" />
+              className="w-4 h-4 mt-0.5 accent-primary shrink-0" />
             <div>
-              <p className="text-sm text-gray-300">{label}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
+              <p className="text-sm text-fg/90">{label}</p>
+              <p className="text-xs text-subtle mt-0.5">{hint}</p>
             </div>
           </label>
         ))}
@@ -150,13 +150,13 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         )}
       </div>
 
-      <div className="rounded-xl p-4 border border-line bg-surface-2">
+      <div className="rounded-control p-4 border border-line bg-surface-2">
         <label className="flex items-start gap-3 cursor-pointer select-none">
           <input type="checkbox" checked={eventRegistrationLocked} onChange={e => setEventRegistrationLocked(e.target.checked)}
-            className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
+            className="w-4 h-4 mt-0.5 rounded accent-primary shrink-0" />
           <div>
-            <p className="text-sm text-gray-200">Selbst-Anmeldung deaktivieren</p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm text-fg">Selbst-Anmeldung deaktivieren</p>
+            <p className="text-xs text-subtle mt-0.5">
               User können sich nicht selbst anmelden — nur Admins/Moderatoren tragen Teilnehmer im
               Tab „Teilnehmer" ein. Praktisch für Team-interne Events (z.B. Trainingsreihen).
             </p>
@@ -165,26 +165,26 @@ export default function StepEventData({ w }: { w: EventWizard }) {
       </div>
 
       {squads.length > 0 && (
-        <div className="rounded-xl p-4 border border-line bg-surface-2">
+        <div className="rounded-control p-4 border border-line bg-surface-2">
           <label className={labelCls}>{forceSquad ? "Squad" : "Nur für Squad (optional)"}</label>
           <select value={eventSquadId} onChange={e => setEventSquadId(e.target.value)}
             className={inputCls} style={inputStyle}>
             {!forceSquad && <option value="">– Für alle offen –</option>}
             {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
-          <p className="text-xs text-gray-500 mt-1.5">
+          <p className="text-xs text-subtle mt-1.5">
             Event bleibt für alle sichtbar, aber nur Mitglieder dieses Squads können sich als
             Spieler anmelden (Zuschauer-Anmeldung bleibt offen).
           </p>
         </div>
       )}
 
-      <div className="rounded-xl p-3 space-y-3" style={{ background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 10%, transparent)" }}>
-        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Eventreihe</p>
+      <div className="rounded-control p-3 space-y-3" style={{ background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 10%, transparent)" }}>
+        <p className="text-xs text-muted font-semibold uppercase tracking-wider">Eventreihe</p>
         <div className="flex gap-2 flex-wrap">
           {(["none", "existing", "new"] as const).map(m => (
             <button key={m} type="button" onClick={() => setSeriesMode(m)}
-              className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+              className="text-xs px-3 py-1.5 rounded-control transition-colors"
               style={seriesMode === m
                 ? { background: "color-mix(in srgb, var(--color-primary) 18%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
                 : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }}>

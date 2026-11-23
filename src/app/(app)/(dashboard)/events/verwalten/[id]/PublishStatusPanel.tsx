@@ -55,8 +55,8 @@ export default function PublishStatusPanel({
 
   if (hidden) {
     return (
-      <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 px-4 py-3 space-y-2">
-        <p className="text-sm text-violet-300 flex items-center gap-2">
+      <div className="rounded-control border border-primary/35 bg-primary-soft/60 px-4 py-3 space-y-2">
+        <p className="text-sm text-primary-fg flex items-center gap-2">
           <CalendarDays className="w-4 h-4" />
           {publishAt
             ? <>Wird am {formatBerlinDateTime(new Date(publishAt), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })} Uhr automatisch veröffentlicht und angekündigt</>
@@ -66,17 +66,17 @@ export default function PublishStatusPanel({
           <input type="datetime-local" value={planned} onChange={e => setPlanned(e.target.value)}
             className="text-xs bg-surface-2 border border-line text-fg rounded-control px-2 py-1.5" />
           <button type="button" disabled={busy || !planned} onClick={() => savePublishAt(planned)}
-            className="text-xs text-violet-300 border border-violet-600/50 rounded-lg px-3 py-1.5 hover:bg-violet-900/20 disabled:opacity-40">
+            className="text-xs text-primary-fg border border-primary/35 rounded-control px-3 py-1.5 hover:bg-primary-soft disabled:opacity-40">
             Veröffentlichung planen
           </button>
           {publishAt && (
             <button type="button" disabled={busy} onClick={() => savePublishAt(null)}
-              className="text-xs text-gray-500 hover:text-gray-300">
+              className="text-xs text-subtle hover:text-fg/90">
               Planung entfernen
             </button>
           )}
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           Beim Sichtbarschalten (oder zum geplanten Zeitpunkt) wird das Event auf Discord angekündigt und
           per Push gemeldet.
         </p>
@@ -86,17 +86,17 @@ export default function PublishStatusPanel({
 
   if (state.errors.length === 0) return null;
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-2">
+    <div className="rounded-control border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-2">
       <p className="text-sm text-amber-300 flex items-center gap-2">
         <AlertTriangle className="w-4 h-4" /> Veröffentlichung unvollständig
       </p>
-      <ul className="text-xs text-gray-400 space-y-0.5">
+      <ul className="text-xs text-muted space-y-0.5">
         {state.errors.map((e, i) => (
           <li key={i}>• {PUBLISH_STEP_LABELS[e.step] ?? e.step}: {e.message}</li>
         ))}
       </ul>
       <button type="button" disabled={busy} onClick={retry}
-        className="flex items-center gap-1.5 text-xs text-amber-300 border border-amber-600/50 rounded-lg px-3 py-1.5 hover:bg-amber-900/20 disabled:opacity-40 max-lg:min-h-10">
+        className="flex items-center gap-1.5 text-xs text-amber-300 border border-amber-600/50 rounded-control px-3 py-1.5 hover:bg-warning-soft disabled:opacity-40 max-lg:min-h-10">
         <RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} /> Erneut versuchen
       </button>
     </div>

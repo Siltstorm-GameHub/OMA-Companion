@@ -32,15 +32,15 @@ export type ReviewMatch = {
 };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  pending:   { label: "Offen",      cls: "bg-amber-900/40 text-amber-300" },
-  processing:{ label: "In Arbeit",  cls: "bg-amber-900/40 text-amber-300" },
-  approved:  { label: "Übernommen", cls: "bg-emerald-900/40 text-emerald-300" },
-  corrected: { label: "Korrigiert", cls: "bg-blue-900/40 text-blue-300" },
-  rejected:  { label: "Abgelehnt",  cls: "bg-red-900/40 text-red-300" },
+  pending:   { label: "Offen",      cls: "bg-warning-soft text-amber-300" },
+  processing:{ label: "In Arbeit",  cls: "bg-warning-soft text-amber-300" },
+  approved:  { label: "Übernommen", cls: "bg-success-soft text-success" },
+  corrected: { label: "Korrigiert", cls: "bg-primary-soft text-primary-fg" },
+  rejected:  { label: "Abgelehnt",  cls: "bg-danger-soft text-danger" },
 };
 
 const inputCls =
-  "w-full px-2.5 py-1.5 rounded-lg bg-surface-2 border border-line-strong text-sm text-white focus:border-primary/40 focus:outline-none";
+  "w-full px-2.5 py-1.5 rounded-control bg-surface-2 border border-line-strong text-sm text-fg focus:border-primary/40 focus:outline-none";
 
 function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; match: ReviewMatch; sub: Sub; statFields: string[] }) {
   const router = useRouter();
@@ -85,42 +85,42 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
   const st = STATUS[sub.status];
 
   return (
-    <div className="rounded-xl border border-line p-3 space-y-3">
+    <div className="rounded-control border border-line p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-white">
+        <p className="text-sm text-fg">
           {sub.forUser && <>Werte von <span className="font-medium">{sub.forUser.name}</span> · </>}
           Gemeldet von <span className="font-medium">{sub.user.name}</span>
-          <span className="text-xs text-gray-500"> · {new Date(sub.createdAt).toLocaleString("de-DE")}</span>
+          <span className="text-xs text-subtle"> · {new Date(sub.createdAt).toLocaleString("de-DE")}</span>
         </p>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? sub.status}{sub.applied && !done ? " · vorläufig sichtbar" : ""}</span>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {sub.screenshotUrls.map((u) => (
-          <button key={u} type="button" onClick={() => setZoom(u)} className="w-28 h-20 rounded-lg overflow-hidden border border-line-strong">
+          <button key={u} type="button" onClick={() => setZoom(u)} className="w-28 h-20 rounded-control overflow-hidden border border-line-strong">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={u} alt="Nachweis" className="w-full h-full object-cover" />
           </button>
         ))}
       </div>
 
-      {sub.screenshotUrls.length === 0 && <p className="text-xs text-gray-500">Screenshots wurden automatisch gelöscht.</p>}
+      {sub.screenshotUrls.length === 0 && <p className="text-xs text-subtle">Screenshots wurden automatisch gelöscht.</p>}
 
-      {sub.note && <p className="text-xs text-gray-400">„{sub.note}“</p>}
+      {sub.note && <p className="text-xs text-muted">„{sub.note}“</p>}
 
       {match.isDuel ? (
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs text-gray-400 space-y-1">{match.player1?.name ?? "Spieler 1"}
+          <label className="text-xs text-muted space-y-1">{match.player1?.name ?? "Spieler 1"}
             <NumberInput min={0} value={score1} disabled={done} onChange={(e) => setScore1(e.target.value)} className={inputCls} />
           </label>
-          <label className="text-xs text-gray-400 space-y-1">{match.player2?.name ?? "Spieler 2"}
+          <label className="text-xs text-muted space-y-1">{match.player2?.name ?? "Spieler 2"}
             <NumberInput min={0} value={score2} disabled={done} onChange={(e) => setScore2(e.target.value)} className={inputCls} />
           </label>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {statFields.map((f) => (
-            <label key={f} className="text-xs text-gray-400 space-y-1">{f}
+            <label key={f} className="text-xs text-muted space-y-1">{f}
               <NumberInput min={0} value={stats[f] ?? ""} disabled={done} onChange={(e) => setStats({ ...stats, [f]: e.target.value })} className={inputCls} />
             </label>
           ))}
@@ -129,7 +129,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
 
       {/* Gleichstand: im K.O.-Spiel entscheidet, wer nach Elfmeterschießen weiterkommt */}
       {tie && match.player1 && match.player2 && (
-        <label className="block text-xs text-gray-400 space-y-1">Wer kommt weiter? (nur im K.O.-Spiel, z.B. nach Elfmeterschießen)
+        <label className="block text-xs text-muted space-y-1">Wer kommt weiter? (nur im K.O.-Spiel, z.B. nach Elfmeterschießen)
           <select value={advancerId} disabled={done} onChange={(e) => setAdvancerId(e.target.value)} className={inputCls}>
             <option value="">— niemand (Unentschieden)</option>
             <option value={match.player1.id}>{match.player1.name}</option>
@@ -139,7 +139,7 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
       )}
 
       {sub.original && (
-        <p className="text-xs text-blue-300/80">
+        <p className="text-xs text-primary-fg">
           Ursprünglich gemeldet: {match.isDuel
             ? `${sub.original.score1 ?? "–"} : ${sub.original.score2 ?? "–"}`
             : Object.entries(sub.original.statsJson ?? {}).map(([k, v]) => `${k} ${v}`).join(", ") || "–"}
@@ -147,17 +147,17 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
       )}
 
       {done ? (
-        sub.reviewNote && <p className="text-xs text-gray-400">Prüf-Notiz: {sub.reviewNote}</p>
+        sub.reviewNote && <p className="text-xs text-muted">Prüf-Notiz: {sub.reviewNote}</p>
       ) : (
         <div className="space-y-2">
           <input value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} maxLength={500} placeholder="Notiz an den Spieler (optional)" className={inputCls} />
           <div className="flex flex-wrap gap-2">
             <button disabled={busy} onClick={() => act(changed ? "correct" : "approve")}
-              className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
+              className="px-3 py-1.5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
               {changed ? "Korrigiert übernehmen" : "Übernehmen"}
             </button>
             <button disabled={busy} onClick={() => act("reject")}
-              className="px-3 py-1.5 rounded-lg bg-red-900/50 hover:bg-red-800/60 text-red-200 text-sm font-medium disabled:opacity-50">
+              className="px-3 py-1.5 rounded-control bg-danger-soft hover:bg-red-800/60 text-red-200 text-sm font-medium disabled:opacity-50">
               Ablehnen
             </button>
           </div>
@@ -193,7 +193,7 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
   const [filter, setFilter] = useState<"open" | "all">("open");
   const [bulkBusy, setBulkBusy] = useState(false);
   if (matches.length === 0) {
-    return <div className="glass rounded-2xl p-8 text-center text-gray-400 text-sm">Noch keine Ergebnis-Meldungen.</div>;
+    return <div className="glass rounded-card p-8 text-center text-muted text-sm">Noch keine Ergebnis-Meldungen.</div>;
   }
   const openMatches = matches.filter((m) => m.submissions.some((s) => s.status === "pending"));
   const shown = filter === "open" ? openMatches : matches;
@@ -223,35 +223,35 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
       <div className="flex flex-wrap items-center gap-2">
         {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
+            className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-muted hover:text-fg hover:bg-line"}`}>
             {label}
           </button>
         ))}
         {bulkSubs.length > 0 && (
           <button type="button" onClick={approveAll} disabled={bulkBusy}
             title="Übernimmt jede offene Meldung so, wie sie gemeldet wurde. Matches mit Widerspruch bleiben offen."
-            className="ml-auto rounded-lg bg-primary hover:bg-primary-hover disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-primary-ink">
+            className="ml-auto rounded-control bg-primary hover:bg-primary-hover disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-primary-ink">
             {bulkBusy ? "Übernehme …" : `Alle offenen ohne Widerspruch übernehmen (${bulkSubs.length})`}
           </button>
         )}
       </div>
       {shown.length === 0 && (
-        <div className="glass rounded-2xl p-6 text-center text-gray-400 text-sm">Alles geprüft, keine offenen Meldungen.</div>
+        <div className="glass rounded-card p-6 text-center text-muted text-sm">Alles geprüft, keine offenen Meldungen.</div>
       )}
       {shown.map((m) => {
         const conflict = conflictOf(m);
         const pendingDuel = m.isDuel ? m.submissions.filter((s) => s.status === "pending") : [];
         return (
-          <div key={m.id} className="glass rounded-2xl p-4 space-y-3">
+          <div key={m.id} className="glass rounded-card p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-white">
+              <h3 className="text-sm font-semibold text-fg">
                 {m.label}
-                {m.isDuel && m.player1 && m.player2 && <span className="text-gray-500 font-normal"> · {m.player1.name} vs {m.player2.name}</span>}
+                {m.isDuel && m.player1 && m.player2 && <span className="text-subtle font-normal"> · {m.player1.name} vs {m.player2.name}</span>}
               </h3>
-              {m.current && <span className="text-xs text-gray-500">Aktuell: {m.current.score1 ?? "–"} : {m.current.score2 ?? "–"}</span>}
+              {m.current && <span className="text-xs text-subtle">Aktuell: {m.current.score1 ?? "–"} : {m.current.score2 ?? "–"}</span>}
             </div>
             {conflict && (
-              <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 space-y-0.5">
+              <div className="rounded-control border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 space-y-0.5">
                 <p className="font-semibold">⚠ Die Meldungen widersprechen sich — bitte anhand der Screenshots prüfen:</p>
                 {m.isDuel
                   ? pendingDuel.map((s) => (

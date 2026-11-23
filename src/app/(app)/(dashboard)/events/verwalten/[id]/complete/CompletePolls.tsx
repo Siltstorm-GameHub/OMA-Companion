@@ -10,19 +10,19 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
   const { eventId, registeredUsers, spectatorUsers, allUsers, pollConfig, pollsConfig, isAdmin, isMod, isPollOnly, isFinishedSummary, openEventPolls, pollExcluded, setPollExcluded, pollVotes, setPollVotes, pollEligible, pollWinners, stepNo } = ctx;
   return (
     <section id="schritt-umfrage" aria-label="Umfrage" className="space-y-3 scroll-mt-20">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-fg">
             <span className="w-5 h-5 rounded-full bg-primary/15 text-primary-fg text-xs flex items-center justify-center">{stepNo("Umfrage")}</span>
             Umfrage
           </h2>
           {!isPollOnly && !isFinishedSummary && pollsConfig.length > 0 && (
-            <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 text-xs text-gray-300">
+            <p className="rounded-control border border-line bg-surface-2 px-4 py-3 text-xs text-fg/90">
               Nach dem Abschluss {pollsConfig.length === 1 ? "startet die Umfrage" : "starten die Umfragen"}{" "}
               {pollsConfig.map(pc => `„${pc.label || pc.question}“`).join(", ")}. Die Sieger-Belohnung wird nach Ablauf
               automatisch vergeben, du musst danach nichts mehr tun.
             </p>
           )}
           {openEventPolls.length > 0 && (
-            <p className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+            <p className="flex items-start gap-2 rounded-control border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
               <Vote className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Läuft noch: {openEventPolls.map(op => `„${op.label}“ bis ${new Date(op.endAt).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
@@ -45,7 +45,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
           )}
           {/* Poll (legacy – nur wenn kein pollsConfig vorhanden) */}
           {pollConfig.enabled && pollsConfig.length === 0 && (
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
+            <div className="rounded-control p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
               <div className="flex items-center gap-2">
                 <Vote className="w-3.5 h-3.5 text-violet-400" />
                 <span className="text-xs font-semibold text-violet-300">
@@ -53,7 +53,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                 </span>
                 {isPollOnly && <span className="text-xs text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
-              <p className="text-xs text-gray-600 -mt-1">
+              <p className="text-xs text-subtle -mt-1">
                 Diese Einzelumfrage stammt aus der alten Umfrage-Einstellung (Sieger wird hier von Hand gewählt). Sie läuft aus:
                 Speichere das Event bzw. die Reihe einmal im Reiter „Belohnungen“, dann wird sie zu einer normalen Abstimmung
                 nach dem Event (mit Stimmen in der App und automatischer Auswertung). Alternativ alle auf einmal umwandeln:
@@ -63,13 +63,13 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
               {!isFinishedSummary && (
                 <>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
+                    <p className="text-xs text-subtle mb-1.5">Aus Abstimmung ausschließen:</p>
                     <div className="flex flex-wrap gap-2">
                       {registeredUsers.map(u => (
-                        <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
+                        <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-control text-xs cursor-pointer transition-colors select-none ${
                           pollExcluded.has(u.id)
-                            ? "bg-red-900/30 border border-red-700/40 text-red-300"
-                            : "bg-surface-2 border border-line text-gray-400 hover:border-line-strong"
+                            ? "bg-danger-soft border border-red-700/40 text-danger"
+                            : "bg-surface-2 border border-line text-muted hover:border-line-strong"
                         }`}>
                           <input
                             type="checkbox"
@@ -91,17 +91,17 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
 
                   {pollEligible.length > 0 && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1.5">Stimmen eintragen:</p>
+                      <p className="text-xs text-subtle mb-1.5">Stimmen eintragen:</p>
                       <div className="space-y-1.5">
                         {pollEligible.map(u => (
                           <div key={u.id} className="flex items-center gap-3">
                             <Avatar u={u} size={5} />
-                            <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
+                            <span className="flex-1 text-sm text-fg truncate">{userName(u)}</span>
                             <NumberInput
                               min={0}
                               value={pollVotes[u.id] ?? 0}
                               onChange={e => setPollVotes(prev => ({ ...prev, [u.id]: Math.max(0, Number(e.target.value)) }))}
-                              className="w-16 rounded-lg px-2 py-1.5 text-sm text-white text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors"
+                              className="w-16 rounded-control px-2 py-1.5 text-sm text-fg text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors"
                             />
                           </div>
                         ))}
@@ -110,13 +110,13 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                   )}
 
                   {pollEligible.length === 0 && (
-                    <p className="text-xs text-gray-600 italic">Alle Teilnehmer ausgeschlossen.</p>
+                    <p className="text-xs text-subtle italic">Alle Teilnehmer ausgeschlossen.</p>
                   )}
                 </>
               )}
 
               {pollWinners.length > 0 ? (
-                <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
+                <div className="rounded-control bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
                   <p className="text-xs text-violet-400 font-semibold">
                     {pollWinners.length === 1 ? "Gewinner" : `Unentschieden – alle ${pollWinners.length} gewinnen`}
                   </p>
@@ -124,21 +124,21 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
                     const u = registeredUsers.find(u => u.id === id);
                     if (!u) return null;
                     return (
-                      <div key={id} className="flex items-center gap-2 text-sm text-white">
+                      <div key={id} className="flex items-center gap-2 text-sm text-fg">
                         <Avatar u={u} size={5} />
                         {userName(u)}
-                        {!isFinishedSummary && <span className="text-xs text-gray-500">({pollVotes[id] ?? 0} Stimmen)</span>}
+                        {!isFinishedSummary && <span className="text-xs text-subtle">({pollVotes[id] ?? 0} Stimmen)</span>}
                       </div>
                     );
                   })}
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-subtle mt-1">
                     Belohnung: {pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}
                     {pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}
                     {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}
                   </p>
                 </div>
               ) : isFinishedSummary ? (
-                <p className="text-xs text-gray-600 italic">Kein Sieger.</p>
+                <p className="text-xs text-subtle italic">Kein Sieger.</p>
               ) : null}
             </div>
           )}

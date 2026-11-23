@@ -32,10 +32,10 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
     <div className="space-y-4">
       {/* ── Stand ── */}
       {goalStatus && (
-        <section aria-label="Stand des Ziels" className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+        <section aria-label="Stand des Ziels" className="rounded-control border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <p className="text-sm font-semibold text-teal-200">Stand: {goalStatus.current} von {goalStatus.target}</p>
-            <span className="text-xs text-gray-400">
+            <p className="text-sm font-semibold text-primary-fg">Stand: {goalStatus.current} von {goalStatus.target}</p>
+            <span className="text-xs text-muted">
               {goalStatus.awaitingApproval ? "Belohnungen erst nach der Freigabe"
                 : goalStatus.settled ? (goalStatus.reached ? "Abgerechnet: geschafft 🎉" : "Abgerechnet: verfehlt")
                 : goalStatus.reached ? "Geschafft 🎉" : "läuft"}
@@ -46,12 +46,12 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
           </div>
           {goalStatus.rewarded.length > 0 ? (
             <div>
-              <p className="text-xs text-gray-500 mb-1">Belohnt ({goalStatus.rewarded.length})</p>
+              <p className="text-xs text-subtle mb-1">Belohnt ({goalStatus.rewarded.length})</p>
               <ul className="flex flex-wrap gap-1.5">
                 {goalStatus.rewarded.map(r => (
-                  <li key={r.id} className="rounded-full bg-line px-2 py-0.5 text-xs text-gray-200">
+                  <li key={r.id} className="rounded-full bg-line px-2 py-0.5 text-xs text-fg">
                     {r.name}
-                    <span className="text-gray-500">
+                    <span className="text-subtle">
                       {r.coins != null && r.coins > 0 ? ` · ${r.coins} Münzen` : ""}{r.seriesPoints > 0 ? ` · ${r.seriesPoints} Tabellenpunkte` : ""}
                     </span>
                   </li>
@@ -59,14 +59,14 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
               </ul>
             </div>
           ) : (
-            <p className="text-xs text-gray-500">Noch niemand belohnt.</p>
+            <p className="text-xs text-subtle">Noch niemand belohnt.</p>
           )}
           <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-line">
-            <p className="flex-1 min-w-[200px] text-xs text-gray-500">
+            <p className="flex-1 min-w-[200px] text-xs text-subtle">
               Einen Wert korrigiert? „Neu auswerten“ bucht die Ziel-Münzen zurück und vergibt sie mit den aktuellen Werten neu.
             </p>
             <button type="button" onClick={reevaluateGoal} disabled={reevaluating}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-line hover:bg-line border border-line-strong text-gray-200 disabled:opacity-50">
+              className="text-xs font-semibold px-3 py-1.5 rounded-control bg-line hover:bg-line border border-line-strong text-fg disabled:opacity-50">
               {reevaluating ? "Wertet aus…" : "Neu auswerten"}
             </button>
           </div>
@@ -75,8 +75,8 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
 
       {/* ── Einstellungen ── */}
       {goalCapable ? (
-        <section aria-label="Ziel einstellen" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-white">Ziel einstellen</h2>
+        <section aria-label="Ziel einstellen" className="rounded-control border border-line bg-surface-2/50 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-fg">Ziel einstellen</h2>
           {event.series ? (
             <div className="flex gap-2 flex-wrap">
               {([
@@ -85,16 +85,16 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
                 ["off", "Kein Ziel", "Dieser Termin ohne Ziel"],
               ] as const).map(([value, label, hint]) => (
                 <button key={value} type="button" onClick={() => setGoalMode(value)} aria-pressed={goalMode === value}
-                  className={`flex-1 min-w-[150px] text-left rounded-lg p-2.5 border transition-colors ${
+                  className={`flex-1 min-w-[150px] text-left rounded-control p-2.5 border transition-colors ${
                     goalMode === value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
                   }`}>
-                  <span className={`block text-sm font-semibold ${goalMode === value ? "text-teal-200" : "text-gray-300"}`}>{label}</span>
-                  <span className="block text-xs text-gray-500">{hint}</span>
+                  <span className={`block text-sm font-semibold ${goalMode === value ? "text-primary-fg" : "text-fg/90"}`}>{label}</span>
+                  <span className="block text-xs text-subtle">{hint}</span>
                 </button>
               ))}
             </div>
           ) : (
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-sm text-fg/90 cursor-pointer select-none">
               <input type="checkbox" checked={goalMode === "override"} onChange={e => setGoalMode(e.target.checked ? "override" : "inherit")} className="rounded" />
               Community-Ziel für dieses Event
             </label>
@@ -103,39 +103,39 @@ export default function TabGoal({ ctx }: { ctx: EventEdit }) {
             <CommunityGoalEditor value={{ ...goalForm, enabled: true }} onChange={f => setGoalForm({ ...f, enabled: true })}
               statFields={goalFieldsFor(event.format, tmtStatFields)} inSeries={!!event.series} hideToggle {...editorProps} />
           )}
-          <p className="text-xs text-gray-500">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
+          <p className="text-xs text-subtle">Gespeichert wird über die Leiste unten, zusammen mit den anderen Änderungen.</p>
         </section>
       ) : !hasTournament && eventKind === "community" ? (
         // "Ohne Platzierung" ohne Spielplan: Ziel direkt einrichten (legt eine Werte-Erfassung an)
-        <section aria-label="Ziel einrichten" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-white">Gemeinsames Ziel einrichten</h2>
-          <p className="text-xs text-gray-400">
+        <section aria-label="Ziel einrichten" className="rounded-control border border-line bg-surface-2/50 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-fg">Gemeinsames Ziel einrichten</h2>
+          <p className="text-xs text-muted">
             Für ein Ziel werden Werte gezählt, z. B. Tore oder Schritte. Lege fest, welche Werte erfasst werden. Eingetragen
             werden sie danach im Reiter „Spielplan“ (von dir oder per Screenshot-Meldung). Eine Platzierung gibt es weiterhin nicht.
           </p>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
+            <p className="text-xs text-subtle uppercase tracking-wide mb-1.5">Erfasste Werte</p>
             <StatFieldEditor fields={setupFields} onChange={setSetupFields} isAvg={false} />
           </div>
           <CommunityGoalEditor value={{ ...goalForm, enabled: true }} onChange={f => setGoalForm({ ...f, enabled: true })}
             statFields={setupFields} inSeries={!!event.series} hideToggle {...editorProps} />
           <button type="button" onClick={() => createGoalTracking(setupFields)} disabled={goalSetupLoading || setupFields.length === 0}
-            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-primary-hover disabled:opacity-50">
+            className="w-full rounded-control py-2.5 text-sm font-semibold text-primary-ink bg-primary hover:bg-primary-hover disabled:opacity-50">
             {goalSetupLoading ? "Legt an…" : "Ziel anlegen"}
           </button>
-          <p className="text-xs text-gray-500">„Ziel anlegen“ gilt sofort.</p>
+          <p className="text-xs text-subtle">„Ziel anlegen“ gilt sofort.</p>
         </section>
       ) : (
-        <section aria-label="Kein Ziel möglich" className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-2">
-          <p className="text-sm text-gray-300">
+        <section aria-label="Kein Ziel möglich" className="rounded-control border border-line bg-surface-2/50 p-4 space-y-2">
+          <p className="text-sm text-fg/90">
             {hasTournament
               ? `Das Format „${formatLabel(event.format)}“ kennt kein Community-Ziel.`
               : "Ein Ziel braucht einen Spielplan, in dem Werte oder Ergebnisse eingetragen werden."}
           </p>
-          <p className="text-xs text-gray-500">Ziele gibt es bei: {GOAL_FORMAT_NAMES}.</p>
+          <p className="text-xs text-subtle">Ziele gibt es bei: {GOAL_FORMAT_NAMES}.</p>
           {!hasTournament && (
             <button type="button" onClick={() => setActiveTab("tournament")}
-              className="text-xs font-semibold text-primary-fg hover:text-teal-200">Zum Spielplan und Format wählen →</button>
+              className="text-xs font-semibold text-primary-fg hover:text-primary-fg">Zum Spielplan und Format wählen →</button>
           )}
         </section>
       )}

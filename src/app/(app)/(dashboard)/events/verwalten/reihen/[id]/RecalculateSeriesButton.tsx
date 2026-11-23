@@ -57,19 +57,19 @@ export default function RecalculateSeriesButton({ seriesId, finishedCount }: { s
         type="button"
         onClick={run}
         disabled={busy || finishedCount === 0}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/40 bg-teal-700/15 hover:bg-teal-700/25 text-sm text-primary-fg disabled:opacity-40 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-control border border-primary/40 bg-primary-soft hover:bg-primary/25 text-sm text-primary-fg disabled:opacity-40 transition-colors"
       >
         <RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />
         {busy ? "Wird neu berechnet…" : `Abgeschlossene Events neu berechnen (${finishedCount})`}
       </button>
       {result && (
-        <div className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-gray-300 space-y-1">
+        <div className="rounded-control border border-line bg-surface-2 px-3 py-2 text-xs text-fg/90 space-y-1">
           <p>{result.recalculated} Event{result.recalculated === 1 ? "" : "s"} neu berechnet. Änderungen insgesamt:</p>
-          <p className="text-gray-400">
+          <p className="text-muted">
             Tabellenpunkte {signed(result.delta.tablePoints)} · Münzen {signed(result.delta.coins)} · Rang-Punkte {signed(result.delta.rankPoints)}
           </p>
           {result.failed.length > 0 && (
-            <ul className="text-red-300 list-disc pl-4">
+            <ul className="text-danger list-disc pl-4">
               {result.failed.map(f => <li key={f.id}>{f.title}: {f.error}</li>)}
             </ul>
           )}

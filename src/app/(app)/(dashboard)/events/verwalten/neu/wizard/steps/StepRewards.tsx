@@ -14,7 +14,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
   const { eventType, spectatorMode, seriesMode, statParticipationPts, setStatParticipationPts, statSpectatorParticipationPts, setStatSpectatorParticipationPts, statPtsToGlobalRanking, setStatPtsToGlobalRanking, statRows, participationCoins, setParticipationCoins, participationRankPts, setParticipationRankPts, placements, setPlacements, spectatorCoins, setSpectatorCoins, spectatorRankPts, setSpectatorRankPts, polls, isEventMode, isSeriesMode, belongsToSeries, addPoll, updatePoll, removePoll, rewardLimits: lim } = w;
   if (w.isBlocksChallenge) {
     return (
-      <div className="rounded-xl p-4 border border-line bg-surface-2 text-sm text-gray-300">
+      <div className="rounded-control p-4 border border-line bg-surface-2 text-sm text-fg/90">
         Bei einer OMA-Blocks-Challenge gibt es keine Platzierungen — die Belohnung für alle mit Mindestbeitrag
         hast du schon in den Grunddaten festgelegt. Sie wird nach dem Ende automatisch ausgezahlt, wenn das Ziel erreicht ist.
       </div>
@@ -22,12 +22,12 @@ export default function StepRewards({ w }: { w: EventWizard }) {
   }
   return (
     <div className="space-y-6">
-      <div className="rounded-xl p-4 border border-line bg-surface-2">
+      <div className="rounded-control p-4 border border-line bg-surface-2">
         <div className="flex items-center gap-2 mb-3">
           <Image src="/Muenze Icon.png" alt="Münzen" width={20} height={20} />
-          <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
+          <p className="text-sm font-medium text-fg">Teilnahme-Belohnung</p>
         </div>
-        <p className="text-xs text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
+        <p className="text-xs text-subtle mb-3">Wird erst nach Event-Abschluss vergeben</p>
         <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
           {!belongsToSeries && (
             <div>
@@ -40,7 +40,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
           {!belongsToSeries && (
             <div>
-              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
+              <label className={labelCls}>Rang-Punkte <span className="text-subtle font-normal">(→ Rangliste)</span></label>
               <NumberInput min="0" value={participationRankPts}
                 onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -49,18 +49,18 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
         </div>
         {isSeriesMode && (
-          <p className="text-xs text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+          <p className="text-xs text-subtle mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
         )}
         {isEventMode && seriesMode !== "none" && (
-          <p className="text-xs text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
+          <p className="text-xs text-subtle mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
         )}
       </div>
 
       {eventType === "community" ? (
-        <p className="text-xs text-gray-500 -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
+        <p className="text-xs text-subtle -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
       ) : (
-      <div className="rounded-xl p-4 border border-line bg-surface-2">
-        <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
+      <div className="rounded-control p-4 border border-line bg-surface-2">
+        <p className="text-sm font-medium text-fg mb-3 flex items-center gap-1.5">
           Platzierungs-Belohnungen
           <InfoTooltip text="Münzen und Rang-Punkte, die je nach Endplatzierung im Turnier vergeben werden (🥇 1. Platz, 🥈 2. Platz, 🥉 3. Platz). Wird erst vergeben, wenn das Event/Turnier abgeschlossen und die finale Platzierung eingetragen ist." />
         </p>
@@ -88,7 +88,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           ))}
         </div>
         {isSeriesMode && lim && (
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-subtle">
             Die Grenzen der Endwertung richten sich nach der Zahl der Termine. Zu hohe Werte werden beim Abschluss der Saison gekürzt.
           </p>
         )}
@@ -97,14 +97,14 @@ export default function StepRewards({ w }: { w: EventWizard }) {
 
       {/* "Ohne Platzierung": gemeinsames Community-Ziel (legt eine Werte-Erfassung an, keine Platzierung) */}
       {isEventMode && eventType === "community" && !w.isBlocksEvent && seriesMode === "none" && (
-        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-3">
+        <div className="rounded-control p-4 border border-primary/20 bg-primary/5 space-y-3">
           <CommunityGoalEditor value={w.communityGoal} onChange={w.setCommunityGoal} statFields={w.statFields}
             rewardLimit={lim?.goalRewardCoins ?? null} hasEnd={!!w.endAt} />
           {w.communityGoal.enabled && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">Erfasste Werte</p>
+              <p className="text-xs text-subtle uppercase tracking-wide mb-1.5">Erfasste Werte</p>
               <StatFieldEditor fields={w.statFields} onChange={w.setStatFields} isAvg={false} />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-subtle mt-1">
                 Diese Werte trägst du (oder tragen die Teilnehmer per Screenshot) im Reiter „Spielplan“ ein. Eine Platzierung gibt es weiterhin nicht.
               </p>
             </div>
@@ -112,11 +112,11 @@ export default function StepRewards({ w }: { w: EventWizard }) {
         </div>
       )}
       {isEventMode && eventType === "community" && seriesMode !== "none" && (
-        <p className="text-xs text-gray-500 -mt-3 px-1">🎯 Ein Community-Ziel kommt bei Terminen einer Reihe aus der Reihe (Reiter „Ziel“ der Reihe).</p>
+        <p className="text-xs text-subtle -mt-3 px-1">🎯 Ein Community-Ziel kommt bei Terminen einer Reihe aus der Reihe (Reiter „Ziel“ der Reihe).</p>
       )}
 
       {spectatorMode && (
-        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5">
+        <div className="rounded-control p-4 border border-primary/20 bg-primary/5">
           <p className="text-sm font-medium text-primary-fg mb-3">👁️ Zuschauer-Basis-Belohnung</p>
           <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
             {!belongsToSeries && (
@@ -129,7 +129,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
               </div>
             )}
             <div>
-              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Rangliste)</span></label>
+              <label className={labelCls}>Rang-Punkte <span className="text-subtle font-normal">(→ Rangliste)</span></label>
               <NumberInput min="0" value={spectatorRankPts}
                 onChange={e => setSpectatorRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -137,24 +137,24 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             </div>
           </div>
           {isSeriesMode && (
-            <p className="text-xs text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+            <p className="text-xs text-subtle mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
           )}
           {isEventMode && seriesMode !== "none" && (
-            <p className="text-xs text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
+            <p className="text-xs text-subtle mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
           )}
         </div>
       )}
 
       {isSeriesMode && (
-        <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+        <div className="rounded-control p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
           <p className="text-sm font-medium text-indigo-300">📊 Reihentabelle</p>
-          <p className="text-xs text-gray-500 -mt-1">
+          <p className="text-xs text-subtle -mt-1">
             Die Reihentabelle der ganzen Reihe (Tabellenpunkte, über alle Events aufsummiert): Teilnahme plus
             die Punkte aus den Statistiken des vorigen Schritts.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
+              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-subtle font-normal">(Reihentabelle)</span></label>
               <NumberInput min="0" value={statParticipationPts}
                 onChange={e => setStatParticipationPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -170,7 +170,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           {spectatorMode && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Reihentabelle)</span></label>
+                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-subtle font-normal">(Reihentabelle)</span></label>
                 <NumberInput min="0" value={statSpectatorParticipationPts}
                   onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
@@ -187,11 +187,11 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={statPtsToGlobalRanking}
               onChange={e => setStatPtsToGlobalRanking(e.target.checked)}
-              className="w-4 h-4 rounded accent-indigo-500" />
-            <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf die Rangliste übertragen</span>
+              className="w-4 h-4 rounded accent-primary" />
+            <span className="text-xs text-fg/90">Tabellenpunkte bei Event-Abschluss auf die Rangliste übertragen</span>
           </label>
           {statRows.some(r => r.field.trim()) && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Punkte aus Statistiken (aus „Statistiken &amp; Events“):{" "}
               {statRows.filter(r => r.field.trim()).map(r => `${r.field} ×${r.pointsPer}`).join(" · ")}
             </p>
@@ -201,7 +201,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-gray-200">Umfragen</p>
+          <p className="text-sm font-medium text-fg">Umfragen</p>
           {polls.length < 5 && (
             <button type="button" onClick={addPoll}
               className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
@@ -209,13 +209,13 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             </button>
           )}
         </div>
-        {polls.length === 0 && <p className="text-xs text-gray-600">Keine Umfragen konfiguriert.</p>}
+        {polls.length === 0 && <p className="text-xs text-subtle">Keine Umfragen konfiguriert.</p>}
         <div className="space-y-3">
           {polls.map((poll, i) => (
-            <div key={i} className="rounded-xl p-4 border border-violet-500/20 bg-violet-500/5 space-y-3">
+            <div key={i} className="rounded-control p-4 border border-violet-500/20 bg-violet-500/5 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-violet-300">Umfrage {i + 1}</p>
-                <button type="button" onClick={() => removePoll(i)} className="text-gray-600 hover:text-red-400 transition-colors">
+                <button type="button" onClick={() => removePoll(i)} className="text-subtle hover:text-danger transition-colors">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -268,7 +268,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
                 <NumberInput min="1" value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
                   onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })}
                   className={inputCls} style={inputStyle} />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-subtle mt-1">
                   Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
                   einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
                   Gleichplatzierten die volle Sieger-Belohnung.

@@ -19,7 +19,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
           {/* Statistiken — EINE Liste: wird in jedem Event erfasst, Punkte gelten für den Skill-Index im
               Event und (gleich oder mit ⇄ abweichend) für die Reihentabelle */}
           <Section title="Statistiken">
-            <p className="text-xs text-gray-500 mb-2">
+            <p className="text-xs text-subtle mb-2">
               Werden in jedem Event der Reihe erfasst. Die Punkte gelten im Event (Eventpunkte) und in der
               Reihentabelle — mit ⇄ legst du für die Reihentabelle eigene Punkte fest. Zusatz-Stats nur für ein
               einzelnes Event ergänzt du dort im Reiter „Spielplan“.
@@ -37,7 +37,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
 
           {eventStatFields.length > 0 && (
             <Section title="Sieger-Ermittlung">
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs text-subtle mb-2">
                 Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
               </p>
               <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)} className={inputCls}>
@@ -54,22 +54,22 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={dominionEnabled} onChange={e => setDominionEnabled(e.target.checked)}
                   className="rounded accent-amber-500" />
-                <span className="text-sm text-gray-300 flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-amber-400" /> Dominion Bonus aktivieren</span>
+                <span className="text-sm text-fg/90 flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-amber-400" /> Dominion Bonus aktivieren</span>
               </label>
               {dominionEnabled && (
                 <div className="space-y-3 pl-1">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1.5">Trigger-Stats (mind. eine muss erfüllt sein)</p>
+                    <p className="text-xs text-subtle mb-1.5">Trigger-Stats (mind. eine muss erfüllt sein)</p>
                     <div className="flex flex-wrap gap-2">
                       {statRows.filter(r => r.field.trim()).map(r => (
                         <button key={r.field} type="button"
                           onClick={() => setDominionTriggerStats(prev =>
                             prev.includes(r.field) ? prev.filter(s => s !== r.field) : [...prev, r.field]
                           )}
-                          className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                          className={`text-xs px-2 py-1 rounded-control border transition-colors ${
                             dominionTriggerStats.includes(r.field)
                               ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
-                              : "text-gray-500 border-line hover:border-line-strong"
+                              : "text-subtle border-line hover:border-line-strong"
                           }`}
                         >{r.field}</button>
                       ))}
@@ -79,32 +79,32 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                             prev.includes(p.label) ? prev.filter(s => s !== p.label) : [...prev, p.label]
                           )}
                           title="Umfragesieg"
-                          className={`text-xs px-2 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
+                          className={`text-xs px-2 py-1 rounded-control border transition-colors flex items-center gap-1 ${
                             dominionTriggerStats.includes(p.label)
                               ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
-                              : "text-gray-500 border-line hover:border-line-strong"
+                              : "text-subtle border-line hover:border-line-strong"
                           } max-lg:min-h-10`}
                         ><Vote className="w-3 h-3" />{p.label}</button>
                       ))}
                       {statRows.filter(r => r.field.trim()).length === 0 && polls.filter(p => p.label.trim()).length === 0 && (
-                        <p className="text-xs text-gray-600">Erst Stats oder Umfragen hinzufügen</p>
+                        <p className="text-xs text-subtle">Erst Stats oder Umfragen hinzufügen</p>
                       )}
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 block">Streak-Schwelle</label>
+                      <label className="text-xs text-subtle mb-1 block">Streak-Schwelle</label>
                       <NumberInput min={1} value={dominionThreshold}
                         onChange={e => setDominionThreshold(Number(e.target.value))} className={inputCls} />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
+                      <label className="text-xs text-subtle mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
                       <NumberInput min={0} value={dominionCoins}
                         onChange={e => setDominionCoins(Number(e.target.value))} className={inputCls} />
                       <LimitHint value={dominionCoins} max={rewardLimits?.dominionCoins} />
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpkt.</label>
+                      <label className="text-xs text-subtle mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Tabellenpkt.</label>
                       <NumberInput min={0} value={dominionSeriesPoints}
                         onChange={e => setDominionSeriesPoints(Number(e.target.value))} className={inputCls} />
                     </div>

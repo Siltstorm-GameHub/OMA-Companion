@@ -21,22 +21,22 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">📋</span>
-          <h2 className="text-base font-semibold text-white">Statistiken &amp; Events</h2>
+          <h2 className="text-base font-semibold text-fg">Statistiken &amp; Events</h2>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           Vorlage für alle Events dieser Reihe. Wird beim Anlegen neuer Events und beim Abschluss automatisch übernommen.
         </p>
       </div>
 
-      <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
+      <div className="rounded-control p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
         <p className="text-sm font-medium text-amber-300">Statistiken</p>
-        <p className="text-xs text-gray-500">
-          Diese Werte trägst du <strong className="text-gray-400">in jedem Event</strong> ein. Die Punkte pro Einheit
+        <p className="text-xs text-subtle">
+          Diese Werte trägst du <strong className="text-muted">in jedem Event</strong> ein. Die Punkte pro Einheit
           gelten für die Eventpunkte im Event <em>und</em> für die Reihentabelle — mit ⇄ kannst du für die
           Reihentabelle einen eigenen Wert festlegen. „Teilnahme“ wird automatisch gezählt.
         </p>
         {variousGames && (
-          <p className="text-xs text-blue-300/90 rounded-lg px-3 py-2 border border-blue-500/20 bg-blue-500/5">
+          <p className="text-xs text-muted rounded-control px-3 py-2 border border-line bg-surface-2">
             Bei wechselnden Spielen: Lege hier nur Stats an, die es in jedem Spiel gibt. Spielspezifische Stats ergänzt
             du im jeweiligen Event (Reiter „Spielplan“) — die zählen dann nur im Event, nicht für die Reihentabelle.
           </p>
@@ -58,9 +58,9 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       </div>
 
       {eventStatFields.length > 0 && (
-        <div className="rounded-xl p-4 border border-primary/20 bg-primary/5 space-y-3">
+        <div className="rounded-control p-4 border border-primary/20 bg-primary/5 space-y-3">
           <p className="text-sm font-medium text-primary-fg">🏆 Sieger-Ermittlung</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-subtle">
             Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
           </p>
           <div>
@@ -87,10 +87,10 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
 
       {/* "Ohne Platzierung": gemeinsames Ziel je Termin — legt für alle Termine eine Werte-Erfassung an */}
       {eventType === "community" && (
-        <div className="rounded-xl p-4 border border-primary/20 bg-primary/[0.04] space-y-2">
-          <p className="text-sm font-semibold text-teal-200">🎯 Community-Ziel (optional)</p>
+        <div className="rounded-control p-4 border border-primary/20 bg-primary/[0.04] space-y-2">
+          <p className="text-sm font-semibold text-primary-fg">🎯 Community-Ziel (optional)</p>
           {eventStatFields.length === 0 ? (
-            <p className="text-xs text-gray-500">Lege oben unter „Statistiken“ fest, welche Werte gezählt werden (z. B. Tore). Dann kannst du hier ein gemeinsames Ziel setzen.</p>
+            <p className="text-xs text-subtle">Lege oben unter „Statistiken“ fest, welche Werte gezählt werden (z. B. Tore). Dann kannst du hier ein gemeinsames Ziel setzen.</p>
           ) : (
             <SeriesGoalEditor format="coop_stats" value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields}
               rewardLimit={w.rewardLimits?.goalRewardCoins ?? null} seriesPointsLimit={w.rewardLimits?.goalSeriesPoints ?? null} />
@@ -99,10 +99,10 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       )}
 
       {eventType === "tournament" && (
-        <div className="rounded-xl p-4 border border-primary/20 bg-primary/[0.04] space-y-3">
+        <div className="rounded-control p-4 border border-primary/20 bg-primary/[0.04] space-y-3">
           <div>
-            <p className="text-sm font-semibold text-teal-200">Turniervorlage</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm font-semibold text-primary-fg">Turniervorlage</p>
+            <p className="text-xs text-subtle">
               Jeder Termin der Reihe übernimmt diese Turnier-Einstellungen. Im einzelnen Turnier bleiben sie änderbar.
             </p>
           </div>
@@ -112,11 +112,11 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
       )}
 
       {/* Dominion Bonus */}
-      <div className="rounded-xl p-4 border border-yellow-500/20 bg-yellow-500/5 space-y-3">
+      <div className="rounded-control p-4 border border-coin/40 bg-coin-soft space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-yellow-300">⚡ Dominion Bonus</p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm font-medium text-coin">⚡ Dominion Bonus</p>
+            <p className="text-xs text-subtle mt-0.5">
               Bonus für Spieler, die eine Stat X-mal in Folge erreichen (z.B. 3× MVP hintereinander).
             </p>
           </div>
@@ -129,7 +129,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         {dominionEnabled && (
           <div className="space-y-3 pt-1">
             <div>
-              <label className={labelCls}>Trigger-Stats <span className="text-gray-600 font-normal">(mind. eine muss X-mal in Folge eintreten)</span></label>
+              <label className={labelCls}>Trigger-Stats <span className="text-subtle font-normal">(mind. eine muss X-mal in Folge eintreten)</span></label>
               {(() => {
                 const allTracked = [
                   "Teilnahmen",
@@ -147,11 +147,11 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                           onClick={() => setDominionTriggerStats(prev =>
                             checked ? prev.filter(s => s !== f) : [...prev, f]
                           )}
-                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
-                            checked ? "border-yellow-500/60 bg-yellow-500/10 text-yellow-300" : "border-line-strong bg-line text-gray-400"
+                          className={`w-full flex items-center gap-3 rounded-control px-3 py-2 border text-xs text-left transition-all ${
+                            checked ? "border-coin/40 bg-coin-soft text-coin" : "border-line-strong bg-line text-muted"
                           }`}>
                           <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-yellow-400 bg-yellow-500" : "border-gray-600"}`}>
-                            {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                            {checked && <Check className="w-2.5 h-2.5 text-fg" />}
                           </div>
                           {f}
                         </button>
@@ -159,7 +159,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                  <p className="text-xs text-amber-500/80 rounded-control px-3 py-2 border border-amber-500/20 bg-amber-500/5">
                     Noch keine summierten Stats konfiguriert. Lege oben Statistiken an oder im nächsten Schritt Umfragen.
                   </p>
                 );
@@ -186,7 +186,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
               </div>
             </div>
             {dominionTriggerStats.length > 0 && (
-              <p className="text-xs text-yellow-600">
+              <p className="text-xs text-coin">
                 Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Tabellenpunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Reihentabelle als „Dominion Bonus" gezählt.
               </p>
             )}

@@ -21,19 +21,19 @@ export default function StatRoundFields({
   /** Beim Bearbeiten: eigene bisherige Nummer, zählt nicht als "schon vergeben" */
   currentRound?: number;
 }) {
-  const inputCls = `w-full text-sm bg-gray-800 border border-gray-700 text-white ${size === "lg" ? "rounded-xl px-3 py-3" : "rounded-lg px-3 py-2"}`;
+  const inputCls = `w-full text-sm bg-gray-800 border border-gray-700 text-fg ${size === "lg" ? "rounded-control px-3 py-3" : "rounded-control px-3 py-2"}`;
   const taken = round !== currentRound && usedRoundNumbers.has(round);
   return (
     <div className="space-y-1.5">
       <div className="grid grid-cols-[6rem_1fr] gap-2">
         <div>
-          <label className="text-xs text-gray-500 block mb-1">Runde</label>
+          <label className="text-xs text-subtle block mb-1">Runde</label>
           <input type="number" min={1} inputMode="numeric" value={round || ""}
             onChange={e => onRoundChange(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
             className={`${inputCls} tabular-nums`} />
         </div>
         <div>
-          <label className="text-xs text-gray-500 block mb-1">Zusatz (optional)</label>
+          <label className="text-xs text-subtle block mb-1">Zusatz (optional)</label>
           <input type="text" value={note} maxLength={100} onChange={e => onNoteChange(e.target.value)}
             placeholder={NOTE_PLACEHOLDER} className={inputCls} />
         </div>
@@ -74,7 +74,7 @@ export function StatRoundMetaEditor({
       {dirty && (
         <button type="button" disabled={saving || current.round < 1}
           onClick={async () => { setSaving(true); await onSave(current.round, current.note); setSaving(false); }}
-          className="flex items-center gap-1.5 text-xs text-white bg-teal-700 hover:bg-primary-hover disabled:opacity-50 rounded-lg px-3 py-1.5 max-lg:min-h-10">
+          className="flex items-center gap-1.5 text-xs text-primary-ink bg-primary hover:bg-primary-hover disabled:opacity-50 rounded-control px-3 py-1.5 max-lg:min-h-10">
           <Save className="w-3.5 h-3.5" /> Runde/Zusatz speichern
         </button>
       )}

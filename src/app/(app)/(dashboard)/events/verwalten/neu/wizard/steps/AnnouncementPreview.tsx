@@ -34,23 +34,23 @@ export default function AnnouncementPreview({ w }: { w: EventWizard }) {
   }, [title, game, genre, effectiveFormat, maxPlayers, startAt, participationCoins]);
 
   return (
-    <div className="rounded-xl border border-indigo-500/25 bg-[#2b2d31] p-4 space-y-2">
+    <div className="rounded-control border border-indigo-500/25 bg-[#2b2d31] p-4 space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
         Vorschau Discord-Ankündigung
         {publishMode === "hidden" && " · wird erst beim Sichtbarschalten gesendet"}
         {publishMode === "scheduled" && " · wird zum geplanten Zeitpunkt gesendet"}
       </p>
-      {failed && <p className="text-xs text-gray-500">Vorschau gerade nicht verfügbar.</p>}
-      {!failed && !preview && <p className="text-xs text-gray-500">Vorschau wird geladen…</p>}
+      {failed && <p className="text-xs text-subtle">Vorschau gerade nicht verfügbar.</p>}
+      {!failed && !preview && <p className="text-xs text-subtle">Vorschau wird geladen…</p>}
       {preview && (
         <div className="border-l-4 border-primary pl-3 space-y-2">
-          <p className="text-sm font-semibold text-white">{preview.title}</p>
-          <p className="text-xs text-gray-300 whitespace-pre-line">{preview.description}</p>
+          <p className="text-sm font-semibold text-fg">{preview.title}</p>
+          <p className="text-xs text-fg/90 whitespace-pre-line">{preview.description}</p>
           <div className="grid grid-cols-2 gap-2">
             {preview.fields.map(f => (
               <div key={f.name}>
-                <p className="text-xs font-semibold text-gray-200">{f.name}</p>
-                <p className="text-xs text-gray-400">{f.value}</p>
+                <p className="text-xs font-semibold text-fg">{f.name}</p>
+                <p className="text-xs text-muted">{f.value}</p>
               </div>
             ))}
           </div>

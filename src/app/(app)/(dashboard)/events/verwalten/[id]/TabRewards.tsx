@@ -17,19 +17,19 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
   return (
     <div className="space-y-4">
           {event.series && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Teilnahme- und Platzierungsbelohnungen legt die Eventreihe „{event.series.name}“ fest. Hier stellst du nur die Umfragen dieses Termins ein.
             </p>
           )}
           {!event.series && (
             <>
               {/* Teilnahme */}
-              <div className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
+              <div className="rounded-control border border-line bg-surface-2/50 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <CoinIcon size={16} />
-                  <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
+                  <h3 className="text-sm font-semibold text-fg/90">Teilnahme-Belohnung</h3>
                 </div>
-                <p className="text-xs text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
+                <p className="text-xs text-subtle">Wird erst nach Event-Abschluss vergeben</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Münzen</label>
@@ -43,15 +43,15 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   </div>
                 </div>
                 {!hasPlacement && (
-                  <p className="text-xs text-gray-500">Ohne Platzierung: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
+                  <p className="text-xs text-subtle">Ohne Platzierung: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
                 )}
               </div>
 
               {/* Platzierungen (nur Turniere) */}
               {hasPlacement && (
-              <div className="rounded-xl border border-line bg-gray-900/50 p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
-                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
+              <div className="rounded-control border border-line bg-surface-2/50 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-fg/90">Platzierungs-Belohnungen</h3>
+                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-subtle px-1">
                   <span />
                   <span>Platz</span>
                   <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> RP</span>
@@ -60,7 +60,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                 {placements.map((p, i) => (
                   <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
                     <span className="text-base"><PlaceMedal place={p.place} /></span>
-                    <span className="text-sm text-gray-300">{p.place}. Platz</span>
+                    <span className="text-sm text-fg/90">{p.place}. Platz</span>
                     <NumberInput min={0} value={p.rankPoints}
                       onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}
                       className={numCls} />
@@ -70,7 +70,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   </div>
                 ))}
                 {lim && (
-                  <p className={`text-xs ${placementsOver ? "text-amber-300" : "text-gray-500"}`}>
+                  <p className={`text-xs ${placementsOver ? "text-amber-300" : "text-subtle"}`}>
                     Höchstens: {placements.map(p => { const l = placeLimit(p.place)!; return `${p.place}. ${l.coins} Münzen${l.rankPoints ? `, ${l.rankPoints} RP` : ""}`; }).join(" · ")}
                     {placementsOver && ". Zu hohe Werte werden beim Speichern gekürzt."}
                   </p>
@@ -80,7 +80,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
 
               {/* Zuschauer-Belohnung */}
               {ctx.spectatorMode && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="rounded-control border border-primary/20 bg-primary/5 p-4 space-y-3">
                   <h3 className="text-sm font-semibold text-primary-fg">👁️ Zuschauer-Basis-Belohnung</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -102,7 +102,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
           {/* Polls */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-300">Umfragen</h3>
+              <h3 className="text-sm font-semibold text-fg/90">Umfragen</h3>
               {polls.length < 3 && (
                 <button type="button" onClick={addPoll}
                   className="flex items-center gap-1 text-xs text-primary hover:text-primary-fg transition-colors">
@@ -110,12 +110,12 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                 </button>
               )}
             </div>
-            {polls.length === 0 && <p className="text-xs text-gray-600">Keine Umfragen konfiguriert.</p>}
+            {polls.length === 0 && <p className="text-xs text-subtle">Keine Umfragen konfiguriert.</p>}
             {polls.map((poll, i) => (
-              <div key={i} className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
+              <div key={i} className="rounded-control border border-violet-500/20 bg-violet-500/5 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-violet-300">Umfrage {i + 1}</p>
-                  <button type="button" onClick={() => removePoll(i)} className="text-gray-600 hover:text-red-400 transition-colors">
+                  <button type="button" onClick={() => removePoll(i)} className="text-subtle hover:text-danger transition-colors">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -166,7 +166,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                           placeholder={`Antwort ${ai + 1}`} className={inputCls} />
                         <button type="button"
                           onClick={() => updatePoll(i, { customAnswers: poll.customAnswers.filter((_, k) => k !== ai) })}
-                          className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                          className="text-subtle hover:text-danger transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                     <button type="button"
@@ -181,7 +181,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   <label className={labelCls}>Dauer der Abstimmung (Std.)</label>
                   <NumberInput min={1} value={Math.max(1, poll.endOffsetHours - poll.startOffsetHours)}
                     onChange={e => updatePoll(i, { startOffsetHours: 0, endOffsetHours: Math.max(1, Number(e.target.value)) })} className={inputCls} />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-subtle mt-1">
                   Startet, sobald die Spielphase abgeschlossen ist (oder per Widget-Knopf). Die Teilnahme-Belohnung gibt es
                   einmal pro Event: den höchsten Betrag aller Umfragen, bei denen man abstimmt. Bei Gleichstand bekommen alle
                   Gleichplatzierten die volle Sieger-Belohnung.

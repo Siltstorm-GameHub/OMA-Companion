@@ -30,15 +30,15 @@ export function DropMenu({ trigger, label, items, align = "right" }: {
   return (
     <div ref={ref} className="relative shrink-0">
       <button type="button" onClick={() => setOpen(o => !o)} aria-label={label} aria-expanded={open}
-        className="flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-line">
+        className="flex items-center justify-center rounded-control text-muted hover:text-fg hover:bg-line">
         {trigger}
       </button>
       {open && (
-        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-line-strong bg-gray-900 shadow-xl`}>
+        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-control border border-line-strong bg-surface-2 shadow-xl`}>
           {visible.map(it => (
             <button key={it.label} role="menuitem" type="button" disabled={it.disabled}
               onClick={() => { setOpen(false); it.onClick(); }}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-line disabled:opacity-40 ${it.danger ? "text-red-300" : "text-gray-200"}`}>
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-line disabled:opacity-40 ${it.danger ? "text-danger" : "text-fg"}`}>
               {it.icon}{it.label}
             </button>
           ))}
@@ -64,19 +64,19 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
   return (
     <section aria-label="Turnier-Stand" className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="min-w-0 flex-1 text-sm text-gray-300">
-          <span className="font-semibold text-white">{formatLabel}</span> · {statusLine}
-          {total > 0 && <span className="text-gray-500"> · {played} von {total} {unit} gespielt</span>}
+        <p className="min-w-0 flex-1 text-sm text-fg/90">
+          <span className="font-semibold text-fg">{formatLabel}</span> · {statusLine}
+          {total > 0 && <span className="text-subtle"> · {played} von {total} {unit} gespielt</span>}
         </p>
         {resultsHref && (
           <Link href={resultsHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200 hover:bg-line max-lg:min-h-10">
+            className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-fg hover:bg-line max-lg:min-h-10">
             Ergebnis-Meldungen
             {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-black tabular-nums">{pendingCount}</span>}
           </Link>
         )}
         <DropMenu label="Werkzeuge" items={tools}
-          trigger={<span className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-gray-200">Werkzeuge <ChevronDown className="w-3.5 h-3.5" /></span>} />
+          trigger={<span className="inline-flex items-center gap-1 rounded-control border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-fg">Werkzeuge <ChevronDown className="w-3.5 h-3.5" /></span>} />
       </div>
       {total > 0 && (
         <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
@@ -137,25 +137,25 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
     <ul className="divide-y divide-line">
       {items.map(s => {
         const what = s.isDuel
-          ? <>{s.player1 ?? "?"} <b className="text-white tabular-nums">{s.score1 ?? "–"} : {s.score2 ?? "–"}</b> {s.player2 ?? "?"}</>
+          ? <>{s.player1 ?? "?"} <b className="text-fg tabular-nums">{s.score1 ?? "–"} : {s.score2 ?? "–"}</b> {s.player2 ?? "?"}</>
           : <>{s.forUser ?? s.by}: {Object.entries(s.stats).filter(([k]) => !k.startsWith("_")).map(([k, v]) => `${formatDecimal(v)} ${k}`).join(" · ") || "keine Werte"}</>;
         return (
           <li key={s.id} className="flex items-center gap-2 py-2 flex-wrap">
             <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-300">gemeldet</span>
-            <span className="min-w-0 flex-1 text-sm text-gray-300">
-              <span className="text-gray-500">{s.matchLabel} · </span>{what}
+            <span className="min-w-0 flex-1 text-sm text-fg/90">
+              <span className="text-subtle">{s.matchLabel} · </span>{what}
               {/* Relative Zeit weicht zwischen Server und Browser minimal ab — kein Hydration-Fehler */}
-              <span className="block text-xs text-gray-500" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
+              <span className="block text-xs text-subtle" suppressHydrationWarning>von {s.by} · {ago(s.createdAt)}{s.hasScreenshots && " · mit Screenshot"}</span>
             </span>
             <button type="button" onClick={() => act(s.id, "approve")} disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-lg bg-primary hover:bg-primary-hover px-2.5 py-1 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
+              className="inline-flex items-center gap-1 rounded-control bg-primary hover:bg-primary-hover px-2.5 py-1 text-xs font-semibold text-primary-ink disabled:opacity-50 max-lg:min-h-10">
               {busy === s.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Übernehmen
             </button>
             <button type="button" onClick={() => act(s.id, "reject")} disabled={!!busy}
-              className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-2.5 py-1 text-xs font-semibold text-gray-300 hover:bg-line disabled:opacity-50 max-lg:min-h-10">
+              className="inline-flex items-center gap-1 rounded-control border border-line-strong px-2.5 py-1 text-xs font-semibold text-fg/90 hover:bg-line disabled:opacity-50 max-lg:min-h-10">
               <X className="w-3.5 h-3.5" /> Ablehnen
             </button>
-            <Link href={resultsHref} className="text-xs text-gray-500 hover:text-gray-300">Prüfen</Link>
+            <Link href={resultsHref} className="text-xs text-subtle hover:text-fg/90">Prüfen</Link>
           </li>
         );
       })}
@@ -168,13 +168,13 @@ export function StatStandingsTable({ rows, fields, isAvg, hasPoints, nameOf, max
   rows: StandingRow[]; fields: string[]; isAvg: boolean; hasPoints: boolean;
   nameOf: (uid: string) => string; maxRounds: number;
 }) {
-  if (rows.length === 0) return <p className="py-4 text-center text-sm text-gray-500">Noch keine Werte eingetragen.</p>;
+  if (rows.length === 0) return <p className="py-4 text-center text-sm text-subtle">Noch keine Werte eingetragen.</p>;
   const medal = ["🥇", "🥈", "🥉"];
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-gray-500 border-b border-line">
+          <tr className="text-subtle border-b border-line">
             <th className="py-1.5 pr-2 text-left font-medium w-8">#</th>
             <th className="py-1.5 pr-3 text-left font-medium">Spieler</th>
             {fields.map(f => <th key={f} className="py-1.5 px-2 text-right font-medium">{isAvg ? `Ø ${f}` : f}</th>)}
@@ -186,19 +186,19 @@ export function StatStandingsTable({ rows, fields, isAvg, hasPoints, nameOf, max
         <tbody>
           {rows.map((r, i) => (
             <tr key={r.userId} className="border-b border-line last:border-0">
-              <td className="py-1.5 pr-2">{i < 3 ? medal[i] : <span className="text-gray-500">{i + 1}</span>}</td>
-              <td className="py-1.5 pr-3 text-white whitespace-nowrap">{nameOf(r.userId)}</td>
+              <td className="py-1.5 pr-2">{i < 3 ? medal[i] : <span className="text-subtle">{i + 1}</span>}</td>
+              <td className="py-1.5 pr-3 text-fg whitespace-nowrap">{nameOf(r.userId)}</td>
               {fields.map(f => (
-                <td key={f} className="py-1.5 px-2 text-right tabular-nums text-gray-300">
+                <td key={f} className="py-1.5 px-2 text-right tabular-nums text-fg/90">
                   {r.values[f] == null ? "–" : isAvg ? formatFixed(r.values[f]!, 2) : formatDecimal(r.values[f]!)}
                 </td>
               ))}
-              <td className={`py-1.5 px-2 text-right tabular-nums ${isAvg && r.rounds < maxRounds ? "text-amber-300" : "text-gray-500"}`}
+              <td className={`py-1.5 px-2 text-right tabular-nums ${isAvg && r.rounds < maxRounds ? "text-amber-300" : "text-subtle"}`}
                 title={isAvg && r.rounds < maxRounds ? `Ø aus ${r.rounds} ${r.rounds === 1 ? "Runde" : "Runden"}` : undefined}>
                 {r.rounds}{maxRounds > 0 && `/${maxRounds}`}
               </td>
-              {isAvg && <td className="py-1.5 pl-2 text-right tabular-nums font-semibold text-white">{r.avg == null ? "–" : formatFixed(r.avg, 2)}</td>}
-              {hasPoints && <td className="py-1.5 pl-2 text-right tabular-nums font-semibold text-white">{formatDecimal(r.points ?? 0)}</td>}
+              {isAvg && <td className="py-1.5 pl-2 text-right tabular-nums font-semibold text-fg">{r.avg == null ? "–" : formatFixed(r.avg, 2)}</td>}
+              {hasPoints && <td className="py-1.5 pl-2 text-right tabular-nums font-semibold text-fg">{formatDecimal(r.points ?? 0)}</td>}
             </tr>
           ))}
         </tbody>

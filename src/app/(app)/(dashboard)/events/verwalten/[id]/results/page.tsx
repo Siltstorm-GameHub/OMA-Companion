@@ -14,12 +14,12 @@ export default async function AdminEventResultsPage({ params }: { params: Promis
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href={`/events/verwalten/${data.event.id}/bracket`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
+      <div className="flex items-center gap-2 text-sm text-subtle">
+        <Link href={`/events/verwalten/${data.event.id}/bracket`} className="flex items-center gap-1 hover:text-fg/90 transition-colors">
           <ChevronLeft className="w-4 h-4" /> {data.event.title}
         </Link>
         <span>/</span>
-        <span className="text-gray-300">Ergebnis-Prüfung</span>
+        <span className="text-fg/90">Ergebnis-Prüfung</span>
       </div>
       <ResultReviewClient eventId={data.event.id} matches={data.matches} statFields={data.statFields} />
     </div>
