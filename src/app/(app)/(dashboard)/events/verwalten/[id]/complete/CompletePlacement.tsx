@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { formatDecimal, formatFixed } from "@/lib/format-number";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -12,6 +13,19 @@ import type { EventComplete } from "./useEventComplete";
 
 /** Abschnitt "Platzierung": Gewinner-Stat, Finale Platzierung, Disqualifikation, Notiz. */
 export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
+  // (10) Platz tauschen per Antippen (Ziehen per Maus geht nur am Desktop)
+  const [pickIdx, setPickIdx] = useState<number | null>(null);
+  function tapSwap(idx: number) {
+    if (pickIdx === null) { setPickIdx(idx); return; }
+    if (pickIdx === idx) { setPickIdx(null); return; }
+    const a = pickIdx, b = idx;
+    const ua = ctx.rankingOrder[a], ub = ctx.rankingOrder[b];
+    ctx.setRankingManuallyEdited(true);
+    ctx.setRankingDirty(true);
+    ctx.setRankingOrder(prev => { const next = [...prev]; [next[a], next[b]] = [next[b], next[a]]; return next; });
+    ctx.setTiedAbove(t => { const s = new Set(t); s.delete(ua); s.delete(ub); return s; });
+    setPickIdx(null);
+  }
   const { absentPlayers, toggleAbsent, seriesId, registeredUsers, tournamentStatFields, winnerStatFieldOptions, userStats, userAvgScore, currentDominionStreaks, isAvgFormat, isPollOnly, isFinishedSummary, winnerLocked, winnerStatField, setWinnerStatField, avgDirection, setAvgDirection, seriesWinnerTargetField, setSeriesWinnerTargetField, rankingOrder, setRankingOrder, tiedAbove, setTiedAbove, rankingNote, setRankingNote, rankingManuallyEdited, setRankingManuallyEdited, dragIdx, setDragIdx, setRankingDirty, excludedUsers, toggleExcluded, seriesStatFields, dominionCfg, dominionTriggerLabel, placementMap, previewWinners, effectiveParticipationCoins, getPlacementReward, winnerCheck, autoSort, toggleTied, moveUp, moveDown, stepNo, winnerSourceText, nameOf } = ctx;
   return (
     <section id="schritt-platzierung" aria-label="Platzierung" className="space-y-3 scroll-mt-20">
@@ -218,7 +232,12 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
                             : isTied ? "border-primary/30 bg-primary-soft/40" : "border-line bg-surface-2"
                         } cursor-grab active:cursor-grabbing`}
                       >
-                        <GripVertical className="w-3.5 h-3.5 text-subtle shrink-0" />
+                        <button type="button" onClick={() => tapSwap(idx)} aria-pressed={pickIdx === idx}
+                          aria-label={pickIdx === null ? `${userName(u)} zum Tauschen wählen` : pickIdx === idx ? "Auswahl aufheben" : `Mit ${ctx.nameOf(ctx.rankingOrder[pickIdx])} tauschen`}
+                          title="Antippen, dann einen zweiten Spieler antippen: Plätze tauschen"
+                          className={`grid size-9 -m-1 shrink-0 place-items-center rounded-control transition-colors ${pickIdx === idx ? "bg-primary text-primary-ink" : pickIdx !== null ? "text-primary-fg hover:bg-primary-soft" : "text-subtle hover:bg-surface-3"}`}>
+                          <GripVertical className="size-4" />
+                        </button>
                         <input type="checkbox" checked={!isAbsent} onChange={() => toggleAbsent(uid)}
                           aria-label={`${userName(u)} war da`} title={isAbsent ? "Nicht da: kein Platz, keine Belohnung" : "War da"}
                           className="rounded accent-primary shrink-0" />

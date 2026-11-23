@@ -32,8 +32,8 @@ export type ReviewMatch = {
 };
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  pending:   { label: "Offen",      cls: "bg-warning-soft text-amber-300" },
-  processing:{ label: "In Arbeit",  cls: "bg-warning-soft text-amber-300" },
+  pending:   { label: "Offen",      cls: "bg-warning-soft text-warning" },
+  processing:{ label: "In Arbeit",  cls: "bg-warning-soft text-warning" },
   approved:  { label: "Übernommen", cls: "bg-success-soft text-success" },
   corrected: { label: "Korrigiert", cls: "bg-primary-soft text-primary-fg" },
   rejected:  { label: "Abgelehnt",  cls: "bg-danger-soft text-danger" },
@@ -153,11 +153,11 @@ function SubmissionCard({ eventId, match, sub, statFields }: { eventId: string; 
           <input value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} maxLength={500} placeholder="Notiz an den Spieler (optional)" className={inputCls} />
           <div className="flex flex-wrap gap-2">
             <button disabled={busy} onClick={() => act(changed ? "correct" : "approve")}
-              className="px-3 py-1.5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-medium disabled:opacity-50">
+              className="min-h-10 px-4 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold disabled:opacity-50">
               {changed ? "Korrigiert übernehmen" : "Übernehmen"}
             </button>
             <button disabled={busy} onClick={() => act("reject")}
-              className="px-3 py-1.5 rounded-control bg-danger-soft hover:bg-red-800/60 text-red-200 text-sm font-medium disabled:opacity-50">
+              className="min-h-10 px-4 rounded-control border border-danger/30 bg-danger-soft hover:bg-danger/20 text-danger text-sm font-bold disabled:opacity-50">
               Ablehnen
             </button>
           </div>
@@ -190,13 +190,18 @@ function conflictOf(m: ReviewMatch): boolean {
 
 export default function ResultReviewClient({ eventId, matches, statFields }: { eventId: string; matches: ReviewMatch[]; statFields: string[] }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<"open" | "all">("open");
+  const [filter, setFilter] = useState<"open" | "all" | "review">("open");
+  // (11) Prüfmodus: eine offene Meldung nach der anderen, Screenshot groß
+  const [reviewIdx, setReviewIdx] = useState(0);
   const [bulkBusy, setBulkBusy] = useState(false);
   if (matches.length === 0) {
-    return <div className="glass rounded-card p-8 text-center text-muted text-sm">Noch keine Ergebnis-Meldungen.</div>;
+    return <div className="rounded-card border border-line bg-surface p-8 text-center text-muted text-sm">Noch keine Ergebnis-Meldungen.</div>;
   }
   const openMatches = matches.filter((m) => m.submissions.some((s) => s.status === "pending"));
-  const shown = filter === "open" ? openMatches : matches;
+  const shown = filter === "open" ? openMatches : filter === "all" ? matches : [];
+  const queue = openMatches.flatMap((m) => m.submissions.filter((s) => s.status === "pending").map((s) => ({ m, s })));
+  const current = queue.length ? queue[Math.min(reviewIdx, queue.length - 1)] : null;
+  const pos = Math.min(reviewIdx, Math.max(0, queue.length - 1));
   // Sammelaktion: alle offenen Meldungen ohne Widerspruch so übernehmen
   const bulkSubs = openMatches.filter((m) => !conflictOf(m)).flatMap((m) => m.submissions.filter((s) => s.status === "pending"));
 
@@ -221,21 +226,54 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`]] as const).map(([k, label]) => (
-          <button key={k} type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}
-            className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors ${filter === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-muted hover:text-fg hover:bg-line"}`}>
+        {([["open", `Offen (${openMatches.length})`], ["all", `Alle (${matches.length})`], ...(queue.length > 0 ? [["review", `Prüfmodus (${queue.length})`] as const] : [])] as const).map(([k, label]) => (
+          <button key={k} type="button" onClick={() => { setFilter(k); setReviewIdx(0); }} aria-pressed={filter === k}
+            className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors ${filter === k ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted hover:text-fg"}`}>
             {label}
           </button>
         ))}
         {bulkSubs.length > 0 && (
           <button type="button" onClick={approveAll} disabled={bulkBusy}
             title="Übernimmt jede offene Meldung so, wie sie gemeldet wurde. Matches mit Widerspruch bleiben offen."
-            className="ml-auto rounded-control bg-primary hover:bg-primary-hover disabled:opacity-50 px-3 py-1.5 text-xs font-medium text-primary-ink">
+            className="ml-auto min-h-9 rounded-control bg-primary hover:bg-primary-hover disabled:opacity-50 px-3.5 text-sm font-bold text-primary-ink">
             {bulkBusy ? "Übernehme …" : `Alle offenen ohne Widerspruch übernehmen (${bulkSubs.length})`}
           </button>
         )}
       </div>
-      {shown.length === 0 && (
+      {/* ── Prüfmodus ── */}
+      {filter === "review" && (current ? (
+        <section aria-label="Prüfmodus" className="space-y-3">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-fg">Meldung {pos + 1} von {queue.length}</p>
+            <span className="truncate text-sm text-muted">· {current.m.label}{conflictOf(current.m) && <span className="ml-1 font-semibold text-warning">· Widerspruch</span>}</span>
+            <span className="ml-auto flex gap-1.5">
+              <button type="button" onClick={() => setReviewIdx(Math.max(0, pos - 1))} disabled={pos === 0}
+                className="min-h-9 rounded-control border border-line-strong bg-surface-2 px-3 text-sm font-semibold text-fg disabled:opacity-40">Zurück</button>
+              <button type="button" onClick={() => setReviewIdx(pos + 1 >= queue.length ? 0 : pos + 1)} disabled={queue.length < 2}
+                className="min-h-9 rounded-control border border-line-strong bg-surface-2 px-3 text-sm font-semibold text-fg disabled:opacity-40">Überspringen</button>
+            </span>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start">
+            {/* Nachweis groß */}
+            <div className="space-y-2">
+              {current.s.screenshotUrls.length > 0 ? current.s.screenshotUrls.map((u) => (
+                <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control border border-line-strong bg-canvas">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u} alt="Nachweis" className="max-h-[60vh] w-full object-contain" />
+                </a>
+              )) : (
+                <div className="rounded-control border border-dashed border-line-strong p-8 text-center text-sm text-muted">Kein Screenshot (automatisch gelöscht)</div>
+              )}
+            </div>
+            {/* Gemeldetes Ergebnis + Aktionen; nach Übernehmen/Ablehnen rückt die nächste Meldung nach */}
+            <SubmissionCard key={current.s.id} eventId={eventId} match={current.m} sub={current.s} statFields={statFields} />
+          </div>
+        </section>
+      ) : (
+        <div className="rounded-card border border-line bg-surface p-6 text-center text-sm text-muted">Alles geprüft, keine offenen Meldungen.</div>
+      ))}
+
+      {filter !== "review" && shown.length === 0 && (
         <div className="glass rounded-card p-6 text-center text-muted text-sm">Alles geprüft, keine offenen Meldungen.</div>
       )}
       {shown.map((m) => {

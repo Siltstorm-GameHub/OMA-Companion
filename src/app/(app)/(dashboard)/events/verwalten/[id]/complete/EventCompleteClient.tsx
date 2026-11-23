@@ -15,6 +15,7 @@ import CompletePolls from "./CompletePolls";
  *  Zustand und Aktionen in ./useEventComplete.tsx, die Abschnitte in ./Complete*.tsx, Bausteine in ./complete-shared.tsx. */
 export default function EventCompleteClient(props: Props) {
   const ctx = useEventComplete(props);
+  const { lines, effectiveSpectatorCoins } = ctx;
   const { eventId, pendingSubmissions, matchCheck, predictionInfo, rewardHistory, rewardsCapped, absentPlayers, actionSummary, pollAutoEnd, eventTitle, seriesId, seriesIcon, registeredUsers, spectatorUsers, spectatorRewardJson, isMod, hasPlacement, ConfirmDialogElement, timingWarning, isPollOnly, isFinishedSummary, mvpUserId, spectatorAttended, rankingDirty, excludedUsers, loading, pollWinners, canDeferPoll, pollPhasePending, totals, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, steps, noRanking, mainLabel, nameOf } = ctx;
 
   return (
@@ -180,6 +181,37 @@ export default function EventCompleteClient(props: Props) {
                     {totals.rankPoints > 0 && <> · {totals.rankPoints} Rang-Punkte</>}
                     {totals.tablePoints > 0 && <> · {totals.tablePoints} Tabellenpunkte</>}
                   </p>
+                  {/* (9) Wer bekommt was? — je Person, vor dem Bestätigen */}
+                  {lines.length > 0 && (
+                    <details className="group mt-1">
+                      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-semibold text-primary-fg hover:text-fg [&::-webkit-details-marker]:hidden">
+                        Wer bekommt was? <span className="transition-transform group-open:rotate-180">▾</span>
+                      </summary>
+                      <ol className="mt-2 max-h-56 overflow-y-auto divide-y divide-line rounded-control border border-line bg-surface">
+                        {lines.map(l => (
+                          <li key={l.uid} className={`flex items-center gap-2 px-3 py-1.5 text-xs ${l.excluded ? "opacity-50" : ""}`}>
+                            <span className="w-6 shrink-0 text-center font-bold tabular-nums text-subtle">{l.excluded ? "–" : l.place}</span>
+                            <span className={`min-w-0 flex-1 truncate font-semibold ${l.excluded ? "text-subtle line-through" : "text-fg"}`}>{nameOf(l.uid)}</span>
+                            {l.excluded
+                              ? <span className="text-subtle">nichts</span>
+                              : <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                                  {l.coins > 0 && <span className="font-bold text-coin">+{l.coins.toLocaleString("de-DE")} Münzen</span>}
+                                  {l.rankPoints > 0 && <span className="font-bold text-primary-fg">+{l.rankPoints} RP</span>}
+                                  {l.tablePoints > 0 && <span className="text-muted">+{l.tablePoints} Tab.</span>}
+                                  {l.coins === 0 && l.rankPoints === 0 && l.tablePoints === 0 && <span className="text-subtle">—</span>}
+                                </span>}
+                          </li>
+                        ))}
+                        {spectatorRewardJson && spectatorAttended.size > 0 && effectiveSpectatorCoins > 0 && (
+                          <li className="flex items-center gap-2 px-3 py-1.5 text-xs">
+                            <span className="w-6 shrink-0 text-center text-subtle">👁</span>
+                            <span className="min-w-0 flex-1 truncate font-semibold text-fg">{spectatorAttended.size} Zuschauer</span>
+                            <span className="font-bold text-coin tabular-nums">je +{effectiveSpectatorCoins} Münzen</span>
+                          </li>
+                        )}
+                      </ol>
+                    </details>
+                  )}
                   <p className="text-xs text-subtle">
                     {[
                       excludedUsers.size > 0 && `${excludedUsers.size} disqualifiziert`,

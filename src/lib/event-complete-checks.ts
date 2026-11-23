@@ -54,6 +54,30 @@ export type RewardLine = { coins: number; rankPoints: number; tablePoints?: numb
  * Summe dessen, was der Abschluss vergibt: Teilnahme + Platzierung für nicht Disqualifizierte und
  * die Zuschauer-Münzen der Anwesenden. (Umfragen, MVP und Dominion kommen gesondert.)
  */
+/**
+ * Auszahlung je Person (gleiche Rechnung wie rewardTotals) — für die Liste "Wer bekommt was?"
+ * vor dem Bestätigen. Ausgeschlossene (disqualifiziert/nicht da) stehen mit 0 und `excluded` drin.
+ */
+export function rewardLines(opts: {
+  order: string[];
+  placementOf: (uid: string) => number;
+  rewardForPlace: (place: number) => RewardLine | undefined;
+  excluded: Set<string>;
+  participationCoins: number;
+}): { uid: string; place: number; coins: number; rankPoints: number; tablePoints: number; excluded: boolean }[] {
+  return opts.order.map(uid => {
+    const place = opts.placementOf(uid);
+    if (opts.excluded.has(uid)) return { uid, place, coins: 0, rankPoints: 0, tablePoints: 0, excluded: true };
+    const r = opts.rewardForPlace(place);
+    return {
+      uid, place, excluded: false,
+      coins: opts.participationCoins + (r?.coins ?? 0),
+      rankPoints: r?.rankPoints ?? 0,
+      tablePoints: r?.tablePoints ?? 0,
+    };
+  });
+}
+
 export function rewardTotals(opts: {
   order: string[];
   placementOf: (uid: string) => number;

@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { checkWinnerStat, rewardTotals, topByStat } from "./event-complete-checks";
+import { checkWinnerStat, rewardTotals, topByStat, rewardLines } from "./event-complete-checks";
 
 const stats = {
   chris: { Kills: 42, Punkte: 18 },
@@ -51,5 +51,22 @@ describe("Abschluss: Summe der Belohnungen", () => {
       excluded: new Set(["d"]), participationCoins: 50, spectatorsAttended: 4, spectatorCoins: 10,
     });
     assert.deepEqual(t, { players: 3, coins: 150 + 500 + 250 + 250 + 40, rankPoints: 3 + 2 + 2, tablePoints: 10 });
+  });
+});
+
+describe("rewardLines", () => {
+  test("je Person: Teilnahme + Platz, Ausgeschlossene mit 0", () => {
+    const lines = rewardLines({
+      order: ["a", "b", "c"],
+      placementOf: uid => ["a", "b", "c"].indexOf(uid) + 1,
+      rewardForPlace: place => (place === 1 ? { coins: 100, rankPoints: 3, tablePoints: 5 } : undefined),
+      excluded: new Set(["c"]),
+      participationCoins: 10,
+    });
+    assert.deepEqual(lines, [
+      { uid: "a", place: 1, coins: 110, rankPoints: 3, tablePoints: 5, excluded: false },
+      { uid: "b", place: 2, coins: 10, rankPoints: 0, tablePoints: 0, excluded: false },
+      { uid: "c", place: 3, coins: 0, rankPoints: 0, tablePoints: 0, excluded: true },
+    ]);
   });
 });

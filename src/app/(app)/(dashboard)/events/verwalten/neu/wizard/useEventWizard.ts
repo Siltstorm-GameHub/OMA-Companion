@@ -36,6 +36,8 @@ export type EventWizardProps = {
   /** Vorausgewählte Reihe ("Termin hinzufügen" auf der Reihen-Seite) */
   initialSeriesId?: string;
   initialMode?: "select" | "event" | "series";
+  /** Die letzten eigenen Events — Schnellstart "Wie zuletzt" (kopiert per ?from=) */
+  recentEvents?: { id: string; title: string; startAt: string; game: string | null }[];
   seasonPrefill?: SeasonPrefill;
   /** "Event duplizieren": Einstellungen eines bestehenden Events als Vorbelegung */
   eventTemplate?: EventTemplate;

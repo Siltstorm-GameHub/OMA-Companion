@@ -96,6 +96,14 @@ export default async function NewEventPage({
   const { mode, squadId: initialSquadId, from, game: gameSlug, blocks, series: initialSeriesId } = await searchParams;
   const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
+  // (2) Schnellstart "Wie zuletzt": die letzten drei selbst angelegten Events zum Kopieren
+  const recentEvents = await prisma.event.findMany({
+    where: { createdById: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    select: { id: true, title: true, startAt: true, game: true },
+  });
+
   const [series, squads, eventTemplate, communityLimits] = await Promise.all([
     prisma.eventSeries.findMany({
       where: { status: "active", ...seriesScopeWhere(scope) },
@@ -139,6 +147,7 @@ export default async function NewEventPage({
       eventTemplate={eventTemplate ?? undefined}
       gamePrefill={gamePrefill ?? undefined}
       initialSeriesId={initialSeriesId && series.some(s => s.id === initialSeriesId) ? initialSeriesId : undefined}
+      recentEvents={recentEvents.map(e => ({ id: e.id, title: e.title, startAt: e.startAt.toISOString(), game: e.game }))}
     />
   );
 }

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
 import ApprovalBanner from "../../ApprovalBanner";
 import { APPROVAL_PENDING, APPROVAL_REJECTED } from "@/lib/community-events";
-import { parseSeriesCompletion, parseStatConfig } from "@/lib/series-seasons";
+import { parseSeriesCompletion, parseStatConfig, seasonStandings } from "@/lib/series-seasons";
 import GameVoteSettings from "./GameVoteSettings";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 
@@ -80,6 +80,30 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
   }))].filter(fld => fld && !fld.startsWith("_streak_")).sort((a, b) => a.localeCompare(b, "de"));
 
   // Mitglieder: Obergrenzen der Ziel-Belohnungen (je Termin einer Reihe) — Anzeige an den Feldern
+  // (12) Top 3 der Reihentabelle für die Übersicht (gleiche Rechnung wie die öffentliche Reihen-Seite)
+  const standingsSource = await prisma.eventSeries.findUnique({
+    where: { id: series.id },
+    select: {
+      status: true, seriesStatConfig: true, legacyStandings: true, seriesCompletionData: true,
+      events: {
+        orderBy: { startAt: "asc" },
+        select: {
+          id: true, status: true, startAt: true, completionData: true, finalRankingJson: true, spectatorMode: true, goalStateJson: true,
+          registrations: { select: { userId: true, role: true } },
+          matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+        },
+      },
+    },
+  });
+  const topRows = standingsSource ? seasonStandings(standingsSource).slice(0, 3) : [];
+  const topUsers = topRows.length
+    ? await prisma.user.findMany({ where: { id: { in: topRows.map(r => r.userId) } }, select: { id: true, name: true, username: true, image: true } })
+    : [];
+  const top3 = topRows.flatMap(r => {
+    const u = topUsers.find(x => x.id === r.userId);
+    return u ? [{ id: u.id, name: u.username ?? u.name ?? "?", image: u.image, points: r.totalPoints }] : [];
+  });
+
   const allLimits = isModerator ? null : await getCommunityLimits();
   const memberLimits = allLimits?.seriesEvent ?? null;
   const rewardLimits = allLimits ? seriesConfigLimits(allLimits) : null;
@@ -95,7 +119,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator}
         isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
         seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
-        goalLimits={goalLimits} rewardLimits={rewardLimits}
+        goalLimits={goalLimits} rewardLimits={rewardLimits} top3={top3}
       />
       {isModerator && series.status !== "archived" && (
         <GameVoteSettings

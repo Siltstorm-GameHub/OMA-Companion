@@ -66,6 +66,15 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
   const rejectedNote = !rejected ? null : (inheritedFromSeries ? seriesApproval?.approvalNote : event.approvalNote) ?? "";
   // Stand des Community-Ziels für den Reiter "Ziel" (null = kein Ziel)
   const goalStatus = await loadGoalStatus(event);
+  // Übersicht oben: offene Ergebnis-Meldungen und Warteliste
+  const [pendingReports, waitlistRows] = await Promise.all([
+    prisma.matchResultSubmission.count({ where: { eventId: event.id, status: "pending" } }),
+    prisma.eventWaitlistEntry.findMany({
+      where: { eventId: event.id }, orderBy: { createdAt: "asc" },
+      select: { user: { select: { id: true, name: true, username: true } } },
+    }),
+  ]);
+  const waitlist = waitlistRows.map(w => ({ id: w.user.id, name: w.user.username ?? w.user.name ?? "?" }));
 
   return (
     <>
@@ -73,7 +82,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
         <ApprovalBanner kind={inheritedFromSeries ? "series" : "events"} id={inheritedFromSeries ? event.seriesId! : event.id}
           canApprove={isModerator} inheritedFromSeries={inheritedFromSeries} rejectedNote={rejectedNote} />
       )}
-      <EventEditClient event={event} registeredUsers={registeredUsers} squads={squads} rewardLimits={rewardLimits} goalStatus={goalStatus} />
+      <EventEditClient event={event} registeredUsers={registeredUsers} squads={squads} rewardLimits={rewardLimits} goalStatus={goalStatus} overview={{ pendingReports, waitlistCount: waitlist.length, waitlist }} />
     </>
   );
 }

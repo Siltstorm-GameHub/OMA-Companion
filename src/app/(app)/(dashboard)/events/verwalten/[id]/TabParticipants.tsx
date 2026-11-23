@@ -1,5 +1,7 @@
 "use client";
-import { Loader2, Search, UserMinus, UserPlus, X } from "@/components/icons";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Copy, Loader2, Search, UserMinus, UserPlus, X } from "@/components/icons";
 import type { User } from "./edit-shared";
 import type { EventEdit } from "./useEventEdit";
 
@@ -14,20 +16,79 @@ function Avatar({ u, name, tone }: { u: User; name: string; tone: string }) {
  * Reiter "Teilnehmer": Spieler und Zuschauer eintragen und entfernen. Änderungen hier wirken sofort
  * (keine Speicherleiste). Neue Teilnehmer findet die Mitglieder-Suche (ab 2 Zeichen) oder "Liste einfügen".
  */
-export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
+type Filter = "all" | "ready" | "notReady" | "spectators" | "waitlist";
+
+export default function TabParticipants({ ctx, waitlist = [] }: { ctx: EventEdit; waitlist?: { id: string; name: string }[] }) {
+  // (8) Filter-Chips und "Nicht Bereite kopieren"
+  const [filter, setFilter] = useState<Filter>("all");
   const {
     event, loading, checkInEnabled, checkedInIds, setPlayerCheckIn, search, setSearch, bulkSelected, setBulkSelected,
     bulkSelectedSpectators, setBulkSelectedSpectators, pasteImportOpen, setPasteImportOpen, pasteImportText, setPasteImportText,
     pasteImportResult, registeredIds, spectatorIds, userName, filteredUsers, removeUser, addSingleUser, applyPasteImport,
     bulkAdd, bulkAddSpectators, knownUsers, addableUsers, searching, searchActive, toggleSelected,
   } = ctx;
-  const players = filteredUsers.filter(u => registeredIds.has(u.id));
-  const spectators = filteredUsers.filter(u => spectatorIds.has(u.id));
+  const allPlayers = filteredUsers.filter(u => registeredIds.has(u.id));
+  const players = filter === "ready" ? allPlayers.filter(u => checkedInIds.has(u.id))
+    : filter === "notReady" ? allPlayers.filter(u => !checkedInIds.has(u.id))
+      : filter === "all" ? allPlayers : [];
+  const spectators = filter === "all" || filter === "spectators" ? filteredUsers.filter(u => spectatorIds.has(u.id)) : [];
+  const notReadyNames = allPlayers.filter(u => !checkedInIds.has(u.id)).map(u => `@${userName(u)}`);
+  async function copyNotReady() {
+    const text = notReadyNames.join(" ");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${notReadyNames.length} Namen kopiert`, { description: "Zum Erinnern im Discord einfügen." });
+    } catch {
+      toast.error("Kopieren hat nicht geklappt");
+    }
+  }
+  const readyCount = allPlayers.filter(u => checkedInIds.has(u.id)).length;
+  const chips: { key: Filter; label: string; count: number }[] = [
+    { key: "all", label: "Alle", count: registeredIds.size + spectatorIds.size },
+    ...(checkInEnabled ? [
+      { key: "ready" as const, label: "Bereit", count: readyCount },
+      { key: "notReady" as const, label: "Nicht bereit", count: registeredIds.size - readyCount },
+    ] : []),
+    ...(ctx.spectatorMode ? [{ key: "spectators" as const, label: "Zuschauer", count: spectatorIds.size }] : []),
+    ...(waitlist.length > 0 ? [{ key: "waitlist" as const, label: "Warteliste", count: waitlist.length }] : []),
+  ];
   const nameOf = (id: string) => (knownUsers[id] ? userName(knownUsers[id]) : "?");
 
   return (
     <div className="space-y-4">
       <p className="text-xs text-subtle">Änderungen in diesem Reiter gelten sofort, ohne Speichern.</p>
+
+      {/* Filter */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {chips.map(c => (
+          <button key={c.key} type="button" onClick={() => setFilter(c.key)} aria-pressed={filter === c.key}
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors ${
+              filter === c.key ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted hover:text-fg"
+            }`}>
+            {c.label} <span className="text-xs tabular-nums opacity-80">{c.count}</span>
+          </button>
+        ))}
+        {checkInEnabled && notReadyNames.length > 0 && (
+          <button type="button" onClick={copyNotReady}
+            className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line-strong bg-surface-2 px-3 text-sm font-semibold text-fg hover:bg-surface-3"
+            title="Kopiert die @-Namen aller, die noch nicht bereit sind — zum Erinnern im Discord">
+            <Copy className="size-4" /> Nicht Bereite kopieren
+          </button>
+        )}
+      </div>
+
+      {/* Warteliste (nur ansehen — wer nachrückt, regelt die App automatisch) */}
+      {filter === "waitlist" && (
+        <ol className="space-y-1">
+          {waitlist.map((w, i) => (
+            <li key={w.id} className="flex items-center gap-3 rounded-control border border-line bg-surface-2 px-3 py-2">
+              <span className="w-5 text-center text-xs font-bold text-subtle tabular-nums">{i + 1}</span>
+              <span className="flex-1 truncate text-sm font-semibold text-fg">{w.name}</span>
+              {i === 0 && <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary-fg">rückt als Nächstes nach</span>}
+            </li>
+          ))}
+        </ol>
+      )}
 
       {/* Suche: filtert die Angemeldeten und findet weitere Mitglieder */}
       <div className="flex items-center gap-2">
@@ -149,27 +210,27 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
       )}
 
       {/* Angemeldete Spieler */}
-      <div>
+      {(filter === "all" || filter === "ready" || filter === "notReady") && <div>
         <p className="text-xs font-semibold text-success uppercase tracking-widest mb-1.5">
           Spieler ({registeredIds.size}{event.maxPlayers ? `/${event.maxPlayers}` : ""})
         </p>
         {players.length === 0 ? (
-          <p className="text-xs text-subtle px-1">{search.trim() ? "Kein angemeldeter Spieler passt zur Suche." : "Noch niemand angemeldet. Such oben nach Mitgliedern, um sie einzutragen."}</p>
+          <p className="text-xs text-subtle px-1">{filter === "ready" ? "Noch niemand bereit gemeldet." : filter === "notReady" ? "Alle sind bereit." : search.trim() ? "Kein angemeldeter Spieler passt zur Suche." : "Noch niemand angemeldet. Such oben nach Mitgliedern, um sie einzutragen."}</p>
         ) : (
           <div className="space-y-1">
             {players.map(u => (
-              <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-control bg-success-soft border border-emerald-900/20">
+              <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-control bg-surface-2 border border-line">
                 <Avatar u={u} name={userName(u)} tone="bg-success-soft text-success" />
-                <span className="flex-1 text-sm text-success truncate font-medium">{userName(u)}</span>
+                <span className="flex-1 text-sm text-fg truncate font-semibold">{userName(u)}</span>
                 {checkInEnabled && (
                   <button type="button" onClick={() => setPlayerCheckIn(u.id, !checkedInIds.has(u.id))}
-                    className={`shrink-0 text-xs font-semibold rounded-full px-2 py-0.5 border transition-colors ${
+                    className={`shrink-0 min-h-8 text-xs font-semibold rounded-full px-2.5 border transition-colors ${
                       checkedInIds.has(u.id)
-                        ? "bg-primary/15 border-primary/40 text-primary-fg"
-                        : "border-gray-700 text-subtle hover:text-fg/90"
+                        ? "bg-success-soft border-success/30 text-success"
+                        : "border-line-strong text-subtle hover:text-fg"
                     }`}
                     title={checkedInIds.has(u.id) ? "Auschecken" : "Manuell einchecken"}>
-                    {checkedInIds.has(u.id) ? "✓ eingecheckt" : "nicht eingecheckt"}
+                    {checkedInIds.has(u.id) ? "✓ bereit" : "nicht bereit"}
                   </button>
                 )}
                 <button type="button" onClick={() => removeUser(u.id, userName(u))} disabled={loading} aria-label={`${userName(u)} entfernen`}
@@ -180,10 +241,10 @@ export default function TabParticipants({ ctx }: { ctx: EventEdit }) {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Angemeldete Zuschauer */}
-      {ctx.spectatorMode && (
+      {ctx.spectatorMode && (filter === "all" || filter === "spectators") && (
         <div className="pt-2 border-t border-line">
           <p className="text-xs font-semibold text-primary/80 uppercase tracking-widest mb-1.5">
             👁️ Zuschauer ({spectatorIds.size})

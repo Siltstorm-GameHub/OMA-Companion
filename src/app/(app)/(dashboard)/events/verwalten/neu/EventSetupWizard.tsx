@@ -1,7 +1,10 @@
 "use client";
 // Event-Wizard: Einstieg (Einzel-Event oder Eventreihe) und Schritt-Navigation. Zustand und Aktionen
 // stehen in ./wizard/useEventWizard.ts, die einzelnen Schritte in ./wizard/steps/*.
-import { ChevronLeft, ChevronRight, Repeat, Check, CalendarDays } from "@/components/icons";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Repeat, Check, CalendarDays, Copy, Eye } from "@/components/icons";
+import EventPreviewCard from "./wizard/steps/EventPreviewCard";
 import { formatBerlinDateTime } from "@/lib/time";
 import { useEventWizard, type EventWizardProps } from "./wizard/useEventWizard";
 import StepIndicator from "./wizard/steps/StepIndicator";
@@ -17,6 +20,9 @@ import StepSeriesSummary from "./wizard/steps/StepSeriesSummary";
 
 export default function EventSetupWizard(props: EventWizardProps) {
   const w = useEventWizard(props);
+  // (4) Schnell anlegen: nur Grunddaten + Zusammenfassung, Rest mit Vorgaben (später unter "Weitere Einstellungen")
+  const [quick, setQuick] = useState(false);
+  const stepCardRef = useRef<HTMLDivElement>(null);
   const { seasonPrefill, eventTemplate, gamePrefill, pendingDraft, restoreDraft, discardDraft, router, wizardMode, setWizardMode, step, setStep, loading, isEventMode, isSeriesMode, showsTournamentStep, canProceed, handleSubmitEvent, handleSubmitSeries } = w;
 
   const eventStepComponents = showsTournamentStep
@@ -25,7 +31,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
   // Statistiken (StepSeriesEventSettings) vor den Belohnungen: erst festlegen, was erfasst wird und wie
   // viele Punkte es gibt — die Reihentabelle in StepRewards baut darauf auf.
   const seriesStepComponents = [StepCategory, StepSeriesData, StepSchedule, StepSeriesEventSettings, StepRewards, StepSeriesSummary];
-  const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
+  const activeSteps = isEventMode ? (quick ? [StepEventData, StepEventSummary] : eventStepComponents) : seriesStepComponents;
 
   // Mitglieder-Events (Ersteller ohne Mod-Rolle): Hinweis auf Freigabe und Obergrenzen
   const communityHint = props.isCommunity && (
@@ -82,6 +88,41 @@ export default function EventSetupWizard(props: EventWizardProps) {
           </button>
 
         </div>
+
+        {/* (4) Schnell anlegen */}
+        <button type="button" onClick={() => { setQuick(true); setWizardMode("event"); setStep(0); }}
+          className="mt-4 flex w-full items-center gap-3 rounded-card border border-line bg-surface p-4 text-left shadow-card hover:border-line-strong hover:bg-surface-2 transition-colors">
+          <span className="text-2xl">⚡</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-extrabold text-fg">Schnell anlegen</span>
+            <span className="block text-xs text-muted">Titel, Spiel, Termin, Plätze — fertig. Alles andere mit sinnvollen Vorgaben, änderbar.</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-subtle" />
+        </button>
+
+        {/* (2) Wie zuletzt: eigene Events als Vorlage */}
+        {(props.recentEvents?.length ?? 0) > 0 && (
+          <div className="mt-6">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-subtle">Wie zuletzt — als Vorlage kopieren</p>
+            <ul className="space-y-1.5">
+              {props.recentEvents!.map(e => (
+                <li key={e.id}>
+                  <a href={`/events/verwalten/neu?from=${e.id}`}
+                    className="flex min-h-12 items-center gap-3 rounded-control border border-line bg-surface px-3 hover:border-line-strong hover:bg-surface-2 transition-colors">
+                    <Copy className="size-4 shrink-0 text-primary-fg" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-fg">{e.title}</span>
+                      <span className="block truncate text-xs text-subtle">
+                        {formatBerlinDateTime(new Date(e.startAt), { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}{e.game && ` · ${e.game}`}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-primary-fg">Kopieren</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }
@@ -91,8 +132,14 @@ export default function EventSetupWizard(props: EventWizardProps) {
   const CurrentStep = activeSteps[Math.min(step, activeSteps.length - 1)];
   const isLastStep  = step >= activeSteps.length - 1;
 
+  // (1) Was fehlt noch? Statt eines stummen grauen Knopfs
+  const problem: string | null = CurrentStep === StepEventData
+    ? w.eventDataProblem()
+    : CurrentStep === StepSeriesData && !w.seriesName.trim() ? "Gib der Reihe einen Namen." : null;
+  const withPreview = isEventMode;
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className={`${withPreview ? "max-w-5xl" : "max-w-2xl"} mx-auto px-4 py-8`}>
       <div className="mb-6 flex items-center gap-3">
         {seasonPrefill ? (
           <button type="button"
@@ -103,7 +150,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
           </button>
         ) : (
           <button type="button"
-            onClick={() => { setWizardMode("select"); setStep(0); }}
+            onClick={() => { setWizardMode("select"); setStep(0); setQuick(false); }}
             className="min-h-9 text-sm text-muted hover:text-fg flex items-center gap-1 transition-colors">
             <ChevronLeft className="w-4 h-4" />
             Zurück zur Auswahl
@@ -117,7 +164,7 @@ export default function EventSetupWizard(props: EventWizardProps) {
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">
             {seasonPrefill
               ? `Saison ${seasonPrefill.seasonNumber} einrichten`
-              : isSeriesMode ? "Neue Eventreihe" : "Neues Event"}
+              : isSeriesMode ? "Neue Eventreihe" : quick ? "Event schnell anlegen" : "Neues Event"}
           </h1>
         </div>
       </div>
@@ -142,18 +189,50 @@ export default function EventSetupWizard(props: EventWizardProps) {
 
       {seasonPrefill && (
         <p className="text-xs text-subtle -mt-3 mb-6">
-          Vorausgefüllt aus „{seasonPrefill.oldSeriesName}". Alles ist editierbar — Start- und Enddatum bitte prüfen.
+          Vorausgefüllt aus „{seasonPrefill.oldSeriesName}“. Alles ist editierbar — Start- und Enddatum bitte prüfen.
         </p>
       )}
 
-      <StepIndicator w={w} />
+      <StepIndicator w={w} labels={quick ? ["Grunddaten", "Zusammenfassung"] : undefined} />
 
-      <div className="rounded-card border border-line bg-surface p-4 sm:p-6 mb-4">
-        <CurrentStep w={w} />
+      <div className={withPreview ? "lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6" : ""}>
+        <div className="min-w-0">
+          {/* (3) Vorschau am Handy: aufklappbar über dem Formular */}
+          {withPreview && (
+            <details className="group mb-3 lg:hidden">
+              <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-control border border-line bg-surface px-3 text-sm font-semibold text-fg [&::-webkit-details-marker]:hidden">
+                <Eye className="size-4 text-primary-fg" /> Vorschau ansehen
+                <ChevronRight className="ml-auto size-4 text-subtle transition-transform group-open:rotate-90" />
+              </summary>
+              <div className="mt-2"><EventPreviewCard w={w} /></div>
+            </details>
+          )}
+          <div ref={stepCardRef} className="rounded-card border border-line bg-surface p-4 sm:p-6 mb-4 scroll-mt-36">
+            <CurrentStep w={w} />
+          </div>
+          {quick && isLastStep && (
+            <button type="button" onClick={() => { setQuick(false); setStep(0); }}
+              className="mb-4 flex w-full min-h-11 items-center justify-center gap-2 rounded-control border border-line-strong bg-surface-2 text-sm font-semibold text-fg hover:bg-surface-3">
+              Weitere Einstellungen (Kategorie, Format, Belohnungen)
+            </button>
+          )}
+        </div>
+        {/* (3) Vorschau am Desktop: klebt rechts neben dem Formular */}
+        {withPreview && (
+          <aside className="hidden lg:block lg:sticky lg:top-24">
+            <EventPreviewCard w={w} />
+          </aside>
+        )}
       </div>
 
       {/* Navigation klebt unten (über der unteren Leiste am Handy), damit "Weiter" immer erreichbar ist */}
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20 flex gap-3 rounded-card border border-line bg-sidebar p-2.5 shadow-pop">
+      <div className={`sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4 z-20 rounded-card border border-line bg-sidebar p-2.5 shadow-pop ${withPreview ? "lg:max-w-[calc(100%-19.5rem)]" : ""}`}>
+        {problem && (
+          <p className="mb-2 flex items-start gap-1.5 px-1 text-xs font-semibold text-warning" role="status">
+            <span aria-hidden>⚠</span> Es fehlt noch: {problem}
+          </p>
+        )}
+        <div className="flex gap-3">
         {step > 0 && (
           <button type="button" onClick={() => setStep(s => s - 1)}
             className="flex min-h-11 items-center gap-2 px-5 rounded-control text-sm font-semibold text-fg border border-line-strong bg-surface-2 hover:bg-surface-3 transition-colors">
@@ -162,19 +241,29 @@ export default function EventSetupWizard(props: EventWizardProps) {
         )}
         <button
           type="button"
-          disabled={!canProceed() || loading}
+          disabled={loading}
+          aria-disabled={!!problem || !canProceed()}
           onClick={() => {
+            // Unvollständig: nicht weiter, sondern zeigen, was fehlt
+            if (problem || !canProceed()) {
+              toast.error(problem ?? "Bitte die Pflichtfelder ausfüllen.");
+              stepCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              const firstEmpty = stepCardRef.current?.querySelector<HTMLInputElement>("input[required]:placeholder-shown, input:not([type=checkbox]):not([type=radio]):placeholder-shown");
+              firstEmpty?.focus({ preventScroll: true });
+              return;
+            }
             if (!isLastStep) setStep(s => s + 1);
             else if (isEventMode) handleSubmitEvent();
             else handleSubmitSeries();
           }}
-          className="flex-1 flex min-h-11 items-center justify-center gap-2 rounded-control text-sm font-bold bg-primary text-primary-ink hover:bg-primary-hover transition-colors disabled:opacity-40">
+          className={`flex-1 flex min-h-11 items-center justify-center gap-2 rounded-control text-sm font-bold bg-primary text-primary-ink hover:bg-primary-hover transition-colors disabled:opacity-40 ${problem ? "opacity-60" : ""}`}>
           {loading
             ? "Wird erstellt…"
             : isLastStep
             ? (<><Check className="w-4 h-4" /> {seasonPrefill ? "Saison erstellen" : isSeriesMode ? "Eventreihe erstellen" : "Event erstellen"}</>)
             : (<>Weiter <ChevronRight className="w-4 h-4" /></>)}
         </button>
+        </div>
       </div>
     </div>
   );

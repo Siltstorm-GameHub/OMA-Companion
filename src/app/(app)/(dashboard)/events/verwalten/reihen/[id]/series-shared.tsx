@@ -92,7 +92,7 @@ export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   open:     { label: "Anmeldung offen", cls: "text-primary-fg bg-primary-soft border-primary/30" },
   closed:   { label: "Voll",            cls: "text-primary-fg bg-primary-soft border-primary/30" },
   active:   { label: "Läuft",           cls: "text-success bg-success-soft border-success/30" },
-  umfrage:  { label: "Umfragephase",    cls: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  umfrage:  { label: "Umfragephase",    cls: "text-warning bg-warning-soft border-warning/30" },
   finished: { label: "Beendet",         cls: "text-subtle bg-surface-2 border-line" },
 };
 export function parseRewards(json: string | null | undefined): RewardsConfig {
@@ -199,4 +199,15 @@ export type SeriesDetailProps = {
   goalLimits?: { coins: number; seriesPoints: number } | null;
   /** Mitglieder: Obergrenzen der Reihen-Belohnungen (Anzeige an den Feldern; der Server kürzt beim Speichern) */
   rewardLimits?: import("@/lib/captain-reward-limits").RewardLimits | null;
+  /** Übersicht: die ersten drei der Reihentabelle */
+  top3?: { id: string; name: string; image: string | null; points: number }[];
 };
+
+/** Farbpunkt je Termin in der Terminliste: offen, läuft, braucht dich, fertig */
+export function eventDot(ev: { status: string }, attention: boolean): { cls: string; label: string } {
+  if (attention) return { cls: "bg-warning", label: "Braucht dich" };
+  if (ev.status === "finished" || ev.status === "archived") return { cls: "bg-success", label: "Fertig" };
+  if (ev.status === "active") return { cls: "bg-live animate-pulse", label: "Läuft" };
+  if (ev.status === "umfrage") return { cls: "bg-warning", label: "Umfragephase" };
+  return { cls: "bg-line-strong", label: "Offen" };
+}

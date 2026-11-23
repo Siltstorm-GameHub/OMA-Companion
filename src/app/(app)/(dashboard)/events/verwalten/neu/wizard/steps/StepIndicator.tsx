@@ -4,12 +4,12 @@ import { STEP_LABELS_EVENT, STEP_LABELS_SERIES } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 
 // ── Render: Step Indicator ────────────────────────────────────────────────────
-export default function StepIndicator({ w }: { w: EventWizard }) {
+export default function StepIndicator({ w, labels: override }: { w: EventWizard; labels?: string[] }) {
   const { step, isEventMode, showsTournamentStep } = w;
   const base = isEventMode ? STEP_LABELS_EVENT : STEP_LABELS_SERIES;
-  const labels = isEventMode && !showsTournamentStep
+  const labels = override ?? (isEventMode && !showsTournamentStep
     ? base.filter((_, i) => i !== 2)
-    : base;
+    : base);
   return (
     <ol className="mb-6 flex items-center gap-1.5 overflow-x-auto scrollbar-none" aria-label="Schritte">
       {labels.map((label, i) => {

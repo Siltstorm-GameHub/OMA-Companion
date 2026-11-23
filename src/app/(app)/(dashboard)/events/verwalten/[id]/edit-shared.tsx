@@ -263,8 +263,20 @@ export function HeaderMenu({ duplicateHref, deleteLabel, onDelete }: { duplicate
 }
 
 /** rewardLimits: Belohnungs-Obergrenzen für Mitglieder (null = Mod/Admin, keine Grenze) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type EventEditProps = { event: any; registeredUsers: User[]; squads?: SquadOption[]; rewardLimits?: RewardLimits | null; goalStatus?: GoalStatus | null };
+export type EventEditProps = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  event: any; registeredUsers: User[]; squads?: SquadOption[]; rewardLimits?: RewardLimits | null; goalStatus?: GoalStatus | null;
+  /** Übersicht oben: offene Ergebnis-Meldungen, Warteliste */
+  overview?: { pendingReports: number; waitlistCount: number; waitlist: { id: string; name: string }[] } | null;
+};
+
+/** Welche Einstellungen gehören zu welchem Reiter (für den Punkt "ungespeichert" am Reiter) */
+export const SNAPSHOT_TAB: Record<string, TabKey> = {
+  eventKind: "rewards", participationCoins: "rewards", participationRankPts: "rewards", placements: "rewards", polls: "rewards",
+  spectatorCoins: "rewards", spectatorRankPts: "rewards",
+  seriesWinnerMode: "series", seriesWinnerStatField: "series",
+  goal: "goal",
+};
 
 /** Stand des Community-Ziels für den Reiter "Ziel" (serverseitig berechnet, siehe page.tsx) */
 export type GoalStatus = {

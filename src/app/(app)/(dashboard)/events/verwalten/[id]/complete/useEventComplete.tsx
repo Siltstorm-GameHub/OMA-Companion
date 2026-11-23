@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { parseAvgDirection, type AvgDirection } from "@/lib/avg-stats";
-import { checkWinnerStat, rewardTotals } from "@/lib/event-complete-checks";
+import { checkWinnerStat, rewardTotals, rewardLines } from "@/lib/event-complete-checks";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { confirmEventTiming, eventTimingWarning } from "@/lib/event-timing-warning";
 import { noopSubscribe, PlacementReward, DominionChange, userName, computeGroups, sameGroups, computePlacementMap , type Props } from "./complete-shared";
@@ -290,6 +290,15 @@ export function useEventComplete({
     spectatorRankPoints: spectatorRewardJson?.rankPoints ?? 0,
   });
 
+  /* ── Auszahlung je Person (Liste "Wer bekommt was?") ── */
+  const lines = rewardLines({
+    order: rankingOrder,
+    placementOf: uid => placementMap.get(uid) ?? rankingOrder.indexOf(uid) + 1,
+    rewardForPlace: getPlacementReward,
+    excluded: unrewarded,
+    participationCoins: effectiveParticipationCoins,
+  });
+
   /* ── Ranking auto-sort with tie detection ── */
   function scoreOf(uid: string, field: string): number {
     return isAvgFormat ? (userAvgScore[uid] ?? 0) : (userStats[uid]?.[field] ?? 0);
@@ -480,7 +489,7 @@ export function useEventComplete({
     ? openEventPolls.map(p => p.endAt).sort().at(-1) ?? null
     : null;
 
-  return { pendingSubmissions, matchCheck, predictionInfo, spectatorActivity, rewardHistory, rewardsCapped, absentPlayers, toggleAbsent, unrewarded, presentOrder, actionSummary, pollAutoEnd, eventId, eventTitle, eventStartAt, eventEndAt, seriesId, seriesName, seriesIcon, registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField, winnerStatSource, seriesWinnerStatField, userStats, format, userAvgScore, defaultAvgDirection, seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson, currentDominionStreaks, isAdmin, isMod, isReEdit, status, hasPlacement, initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote, router, isAvgFormat, confirm, ConfirmDialogElement, timingWarningJson, timingWarning, isPollOnly, isFinishedSummary, winnerLocked, openEventPolls, willFinalizePolls, winnerStatField, setWinnerStatField, avgDirection, setAvgDirection, seriesWinnerTargetField, setSeriesWinnerTargetField, mvpUserId, setMvpUserId, pollExcluded, setPollExcluded, pollVotes, setPollVotes, spectatorAttended, setSpectatorAttended, rankingOrder, setRankingOrder, tiedAbove, setTiedAbove, rankingNote, setRankingNote, rankingManuallyEdited, setRankingManuallyEdited, dragIdx, setDragIdx, rankingDirty, setRankingDirty, excludedUsers, setExcludedUsers, toggleExcluded, hasMissingUsers, loading, setLoading, seriesStatFields, dominionCfg, dominionTriggerLabel, dominionChanges, dominionAwarded, rankingGroups, placementMap, previewWinners, pollEligible, pollWinners, canDeferPoll, pollPhasePending, effectiveParticipationCoins, effectiveSpectatorCoins, getPlacementReward, winnerCheck, totals, scoreOf, computeAutoRanking, autoSort, toggleTied, moveUp, moveDown, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, firstStep, steps, stepNo, noRanking, participationRankPts, mainLabel, winnerSourceText, nameOf };
+  return { pendingSubmissions, matchCheck, predictionInfo, spectatorActivity, rewardHistory, rewardsCapped, absentPlayers, toggleAbsent, unrewarded, presentOrder, actionSummary, pollAutoEnd, eventId, eventTitle, eventStartAt, eventEndAt, seriesId, seriesName, seriesIcon, registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, defaultWinnerStatField, winnerStatSource, seriesWinnerStatField, userStats, format, userAvgScore, defaultAvgDirection, seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson, currentDominionStreaks, isAdmin, isMod, isReEdit, status, hasPlacement, initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote, router, isAvgFormat, confirm, ConfirmDialogElement, timingWarningJson, timingWarning, isPollOnly, isFinishedSummary, winnerLocked, openEventPolls, willFinalizePolls, winnerStatField, setWinnerStatField, avgDirection, setAvgDirection, seriesWinnerTargetField, setSeriesWinnerTargetField, mvpUserId, setMvpUserId, pollExcluded, setPollExcluded, pollVotes, setPollVotes, spectatorAttended, setSpectatorAttended, rankingOrder, setRankingOrder, tiedAbove, setTiedAbove, rankingNote, setRankingNote, rankingManuallyEdited, setRankingManuallyEdited, dragIdx, setDragIdx, rankingDirty, setRankingDirty, excludedUsers, setExcludedUsers, toggleExcluded, hasMissingUsers, loading, setLoading, seriesStatFields, dominionCfg, dominionTriggerLabel, dominionChanges, dominionAwarded, rankingGroups, placementMap, previewWinners, pollEligible, pollWinners, canDeferPoll, pollPhasePending, effectiveParticipationCoins, effectiveSpectatorCoins, getPlacementReward, winnerCheck, totals, lines, scoreOf, computeAutoRanking, autoSort, toggleTied, moveUp, moveDown, handleConfirm, backHref, pageTitle, hasExtras, hasPolls, firstStep, steps, stepNo, noRanking, participationRankPts, mainLabel, winnerSourceText, nameOf };
 }
 
 export type EventComplete = ReturnType<typeof useEventComplete>;

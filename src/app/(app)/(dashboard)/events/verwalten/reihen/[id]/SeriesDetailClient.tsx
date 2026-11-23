@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useState } from "react";
 import { CalendarPlus } from "@/components/icons";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Repeat } from "@/components/icons";
@@ -7,7 +8,8 @@ import { RefreshCw, Save, Coins, ExternalLink, Archive, Vote, Trash2, EyeOff, Cl
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { formatBerlinDate } from "@/lib/time";
-import { inputCls, SETTINGS_TABS, needsAttention, STATUS_CONFIG, EventHiddenToggle, type SeriesDetailProps } from "./series-shared";
+import { inputCls, SETTINGS_TABS, needsAttention, eventDot, STATUS_CONFIG, EventHiddenToggle, type SeriesEvent, type SeriesDetailProps } from "./series-shared";
+import { Podium } from "@/components/ui/Podium";
 import { useSeriesDetail } from "./useSeriesDetail";
 import SeriesTabGeneral from "./SeriesTabGeneral";
 import SeriesTabGoal from "./SeriesTabGoal";
@@ -22,6 +24,14 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
   const ctx = useSeriesDetail(props);
   const { series, hasActiveSibling, isModerator, canUndoCompletion, isArchived, undoConfirm, setUndoConfirm, undoing, saving, activeSettingsTab, setActiveSettingsTab, generatingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, description, icon, seriesColor, recurrenceType, hidden, registrationLocked, sortedSeriesEvents, saveSettings, openGenerateModal, generateNextEvent, undoCompletion, deleteSeries, ConfirmDialogElement, settingsDirty, discardSettings, confirm } = ctx;
   // Mitglieder dürfen ihre Reihe löschen, solange kein Termin abgeschlossen ist (api/admin/series/[id])
+  // (12) Übersicht: Fortschritt, nächster Termin, offene Abschlüsse, Top 3
+  const evs = series.events as (SeriesEvent & { startAt: string | Date; status: string })[];
+  const doneCount = evs.filter(e => e.status === "finished").length;
+  const [nowMs] = useState(() => Date.now());
+  const nextEv = [...evs].filter(e => e.status !== "finished" && new Date(e.startAt).getTime() > nowMs)
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0] ?? null;
+  const attentionCount = evs.filter(e => needsAttention(e)).length;
+  const top3 = props.top3 ?? [];
   const memberCanDelete = !isModerator && series.status === "active"
     && !(series.events as { status: string }[]).some(e => e.status === "finished" || e.status === "umfrage");
 
@@ -99,6 +109,41 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         </div>
       </div>
 
+      {/* ── Übersicht ── */}
+      <section aria-label="Übersicht" className="rounded-card border border-line bg-surface shadow-card p-3 sm:p-4">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] md:items-end">
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="rounded-control border border-line bg-surface-2 px-3 py-2">
+                <span className="block text-lg font-extrabold tabular-nums text-fg">{doneCount}/{evs.length}</span>
+                <span className="block text-xs font-semibold text-subtle">Termine gespielt</span>
+              </div>
+              <div className="rounded-control border border-line bg-surface-2 px-3 py-2">
+                <span className="block truncate text-lg font-extrabold tabular-nums text-fg">
+                  {nextEv ? formatBerlinDate(nextEv.startAt, { weekday: "short", day: "numeric", month: "numeric" }) : "—"}
+                </span>
+                <span className="block text-xs font-semibold text-subtle">{nextEv ? `Nächster · ${formatBerlinDate(nextEv.startAt, { hour: "2-digit", minute: "2-digit" })} Uhr` : "Kein Termin geplant"}</span>
+              </div>
+              <div className={`col-span-2 sm:col-span-1 rounded-control border px-3 py-2 ${attentionCount > 0 ? "border-warning/40 bg-warning-soft" : "border-line bg-surface-2"}`}>
+                <span className={`block text-lg font-extrabold tabular-nums ${attentionCount > 0 ? "text-warning" : "text-success"}`}>{attentionCount > 0 ? attentionCount : "✓"}</span>
+                <span className="block text-xs font-semibold text-subtle">{attentionCount > 0 ? (attentionCount === 1 ? "Termin braucht dich" : "Termine brauchen dich") : "Nichts offen"}</span>
+              </div>
+            </div>
+            {evs.length > 0 && (
+              <div className="h-2 overflow-hidden rounded-full bg-surface-3" aria-hidden>
+                <div className="h-full rounded-full" style={{ width: `${Math.round((doneCount / evs.length) * 100)}%`, background: seriesColor }} />
+              </div>
+            )}
+          </div>
+          {top3.length === 3 && (
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-subtle">Tabelle · Top 3</p>
+              <Podium size="sm" entries={top3.map(t => ({ id: t.id, name: t.name, image: t.image, value: `${t.points.toLocaleString("de-DE")} Pkt.` }))} />
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
@@ -140,8 +185,8 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         {/* ── Right column: Events ── */}
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">
-              Events dieser Reihe
+            <h2 className="text-base font-extrabold text-fg">
+              Termine dieser Reihe
             </h2>
             {isArchived ? (
               <span className="flex items-center gap-1.5 text-xs text-subtle">
@@ -172,6 +217,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
                 });
                 const attention = needsAttention(ev);
+                const dot = eventDot(ev, !!attention);
                 return (
                   <div
                     key={ev.id}
@@ -181,6 +227,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                       isFinished ? "opacity-60 hover:opacity-90" : ""
                     } ${ev.hidden ? "opacity-60" : ""}`}
                   >
+                    <span className={`size-2.5 shrink-0 rounded-full ${dot.cls}`} title={dot.label} aria-label={dot.label} />
                     <Link href={`/events/verwalten/${ev.id}`} className="flex-1 min-w-0 group">
                       <p className="text-sm text-fg truncate flex items-center gap-2 flex-wrap group-hover:text-primary-fg">
                         {ev.title}
