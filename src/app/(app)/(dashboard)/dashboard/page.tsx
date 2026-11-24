@@ -594,7 +594,7 @@ export default async function DashboardPage() {
   const upcomingCovers: HomeUpcoming[] = homeCandidates
     .filter(e => !stageIds.has(e.id) && e.startAt.getTime() > now.getTime() && ["open", "closed"].includes(e.status))
     .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
-    .slice(0, 4)
+    .slice(0, 2) // "Kommende Events" auf der Übersicht: nur die nächsten zwei, der Rest steht unter /events
     .map(e => ({
       id: e.id, title: e.title, game: e.game, coverUrl: e.coverUrl, omaOriginal: e.omaOriginal, startAt: e.startAt,
       startsIn: startsInLabel(e.startAt, now), playerCount: e.playerCount, maxPlayers: e.maxPlayers, isRegistered: e.isRegistered,
