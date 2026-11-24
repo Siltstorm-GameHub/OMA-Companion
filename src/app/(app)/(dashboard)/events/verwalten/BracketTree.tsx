@@ -43,7 +43,7 @@ function SlotBox({ slot, nameOf, selected, onSelect }: { slot: BracketSlot; name
     <button type="button" onClick={() => onSelect(slot.key)} aria-pressed={selected} aria-label={label}
       className={`relative w-full overflow-hidden rounded-control border text-left transition-colors divide-y divide-line ${
         selected ? "border-primary/60 bg-primary/[0.08] ring-1 ring-primary/40"
-          : slot.live ? "border-amber-400/50 bg-amber-500/[0.06]"
+          : slot.live ? "border-amber-400/50 bg-warning-soft"
           : "border-line bg-surface-2 hover:bg-line"
       } ${slot.bye ? "opacity-60" : ""}`}>
       {slot.live && (

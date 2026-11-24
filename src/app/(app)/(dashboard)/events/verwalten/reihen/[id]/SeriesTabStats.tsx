@@ -68,7 +68,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                           )}
                           className={`text-xs px-2 py-1 rounded-control border transition-colors ${
                             dominionTriggerStats.includes(r.field)
-                              ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                              ? "text-amber-300 bg-amber-500/10 border-warning/30"
                               : "text-subtle border-line hover:border-line-strong"
                           }`}
                         >{r.field}</button>
@@ -81,7 +81,7 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
                           title="Umfragesieg"
                           className={`text-xs px-2 py-1 rounded-control border transition-colors flex items-center gap-1 ${
                             dominionTriggerStats.includes(p.label)
-                              ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                              ? "text-amber-300 bg-amber-500/10 border-warning/30"
                               : "text-subtle border-line hover:border-line-strong"
                           } max-lg:min-h-10`}
                         ><Vote className="w-3 h-3" />{p.label}</button>

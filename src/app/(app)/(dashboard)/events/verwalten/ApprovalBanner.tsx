@@ -113,7 +113,7 @@ export default function ApprovalBanner({ kind, id, canApprove, inheritedFromSeri
   }
 
   return (
-    <div className="mb-4 rounded-control border border-amber-500/25 bg-amber-500/[0.07] px-4 py-3 flex items-center gap-3 flex-wrap">
+    <div className="mb-4 rounded-control border border-warning/30 bg-warning-soft px-4 py-3 flex items-center gap-3 flex-wrap">
       <div className="flex-1 min-w-[220px]">
         <p className="text-sm font-semibold text-amber-300">Wartet auf Mod-Freigabe</p>
         <p className="text-xs text-amber-100/80">

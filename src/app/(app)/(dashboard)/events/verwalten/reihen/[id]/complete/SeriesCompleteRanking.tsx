@@ -37,7 +37,7 @@ export default function SeriesCompleteRanking({ ctx }: { ctx: SeriesComplete }) 
               )}
 
               <p className="text-xs text-subtle">
-                Anhand dieser Endplatzierung werden die unter „Belohnungen (Endplatzierung der Eventreihe)" konfigurierten Münzen &amp; Rang-Punkte vergeben.
+                Anhand dieser Endplatzierung werden die unter „Belohnungen (Endplatzierung der Eventreihe)“ konfigurierten Münzen &amp; Rang-Punkte vergeben.
               </p>
 
               <div className="space-y-1">

@@ -101,7 +101,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           ) : (
             <Link
               href={`/events/verwalten/reihen/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-control px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-warning/30 hover:border-warning/30 rounded-control px-3 py-1.5 transition-all whitespace-nowrap shrink-0 max-lg:min-h-10"
             >
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
@@ -233,7 +233,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                         {ev.title}
                         <span className="text-subtle font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
-                          <span className="text-xs text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                          <span className="text-xs text-amber-500 bg-amber-500/10 border border-warning/30 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
                             <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
                           </span>
                         )}
@@ -242,7 +242,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                     </Link>
                     {attention && (
                       <Link href={attention.href} title={attention.label}
-                        className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 hover:bg-amber-500/20">
+                        className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-warning/30 rounded px-1.5 py-0.5 shrink-0 hover:bg-amber-500/20">
                         <Clock className="w-2.5 h-2.5" /> {attention.label}
                       </Link>
                     )}

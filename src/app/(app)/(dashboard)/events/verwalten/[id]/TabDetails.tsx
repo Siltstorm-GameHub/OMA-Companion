@@ -44,7 +44,7 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   {TMT_FORMATS.map(f => (
                     <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
                       className={`text-left px-3 py-2.5 rounded-control border transition-colors ${
-                        tmtFormat === f.value ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 bg-gray-800 text-muted hover:border-gray-600"
+                        tmtFormat === f.value ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 bg-gray-800 text-muted hover:border-line-strong"
                       }`}>
                       <p className="text-xs font-medium leading-tight">{f.label}</p>
                       <p className="text-xs text-subtle mt-0.5 leading-tight">{f.desc}</p>

@@ -116,7 +116,7 @@ export default function SeriesCompleteClient(props: Props) {
                   </h2>
 
                   {isReEdit && (
-                    <p className="text-xs text-amber-300/80 rounded-control px-3 py-2 bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-xs text-amber-300/80 rounded-control px-3 py-2 bg-amber-500/10 border border-warning/30">
                       Die bisherige Vergabe wird vollständig zurückgebucht und durch die folgende ersetzt.
                     </p>
                   )}

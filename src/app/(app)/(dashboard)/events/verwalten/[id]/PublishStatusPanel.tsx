@@ -86,7 +86,7 @@ export default function PublishStatusPanel({
 
   if (state.errors.length === 0) return null;
   return (
-    <div className="rounded-control border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-2">
+    <div className="rounded-control border border-warning/30 bg-amber-500/5 px-4 py-3 space-y-2">
       <p className="text-sm text-amber-300 flex items-center gap-2">
         <AlertTriangle className="w-4 h-4" /> Veröffentlichung unvollständig
       </p>

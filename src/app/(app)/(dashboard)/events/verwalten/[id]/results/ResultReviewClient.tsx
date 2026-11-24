@@ -188,9 +188,9 @@ function conflictOf(m: ReviewMatch): boolean {
   return [...bySubject.values()].some((v) => v.size > 1);
 }
 
-export default function ResultReviewClient({ eventId, matches, statFields }: { eventId: string; matches: ReviewMatch[]; statFields: string[] }) {
+export default function ResultReviewClient({ eventId, matches, statFields, initialMode = "open" }: { eventId: string; matches: ReviewMatch[]; statFields: string[]; initialMode?: "open" | "all" | "review" }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<"open" | "all" | "review">("open");
+  const [filter, setFilter] = useState<"open" | "all" | "review">(initialMode);
   // (11) Prüfmodus: eine offene Meldung nach der anderen, Screenshot groß
   const [reviewIdx, setReviewIdx] = useState(0);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -289,7 +289,7 @@ export default function ResultReviewClient({ eventId, matches, statFields }: { e
               {m.current && <span className="text-xs text-subtle">Aktuell: {m.current.score1 ?? "–"} : {m.current.score2 ?? "–"}</span>}
             </div>
             {conflict && (
-              <div className="rounded-control border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 space-y-0.5">
+              <div className="rounded-control border border-warning/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-200 space-y-0.5">
                 <p className="font-semibold">⚠ Die Meldungen widersprechen sich — bitte anhand der Screenshots prüfen:</p>
                 {m.isDuel
                   ? pendingDuel.map((s) => (

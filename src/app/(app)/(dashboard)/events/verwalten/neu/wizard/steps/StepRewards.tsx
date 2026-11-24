@@ -49,7 +49,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
           )}
         </div>
         {isSeriesMode && (
-          <p className="text-xs text-subtle mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+          <p className="text-xs text-subtle mt-2">Münzen pro Teilnahme: siehe „📊 Reihentabelle“ weiter unten.</p>
         )}
         {isEventMode && seriesMode !== "none" && (
           <p className="text-xs text-subtle mt-2">Münzen pro Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>
@@ -137,7 +137,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
             </div>
           </div>
           {isSeriesMode && (
-            <p className="text-xs text-subtle mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle" weiter unten.</p>
+            <p className="text-xs text-subtle mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Reihentabelle“ weiter unten.</p>
           )}
           {isEventMode && seriesMode !== "none" && (
             <p className="text-xs text-subtle mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Reihentabellen-Konfiguration der Eventreihe eingestellt.</p>

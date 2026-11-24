@@ -22,7 +22,7 @@ export default function CompletePolls({ ctx }: { ctx: EventComplete }) {
             </p>
           )}
           {openEventPolls.length > 0 && (
-            <p className="flex items-start gap-2 rounded-control border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+            <p className="flex items-start gap-2 rounded-control border border-warning/30 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
               <Vote className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Läuft noch: {openEventPolls.map(op => `„${op.label}“ bis ${new Date(op.endAt).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.

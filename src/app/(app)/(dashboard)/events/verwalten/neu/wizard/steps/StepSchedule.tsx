@@ -19,7 +19,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
             {FORMATS.map(f => (
               <button key={f.value} type="button" onClick={() => setSeriesFormat(f.value)}
                 className={`flex flex-col items-start gap-1 rounded-control p-3 border-2 transition-all text-left ${
-                  seriesFormat === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                  seriesFormat === f.value ? "border-warning/30 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
                 }`}>
                 <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-fg/90"}`}>{f.label}</span>
                 <span className="text-xs text-subtle">{f.desc}</span>
@@ -30,7 +30,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
         </div>
       )}
       {eventType === "tournament" && variousGames && (
-        <div className="rounded-control px-4 py-3 border border-amber-500/20 bg-amber-500/5">
+        <div className="rounded-control px-4 py-3 border border-warning/30 bg-amber-500/5">
           <p className="text-xs text-amber-400">⚠️ Format wird pro Event einzeln festgelegt, da verschiedene Spiele ausgewählt sind.</p>
         </div>
       )}

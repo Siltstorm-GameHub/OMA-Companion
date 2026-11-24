@@ -30,15 +30,15 @@ export function DropMenu({ trigger, label, items, align = "right" }: {
   return (
     <div ref={ref} className="relative shrink-0">
       <button type="button" onClick={() => setOpen(o => !o)} aria-label={label} aria-expanded={open}
-        className="flex items-center justify-center rounded-control text-muted hover:text-fg hover:bg-line">
+        className="flex items-center justify-center rounded-control text-muted hover:text-fg hover:bg-surface-3">
         {trigger}
       </button>
       {open && (
-        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-control border border-line-strong bg-surface-2 shadow-xl`}>
+        <div role="menu" className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-30 mt-1 min-w-[13rem] overflow-hidden rounded-control border border-line-strong bg-surface-2 p-1 shadow-card`}>
           {visible.map(it => (
             <button key={it.label} role="menuitem" type="button" disabled={it.disabled}
               onClick={() => { setOpen(false); it.onClick(); }}
-              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-line disabled:opacity-40 ${it.danger ? "text-danger" : "text-fg"}`}>
+              className={`flex min-h-10 w-full items-center gap-2 rounded-control px-3 text-left text-sm font-semibold hover:bg-surface-3 disabled:opacity-40 ${it.danger ? "text-danger" : "text-fg"}`}>
               {it.icon}{it.label}
             </button>
           ))}
@@ -49,7 +49,10 @@ export function DropMenu({ trigger, label, items, align = "right" }: {
 }
 
 /** Kopf: Format, Stand in Klartext, Fortschritt, Ergebnis-Meldungen und Werkzeuge */
-export function TournamentHeader({ formatLabel, statusLine, played, total, unit, resultsHref, pendingCount, tools }: {
+/** Hauptknopf im Kopf: genau der nächste Schritt (Meldungen prüfen, nächstes Match, abschließen) */
+export type HeaderPrimary = { label: string; href?: string; onClick?: () => void; tone?: "primary" | "warning" };
+
+export function TournamentHeader({ formatLabel, statusLine, played, total, unit, resultsHref, pendingCount, tools, primary = null, live = null }: {
   formatLabel: string;
   statusLine: string;
   played: number;
@@ -59,30 +62,46 @@ export function TournamentHeader({ formatLabel, statusLine, played, total, unit,
   resultsHref?: string;
   pendingCount: number;
   tools: { label: string; onClick: () => void; disabled?: boolean }[];
+  primary?: HeaderPrimary | null;
+  /** z. B. "Live · aktualisiert vor 20 s" */
+  live?: ReactNode;
 }) {
   const pct = total > 0 ? Math.round((played / total) * 100) : 0;
+  const open = Math.max(0, total - played);
+  const btn = primary?.tone === "warning"
+    ? "bg-warning text-canvas hover:brightness-110"
+    : "bg-primary text-primary-ink hover:bg-primary-hover";
+  const kpi = (value: ReactNode, label: string, cls = "text-fg") => (
+    <div className="rounded-control border border-line bg-surface-2 px-3 py-2">
+      <span className={`block text-lg font-extrabold tabular-nums leading-tight ${cls}`}>{value}</span>
+      <span className="block text-xs font-semibold text-subtle">{label}</span>
+    </div>
+  );
   return (
-    <section aria-label="Turnier-Stand" className="space-y-2">
+    <section aria-label="Turnier-Stand" className="rounded-card border border-line bg-surface shadow-card p-3 sm:p-4 space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <p className="min-w-0 flex-1 text-sm text-fg/90">
-          <span className="font-semibold text-fg">{formatLabel}</span> · {statusLine}
-          {total > 0 && <span className="text-subtle"> · {played} von {total} {unit} gespielt</span>}
+        <p className="min-w-0 flex-1 text-sm text-muted">
+          <span className="font-extrabold text-fg">{formatLabel}</span> · {statusLine}
         </p>
-        {resultsHref && (
-          <Link href={resultsHref}
-            className="inline-flex items-center gap-1.5 rounded-control border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-fg hover:bg-line max-lg:min-h-10">
-            Ergebnis-Meldungen
-            {pendingCount > 0 && <span className="rounded-full bg-amber-400 px-1.5 text-xs font-bold text-black tabular-nums">{pendingCount}</span>}
-          </Link>
-        )}
+        {live}
         <DropMenu label="Werkzeuge" items={tools}
-          trigger={<span className="inline-flex items-center gap-1 rounded-control border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-fg">Werkzeuge <ChevronDown className="w-3.5 h-3.5" /></span>} />
+          trigger={<span className="inline-flex min-h-10 items-center gap-1.5 rounded-control border border-line-strong bg-surface-2 px-3.5 text-sm font-semibold text-fg hover:bg-surface-3">Werkzeuge <ChevronDown className="size-4" /></span>} />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {kpi(<>{played}<span className="text-sm text-subtle">/{total}</span></>, `${unit} gespielt`)}
+        {kpi(open, "offen")}
+        {resultsHref
+          ? <Link href={resultsHref} className="block">{kpi(pendingCount, pendingCount === 1 ? "Meldung offen" : "Meldungen offen", pendingCount > 0 ? "text-warning" : "text-fg")}</Link>
+          : kpi(pendingCount, "Meldungen offen", pendingCount > 0 ? "text-warning" : "text-fg")}
       </div>
       {total > 0 && (
-        <div className="h-1.5 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-2 rounded-full bg-surface-3 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
         </div>
       )}
+      {primary && (primary.href
+        ? <Link href={primary.href} className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-colors ${btn}`}>{primary.label}</Link>
+        : <button type="button" onClick={primary.onClick} className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-control text-sm font-bold transition-colors ${btn}`}>{primary.label}</button>)}
     </section>
   );
 }
@@ -141,7 +160,7 @@ export function InlineSubmissions({ eventId, items, resultsHref }: { eventId: st
           : <>{s.forUser ?? s.by}: {Object.entries(s.stats).filter(([k]) => !k.startsWith("_")).map(([k, v]) => `${formatDecimal(v)} ${k}`).join(" · ") || "keine Werte"}</>;
         return (
           <li key={s.id} className="flex items-center gap-2 py-2 flex-wrap">
-            <span className="rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-300">gemeldet</span>
+            <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-bold text-warning">gemeldet</span>
             <span className="min-w-0 flex-1 text-sm text-fg/90">
               <span className="text-subtle">{s.matchLabel} · </span>{what}
               {/* Relative Zeit weicht zwischen Server und Browser minimal ab — kein Hydration-Fehler */}

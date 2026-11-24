@@ -158,7 +158,7 @@ export default function StepEventData({ w }: { w: EventWizard }) {
             <p className="text-sm text-fg">Selbst-Anmeldung deaktivieren</p>
             <p className="text-xs text-subtle mt-0.5">
               User können sich nicht selbst anmelden — nur Admins/Moderatoren tragen Teilnehmer im
-              Tab „Teilnehmer" ein. Praktisch für Team-interne Events (z.B. Trainingsreihen).
+              Tab „Teilnehmer“ ein. Praktisch für Team-interne Events (z.B. Trainingsreihen).
             </p>
           </div>
         </label>

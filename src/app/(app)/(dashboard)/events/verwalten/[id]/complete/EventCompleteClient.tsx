@@ -46,7 +46,7 @@ export default function EventCompleteClient(props: Props) {
       </div>
 
       {timingWarning && (
-        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-warning/30 text-amber-200 text-sm">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
           <div>
             <p className="font-semibold">{timingWarning.title}</p>
@@ -57,7 +57,7 @@ export default function EventCompleteClient(props: Props) {
 
       {/* Offene Screenshot-/Ergebnis-Meldungen: erst prüfen, dann abschließen */}
       {pendingSubmissions > 0 && !isFinishedSummary && (
-        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-warning/30 text-amber-200 text-sm">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
           <div className="flex-1">
             <p className="font-semibold">{pendingSubmissions === 1 ? "1 Meldung wartet auf Prüfung" : `${pendingSubmissions} Meldungen warten auf Prüfung`}</p>
@@ -68,7 +68,7 @@ export default function EventCompleteClient(props: Props) {
       )}
       {/* Spiele ohne Ergebnis bzw. nur vorläufig: vor dem Abschluss eintragen bzw. bestätigen */}
       {matchCheck && (matchCheck.open > 0 || matchCheck.provisional > 0) && !isFinishedSummary && (
-        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+        <div className="flex items-start gap-2.5 rounded-control px-4 py-3 bg-amber-500/10 border border-warning/30 text-amber-200 text-sm">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
           <div className="flex-1">
             <p className="font-semibold">

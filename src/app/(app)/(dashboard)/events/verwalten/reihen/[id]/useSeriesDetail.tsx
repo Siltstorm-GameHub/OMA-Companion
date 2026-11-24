@@ -174,8 +174,9 @@ export function useSeriesDetail({
   // Community-Ziel: Termine erben das Ziel der Reihe automatisch (lib/event-goal.ts). Dieser Knopf
   // entfernt nur einzelne Abweichungen bei noch nicht gestarteten Terminen, damit alle kommenden
   // Termine wieder dem Ziel der Reihe folgen.
+  const [loadedAtMs] = useState(() => Date.now());
   const upcomingTermineCount = (series.events as { status: string; startAt: string | Date }[])
-    .filter(e => e.status !== "finished" && new Date(e.startAt).getTime() > Date.now()).length;
+    .filter(e => e.status !== "finished" && new Date(e.startAt).getTime() > loadedAtMs).length;
   const [applyingGoal, setApplyingGoal] = useState(false);
   async function applyGoalNow() {
     if (!(await confirm({
@@ -392,7 +393,7 @@ export function useSeriesDetail({
 
   // Hinweis über gesperrten Einstellungen einer abgeschlossenen Saison
   const lockedNotice = isArchived ? (
-    <div className="flex items-start gap-2 rounded-control px-3 py-2.5 border border-amber-500/20 bg-amber-500/[0.06]">
+    <div className="flex items-start gap-2 rounded-control px-3 py-2.5 border border-warning/30 bg-warning-soft">
       <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
       <p className="text-xs text-amber-200/80">
         Diese Saison ist abgeschlossen. Punkteregeln, Belohnungen, Umfragen, Spiel und Format sind gesperrt, damit Endtabelle und

@@ -28,7 +28,7 @@ function Avatar({ u, tone }: { u?: User; tone: "a" | "b" }) {
   const initial = u ? userName(u)[0]?.toUpperCase() : "?";
   if (u?.image) return <img src={u.image} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />;
   return (
-    <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-gray-950 ${bg}`}>
+    <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-canvas ${bg}`}>
       {initial}
     </div>
   );
@@ -42,14 +42,14 @@ function Stepper({
 }) {
   const dim = size === "sm" ? "w-8 h-8 text-sm" : "w-10 h-10 text-base";
   return (
-    <div className="flex items-center gap-1 bg-gray-950 border border-gray-700 rounded-xl p-1">
+    <div className="flex items-center gap-1 bg-canvas border border-line-strong rounded-control p-1">
       <button type="button" onClick={() => onChange(Math.max(min, value - 1))}
-        className={`${dim} flex items-center justify-center rounded-lg bg-gray-800 text-white active:bg-gray-700 transition-colors`}>
+        className={`${dim} flex items-center justify-center rounded-control bg-surface-2 text-fg active:bg-surface-3 transition-colors`}>
         <Minus className="w-4 h-4" />
       </button>
-      <span className="min-w-[2ch] text-center text-lg font-bold text-white tabular-nums px-1">{value}</span>
+      <span className="min-w-[2ch] text-center text-lg font-bold text-fg tabular-nums px-1">{value}</span>
       <button type="button" onClick={() => onChange(value + 1)}
-        className={`${dim} flex items-center justify-center rounded-lg bg-gray-800 text-white active:bg-gray-700 transition-colors`}>
+        className={`${dim} flex items-center justify-center rounded-control bg-surface-2 text-fg active:bg-surface-3 transition-colors`}>
         <PlusIcon className="w-4 h-4" />
       </button>
     </div>
@@ -65,8 +65,8 @@ function Snackbar({ text, onUndo, onDismiss }: { text: string; onUndo: () => voi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
   return (
-    <div className="fixed left-3 right-3 bottom-3 z-40 flex items-center justify-between gap-3 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 shadow-xl shadow-black/40">
-      <span className="text-xs text-gray-200 flex items-center gap-2"><Check className="w-3.5 h-3.5 text-primary shrink-0" />{text}</span>
+    <div className="fixed left-3 right-3 bottom-3 z-40 flex items-center justify-between gap-3 rounded-control border border-line-strong bg-surface-2 px-4 py-3 shadow-xl shadow-black/40">
+      <span className="text-xs text-fg flex items-center gap-2"><Check className="w-3.5 h-3.5 text-primary shrink-0" />{text}</span>
       <button onClick={onUndo} className="text-xs font-semibold text-primary shrink-0">Rückgängig</button>
     </div>
   );
@@ -224,24 +224,24 @@ export default function TournamentManagerMobile({
       <div className="flex items-center gap-2 flex-wrap text-xs">
         <span className="bg-primary-soft/60 text-primary-fg px-2 py-1 rounded-full">{formatLabel}</span>
         <span className={`px-2 py-1 rounded-full ${
-          tournament.status === "active" ? "bg-green-900/40 text-green-300" :
-          tournament.status === "finished" ? "bg-gray-800 text-gray-500" : "bg-amber-900/40 text-amber-300"
+          tournament.status === "active" ? "bg-green-900/40 text-success" :
+          tournament.status === "finished" ? "bg-surface-2 text-subtle" : "bg-warning-soft text-amber-300"
         }`}>{tournament.status}</span>
-        <span className="text-gray-600 ml-auto">{matches.filter(m => is1v1 ? (m.winnerId || m.playedAt) : m.playedAt).length}/{matches.length} gespielt</span>
+        <span className="text-subtle ml-auto">{matches.filter(m => is1v1 ? (m.winnerId || m.playedAt) : m.playedAt).length}/{matches.length} gespielt</span>
       </div>
 
       {groupStage?.panel}
 
       {canGenerate && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-blue-400 bg-blue-900/20 border border-blue-900/40 rounded-lg px-3 py-2.5 w-full justify-center">
+          className="flex items-center gap-1.5 text-xs text-primary-fg bg-primary-soft/50 border border-primary/30 rounded-control px-3 py-2.5 w-full justify-center">
           <RefreshCw className="w-3.5 h-3.5" /> {isBracketFormat ? "K.O.-Baum auslosen" : "Spielplan auslosen"}
         </button>
       )}
 
       {!hasMatches && !groupStage && (
-        <div className="text-center py-8 text-gray-500 text-sm space-y-2 border border-dashed border-gray-700 rounded-xl bg-gray-800/50">
-          <Swords className="w-7 h-7 mx-auto text-gray-700" />
+        <div className="text-center py-8 text-subtle text-sm space-y-2 border border-dashed border-line-strong rounded-control bg-surface-2/50">
+          <Swords className="w-7 h-7 mx-auto text-subtle/60" />
           <p>{(isRoundRobin || isLiga || isBracketFormat)
             ? 'Spieler im Reiter „Teilnehmer" anmelden, dann auslosen.'
             : 'Noch keine Matches — unten anlegen.'}</p>
@@ -250,27 +250,27 @@ export default function TournamentManagerMobile({
 
       {/* ── "Jetzt dran"-Karte ── */}
       {focused && (
-      <div className="rounded-2xl p-4 space-y-3" style={{ background: "linear-gradient(165deg, color-mix(in srgb, var(--color-primary) 12%, transparent), rgba(31,41,55,0.9))", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)" }}>
+      <div className="rounded-card p-4 space-y-3" style={{ background: "linear-gradient(165deg, color-mix(in srgb, var(--color-primary) 12%, transparent), rgba(31,41,55,0.9))", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)" }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-primary">
               {(is1v1 ? !isPlayed1v1 : !isPlayedFfa) ? "Jetzt dran" : "Zuletzt angesehen"}
             </span>
-            <span className="text-xs text-gray-400">{matchLabel(focused)}</span>
+            <span className="text-xs text-muted">{matchLabel(focused)}</span>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={() => goto(-1)} disabled={focusIdx === 0}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800/80 text-gray-300 disabled:opacity-30">
+              className="w-8 h-8 flex items-center justify-center rounded-control bg-surface-2/80 text-fg/90 disabled:opacity-30">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button onClick={() => goto(1)} disabled={focusIdx >= matches.length - 1}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800/80 text-gray-300 disabled:opacity-30">
+              className="w-8 h-8 flex items-center justify-center rounded-control bg-surface-2/80 text-fg/90 disabled:opacity-30">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {!isFfa && focused.title && <p className="text-xs text-gray-400 -mt-1">{focused.title}</p>}
+        {!isFfa && focused.title && <p className="text-xs text-muted -mt-1">{focused.title}</p>}
         {isFfa && (editingMetaId === focused.id ? (
           <StatRoundMetaEditor
             match={focused} usedRoundNumbers={usedRoundNumbers} size="lg"
@@ -282,7 +282,7 @@ export default function TournamentManagerMobile({
           />
         ) : (
           <button type="button" onClick={() => setEditingMetaId(focused.id)}
-            className="flex items-center gap-1 text-xs text-gray-400 active:text-white -mt-1">
+            className="flex items-center gap-1 text-xs text-muted active:text-fg -mt-1">
             <Pencil className="w-3 h-3" /> Rundennummer/Zusatz ändern
           </button>
         ))}
@@ -335,7 +335,7 @@ export default function TournamentManagerMobile({
       {/* ── Übrige Matches als kompakte Liste ── */}
       {hasMatches && (
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5 px-1">Alle Matches</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-subtle mb-1.5 px-1">Alle Matches</p>
         <div className="space-y-1.5">
           {matches.map((m, idx) => {
             const played = is1v1 ? !!(m.winnerId || m.playedAt) : !!m.playedAt;
@@ -345,26 +345,26 @@ export default function TournamentManagerMobile({
               // ungültiges HTML und brachen die Hydration)
               <div key={m.id} role="button" tabIndex={0} onClick={() => setFocusIdx(idx)}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setFocusIdx(idx); } }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                  isFocused ? "border-primary/50 bg-primary/10" : "border-gray-700 bg-gray-800/60"
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-control border text-left transition-colors cursor-pointer ${
+                  isFocused ? "border-primary/50 bg-primary/10" : "border-line-strong bg-surface-2/60"
                 }`}>
-                <span className={`w-2 h-2 rounded-full shrink-0 ${played ? "bg-primary" : "bg-gray-600"}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${played ? "bg-primary" : "bg-line-strong"}`} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-white truncate">
+                  <p className="text-xs text-fg truncate">
                     {is1v1
                       ? `${m.player1Id ? userName(allUsers.find(u => u.id === m.player1Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"} vs. ${m.player2Id ? userName(allUsers.find(u => u.id === m.player2Id) ?? { id: "", name: "TBD", username: null, image: null }) : "TBD"}`
                       : statRoundLabel(m)}
                   </p>
-                  {is1v1 && <p className="text-xs text-gray-500">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
+                  {is1v1 && <p className="text-xs text-subtle">{matchLabel(m)}{m.scheduledAt ? ` · ${fmtDate(m.scheduledAt)}` : ""}</p>}
                 </div>
                 {is1v1 && played && (
                   <span className="text-xs text-primary shrink-0">{m.score1 ?? "–"}:{m.score2 ?? "–"}</span>
                 )}
                 {!is1v1 && (
-                  <span className="text-xs text-gray-500 shrink-0">{m.entries.length} Sp.</span>
+                  <span className="text-xs text-subtle shrink-0">{m.entries.length} Sp.</span>
                 )}
                 <button onClick={e => { e.stopPropagation(); deleteMatch(m.id); }}
-                  className="p-1.5 -m-1 text-gray-600 active:text-red-500 shrink-0">
+                  className="p-1.5 -m-1 text-subtle active:text-danger shrink-0">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -381,7 +381,7 @@ export default function TournamentManagerMobile({
           setMScheduled(nowForDatetimeLocal());
           setShowAdd(true);
         }}
-          className="flex items-center gap-2 text-sm text-gray-300 border border-gray-700 rounded-xl px-4 py-3 w-full justify-center">
+          className="flex items-center gap-2 text-sm text-fg/90 border border-line-strong rounded-control px-4 py-3 w-full justify-center">
           <PlusIcon className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
         </button>
       ) : (
@@ -446,10 +446,10 @@ function AddMatchForm({
   });
 
   return (
-    <div className="rounded-2xl border border-primary/40 bg-primary-soft/60 p-4 space-y-4">
+    <div className="rounded-card border border-primary/40 bg-primary-soft/60 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
-        <button onClick={onCancel} className="p-1.5 -m-1 text-gray-500 active:text-white">
+        <p className="text-sm font-semibold text-fg">{isFfa ? "Neue Runde" : "Neues Match"}</p>
+        <button onClick={onCancel} className="p-1.5 -m-1 text-subtle active:text-fg">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -462,7 +462,7 @@ function AddMatchForm({
         />
       ) : (<>
       <div>
-        <label className="text-xs text-gray-500 block mb-1.5">Titel (optional)</label>
+        <label className="text-xs text-subtle block mb-1.5">Titel (optional)</label>
         <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
           placeholder="z.B. Gruppenphase A"
           className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
@@ -470,7 +470,7 @@ function AddMatchForm({
       </div>
 
       <div>
-        <label className="text-xs text-gray-500 block mb-1.5">Datum &amp; Uhrzeit</label>
+        <label className="text-xs text-subtle block mb-1.5">Datum &amp; Uhrzeit</label>
         <input type="datetime-local" value={mScheduled} onChange={e => setMScheduled(e.target.value)}
           className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
         />
@@ -480,16 +480,16 @@ function AddMatchForm({
       {is1v1 && (
         <>
           <div>
-            <label className="text-xs text-gray-500 block mb-1.5">{isLiga ? "Spieltag" : "Runde"}</label>
+            <label className="text-xs text-subtle block mb-1.5">{isLiga ? "Spieltag" : "Runde"}</label>
             <Stepper min={1} value={mRound} onChange={setMRound} />
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1.5">Spieler 1</label>
+            <label className="text-xs text-subtle block mb-1.5">Spieler 1</label>
             <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
               {sortedUsers.map(u => (
                 <button key={u.id} onClick={() => setMP1(u.id === mP1 ? "" : u.id)}
-                  className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    mP1 === u.id ? "bg-primary-soft border-primary text-white" : "bg-gray-800 border-gray-700 text-gray-300"
+                  className={`flex items-center gap-1.5 p-2.5 rounded-control text-xs text-left truncate border ${
+                    mP1 === u.id ? "bg-primary-soft border-primary text-fg" : "bg-surface-2 border-line-strong text-fg/90"
                   }`}>
                   {userName(u)}
                 </button>
@@ -497,12 +497,12 @@ function AddMatchForm({
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500 block mb-1.5">Spieler 2</label>
+            <label className="text-xs text-subtle block mb-1.5">Spieler 2</label>
             <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto">
               {sortedUsers.map(u => (
                 <button key={u.id} onClick={() => setMP2(u.id === mP2 ? "" : u.id)}
-                  className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    mP2 === u.id ? "bg-primary-soft/60 border-primary/40 text-primary-ink" : "bg-gray-800 border-gray-700 text-gray-300"
+                  className={`flex items-center gap-1.5 p-2.5 rounded-control text-xs text-left truncate border ${
+                    mP2 === u.id ? "bg-primary-soft/60 border-primary/40 text-primary-fg" : "bg-surface-2 border-line-strong text-fg/90"
                   }`}>
                   {userName(u)}
                 </button>
@@ -514,15 +514,15 @@ function AddMatchForm({
 
       {isFfa && (
         <div>
-          <label className="text-xs text-gray-500 block mb-1.5">Teilnehmer ({mFfaIds.length} gewählt)</label>
+          <label className="text-xs text-subtle block mb-1.5">Teilnehmer ({mFfaIds.length} gewählt)</label>
           <div className="grid grid-cols-2 gap-1.5 max-h-44 overflow-y-auto">
             {sortedUsers.map(u => {
               const checked = mFfaIds.includes(u.id);
               return (
                 <button key={u.id}
                   onClick={() => setMFfaIds(checked ? mFfaIds.filter(id => id !== u.id) : [...mFfaIds, u.id])}
-                  className={`flex items-center gap-1.5 p-2.5 rounded-xl text-xs text-left truncate border ${
-                    checked ? "bg-primary-soft border-primary text-white" : "bg-gray-800 border-gray-700 text-gray-300"
+                  className={`flex items-center gap-1.5 p-2.5 rounded-control text-xs text-left truncate border ${
+                    checked ? "bg-primary-soft border-primary text-fg" : "bg-surface-2 border-line-strong text-fg/90"
                   }`}>
                   {userName(u)}
                 </button>
@@ -534,7 +534,7 @@ function AddMatchForm({
 
       {!isFfa && (
       <div>
-        <label className="text-xs text-gray-500 block mb-1.5">Notizen (optional)</label>
+        <label className="text-xs text-subtle block mb-1.5">Notizen (optional)</label>
         <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
           placeholder="z.B. Map: Verdansk, Server: EU"
           className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-3"
@@ -543,7 +543,7 @@ function AddMatchForm({
       )}
 
       <button onClick={onSubmit} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
-        className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-xl py-3">
+        className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-control py-3">
         <PlusIcon className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
       </button>
     </div>
@@ -578,11 +578,11 @@ function FocusedDuelCard({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Avatar u={p1} tone="a" />
-            <span className={`text-sm truncate ${match.winnerId === match.player1Id ? "text-white font-semibold" : "text-gray-500"}`}>{p1 ? userName(p1) : "TBD"}</span>
+            <span className={`text-sm truncate ${match.winnerId === match.player1Id ? "text-fg font-semibold" : "text-subtle"}`}>{p1 ? userName(p1) : "TBD"}</span>
           </div>
-          <span className="text-lg font-bold text-white tabular-nums shrink-0">{match.score1 ?? "–"} : {match.score2 ?? "–"}</span>
+          <span className="text-lg font-bold text-fg tabular-nums shrink-0">{match.score1 ?? "–"} : {match.score2 ?? "–"}</span>
           <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-            <span className={`text-sm truncate ${match.winnerId === match.player2Id ? "text-white font-semibold" : "text-gray-500"}`}>{p2 ? userName(p2) : "TBD"}</span>
+            <span className={`text-sm truncate ${match.winnerId === match.player2Id ? "text-fg font-semibold" : "text-subtle"}`}>{p2 ? userName(p2) : "TBD"}</span>
             <Avatar u={p2} tone="b" />
           </div>
         </div>
@@ -590,15 +590,15 @@ function FocusedDuelCard({
         {/* Freilos (nur ein Spieler): kein Zurücksetzen, sonst fiele der Spieler aus dem Baum */}
         {canPlay && (
           <div className="flex gap-2">
-            <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-primary-fg border border-primary/30 bg-primary-soft rounded-xl py-2">
+            <button onClick={onEdit} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-primary-fg border border-primary/30 bg-primary-soft rounded-control py-2">
               <Pencil className="w-3.5 h-3.5" /> Bearbeiten
             </button>
-            <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-xl py-2">
+            <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-control py-2">
               <RotateCcw className="w-3.5 h-3.5" /> Zurücksetzen
             </button>
           </div>
         )}
-        {!canPlay && <p className="text-center text-xs text-gray-500">Freilos — kommt automatisch weiter</p>}
+        {!canPlay && <p className="text-center text-xs text-subtle">Freilos — kommt automatisch weiter</p>}
       </div>
     );
   }
@@ -607,31 +607,31 @@ function FocusedDuelCard({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Avatar u={p1} tone="a" />
-        <span className="text-sm text-white flex-1 truncate">{p1 ? userName(p1) : "TBD"}</span>
+        <span className="text-sm text-fg flex-1 truncate">{p1 ? userName(p1) : "TBD"}</span>
         <Stepper value={s1} onChange={n => setScores1v1(prev => ({ ...prev, [match.id]: { s1: String(n), s2: String(s2) } }))} />
       </div>
       <div className="flex items-center gap-2">
         <Avatar u={p2} tone="b" />
-        <span className="text-sm text-white flex-1 truncate">{p2 ? userName(p2) : "TBD"}</span>
+        <span className="text-sm text-fg flex-1 truncate">{p2 ? userName(p2) : "TBD"}</span>
         <Stepper value={s2} onChange={n => setScores1v1(prev => ({ ...prev, [match.id]: { s1: String(s1), s2: String(n) } }))} />
       </div>
       <div className="flex gap-2 pt-1">
         <button disabled={!canPlay} onClick={() => onResult(match.player1Id)}
-          className="flex-1 text-xs font-semibold bg-teal-700 disabled:opacity-40 text-white rounded-xl py-3 truncate">
+          className="flex-1 text-xs font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-control py-3 truncate">
           {p1 ? userName(p1) : "?"} gewinnt
         </button>
         <button disabled={!canPlay} onClick={() => onResult(match.player2Id)}
-          className="flex-1 text-xs font-semibold bg-teal-700 disabled:opacity-40 text-white rounded-xl py-3 truncate">
+          className="flex-1 text-xs font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-control py-3 truncate">
           {p2 ? userName(p2) : "?"} gewinnt
         </button>
       </div>
       {supportsDraw && (
         <button disabled={!canPlay} onClick={() => onResult(null, true)}
-          className="w-full text-xs font-medium bg-amber-900/30 disabled:opacity-40 text-amber-300 border border-amber-800/40 rounded-xl py-2">
+          className="w-full text-xs font-medium bg-warning-soft disabled:opacity-40 text-amber-300 border border-amber-800/40 rounded-control py-2">
           Unentschieden
         </button>
       )}
-      {!canPlay && <p className="text-xs text-gray-600 text-center">Wartet noch auf beide Teilnehmer.</p>}
+      {!canPlay && <p className="text-xs text-subtle text-center">Wartet noch auf beide Teilnehmer.</p>}
     </div>
   );
 }
@@ -691,29 +691,29 @@ function FocusedFfaCard({
       {trackMatchWin && (
         usesTeams ? (
           <div className="space-y-1.5">
-            <p className="text-xs text-gray-400">Match Win <span className="text-gray-600">(Sieger-Team +1)</span></p>
+            <p className="text-xs text-muted">Match Win <span className="text-subtle">(Sieger-Team +1)</span></p>
             <div className="flex gap-2">
               <button onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
-                className={`flex-1 text-xs font-semibold rounded-xl py-2.5 border ${matchWin[match.id] === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-gray-800 border-gray-700 text-gray-400"}`}>
+                className={`flex-1 text-xs font-semibold rounded-control py-2.5 border ${matchWin[match.id] === "A" ? "bg-blue-600 border-blue-500 text-fg" : "bg-surface-2 border-line-strong text-muted"}`}>
                 Team A gewinnt
               </button>
               <button onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "B" ? null : "B" }))}
-                className={`flex-1 text-xs font-semibold rounded-xl py-2.5 border ${matchWin[match.id] === "B" ? "bg-rose-600 border-rose-500 text-white" : "bg-gray-800 border-gray-700 text-gray-400"}`}>
+                className={`flex-1 text-xs font-semibold rounded-control py-2.5 border ${matchWin[match.id] === "B" ? "bg-rose-600 border-rose-500 text-fg" : "bg-surface-2 border-line-strong text-muted"}`}>
                 Team B gewinnt
               </button>
             </div>
           </div>
         ) : (
-          <label className="flex items-center gap-2.5 text-xs text-gray-300 rounded-xl border border-gray-700 bg-gray-800/60 px-3 py-2.5">
+          <label className="flex items-center gap-2.5 text-xs text-fg/90 rounded-control border border-line-strong bg-surface-2/60 px-3 py-2.5">
             <input type="checkbox" checked={matchWinAll[match.id] ?? false}
               onChange={e => setMatchWinAll(prev => ({ ...prev, [match.id]: e.target.checked }))}
               className="w-4 h-4 rounded shrink-0" />
-            Match Win <span className="text-gray-500">(alle zusammen +1)</span>
+            Match Win <span className="text-subtle">(alle zusammen +1)</span>
           </label>
         )
       )}
       {teamError && (
-        <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2">⚠️ {teamError}</p>
+        <p className="text-xs text-amber-300 bg-warning-soft border border-amber-700/40 rounded-control px-3 py-2">⚠️ {teamError}</p>
       )}
 
       {/* Spieler in diesem Match ändern — auch bei laufenden Matches */}
@@ -726,11 +726,11 @@ function FocusedFfaCard({
               {match.entries.map(e => {
                 const u = allUsers.find(x => x.id === e.userId);
                 return (
-                  <span key={e.id} className="inline-flex items-center gap-1 text-sm bg-gray-800 border border-gray-700 rounded-full pl-3 pr-1.5 py-1 text-gray-200">
+                  <span key={e.id} className="inline-flex items-center gap-1 text-sm bg-surface-2 border border-line-strong rounded-full pl-3 pr-1.5 py-1 text-fg">
                     {u ? userName(u) : "?"}
                     <button type="button" disabled={loading || !e.userId} aria-label="Aus Match entfernen"
                       onClick={() => e.userId && changeMatchPlayer(match.id, e.userId, "remove")}
-                      className="p-1.5 rounded-full text-gray-500 active:text-red-400 disabled:opacity-40">
+                      className="p-1.5 rounded-full text-subtle active:text-danger disabled:opacity-40">
                       <X className="w-4 h-4" />
                     </button>
                   </span>
@@ -740,7 +740,7 @@ function FocusedFfaCard({
             {addable.length > 0 && (
               <select value="" disabled={loading}
                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
-                className="w-full text-sm bg-surface-2 border border-line rounded-control px-3 py-2.5 text-gray-300">
+                className="w-full text-sm bg-surface-2 border border-line rounded-control px-3 py-2.5 text-fg/90">
                 <option value="">+ Spieler hinzufügen…</option>
                 {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
               </select>
@@ -755,10 +755,10 @@ function FocusedFfaCard({
           const user = allUsers.find(u => u.id === entry.userId);
           const entryTeam = entry.userId ? teams[entry.userId] : undefined;
           return (
-            <div key={entry.id} className="rounded-xl border border-gray-700 bg-gray-800/60 p-2.5 space-y-2">
+            <div key={entry.id} className="rounded-control border border-line-strong bg-surface-2/60 p-2.5 space-y-2">
               <div className="flex items-center gap-2">
                 <Avatar u={user} tone={entryTeam === "B" ? "b" : "a"} />
-                <span className="text-sm text-white flex-1 truncate">{user ? userName(user) : "?"}</span>
+                <span className="text-sm text-fg flex-1 truncate">{user ? userName(user) : "?"}</span>
                 {trackMatchWin && (
                   <div className="flex gap-1 shrink-0">
                     {(["A", "B"] as const).map(team => (
@@ -768,10 +768,10 @@ function FocusedFfaCard({
                           const uid = entry.userId;
                           setTeamAssign(prev => ({ ...prev, [match.id]: { ...prev[match.id], [uid]: prev[match.id]?.[uid] === team ? undefined : team } }));
                         }}
-                        className={`w-9 h-9 rounded-lg text-xs font-bold border disabled:opacity-30 ${
+                        className={`w-9 h-9 rounded-control text-xs font-bold border disabled:opacity-30 ${
                           entryTeam === team
-                            ? team === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-rose-600 border-rose-500 text-white"
-                            : "bg-gray-900 border-gray-600 text-gray-400"
+                            ? team === "A" ? "bg-blue-600 border-blue-500 text-fg" : "bg-rose-600 border-rose-500 text-fg"
+                            : "bg-surface-2 border-gray-600 text-muted"
                         }`}>
                         {team}
                       </button>
@@ -781,15 +781,15 @@ function FocusedFfaCard({
               </div>
               <div className={`grid gap-2 ${statGridClass}`}>
                 {trackPlacement && (
-                  <div className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-900/60 px-2 py-1.5">
-                    <span className="text-xs font-semibold text-gray-200 truncate">Platz</span>
+                  <div className="flex flex-col gap-1 rounded-control border border-line-strong bg-surface-2/60 px-2 py-1.5">
+                    <span className="text-xs font-semibold text-fg truncate">Platz</span>
                     <Stepper size="sm" min={0} value={val(entry, PLACEMENT_STAT_KEY)}
                       onChange={n => setFfaField(match.id, entry.userId ?? "", PLACEMENT_STAT_KEY, String(n))} />
                   </div>
                 )}
                 {visibleStatFields.map(f => (
-                  <div key={f} className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-900/60 px-2 py-1.5">
-                    <span className="text-xs font-semibold text-gray-200 truncate">{f}</span>
+                  <div key={f} className="flex flex-col gap-1 rounded-control border border-line-strong bg-surface-2/60 px-2 py-1.5">
+                    <span className="text-xs font-semibold text-fg truncate">{f}</span>
                     <Stepper size="sm" value={val(entry, f)}
                       onChange={n => setFfaField(match.id, entry.userId ?? "", f, String(n))} />
                   </div>
@@ -801,18 +801,18 @@ function FocusedFfaCard({
       </div>
 
       {trackPlacement && placementPoints && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           Platz → Punkte: {Object.entries(placementPoints).sort(([a], [b]) => Number(a) - Number(b)).map(([p, pts]) => `${p}.=${pts}`).join(" · ")}
         </p>
       )}
 
       <div className="flex gap-2 pt-1">
         <button onClick={onSave} disabled={loading || !!teamError}
-          className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold bg-teal-700 disabled:opacity-40 text-white rounded-xl py-3">
+          className="flex-1 flex items-center justify-center gap-1.5 text-sm font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-control py-3">
           <Check className="w-4 h-4" /> Ergebnisse speichern
         </button>
         {isPlayed && (
-          <button onClick={onReset} className="flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-xl px-3">
+          <button onClick={onReset} className="flex items-center justify-center gap-1.5 text-xs text-amber-400 border border-amber-900/40 bg-amber-950/20 rounded-control px-3">
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         )}

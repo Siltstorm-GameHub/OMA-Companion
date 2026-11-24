@@ -36,7 +36,7 @@ export default function CompletePlacement({ ctx }: { ctx: EventComplete }) {
 
         {/* Gewinner-Stat: bewusst prominent — ein falscher Stat hat schon zu falschen Platzierungen geführt */}
         {(tournamentStatFields.length > 0 || isAvgFormat) && (
-          <div className={`rounded-control border p-4 space-y-3 ${winnerLocked ? "border-line bg-surface-2" : "border-amber-500/30 bg-amber-500/[0.04]"}`}>
+          <div className={`rounded-control border p-4 space-y-3 ${winnerLocked ? "border-line bg-surface-2" : "border-warning/30 bg-warning-soft"}`}>
             <div className="flex items-center gap-2 flex-wrap">
               <Trophy className="w-4 h-4 text-amber-400" />
               <span className="text-sm font-semibold text-fg">Gewinner-Stat</span>

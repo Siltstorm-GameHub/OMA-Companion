@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp } from "@/components/icons";
@@ -15,7 +16,7 @@ import { formatBerlinDateTime, toDatetimeLocalBerlin, fromDatetimeLocalBerlin } 
 import { nextStatRoundNumber, sortStatRounds, statRoundLabel, statRoundNote, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import StatRoundFields, { StatRoundMetaEditor } from "./StatRoundFields";
 import { NumberInput } from "@/components/ui/NumberInput";
-import { DropMenu, InlineSubmissions, StatStandingsTable, TournamentHeader, type InlineSubmission } from "./TournamentOverview";
+import { DropMenu, InlineSubmissions, StatStandingsTable, TournamentHeader, type HeaderPrimary, type InlineSubmission } from "./TournamentOverview";
 import { duelProgress, nextDuelMatches, statProgress, statStandings } from "@/lib/tournaments/progress";
 import { bracketColumns } from "@/lib/tournaments/bracket-tree";
 import BracketTree from "./BracketTree";
@@ -24,6 +25,26 @@ import { computeCommunityGoalProgress, goalUnit, isAvgGoal, type CommunityGoal }
 import type { AvgDirection } from "@/lib/avg-stats";
 import { formatDecimal } from "@/lib/format-number";
 import { drawPreview, type DrawSeeding } from "@/lib/tournaments/draw-plan";
+import LiveRefresh from "@/app/(app)/(dashboard)/tournament/[id]/LiveRefresh";
+
+/** Events, bei denen die Warnung "Ergebnisse vor dem Start" schon bestätigt wurde (Modul-Ebene statt Ref:
+ *  der Merker wird nur in Event-Handlern genutzt; ein Ref beanstandet der React-Compiler-Lint hier fälschlich). */
+const timingConfirmed = new Set<string>();
+
+/** Status eines Matches für Punkt und Filter der Liste */
+type MatchStatus = "open" | "live" | "reported" | "done";
+const STATUS_DOT: Record<MatchStatus, { cls: string; label: string }> = {
+  open: { cls: "bg-line-strong", label: "Offen" },
+  live: { cls: "bg-live animate-pulse", label: "Läuft" },
+  reported: { cls: "bg-warning", label: "Gemeldet" },
+  done: { cls: "bg-success", label: "Fertig" },
+};
+function matchStatus(m: { winnerId: string | null; playedAt: string | Date | null; startedAt?: string | Date | null; resultConfirmed?: boolean | null }): MatchStatus {
+  if ((m.winnerId || m.playedAt) && m.resultConfirmed === false) return "reported";
+  if (m.winnerId || m.playedAt) return "done";
+  if (m.startedAt) return "live";
+  return "open";
+}
 
 export type User = { id: string; name: string | null; username: string | null; image: string | null };
 export type MatchEntry = {
@@ -146,7 +167,7 @@ export default function TournamentManager({
   const [replaceFrom, setReplaceFrom] = useState("");
   const [replaceTo, setReplaceTo] = useState("");
   const { confirm, ConfirmDialogElement } = useConfirm();
-  const resultsTimingOk = useRef(false);
+
 
   // ── Panel visibility ──────────────────────────────────────────────────
   const [showParticipants, setShowParticipants] = useState(false);
@@ -156,6 +177,8 @@ export default function TournamentManager({
   // K.O.-Formate: visueller Baum oder Liste je Runde; im Baum gewählte Paarung
   const [duelView, setDuelView]             = useState<"tree" | "list">("tree");
   const [treeSel, setTreeSel]               = useState<string | null>(null);
+  // (6) Liste filtern: offen, läuft, gemeldet, fertig
+  const [listFilter, setListFilter] = useState<"all" | MatchStatus>("all");
   const addRef = useRef<HTMLDivElement>(null);
 
   // Ansicht: "auto" (Touch-UI bei schmalem Viewport oder Finger-Eingabe) oder manuell erzwungen.
@@ -251,10 +274,10 @@ export default function TournamentManager({
 
   if (!tournament) {
     return (
-      <div className="text-center py-8 text-gray-500 text-sm space-y-2">
-        <Trophy className="w-8 h-8 mx-auto text-gray-700" />
+      <div className="text-center py-8 text-subtle text-sm space-y-2">
+        <Trophy className="w-8 h-8 mx-auto text-subtle/60" />
         <p>Noch kein Turnier erstellt.</p>
-        <p className="text-xs text-gray-600">Format, Punkte und Stat-Felder im Reiter <span className="text-amber-400">Einstellungen</span> konfigurieren.</p>
+        <p className="text-xs text-subtle">Format, Punkte und Stat-Felder im Reiter <span className="text-amber-400">Einstellungen</span> konfigurieren.</p>
       </div>
     );
   }
@@ -580,15 +603,15 @@ export default function TournamentManager({
     });
   }
 
-  /** Warnt einmalig (pro geöffneter Seite), wenn vor dem Event-Start Ergebnisse eingetragen werden. */
+  /** Warnt einmalig (pro Event und Browser-Sitzung), wenn vor dem Event-Start Ergebnisse eingetragen werden. */
   async function guardResultsTiming(): Promise<boolean> {
-    if (resultsTimingOk.current || !event.startAt) return true;
+    if (timingConfirmed.has(event.id) || !event.startAt) return true;
     const ok = await confirmEventTiming(confirm, "results", { startAt: event.startAt, endAt: event.endAt });
-    if (ok) resultsTimingOk.current = true;
+    if (ok) timingConfirmed.add(event.id);
     return ok;
   }
 
-  async function submit1v1(matchId: string, winnerId: string | null, isDraw = false): Promise<boolean> {
+  async function submit1v1(matchId: string, winnerId: string | null, isDraw = false, opts: { undoToast?: boolean } = {}): Promise<boolean> {
     if (!tournament) return false;
     if (!(await guardResultsTiming())) return false;
     if (!(await confirmGroupChangeAfterKnockout(matchId))) return false;
@@ -605,7 +628,17 @@ export default function TournamentManager({
     });
     setLoading(false);
     if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return false; }
-    toast.success(savedResultMessage(matchId, winnerId, isDraw, s));
+    if (opts.undoToast === false) toast.success(savedResultMessage(matchId, winnerId, isDraw, s));
+    else toast.success(savedResultMessage(matchId, winnerId, isDraw, s), {
+      duration: 8000,
+      action: { label: "Rückgängig", onClick: () => { void undoResult(matchId); } },
+    });
+    // (4) Weiter zum nächsten Match: Fokus ins erste Torfeld der nächsten offenen Paarung
+    setTimeout(() => {
+      const next = [...document.querySelectorAll<HTMLInputElement>("[data-tm-next] [data-score-input]")]
+        .find(el => el.dataset.match !== matchId && el.offsetParent !== null);
+      next?.focus({ preventScroll: false });
+    }, 600);
     setEditing(prev => { const n = new Set(prev); n.delete(matchId); return n; });
     setLogs(prev => { const n = { ...prev }; delete n[matchId]; return n; });
     router.refresh();
@@ -707,6 +740,21 @@ export default function TournamentManager({
     if (!res.ok) { toast.error(data.error ?? "Fehler bei der Terminplanung"); return; }
     toast.success(`${data.scheduled} Matches terminiert`);
     setShowSchedule(false);
+    router.refresh();
+  }
+
+  /** Rückgängig direkt nach dem Speichern — ohne Rückfrage (der Klick war eben erst) */
+  async function undoResult(matchId: string) {
+    if (!tournament) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, action: "reset" }),
+    });
+    setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Zurücksetzen hat nicht geklappt"); return; }
+    toast.success("Ergebnis zurückgenommen");
     router.refresh();
   }
 
@@ -952,24 +1000,25 @@ export default function TournamentManager({
     })();
     return (
       <div key={match.id}
-        className={`rounded-lg border overflow-hidden ${
-          isLive ? "border-red-500/60"
-          : isPlayed && !isEditing ? "border-gray-700 opacity-80" : "border-gray-600"
+        className={`rounded-control border overflow-hidden ${
+          isLive ? "border-danger/30"
+          : isPlayed && !isEditing ? "border-line-strong opacity-80" : "border-gray-600"
         }`}>
         {/* Match header */}
-        <div className="px-3 py-1.5 bg-gray-800 border-b border-gray-700 flex items-center justify-between gap-2">
-          <span className="text-xs text-gray-400 truncate">
+        <div className="px-3 py-1.5 bg-surface-2 border-b border-line-strong flex items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted truncate">
+            <span className={`size-2 shrink-0 rounded-full ${STATUS_DOT[matchStatus(match)].cls}`} title={STATUS_DOT[matchStatus(match)].label} aria-label={STATUS_DOT[matchStatus(match)].label} />
             {match.title || (match.isThirdPlace ? "Spiel um Platz 3" : match.groupIndex != null ? `Spieltag ${match.round}` : `Match ${match.position}`)}
             {match.leg === 1 && " · Hinspiel"}{match.leg === 2 && " · Rückspiel"}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {match.scheduledAt && (
-              <span className="text-xs text-gray-600 flex items-center gap-1">
+              <span className="text-xs text-subtle flex items-center gap-1">
                 <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
               </span>
             )}
-            {isByeMatch && <span className="text-xs text-gray-500">Freilos</span>}
-            {match.walkover && <span className="text-xs text-gray-400" title="Gegner nicht angetreten">kampflos</span>}
+            {isByeMatch && <span className="text-xs text-subtle">Freilos</span>}
+            {match.walkover && <span className="text-xs text-muted" title="Gegner nicht angetreten">kampflos</span>}
             {isPlayed && match.resultConfirmed === false && !isByeMatch && (
               <>
                 <span className="text-xs text-amber-300" title="Von Spielern gemeldet, noch nicht bestätigt — Punkte gibt es erst nach der Bestätigung">vorläufig</span>
@@ -979,13 +1028,13 @@ export default function TournamentManager({
                 </button>
               </>
             )}
-            {isLive && <span className="text-xs font-bold text-red-400 animate-pulse">● LIVE</span>}
+            {isLive && <span className="text-xs font-bold text-danger animate-pulse">● LIVE</span>}
             {/* Live-Markierung als beschrifteter Schalter (Turnierseite & Overlay) */}
             {!isPlayed && p1 && p2 && (
               <button onClick={() => setLive(match.id, !isLive)} disabled={loading}
                 title={isLive ? "Live-Markierung beenden" : "Als „läuft gerade“ markieren (Turnierseite & Overlay)"}
                 className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-semibold transition-colors ${
-                  isLive ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-gray-700 text-gray-500 hover:text-red-300 hover:border-red-500/40"
+                  isLive ? "border-danger/30 bg-danger-soft text-danger" : "border-line-strong text-subtle hover:text-danger hover:border-danger/30"
                 }`}>
                 {isLive ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />} Live
               </button>
@@ -1004,10 +1053,10 @@ export default function TournamentManager({
                 // Gegner nicht angetreten: der andere kommt ohne Tore weiter (nicht bei Hin-/Rückspiel)
                 ...(!isPlayed && p1 && p2 && !match.leg ? [p1, p2].map(pl => ({
                   label: `${userName(pl)} kampflos weiter`, onClick: () => walkoverAction(match, pl.id),
-                  icon: <Trophy className="w-3.5 h-3.5 text-gray-500" />,
+                  icon: <Trophy className="w-3.5 h-3.5 text-subtle" />,
                 })) : []),
-                ...(isPlayed && !isByeMatch && !isEditing ? [{ label: "Ergebnis bearbeiten", onClick: () => startEdit(match), icon: <Pencil className="w-3.5 h-3.5 text-gray-500" /> }] : []),
-                ...(!isByeMatch ? [{ label: matchLog ? "Verlauf ausblenden" : "Verlauf anzeigen", onClick: () => toggleLog(match.id), icon: <History className="w-3.5 h-3.5 text-gray-500" /> }] : []),
+                ...(isPlayed && !isByeMatch && !isEditing ? [{ label: "Ergebnis bearbeiten", onClick: () => startEdit(match), icon: <Pencil className="w-3.5 h-3.5 text-subtle" /> }] : []),
+                ...(!isByeMatch ? [{ label: matchLog ? "Verlauf ausblenden" : "Verlauf anzeigen", onClick: () => toggleLog(match.id), icon: <History className="w-3.5 h-3.5 text-subtle" /> }] : []),
                 ...(isPlayed && !isByeMatch ? [{ label: "Ergebnis zurücksetzen", onClick: () => resetMatch(match.id), icon: <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> }] : []),
                 { label: "Match löschen", onClick: () => deleteMatch(match.id), danger: true, disabled: loading, icon: <Trash2 className="w-3.5 h-3.5" /> },
               ]}
@@ -1017,7 +1066,7 @@ export default function TournamentManager({
 
         {/* Draw badge */}
         {isDraw && (
-          <div className="px-3 py-1 bg-amber-900/20 border-b border-gray-700 text-center">
+          <div className="px-3 py-1 bg-warning-soft border-b border-line-strong text-center">
             <span className="text-xs text-amber-400 font-medium">Unentschieden</span>
           </div>
         )}
@@ -1029,36 +1078,47 @@ export default function TournamentManager({
         ].map(({ player, score, id, key }, idx) => (
           <div key={idx}
             className={`flex items-center justify-between px-3 py-2 text-sm ${
-              idx === 0 ? "border-b border-gray-700" : ""
-            } ${match.winnerId === id ? "bg-green-900/20" : isDraw ? "bg-amber-900/10" : ""}`}>
+              idx === 0 ? "border-b border-line-strong" : ""
+            } ${match.winnerId === id ? "bg-green-900/20" : isDraw ? "bg-warning-soft" : ""}`}>
             <span className={
-              match.winnerId === id                    ? "text-white font-medium" :
-              match.winnerId && match.winnerId !== id  ? "text-gray-600"          :
+              match.winnerId === id                    ? "text-fg font-medium" :
+              match.winnerId && match.winnerId !== id  ? "text-subtle"          :
               isDraw                                   ? "text-amber-200"          :
-              player                                   ? "text-white"              :
-                                                         "text-gray-600 italic"
+              player                                   ? "text-fg"              :
+                                                         "text-subtle italic"
             }>
               {player ? userName(player) : "TBD"}
             </span>
             {isPending ? (
               <NumberInput placeholder="0" min={0}
+                data-score-input="" data-match={match.id}
                 value={scores1v1[match.id]?.[key as "s1" | "s2"] ?? ""}
                 onChange={e => setScores1v1(prev => ({
                   ...prev, [match.id]: { ...prev[match.id], [key]: e.target.value },
                 }))}
-                className="w-14 text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-center"
+                onKeyDown={e => {
+                  if (e.key !== "Enter" || !hasBothScores(match.id) || match.leg === 2) return;
+                  e.preventDefault();
+                  const n1 = Number(scores1v1[match.id]!.s1), n2 = Number(scores1v1[match.id]!.s2);
+                  const koSingle = (isBracketFormat || (isGroupKnockout && match.groupIndex == null)) && !match.leg;
+                  if (n1 !== n2) void submit1v1(match.id, n1 > n2 ? match.player1Id! : match.player2Id!);
+                  else if (!koSingle && allowDraw) void submit1v1(match.id, null, true);
+                  else toast.info("Gleichstand im K.O.-Spiel: bitte wählen, wer weiterkommt");
+                }}
+                aria-label={`Tore ${player ? userName(player) : "Spieler"}`}
+                className="w-16 min-h-9 text-sm font-bold bg-surface-3 border border-line-strong text-fg rounded-control px-2 text-center focus:border-primary focus:outline-none"
               />
             ) : (
-              <span className="text-gray-400 font-mono text-xs">{score ?? "–"}</span>
+              <span className="text-muted font-mono text-xs">{score ?? "–"}</span>
             )}
           </div>
         ))}
 
         {/* Rückspiel: Gesamtergebnis */}
         {match.leg === 2 && (
-          <div className="px-3 py-1.5 bg-gray-800/40 border-t border-gray-700 text-xs text-gray-400">
+          <div className="px-3 py-1.5 bg-surface-2/40 border-t border-line-strong text-xs text-muted">
             {aggregate
-              ? <>Hinspiel {aggregate.first.score1 ?? 0}:{aggregate.first.score2 ?? 0} · <span className="text-white font-medium">Gesamt {userName(p1 ?? { id: "", name: "?", username: null, image: null })} {aggregate.g1}:{aggregate.g2} {userName(p2 ?? { id: "", name: "?", username: null, image: null })}</span>
+              ? <>Hinspiel {aggregate.first.score1 ?? 0}:{aggregate.first.score2 ?? 0} · <span className="text-fg font-medium">Gesamt {userName(p1 ?? { id: "", name: "?", username: null, image: null })} {aggregate.g1}:{aggregate.g2} {userName(p2 ?? { id: "", name: "?", username: null, image: null })}</span>
                   {isPlayed && match.winnerId && <> · weiter: {userName((match.winnerId === match.player1Id ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })}</>}</>
               : "Erst das Hinspiel eintragen — danach entscheidet das Gesamtergebnis."}
           </div>
@@ -1066,20 +1126,20 @@ export default function TournamentManager({
 
         {/* Rückspiel: Gesamtergebnis entscheidet, bei Gleichstand Auswahl, wer weiterkommt */}
         {isPending && match.leg === 2 && (
-          <div className="flex gap-1 p-2 bg-gray-800/50">
+          <div className="flex gap-1 p-2 bg-surface-2/50">
             {!aggregate ? null : aggregate.g1 !== aggregate.g2 ? (
               <button onClick={() => submit1v1(match.id, aggregate.g1 > aggregate.g2 ? match.player1Id! : match.player2Id!)} disabled={loading}
-                className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
+                className="flex-1 text-xs bg-surface-3 text-fg hover:bg-primary hover:text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                 Ergebnis speichern — {userName((aggregate.g1 > aggregate.g2 ? p1 : p2) ?? { id: "", name: "?", username: null, image: null })} kommt weiter
               </button>
             ) : (
               <>
                 <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
-                  className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
+                  className="flex-1 text-xs bg-surface-3 text-fg hover:bg-primary hover:text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                   {p1 ? userName(p1) : "?"} kommt weiter (n.E.)
                 </button>
                 <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
-                  className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
+                  className="flex-1 text-xs bg-surface-3 text-fg hover:bg-primary hover:text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
                   {p2 ? userName(p2) : "?"} kommt weiter (n.E.)
                 </button>
               </>
@@ -1094,7 +1154,7 @@ export default function TournamentManager({
           const koSingle = (isBracketFormat || (isGroupKnockout && match.groupIndex == null)) && !match.leg;
           const btn = "flex-1 text-xs bg-primary hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate";
           return (
-            <div className="flex gap-1 p-2 bg-gray-800/50">
+            <div className="flex gap-1 p-2 bg-surface-2/50">
               {n1 !== n2 ? (
                 <button onClick={() => submit1v1(match.id, n1 > n2 ? match.player1Id! : match.player2Id!)} disabled={loading} className={btn}>
                   Speichern · {userName((n1 > n2 ? p1 : p2)!)} gewinnt {n1}:{n2}
@@ -1115,35 +1175,35 @@ export default function TournamentManager({
 
         {/* Ohne Tore: Sieger direkt wählen */}
         {isPending && match.leg !== 2 && !hasBothScores(match.id) && (
-          <div className="flex gap-1 p-2 bg-gray-800/50">
+          <div className="flex gap-1 p-2 bg-surface-2/50">
             <button onClick={() => submit1v1(match.id, match.player1Id!)} disabled={loading}
-              className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
+              className="flex-1 text-xs bg-surface-3 text-fg hover:bg-primary hover:text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
               {p1 ? userName(p1) : "?"} gewinnt
             </button>
             {allowDraw && (
               <button onClick={() => submit1v1(match.id, null, true)} disabled={loading}
-                className="shrink-0 text-xs bg-gray-700 hover:bg-amber-700 text-amber-300 rounded px-2 py-1.5 transition-colors">
+                className="shrink-0 text-xs bg-surface-3 hover:bg-warning-soft text-amber-300 rounded px-2 py-1.5 transition-colors">
                 Unentschieden
               </button>
             )}
             <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
-              className="flex-1 text-xs bg-gray-700 hover:bg-primary-hover text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
+              className="flex-1 text-xs bg-surface-3 text-fg hover:bg-primary hover:text-primary-ink rounded px-2 py-1.5 transition-colors truncate">
               {p2 ? userName(p2) : "?"} gewinnt
             </button>
           </div>
         )}
 
         {match.notes && (
-          <p className="px-3 py-1.5 text-xs text-gray-600 bg-gray-800/30">{match.notes}</p>
+          <p className="px-3 py-1.5 text-xs text-subtle bg-surface-2/30">{match.notes}</p>
         )}
 
         {/* Änderungsprotokoll */}
         {matchLog && (
-          <div className="px-3 py-2 bg-gray-900/60 border-t border-gray-700 space-y-1">
+          <div className="px-3 py-2 bg-surface-2/60 border-t border-line-strong space-y-1">
             {matchLog === "loading" ? (
-              <p className="text-xs text-gray-500">Lädt…</p>
+              <p className="text-xs text-subtle">Lädt…</p>
             ) : matchLog.length === 0 ? (
-              <p className="text-xs text-gray-500">Noch keine Einträge.</p>
+              <p className="text-xs text-subtle">Noch keine Einträge.</p>
             ) : matchLog.map(entry => {
               const describe = (st: MatchLogEntry["after"]) => {
                 if (!st || !st.played) return "offen";
@@ -1152,8 +1212,8 @@ export default function TournamentManager({
                 return [score, winner ? `Sieger ${userName(winner)}` : "Unentschieden"].filter(Boolean).join(" · ");
               };
               return (
-                <p key={entry.id} className="text-xs text-gray-400">
-                  <span className="text-gray-500">{fmtDate(entry.createdAt)}</span> · {entry.actor} ·{" "}
+                <p key={entry.id} className="text-xs text-muted">
+                  <span className="text-subtle">{fmtDate(entry.createdAt)}</span> · {entry.actor} ·{" "}
                   {entry.action === "reset" ? "zurückgesetzt" : `${describe(entry.before)} → ${describe(entry.after)}`}
                 </p>
               );
@@ -1173,27 +1233,27 @@ export default function TournamentManager({
               const teamError = validateTeamAssignment(match.id, match.entries);
               return (
                 <div key={match.id}
-                  className={`rounded-lg border overflow-hidden ${isPlayed ? "border-gray-700" : "border-gray-600"}`}>
+                  className={`rounded-control border overflow-hidden ${isPlayed ? "border-line-strong" : "border-gray-600"}`}>
                   <button
-                    className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-800 hover:bg-gray-750 text-left"
+                    className="w-full flex items-center justify-between px-3 py-2.5 bg-surface-2 hover:bg-surface-3 text-left"
                     onClick={() => setExpanded(prev => { const s = new Set(prev); s.has(match.id) ? s.delete(match.id) : s.add(match.id); return s; })}>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-white">Runde {match.position}</span>
-                      {statRoundNote(match) && <span className="text-sm text-gray-400">· {statRoundNote(match)}</span>}
+                      <span className="text-sm text-fg">Runde {match.position}</span>
+                      {statRoundNote(match) && <span className="text-sm text-muted">· {statRoundNote(match)}</span>}
                       {match.scheduledAt && (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="text-xs text-subtle flex items-center gap-1">
                           <Clock className="w-3 h-3" />{fmtDate(match.scheduledAt)}
                         </span>
                       )}
                       {isPlayed && (match.resultConfirmed === false ? (
-                        <span className="text-xs bg-amber-900/30 text-amber-300 px-1.5 py-0.5 rounded-full" title="Von Spielern gemeldet, noch nicht bestätigt">Vorläufig</span>
+                        <span className="text-xs bg-warning-soft text-amber-300 px-1.5 py-0.5 rounded-full" title="Von Spielern gemeldet, noch nicht bestätigt">Vorläufig</span>
                       ) : (
-                        <span className="text-xs bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full">Gespielt</span>
+                        <span className="text-xs bg-green-900/40 text-success px-1.5 py-0.5 rounded-full">Gespielt</span>
                       ))}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-gray-500">{match.entries.length} Spieler</span>
-                      {isExp ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                      <span className="text-xs text-subtle">{match.entries.length} Spieler</span>
+                      {isExp ? <ChevronUp className="w-4 h-4 text-subtle" /> : <ChevronDown className="w-4 h-4 text-subtle" />}
                     </div>
                   </button>
 
@@ -1204,16 +1264,16 @@ export default function TournamentManager({
                         usedRoundNumbers={usedRoundNumbers}
                         onSave={(position, title) => updateRoundMeta(match.id, position, title)}
                       />
-                      {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
+                      {match.notes && <p className="text-xs text-subtle mb-3">{match.notes}</p>}
                       {/* Punkt 2: Werte des vorherigen Matches übernehmen (gleiche Teilnehmer über mehrere Runden) */}
                       {matchIdx > 0 && (
                         <button type="button" onClick={() => copyFromPreviousMatch(match.id)}
-                          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors max-lg:min-h-10">
+                          className="flex items-center gap-1.5 text-xs text-muted hover:text-fg border border-line-strong hover:border-gray-500 rounded-control px-2.5 py-1 mb-3 transition-colors max-lg:min-h-10">
                           <RefreshCw className="w-3 h-3" /> Werte aus vorherigem Match übernehmen
                         </button>
                       )}
                       {teamError && (
-                        <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2 mb-3">
+                        <div className="flex items-center gap-2 text-xs text-amber-300 bg-warning-soft border border-amber-700/40 rounded-control px-3 py-2 mb-3">
                           <span>⚠️ {teamError}</span>
                         </div>
                       )}
@@ -1227,11 +1287,11 @@ export default function TournamentManager({
                                 const u = tournament!.participants.find(p => p.userId === e.userId)?.user
                                   ?? allUsers.find(x => x.id === e.userId);
                                 return (
-                                  <span key={e.id} className="inline-flex items-center gap-1 text-xs bg-gray-800 border border-gray-700 rounded-full pl-2.5 pr-1 py-0.5 text-gray-200">
+                                  <span key={e.id} className="inline-flex items-center gap-1 text-xs bg-surface-2 border border-line-strong rounded-full pl-2.5 pr-1 py-0.5 text-fg">
                                     {u ? userName(u) : "?"}
                                     <button type="button" disabled={loading || !e.userId}
                                       onClick={() => e.userId && changeMatchPlayer(match.id, e.userId, "remove")}
-                                      className="p-0.5 rounded-full text-gray-500 hover:text-red-400 disabled:opacity-40" title="Aus Match entfernen">
+                                      className="p-0.5 rounded-full text-subtle hover:text-danger disabled:opacity-40" title="Aus Match entfernen">
                                       <X className="w-3 h-3" />
                                     </button>
                                   </span>
@@ -1241,7 +1301,7 @@ export default function TournamentManager({
                             {addable.length > 0 && (
                               <select value="" disabled={loading}
                                 onChange={e => e.target.value && changeMatchPlayer(match.id, e.target.value, "add")}
-                                className="text-xs bg-surface-2 border border-line rounded-control px-2 py-1 text-gray-300">
+                                className="text-xs bg-surface-2 border border-line rounded-control px-2 py-1 text-fg/90">
                                 <option value="">+ Spieler hinzufügen…</option>
                                 {addable.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
                               </select>
@@ -1250,7 +1310,7 @@ export default function TournamentManager({
                         );
                       })()}
                       {visibleStatFields.length === 0 && !trackMatchWin && !trackPlacement ? (
-                        <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
+                        <div className="text-xs text-warning/80 bg-warning-soft border border-amber-800/30 rounded-control px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern“ klicken.
                         </div>
                       ) : (
@@ -1262,16 +1322,16 @@ export default function TournamentManager({
                           const usesTeams = match.entries.some(e => e.userId && teams[e.userId]);
                           return usesTeams ? (
                             <div className="mb-3 space-y-2">
-                              <p className="text-xs text-gray-400">
-                                Match Win <span className="text-gray-500">(Spieler des Sieger-Teams erhalten +1)</span>
+                              <p className="text-xs text-muted">
+                                Match Win <span className="text-subtle">(Spieler des Sieger-Teams erhalten +1)</span>
                               </p>
                               <div className="flex gap-2">
                                 <button type="button"
                                   onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
                                   className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
                                     matchWin[match.id] === "A"
-                                      ? "bg-blue-600 border-blue-500 text-white"
-                                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                      ? "bg-blue-600 border-blue-500 text-fg"
+                                      : "bg-surface-2 border-line-strong text-muted hover:border-line-strong"
                                   }`}>
                                   Team A gewinnt
                                 </button>
@@ -1280,29 +1340,29 @@ export default function TournamentManager({
                                   className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
                                     matchWin[match.id] === "B"
                                       ? "bg-primary border-primary/40 text-primary-ink"
-                                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                      : "bg-surface-2 border-line-strong text-muted hover:border-line-strong"
                                   }`}>
                                   Team B gewinnt
                                 </button>
                               </div>
-                              <p className="text-xs text-amber-500/80">
+                              <p className="text-xs text-warning/80">
                                 Team-Modus aktiv — jeder Spieler muss unten einem Team zugewiesen sein, bevor du speicherst.
                               </p>
                             </div>
                           ) : (
-                            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mb-3 select-none">
+                            <label className="flex items-center gap-2 text-xs text-fg/90 cursor-pointer mb-3 select-none">
                               <input
                                 type="checkbox"
                                 checked={matchWinAll[match.id] ?? false}
                                 onChange={e => setMatchWinAll(prev => ({ ...prev, [match.id]: e.target.checked }))}
                                 className="rounded"
                               />
-                              <span>Match Win <span className="text-gray-500">(alle haben zusammen gespielt, alle erhalten +1)</span></span>
+                              <span>Match Win <span className="text-subtle">(alle haben zusammen gespielt, alle erhalten +1)</span></span>
                             </label>
                           );
                         })()}
                         {trackPlacement && placementPoints && (
-                          <p className="text-xs text-gray-500 mb-2">
+                          <p className="text-xs text-subtle mb-2">
                             Platzierung dieser Runde → Punkte: {Object.entries(placementPoints)
                               .sort(([a], [b]) => Number(a) - Number(b))
                               .map(([place, pts]) => `Platz ${place} = ${pts}`).join(" · ")}
@@ -1322,7 +1382,7 @@ export default function TournamentManager({
                         <div key={gi} className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
-                              <tr className="text-gray-500 border-b border-gray-700">
+                              <tr className="text-subtle border-b border-line-strong">
                                 <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
                                 {trackMatchWin && <th className="text-center py-1.5 px-2 font-medium">Team</th>}
                                 {trackPlacement && <th className="text-center py-1.5 px-2 font-medium">Platz</th>}
@@ -1338,8 +1398,8 @@ export default function TournamentManager({
                                 const row     = ed[entry.userId ?? ""] ?? {};
                                 const entryTeam = entry.userId ? teamAssign[match.id]?.[entry.userId] : undefined;
                                 return (
-                                  <tr key={entry.id} className="border-b border-gray-800 last:border-0">
-                                    <td className="py-1.5 pr-3 text-white whitespace-nowrap">
+                                  <tr key={entry.id} className="border-b border-line last:border-0">
+                                    <td className="py-1.5 pr-3 text-fg whitespace-nowrap">
                                       {user ? userName(user) : "?"}
                                     </td>
                                     {trackMatchWin && (
@@ -1358,8 +1418,8 @@ export default function TournamentManager({
                                               disabled={!entry.userId}
                                               className={`w-6 h-6 rounded text-xs font-bold border transition-colors disabled:opacity-30 ${
                                                 entryTeam === team
-                                                  ? team === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-rose-600 border-rose-500 text-white"
-                                                  : "bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500"
+                                                  ? team === "A" ? "bg-blue-600 border-blue-500 text-fg" : "bg-rose-600 border-rose-500 text-fg"
+                                                  : "bg-surface-3 border-gray-600 text-muted hover:border-gray-500"
                                               }`}>
                                               {team}
                                             </button>
@@ -1372,7 +1432,7 @@ export default function TournamentManager({
                                         <NumberInput min={1} placeholder="–"
                                           value={row[PLACEMENT_STAT_KEY] ?? (existing[PLACEMENT_STAT_KEY] !== undefined ? String(existing[PLACEMENT_STAT_KEY]) : "")}
                                           onChange={e => setFfaField(match.id, entry.userId ?? "", PLACEMENT_STAT_KEY, e.target.value)}
-                                          className="w-14 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
+                                          className="w-14 bg-surface-3 border border-gray-600 text-fg rounded px-1.5 py-1 text-center text-xs"
                                         />
                                       </td>
                                     )}
@@ -1381,7 +1441,7 @@ export default function TournamentManager({
                                         <NumberInput placeholder="–"
                                           value={row[f] ?? (existing[f] !== undefined ? String(existing[f]) : "")}
                                           onChange={e => setFfaField(match.id, entry.userId ?? "", f, e.target.value)}
-                                          className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
+                                          className="w-16 bg-surface-3 border border-gray-600 text-fg rounded px-1.5 py-1 text-center text-xs"
                                         />
                                       </td>
                                     ))}
@@ -1406,12 +1466,12 @@ export default function TournamentManager({
                         </button>
                         {isPlayed && (
                           <button onClick={() => resetMatch(match.id)} disabled={loading}
-                            className="flex items-center gap-1 text-xs text-amber-500 hover:bg-amber-900/20 rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
+                            className="flex items-center gap-1 text-xs text-warning hover:bg-warning-soft rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
                             <RotateCcw className="w-3.5 h-3.5" /> Zurücksetzen
                           </button>
                         )}
                         <button onClick={() => deleteMatch(match.id)} disabled={loading}
-                          className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-900/20 rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
+                          className="flex items-center gap-1 text-xs text-danger hover:bg-danger-soft rounded px-2 py-1.5 transition-colors max-lg:min-h-10">
                           <Trash2 className="w-3.5 h-3.5" /> Löschen
                         </button>
                       </div>
@@ -1458,13 +1518,13 @@ export default function TournamentManager({
     <div className="flex items-center gap-1">
       {([["tree", "Baum"], ["list", "Liste"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setDuelView(k)} aria-pressed={duelView === k}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            duelView === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+          className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors ${
+            duelView === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-subtle hover:text-fg/90 hover:bg-line"
           }`}>
           {label}
         </button>
       ))}
-      <span className="ml-auto text-xs text-gray-600">{duelView === "tree" ? "Paarung antippen zum Eintragen" : "Alle Matches nach Runde"}</span>
+      <span className="ml-auto text-xs text-subtle">{duelView === "tree" ? "Paarung antippen zum Eintragen" : "Alle Matches nach Runde"}</span>
     </div>
   );
   const treeView = showTree && tree && (
@@ -1473,15 +1533,15 @@ export default function TournamentManager({
         selectedKey={treeSlot?.key ?? null} onSelect={k => setTreeSel(cur => cur === k ? null : k)} />
       {treeSlot && (
         <section aria-label="Gewählte Paarung" className="space-y-2">
-          <p className="flex items-center gap-2 text-xs text-gray-500">
+          <p className="flex items-center gap-2 text-xs text-subtle">
             <span className="min-w-0 flex-1">{treeSlot.key === "third" ? "Spiel um Platz 3" : tree.columns.find(c => c.round === treeSlot.round)?.label}
               {treeSlot.matches.length > 1 && " · Hin- und Rückspiel"}</span>
-            <button type="button" onClick={() => setTreeSel(null)} className="text-gray-500 hover:text-gray-300">Schließen</button>
+            <button type="button" onClick={() => setTreeSel(null)} className="text-subtle hover:text-fg/90">Schließen</button>
           </p>
           <div className={`grid gap-2 ${treeSlot.matches.length > 1 ? "md:grid-cols-2" : ""}`}>
             {treeSlot.matches.map(m => (
               <div key={m.id} className="space-y-1">
-                {treeSlot.matches.length > 1 && <p className="text-xs text-gray-500">{m.leg === 2 ? "Rückspiel" : "Hinspiel"}</p>}
+                {treeSlot.matches.length > 1 && <p className="text-xs text-subtle">{m.leg === 2 ? "Rückspiel" : "Hinspiel"}</p>}
                 {renderDuelCard(m, treeAllowDraw(m))}
               </div>
             ))}
@@ -1494,11 +1554,11 @@ export default function TournamentManager({
   // Auslosung: zufällig oder gesetzt (K.O.-Baum und Gruppen)
   const seedingToggle = (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs text-gray-500">Auslosung:</span>
+      <span className="text-xs text-subtle">Auslosung:</span>
       {([["random", "Zufällig"], ["rank", "Nach Rangpunkten setzen"]] as const).map(([k, label]) => (
         <button key={k} type="button" onClick={() => setSeeding(k)} aria-pressed={seeding === k}
           title={k === "rank" ? "Die Stärksten (Rangpunkte) treffen erst spät aufeinander bzw. landen in verschiedenen Gruppen" : undefined}
-          className={`rounded-md px-2 py-1 text-xs transition-colors ${seeding === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-400 hover:text-gray-200 hover:bg-line"}`}>
+          className={`rounded-md px-2 py-1 text-xs transition-colors ${seeding === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-muted hover:text-fg hover:bg-line"}`}>
           {label}
         </button>
       ))}
@@ -1514,6 +1574,22 @@ export default function TournamentManager({
     else { setMScheduled(nowForDatetimeLocal()); setShowAdd(true); }
     setTimeout(() => addRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   };
+  const allPlayed = dp ? dp.total > 0 && dp.played === dp.total : sp ? sp.total > 0 && sp.played === sp.total : false;
+  const focusNext = () => {
+    const box = [...document.querySelectorAll<HTMLElement>("[data-tm-next]")].find(el => el.offsetParent !== null);
+    box?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => box?.querySelector<HTMLInputElement>("[data-score-input], input")?.focus({ preventScroll: true }), 350);
+  };
+  const headerPrimary: HeaderPrimary | null = pendingCount > 0 && resultsHref
+    ? { label: `Meldungen prüfen (${pendingCount})`, href: `${resultsHref}?modus=pruefen`, tone: "warning" }
+    : allPlayed
+      ? { label: "Turnier abschließen", href: `/events/verwalten/${event.id}/complete` }
+      : (nextDuels.length > 0 || sp?.next)
+        ? { label: is1v1 ? "Nächstes Match eintragen" : "Nächste Runde eintragen", onClick: focusNext }
+        : null;
+  const viewTools = (([["auto", "Ansicht: automatisch"], ["touch", "Ansicht: Touch (große Knöpfe)"], ["desktop", "Ansicht: Desktop (Tabellen)"]] as const)
+    .filter(([v]) => v !== viewMode)
+    .map(([v, label]) => ({ label, onClick: () => changeViewMode(v) })));
   const tools = [
     ...(is1v1 && tournament.matches.length > 0 ? [{
       label: showSchedule ? "Terminplanung schließen" : "Termine planen",
@@ -1522,13 +1598,14 @@ export default function TournamentManager({
     ...(canResetDraw ? [{ label: "Auslosung zurücksetzen", onClick: resetDrawAction, disabled: loading }] : []),
     ...(isDrawn ? [{ label: showReplace ? "Ersetzen schließen" : "Spieler ersetzen", onClick: () => setShowReplace(v => !v) }] : []),
     ...(!isGroupKnockout ? [{ label: isFfa ? "Runde hinzufügen" : "Match hinzufügen", onClick: openAdd }] : []),
+    ...viewTools,
   ];
 
   const goalBar = goalProgress && goal ? (
-            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] px-3 py-2 space-y-1">
+            <div className="rounded-control border border-primary/20 bg-primary/[0.04] px-3 py-2 space-y-1">
               <p className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-teal-200 font-semibold">{goal?.title || "Community-Ziel"}</span>
-                <span className="tabular-nums text-gray-300">
+                <span className="text-primary-fg font-semibold">{goal?.title || "Community-Ziel"}</span>
+                <span className="tabular-nums text-fg/90">
                   {isAvgGoal(goal!)
                     ? <>Ø {formatDecimal(goalProgress.main.total)} · Ziel {goal!.direction === "atMost" ? "höchstens" : "mind."} {formatDecimal(goal!.target)} {goalUnit(goal!)}</>
                     : <>{formatDecimal(goalProgress.main.total)} von {formatDecimal(goal!.target)} {goalUnit(goal!)}</>}
@@ -1543,18 +1620,6 @@ export default function TournamentManager({
   return (
     <div className="tm-root space-y-4" data-tm-view={viewMode}>
 
-      <div className="flex items-center justify-end gap-1.5 text-xs text-gray-500">
-        <span>Ansicht:</span>
-        {([["auto", "Auto"], ["touch", "Touch"], ["desktop", "Desktop"]] as const).map(([v, label]) => (
-          <button key={v} type="button" onClick={() => changeViewMode(v)}
-            className={`px-2.5 py-1 rounded-md border transition-colors ${
-              viewMode === v ? "border-primary/40 bg-primary-soft/60 text-primary-ink" : "border-gray-700 text-gray-400 hover:border-gray-600"
-            }`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* ── Stand, Ergebnis-Meldungen, Werkzeuge (für Desktop und Touch) ── */}
       <TournamentHeader
         formatLabel={formatLabel}
@@ -1565,20 +1630,29 @@ export default function TournamentManager({
         resultsHref={resultsHref}
         pendingCount={pendingCount}
         tools={tools}
+        primary={headerPrimary}
+        live={tournament.status === "active" ? <LiveRefresh /> : null}
       />
       {!isFfa && goalBar}
       {pendingSubmissions.length > 0 && (
-        <section aria-label="Gemeldete Ergebnisse" className="rounded-xl border border-amber-500/30 bg-amber-500/[0.04] px-3 py-2">
-          <p className="text-xs font-semibold text-amber-300">Von Spielern gemeldet ({pendingSubmissions.length})</p>
+        <section aria-label="Gemeldete Ergebnisse" className="rounded-card border border-warning/40 bg-warning-soft px-3 py-3 sm:px-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="flex-1 text-sm font-extrabold text-fg">Von Spielern gemeldet <span className="rounded-full bg-warning px-2 text-xs font-bold leading-5 text-canvas">{pendingSubmissions.length}</span></p>
+            {resultsHref && (
+              <Link href={`${resultsHref}?modus=pruefen`} className="inline-flex min-h-9 items-center rounded-control bg-warning px-3.5 text-sm font-bold text-canvas hover:brightness-110">
+                Im Prüfmodus prüfen
+              </Link>
+            )}
+          </div>
           <InlineSubmissions eventId={event.id} items={pendingSubmissions} resultsHref={resultsHref} />
         </section>
       )}
 
       {/* Spieler ersetzen: Ausfall nach der Auslosung, Nachrücker übernimmt die offenen Spiele */}
       {showReplace && isDrawn && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/30 p-3 space-y-2">
-          <p className="text-xs text-gray-300 font-medium">Spieler ersetzen</p>
-          <p className="text-xs text-gray-500">
+        <div className="rounded-control border border-line-strong bg-surface-2/30 p-3 space-y-2">
+          <p className="text-xs text-fg/90 font-medium">Spieler ersetzen</p>
+          <p className="text-xs text-subtle">
             Der Nachrücker übernimmt alle noch offenen Spiele, gespielte bleiben beim alten Spieler. Zur Wahl stehen
             angemeldete Spieler, die nicht ausgelost sind. Andere Mitglieder erst im Reiter „Teilnehmer“ eintragen.
             Wer nur ein Spiel verpasst, wird besser über ⋯ → „kampflos weiter“ gewertet.
@@ -1599,7 +1673,7 @@ export default function TournamentManager({
             <p className="text-xs text-amber-300">Kein angemeldeter Spieler ohne Platz. Trag den Nachrücker zuerst im Reiter „Teilnehmer“ ein.</p>
           )}
           <button type="button" onClick={replacePlayerAction} disabled={loading || !replaceFrom || !replaceTo}
-            className="text-xs bg-teal-700/80 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+            className="text-xs bg-primary/80 hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-control px-3 py-1.5">
             Ersetzen
           </button>
         </div>
@@ -1607,35 +1681,35 @@ export default function TournamentManager({
 
       {/* Terminplanung: Startzeit + Abstand je Spieltag/Runde */}
       {showSchedule && is1v1 && tournament.matches.length > 0 && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/30">
+        <div className="rounded-control border border-line-strong bg-surface-2/30">
           <button type="button" onClick={() => {
             if (!showSchedule && !scheduleStart) setScheduleStart(nowForDatetimeLocal());
             setShowSchedule(v => !v);
           }}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-300">
+            className="w-full flex items-center justify-between px-3 py-2 text-xs text-fg/90">
             <span className="flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Termine planen</span>
             {showSchedule ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
           {showSchedule && (
             <div className="px-3 pb-3 space-y-2">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-subtle">
                 Jeder Spieltag bzw. jede K.O.-Runde bekommt ein eigenes Zeitfenster (Gruppen spielen gleichzeitig,
                 Hin- und Rückspiel getrennt). Freilose werden nicht terminiert.
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <input type="datetime-local" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)}
                   className="text-xs bg-surface-2 border border-line text-fg rounded-control px-2 py-1.5" />
-                <span className="text-xs text-gray-400">alle</span>
+                <span className="text-xs text-muted">alle</span>
                 <NumberInput min={5} value={scheduleInterval} onChange={e => setScheduleInterval(Number(e.target.value) || 0)}
-                  className="w-20 text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
-                <span className="text-xs text-gray-400">Minuten</span>
+                  className="w-20 text-xs bg-surface-2 border border-line-strong text-fg rounded-control px-2 py-1.5 text-center" />
+                <span className="text-xs text-muted">Minuten</span>
               </div>
-              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
                 <input type="checkbox" checked={scheduleOverwrite} onChange={e => setScheduleOverwrite(e.target.checked)} className="rounded" />
                 Vorhandene Termine überschreiben
               </label>
               <button type="button" onClick={scheduleMatches} disabled={loading || !scheduleStart || scheduleInterval < 5}
-                className="text-xs bg-teal-700 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-1.5">
+                className="text-xs bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-control px-3 py-1.5">
                 Termine setzen
               </button>
             </div>
@@ -1647,14 +1721,14 @@ export default function TournamentManager({
       {/* Nachzügler (Punktewertung/Durchschnittswerte): angemeldete Spieler, die in noch keiner Runde
           stehen — z.B. bei Zeitraum-Events nach dem Start eingestiegen. Per Knopf in eine Runde aufnehmen. */}
       {isFfa && statRounds.length > 0 && latecomers.length > 0 && (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3 space-y-2">
+        <div className="rounded-control border border-warning/30 bg-warning-soft p-3 space-y-2">
           <p className="text-sm font-semibold text-amber-300">
             Neu dabei — noch in keiner Runde ({latecomers.length})
           </p>
           <div className="space-y-1.5">
             {latecomers.map(u => (
               <div key={u.id} className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-white flex-1 min-w-[120px] truncate">{u.username ?? u.name ?? "?"}</span>
+                <span className="text-sm text-fg flex-1 min-w-[120px] truncate">{u.username ?? u.name ?? "?"}</span>
                 <select
                   value={latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id}
                   onChange={e => setLatecomerRound(prev => ({ ...prev, [u.id]: e.target.value }))}
@@ -1663,7 +1737,7 @@ export default function TournamentManager({
                 </select>
                 <button type="button" disabled={loading}
                   onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50 max-lg:min-h-10">
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-control bg-warning hover:brightness-110 text-canvas transition-colors disabled:opacity-50 max-lg:min-h-10">
                   <Plus className="w-3.5 h-3.5" /> Zur Runde
                 </button>
               </div>
@@ -1676,7 +1750,7 @@ export default function TournamentManager({
           Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
           Desktop-Tabelle, siehe TournamentManagerMobile.
           ══════════════════════════════════════════════════════════════ */}
-      <div className="tm-touch-only">
+      <div className="tm-touch-only scroll-mt-36" data-tm-next="">
         <TournamentManagerMobile
           tournament={isGroupKnockout
             ? { ...tournament, matches: [...groupMatches, ...knockoutMatches] }
@@ -1713,7 +1787,7 @@ export default function TournamentManager({
           matchWinAll={matchWinAll}
           setMatchWinAll={setMatchWinAll}
           validateTeamAssignment={validateTeamAssignment}
-          submit1v1={submit1v1}
+          submit1v1={(id, w, d) => submit1v1(id, w, d, { undoToast: false })}
           submitFfa={submitFfa}
           changeMatchPlayer={changeMatchPlayer}
           resetMatch={resetMatch}
@@ -1751,12 +1825,12 @@ export default function TournamentManager({
 
       {/* ── Als Nächstes ── */}
       {is1v1 && nextDuels.length > 0 && (
-        <section aria-label="Als Nächstes" className="space-y-2">
-          <p className="text-xs font-semibold text-amber-300">Als Nächstes</p>
+        <section aria-label="Als Nächstes" data-tm-next="" className="space-y-2 scroll-mt-36">
+          <p className="text-sm font-extrabold text-fg">Als Nächstes <span className="text-xs font-semibold text-subtle">· Enter speichert</span></p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {nextDuels.map(m => (
               <div key={m.id} className="space-y-1">
-                <p className="text-xs text-gray-500">{duelStageLabel(m)}</p>
+                <p className="text-xs text-subtle">{duelStageLabel(m)}</p>
                 {renderDuelCard(m, isGroupKnockout ? (m.groupIndex != null || m.leg === 1) : supportsDraw)}
               </div>
             ))}
@@ -1764,19 +1838,48 @@ export default function TournamentManager({
         </section>
       )}
       {isFfa && sp?.next && (
-        <section aria-label="Als Nächstes" className="space-y-2">
-          <p className="text-xs font-semibold text-amber-300">Als Nächstes · {statRoundLabel(sp.next)} eintragen</p>
+        <section aria-label="Als Nächstes" data-tm-next="" className="space-y-2 scroll-mt-36">
+          <p className="text-sm font-extrabold text-fg">Als Nächstes · {statRoundLabel(sp.next)} eintragen</p>
           {renderStatRound(sp.next, statRounds.findIndex(r => r.id === sp.next!.id), true)}
         </section>
       )}
 
       {/* K.O.-Baum / Liga aus den angemeldeten Spielern auslosen (direkt sichtbar wenn relevant) */}
       {canGenerate && (
-        <div className="rounded-lg border border-blue-900/40 bg-blue-900/10 p-3 space-y-2">
+        <div className="rounded-control border border-primary/30 bg-primary-soft/50 p-3 space-y-2">
           {isBracketFormat && seedingToggle}
-          <p className="text-xs text-gray-400">{drawPreview(tournament.format, drawCount)}</p>
+          <p className="text-sm font-semibold text-fg">{drawPreview(tournament.format, drawCount)}</p>
+          {(() => {
+            const notReady = new Set(notReadyNames ?? []);
+            const pool = [...new Map([
+              ...tournament.participants.map(p => [p.userId, p.user] as const),
+              ...allUsers.map(u => [u.id, u] as const),
+            ]).values()].filter((u): u is User => !!u);
+            const inDraw = pool.filter(u => !notReady.has(userName(u)));
+            const out = pool.filter(u => notReady.has(userName(u)));
+            const size = Math.pow(2, Math.ceil(Math.log2(Math.max(2, inDraw.length))));
+            const byes = isBracketFormat ? size - inDraw.length : 0;
+            return (
+              <div className="space-y-2">
+                {isBracketFormat && (
+                  <p className="text-xs text-muted">
+                    Baum mit {size} Plätzen · Runde 1: {size / 2 - byes} {size / 2 - byes === 1 ? "Match" : "Matches"}
+                    {byes > 0 && <> · {byes} {byes === 1 ? "Freilos" : "Freilose"} ({seeding === "rank" ? "an die Besten nach Rangpunkten" : "zufällig"})</>}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-1">
+                  {inDraw.map(u => <span key={u.id} className="rounded-full border border-line bg-surface px-2 py-0.5 text-xs font-semibold text-fg">{userName(u)}</span>)}
+                  {out.map(u => <span key={u.id} className="rounded-full border border-dashed border-line-strong px-2 py-0.5 text-xs text-subtle line-through" title="Nicht bereit — wird nicht ausgelost">{userName(u)}</span>)}
+                </div>
+                <p className="text-xs text-subtle">
+                  Die Paarungen entstehen beim Auslosen{seeding === "rank" ? " — nach Rangpunkten gesetzt, die Stärksten treffen erst spät aufeinander" : " zufällig"}.
+                  Passt es nicht, mischt „Auslosung zurücksetzen“ im Werkzeug-Menü neu, solange kein Ergebnis eingetragen ist.
+                </p>
+              </div>
+            );
+          })()}
           <button onClick={generateRoundRobinMatches} disabled={loading}
-            className="flex items-center gap-1.5 text-xs text-blue-300 hover:text-blue-200 bg-blue-900/30 hover:bg-blue-900/40 border border-blue-900/50 rounded-lg px-3 py-2 transition-colors w-full justify-center">
+            className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-fg bg-primary-soft hover:bg-primary-soft border border-primary/30 rounded-control px-3 py-2 transition-colors w-full justify-center">
             <RefreshCw className="w-3.5 h-3.5" />
             {isBracketFormat ? "K.O.-Baum auslosen" : isLiga ? "Spieltage auslosen" : "Paarungen auslosen"}
           </button>
@@ -1790,7 +1893,7 @@ export default function TournamentManager({
             drawCount={drawCount} seedingToggle={seedingToggle} />
           {groupIndexes.map(gi => (
             <div key={`g${gi}`}>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>
+              <p className="text-xs text-subtle uppercase tracking-wide mb-1.5">{groupLabel(gi)} · Spiele</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {groupMatches.filter(m => m.groupIndex === gi).map(m => renderDuelCard(m, true))}
               </div>
@@ -1800,7 +1903,7 @@ export default function TournamentManager({
           {treeView}
           {!showTree && Array.from({ length: knockoutRounds }, (_, i) => i + 1).map(round => (
             <div key={`ko${round}`}>
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
+              <p className="text-xs text-subtle uppercase tracking-wide mb-1.5">{knockoutRoundLabel(round, knockoutRounds)}</p>
               <div className="space-y-2">
                 {knockoutMatches.filter(m => m.round === round).map(m => renderDuelCard(m, m.leg === 1))}
               </div>
@@ -1813,7 +1916,7 @@ export default function TournamentManager({
       {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
       {!is1v1 && statView === "rounds" && expanded.size > 0 && (
         <button onClick={saveAllExpanded} disabled={loading}
-          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-primary-hover disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
+          className="flex items-center gap-1.5 text-xs bg-primary/80 hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-control px-3 py-2 w-full justify-center transition-colors">
           <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
         </button>
       )}
@@ -1823,13 +1926,13 @@ export default function TournamentManager({
           <div className="flex items-center gap-1">
             {([["table", "Tabelle"], ["rounds", "Runden"]] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setStatView(k)} aria-pressed={statView === k}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                  statView === k ? "bg-primary/15 text-teal-200 ring-1 ring-primary/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+                className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors ${
+                  statView === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-subtle hover:text-fg/90 hover:bg-line"
                 }`}>
                 {label}
               </button>
             ))}
-            <span className="ml-auto text-xs text-gray-600">
+            <span className="ml-auto text-xs text-subtle">
               {statView === "table"
                 ? (hasEventPoints ? "Wertung nach Eventpunkten, wie beim Abschluss" : tournament.format === "avg_stats" ? `Wertung nach Ø pro Runde · ${avgDirection === "low" ? "niedrigster" : "höchster"} gewinnt` : `Wertung nach ${visibleStatFields[0] ?? "erstem Stat"}`)
                 : "Runde aufklappen zum Korrigieren"}
@@ -1837,7 +1940,7 @@ export default function TournamentManager({
           </div>
           {goalBar}
           {statView === "table" && (
-            <div className="rounded-xl border border-line bg-surface-2 p-3">
+            <div className="rounded-control border border-line bg-surface-2 p-3">
               <StatStandingsTable rows={standings} fields={visibleStatFields} isAvg={tournament.format === "avg_stats"}
                 hasPoints={!!eventPoints} nameOf={nameOfUser} maxRounds={sp?.played ?? 0} />
             </div>
@@ -1856,7 +1959,7 @@ export default function TournamentManager({
       {!isGroupKnockout && (!isFfa || statView === "rounds") && !showTree && (
       <div className="space-y-2">
         {tournament.matches.length === 0 && (
-          <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
+          <div className="text-center py-6 bg-surface-2/50 rounded-control text-subtle text-sm border border-line-strong border-dashed">
             {(isRoundRobin || isLiga)
               ? 'Spieler im Reiter "Teilnehmer" anmelden, dann hier auf "Paarungen generieren" klicken.'
               : isBracketFormat
@@ -1865,10 +1968,28 @@ export default function TournamentManager({
           </div>
         )}
 
+        {is1v1 && tournament.matches.length > 0 && (
+          <div className="flex flex-wrap gap-1.5" role="toolbar" aria-label="Matches filtern">
+            {(["all", "open", "live", "reported", "done"] as const).map(k => {
+              const count = k === "all" ? tournament.matches.length : tournament.matches.filter(m => matchStatus(m) === k).length;
+              if (k !== "all" && count === 0) return null;
+              return (
+                <button key={k} type="button" onClick={() => setListFilter(k)} aria-pressed={listFilter === k}
+                  className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition-colors ${
+                    listFilter === k ? "border-primary/40 bg-primary-soft text-primary-fg" : "border-line bg-surface text-muted hover:text-fg"
+                  }`}>
+                  {k !== "all" && <span className={`size-2 rounded-full ${STATUS_DOT[k].cls}`} />}
+                  {k === "all" ? "Alle" : STATUS_DOT[k].label} <span className="text-xs tabular-nums opacity-80">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {is1v1
           ? /* ── 1v1 / bracket / liga ────────────────────────────────── */
             Array.from({ length: rounds }, (_, i) => i + 1).map(round => {
-              const rMatches = tournament.matches.filter(m => m.round === round);
+              const rMatches = tournament.matches.filter(m => m.round === round && (listFilter === "all" || matchStatus(m) === listFilter));
+              if (rMatches.length === 0 && listFilter !== "all") return null;
               const rLabel = isLiga
                 ? `Spieltag ${round}`
                 : round === rounds       ? "Finale"
@@ -1877,7 +1998,7 @@ export default function TournamentManager({
                 : `Runde ${round}`;
               return (
                 <div key={round}>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1.5">{rLabel}</p>
+                  <p className="text-xs font-bold text-subtle uppercase tracking-wide mb-1.5">{rLabel}</p>
                   <div className="space-y-2">
                     {rMatches.map(match => renderDuelCard(match, supportsDraw))}
                   </div>
@@ -1898,14 +2019,14 @@ export default function TournamentManager({
           setMScheduled(nowForDatetimeLocal());
           setShowAdd(true);
         }}
-          className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-4 py-2 w-full justify-center transition-colors">
+          className="flex items-center gap-2 text-sm text-muted hover:text-fg border border-line-strong hover:border-gray-500 rounded-control px-4 py-2 w-full justify-center transition-colors">
           <Plus className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
         </button>
       ) : (
-        <div className="border border-primary/40 rounded-lg p-4 bg-primary-soft/60 space-y-3">
+        <div className="border border-primary/40 rounded-control p-4 bg-primary-soft/60 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-white">{isFfa ? "Neue Runde" : "Neues Match"}</p>
-            <button onClick={() => setShowAdd(false)} className="text-gray-500 hover:text-white">
+            <p className="text-sm font-medium text-fg">{isFfa ? "Neue Runde" : "Neues Match"}</p>
+            <button onClick={() => setShowAdd(false)} className="text-subtle hover:text-fg">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -1919,14 +2040,14 @@ export default function TournamentManager({
           {!isFfa && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Titel (optional)</label>
+              <label className="text-xs text-subtle block mb-1">Titel (optional)</label>
               <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
                 placeholder="z.B. Gruppenphase A"
                 className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Datum & Uhrzeit</label>
+              <label className="text-xs text-subtle block mb-1">Datum & Uhrzeit</label>
               <input type="datetime-local" value={mScheduled} onChange={e => setMScheduled(e.target.value)}
                 className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
               />
@@ -1934,14 +2055,14 @@ export default function TournamentManager({
             {is1v1 && (
               <>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">{isLiga ? "Spieltag" : "Runde"}</label>
+                  <label className="text-xs text-subtle block mb-1">{isLiga ? "Spieltag" : "Runde"}</label>
                   <NumberInput min={1} value={mRound} onChange={e => setMRound(Number(e.target.value))}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                    className="w-full text-sm bg-surface-2 border border-line-strong text-fg rounded-control px-3 py-2"
                   />
                 </div>
                 <div />
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Spieler 1</label>
+                  <label className="text-xs text-subtle block mb-1">Spieler 1</label>
                   <select value={mP1} onChange={e => setMP1(e.target.value)}
                     className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2">
                     <option value="">– wählen –</option>
@@ -1949,7 +2070,7 @@ export default function TournamentManager({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Spieler 2</label>
+                  <label className="text-xs text-subtle block mb-1">Spieler 2</label>
                   <select value={mP2} onChange={e => setMP2(e.target.value)}
                     className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2">
                     <option value="">– wählen –</option>
@@ -1963,16 +2084,16 @@ export default function TournamentManager({
 
           {isFfa && (
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Teilnehmer ({mFfaIds.length} gewählt)</label>
+              <label className="text-xs text-subtle block mb-1">Teilnehmer ({mFfaIds.length} gewählt)</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-32 overflow-y-auto">
                 {allUsers.map(u => (
-                  <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
+                  <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-surface-2 hover:bg-surface-3 cursor-pointer text-xs">
                     <input type="checkbox"
                       checked={mFfaIds.includes(u.id)}
                       onChange={e => setMFfaIds(e.target.checked ? [...mFfaIds, u.id] : mFfaIds.filter(id => id !== u.id))}
                       className="rounded shrink-0"
                     />
-                    <span className="text-white truncate">{userName(u)}</span>
+                    <span className="text-fg truncate">{userName(u)}</span>
                   </label>
                 ))}
               </div>
@@ -1981,7 +2102,7 @@ export default function TournamentManager({
 
           {!isFfa && (
           <div>
-            <label className="text-xs text-gray-500 block mb-1">Notizen (optional)</label>
+            <label className="text-xs text-subtle block mb-1">Notizen (optional)</label>
             <input type="text" value={mNotes} onChange={e => setMNotes(e.target.value)}
               placeholder="z.B. Map: Verdansk, Server: EU"
               className="w-full text-sm bg-surface-2 border border-line text-fg rounded-control px-3 py-2"
@@ -1990,7 +2111,7 @@ export default function TournamentManager({
           )}
 
           <button onClick={addMatch} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
-            className="flex items-center gap-2 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-lg px-4 py-2">
+            className="flex items-center gap-2 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-control px-4 py-2">
             <Plus className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
           </button>
         </div>

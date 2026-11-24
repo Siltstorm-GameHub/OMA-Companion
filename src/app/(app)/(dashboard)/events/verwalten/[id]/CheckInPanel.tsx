@@ -42,7 +42,7 @@ export default function CheckInPanel({ ctx, drawn }: { ctx: EventEdit; drawn: bo
       )}
 
       {savedOn && !drawn && notReady.length > 0 && (
-        <div className="rounded-control border border-amber-500/25 bg-amber-500/5 p-3 space-y-2">
+        <div className="rounded-control border border-warning/30 bg-amber-500/5 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <p className="text-xs text-amber-200 flex-1">
               {notReady.length} von {registeredIds.size} noch nicht bereit. Sie werden bei der Auslosung nicht berücksichtigt.

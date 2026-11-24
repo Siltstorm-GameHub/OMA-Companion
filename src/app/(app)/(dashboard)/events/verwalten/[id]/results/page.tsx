@@ -5,8 +5,9 @@ import { ChevronLeft } from "@/components/icons";
 import ResultReviewClient from "./ResultReviewClient";
 import { loadReviewData } from "@/lib/tournaments/review-data";
 
-export default async function AdminEventResultsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminEventResultsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ modus?: string }> }) {
   const { id } = await params;
+  const { modus } = await searchParams;
   await requireEventManager(id);
 
   const data = await loadReviewData(id);
@@ -21,7 +22,7 @@ export default async function AdminEventResultsPage({ params }: { params: Promis
         <span>/</span>
         <span className="text-fg/90">Ergebnis-Prüfung</span>
       </div>
-      <ResultReviewClient eventId={data.event.id} matches={data.matches} statFields={data.statFields} />
+      <ResultReviewClient eventId={data.event.id} matches={data.matches} statFields={data.statFields} initialMode={modus === "pruefen" ? "review" : "open"} />
     </div>
   );
 }

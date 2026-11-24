@@ -28,7 +28,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
         </p>
       </div>
 
-      <div className="rounded-control p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
+      <div className="rounded-control p-4 border border-warning/30 bg-amber-500/5 space-y-2">
         <p className="text-sm font-medium text-amber-300">Statistiken</p>
         <p className="text-xs text-subtle">
           Diese Werte trägst du <strong className="text-muted">in jedem Event</strong> ein. Die Punkte pro Einheit
@@ -159,7 +159,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-500/80 rounded-control px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                  <p className="text-xs text-amber-500/80 rounded-control px-3 py-2 border border-warning/30 bg-amber-500/5">
                     Noch keine summierten Stats konfiguriert. Lege oben Statistiken an oder im nächsten Schritt Umfragen.
                   </p>
                 );
@@ -187,7 +187,7 @@ export default function StepSeriesEventSettings({ w }: { w: EventWizard }) {
             </div>
             {dominionTriggerStats.length > 0 && (
               <p className="text-xs text-coin">
-                Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Tabellenpunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Reihentabelle als „Dominion Bonus" gezählt.
+                Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Tabellenpunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Reihentabelle als „Dominion Bonus“ gezählt.
               </p>
             )}
           </div>

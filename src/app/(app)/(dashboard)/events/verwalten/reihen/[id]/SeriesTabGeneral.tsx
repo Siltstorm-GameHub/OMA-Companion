@@ -45,14 +45,14 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-control px-3 py-1.5 transition-all disabled:opacity-50 ${
-                  hidden ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-fg/90 border-line hover:border-line-strong"
+                  hidden ? "text-amber-400 border-warning/30 bg-amber-500/10 hover:bg-amber-500/20" : "text-fg/90 border-line hover:border-line-strong"
                 } max-lg:min-h-10`}>
                 {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 {hidden ? "Ausgeblendet · einblenden" : "Sichtbar · ausblenden"}
               </button>
               <button type="button" onClick={toggleRegistrationLocked} disabled={registrationLockedBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-control px-3 py-1.5 transition-all disabled:opacity-50 ${
-                  registrationLocked ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20" : "text-fg/90 border-line hover:border-line-strong"
+                  registrationLocked ? "text-amber-400 border-warning/30 bg-amber-500/10 hover:bg-amber-500/20" : "text-fg/90 border-line hover:border-line-strong"
                 } max-lg:min-h-10`}>
                 {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                 {registrationLocked ? "Anmeldung gesperrt · freigeben" : "Selbst-Anmeldung offen · sperren"}

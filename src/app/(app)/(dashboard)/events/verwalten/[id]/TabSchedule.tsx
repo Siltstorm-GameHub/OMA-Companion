@@ -30,7 +30,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
               {TMT_FORMATS.map(f => (
                 <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
                   className={`text-left px-3 py-2.5 rounded-control border transition-colors ${
-                    tmtFormat === f.value ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 bg-gray-800 text-muted hover:border-gray-600"
+                    tmtFormat === f.value ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 bg-gray-800 text-muted hover:border-line-strong"
                   }`}>
                   <p className="text-xs font-medium leading-tight">{f.label}</p>
                   <p className="text-xs text-subtle mt-0.5 leading-tight">{f.desc}</p>
@@ -42,7 +42,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
 
           {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus, ersetzt das ehemalige Format "liga") */}
           {isRoundRobinFamily && (
-            <div className="rounded-control border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+            <div className="rounded-control border border-warning/30 bg-amber-500/5 p-4 space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={tmtPlayHomeAway}
                   onChange={e => setTmtPlayHomeAway(e.target.checked)}
@@ -54,13 +54,13 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setTmtPointsMode("placement")}
                     className={`flex-1 text-xs rounded-control px-3 py-1.5 border transition-colors ${
-                      tmtPointsMode === "placement" ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 text-muted hover:border-gray-600"
+                      tmtPointsMode === "placement" ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 text-muted hover:border-line-strong"
                     }`}>
                     Platzierungspunkte
                   </button>
                   <button type="button" onClick={() => setTmtPointsMode("matchResult")}
                     className={`flex-1 text-xs rounded-control px-3 py-1.5 border transition-colors ${
-                      tmtPointsMode === "matchResult" ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 text-muted hover:border-gray-600"
+                      tmtPointsMode === "matchResult" ? "border-amber-500 bg-warning-soft text-fg" : "border-gray-700 text-muted hover:border-line-strong"
                     }`}>
                     Sieg/Unentschieden-Münzen
                   </button>
@@ -76,7 +76,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
             {usesMatchResultPoints && " Die Münzen pro Match-Ergebnis unten kommen zusätzlich, direkt beim Eintragen."}
           </p>
           {usesMatchResultPoints && (
-            <div className="rounded-control border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="rounded-control border border-warning/30 bg-amber-500/5 p-4">
               <label className="text-xs text-subtle block mb-3">Münzen pro Match-Ergebnis</label>
               <div className="grid grid-cols-2 gap-3">
                 {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
@@ -92,7 +92,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
           )}
 
           {hasStat && (
-            <div className="rounded-control border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="rounded-control border border-warning/30 bg-amber-500/5 p-4">
               {seriesStatRows.length > 0 ? (
                 <div className="space-y-3">
                   <div>
@@ -148,7 +148,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
               viele Punkte welche Endplatzierung gibt. Für Reihen ohne festes Format/Spiel überschreibt
               das die Reihen-weite Konfiguration nur für dieses eine Event. */}
           {["ffa", "coop_stats", "avg_stats"].includes(tmtFormat) && (
-            <div className="rounded-control border border-amber-500/20 bg-amber-500/5 p-4 space-y-4">
+            <div className="rounded-control border border-warning/30 bg-amber-500/5 p-4 space-y-4">
               <div>
                 <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
                 <p className="text-xs text-subtle -mt-1 mb-2">

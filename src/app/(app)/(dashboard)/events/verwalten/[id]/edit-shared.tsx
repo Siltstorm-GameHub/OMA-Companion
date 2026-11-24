@@ -163,7 +163,7 @@ export const STATUS_OPTIONS = ["open", "active"];
 export const STATUS_STYLES: Record<string, string> = {
   open:     "text-primary-fg bg-primary-soft border-primary/30",
   active:   "text-success bg-success-soft border-success/30",
-  umfrage:  "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  umfrage:  "text-amber-400 bg-amber-500/10 border-warning/30",
   finished: "text-subtle bg-surface-2 border-line",
 };
 export const inputCls = "w-full rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";

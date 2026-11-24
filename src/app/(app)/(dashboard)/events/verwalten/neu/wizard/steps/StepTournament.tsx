@@ -32,7 +32,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
           {FORMATS.map(f => (
             <button key={f.value} type="button" onClick={() => setFormat(f.value)}
               className={`flex flex-col items-start gap-1 rounded-control p-3 border-2 transition-all text-left ${
-                format === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
+                format === f.value ? "border-warning/30 bg-amber-500/10" : "border-line bg-surface-2 hover:border-line-strong"
               }`}>
               <span className={`text-sm font-semibold ${format === f.value ? "text-amber-300" : "text-fg/90"}`}>{f.label}</span>
               <span className="text-xs text-subtle">{f.desc}</span>
@@ -44,7 +44,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       )}
 
       {hasStat && !seriesFixedFormat && (
-        <div className="rounded-control p-4 border border-amber-500/20 bg-amber-500/5">
+        <div className="rounded-control p-4 border border-warning/30 bg-amber-500/5">
           <p className="text-sm font-medium text-amber-300 mb-3">Stat-Felder</p>
           <StatFieldEditor fields={statFields} onChange={setStatFields} isAvg={format === "avg_stats"} />
           {format === "avg_stats" && (
@@ -90,7 +90,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
       )}
 
       {!seriesFixedFormat && format === "round_robin" && (
-        <div className="rounded-control p-4 border border-amber-500/20 bg-amber-500/5 space-y-3">
+        <div className="rounded-control p-4 border border-warning/30 bg-amber-500/5 space-y-3">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={playHomeAway} onChange={e => setPlayHomeAway(e.target.checked)} className="rounded shrink-0" />
             <span className="text-sm text-fg">Hin- und Rückrunde spielen</span>
