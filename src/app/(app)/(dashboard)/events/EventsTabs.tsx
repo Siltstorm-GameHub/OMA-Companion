@@ -2,23 +2,26 @@
 import { Suspense, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
-import { CalendarDays, Settings, Target, Users, User } from "@/components/icons";
+import { CalendarDays, Settings, Target, Users } from "@/components/icons";
 
-const TAB_KEYS = ["events", "mine", "predictions", "squads"] as const;
+// "Meine Events" gibt es nicht mehr als Reiter: die eigenen Anmeldungen zeigen "Für dich" und der
+// Filter "Angemeldet" in der Liste. Alte Links (?tab=mine) landen in der Liste mit diesem Filter
+// (siehe EventFilterShell).
+const TAB_KEYS = ["events", "predictions", "squads"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 function EventsTabsInner({
   eventsPanel,
-  myEventsPanel,
   predictionsPanel,
   squadsPanel,
+  loggedIn,
   manageCount = 0,
 }: {
   eventsPanel: ReactNode;
-  /** null = Gast (kein Tab "Meine Events") */
-  myEventsPanel: ReactNode | null;
   predictionsPanel: ReactNode;
   squadsPanel: ReactNode;
+  /** false = Gast (kein Reiter "Verwalten") */
+  loggedIn: boolean;
   /** Offene Aufgaben in der Verwaltung (Zahl am Reiter "Verwalten") */
   manageCount?: number;
 }) {
@@ -26,9 +29,7 @@ function EventsTabsInner({
   // "duels" = alter Tab-Key (Links aus älteren Benachrichtigungen) → Vorhersagen
   const rawTab = searchParams.get("tab");
   const tabParam = rawTab === "duels" ? "predictions" : rawTab;
-  const initialTab: TabKey = (TAB_KEYS as readonly string[]).includes(tabParam ?? "") && (tabParam !== "mine" || myEventsPanel)
-    ? (tabParam as TabKey)
-    : "events";
+  const initialTab: TabKey = (TAB_KEYS as readonly string[]).includes(tabParam ?? "") ? (tabParam as TabKey) : "events";
   const [active, setActive] = useState<string>(initialTab);
   const router = useRouter();
   // "Verwalten" hat eine eigene Route (/events/verwalten mit Unterseiten) — der Reiter führt dorthin
@@ -42,14 +43,12 @@ function EventsTabsInner({
         className="overflow-x-auto scrollbar-none whitespace-nowrap"
         tabs={[
           { key: "events", label: "Events", icon: CalendarDays },
-          ...(myEventsPanel ? [{ key: "mine", label: "Meine Events", icon: User }] : []),
           { key: "predictions", label: "Vorhersagen", icon: Target },
           { key: "squads", label: "Squads", icon: Users },
-          ...(myEventsPanel ? [{ key: "manage", label: "Verwalten", icon: Settings, count: manageCount }] : []),
+          ...(loggedIn ? [{ key: "manage", label: "Verwalten", icon: Settings, count: manageCount }] : []),
         ]}
       />
       <TabPanel tabKey="events" active={active}>{eventsPanel}</TabPanel>
-      {myEventsPanel && <TabPanel tabKey="mine" active={active}>{myEventsPanel}</TabPanel>}
       <TabPanel tabKey="predictions" active={active}>{predictionsPanel}</TabPanel>
       <TabPanel tabKey="squads" active={active}>{squadsPanel}</TabPanel>
     </div>
@@ -58,9 +57,9 @@ function EventsTabsInner({
 
 export default function EventsTabs(props: {
   eventsPanel: ReactNode;
-  myEventsPanel: ReactNode | null;
   predictionsPanel: ReactNode;
   squadsPanel: ReactNode;
+  loggedIn: boolean;
   manageCount?: number;
 }) {
   return (

@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { CalendarDays, Settings, Target, User, Users } from "@/components/icons";
+import { CalendarDays, Settings, Target, Users } from "@/components/icons";
 
 /** Reiter der Events-Seite als Links — für Unterseiten wie /events/verwalten, die eine eigene Route
  *  haben. Sieht aus wie die Reiter auf /events (EventsTabs, components/admin/Tabs "underline"). */
 const TABS = [
   { key: "events", label: "Events", href: "/events", icon: CalendarDays },
-  { key: "mine", label: "Meine Events", href: "/events?tab=mine", icon: User },
   { key: "predictions", label: "Vorhersagen", href: "/events?tab=predictions", icon: Target },
   { key: "squads", label: "Squads", href: "/events?tab=squads", icon: Users },
   { key: "manage", label: "Verwalten", href: "/events/verwalten", icon: Settings },

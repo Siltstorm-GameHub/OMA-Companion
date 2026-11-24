@@ -538,3 +538,9 @@ a.card-hover:active { transform: scale(0.985); }
   0%, 100% { box-shadow: 0 0 10px rgba(103,232,249,0.3); }
   50%      { box-shadow: 0 0 22px rgba(103,232,249,0.6), 0 0 6px rgba(167,139,250,0.5); }
 }
+
+/* ── Eventliste: Kacheln oder Liste (EventFilterShell setzt data-ev-layout; jede Karte ist in beiden
+   Varianten gerendert, die gerade nicht gewählte ist ausgeblendet) ── */
+[data-ev-layout="tiles"] .ev-row { display: none; }
+[data-ev-layout="list"] .ev-tile { display: none; }
+[data-ev-layout="list"] .ev-grid { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }

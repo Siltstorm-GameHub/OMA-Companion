@@ -33,7 +33,7 @@ export default function ProfileRecentEvents({ eventRegs, userId, isOwn }: { even
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
           <CalendarDays className="w-3.5 h-3.5 text-primary/70" /> Letzte Events
         </h2>
-        {isOwn && <Link href="/events?tab=mine" className="text-xs text-primary hover:text-primary-fg">Meine Events →</Link>}
+        {isOwn && <Link href="/events?filter=angemeldet" className="text-xs text-primary hover:text-primary-fg">Meine Events →</Link>}
       </div>
       {eventRegs.length === 0 ? (
         <div className="glass rounded-2xl px-4 py-5 text-center">

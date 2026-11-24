@@ -7,7 +7,7 @@ import { parseCycleConfig } from "@/lib/series-cycles-config";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
-import { ExternalLink, Plus, Repeat, Users, EyeOff } from "@/components/icons";
+import { ChevronDown, Plus, Repeat, Users, EyeOff } from "@/components/icons";
 import SyncButton from "./SyncButton";
 import { GateLink, GuestMoreCta } from "@/components/GuestGate";
 import EventCardActions from "@/components/events/EventCardActions";
@@ -22,16 +22,18 @@ import EventsTabs from "./EventsTabs";
 import { loadManageAttentionCount } from "@/lib/admin-inbox";
 import { getCaptainedSquadIds } from "@/lib/roles";
 import { attachCommentCounts } from "@/lib/event-comments";
-import MyEventsPanel from "./MyEventsPanel";
 import SquadsList from "../squads/SquadsList";
 import EventPredictionsPanel from "./EventPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import EventCard, { type EventCardData } from "@/components/events/EventCard";
-import NextEventHero from "@/components/events/NextEventHero";
+import ForYouStrip, { type ForYouItem } from "@/components/events/ForYouStrip";
+import LiveRefresh from "@/app/(app)/(dashboard)/tournament/[id]/LiveRefresh";
+import { isPeriodEvent } from "@/lib/event-period";
+import { checkInOpensAt } from "@/lib/checkin";
 import RecentResultCard, { type RecentResultData } from "@/components/events/RecentResultCard";
 import EventFilterShell, { type EventFilterGame, type EventFilterDay } from "@/components/events/EventFilterShell";
-import { EVENT_CARD_INCLUDE, eventDiscordUrl, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
+import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf, toEventCardData, type EventCardSource } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import { dayBucket, parseRanking, placementOf, startsInLabel } from "@/lib/event-display";
 import { gameNameKey } from "@/lib/games/slug";
@@ -144,27 +146,28 @@ export default async function EventsPage() {
   const cards = new Map<string, EventCardData>(visibleUpcoming.map(i => [i.ev.id, toEventCardData(i.ev, viewer, userId, now)]));
   await attachCommentCounts([...cards.values()], userId);
 
-  // ── "Dein nächstes Event": laufend vor anstehend, Umfragephase zählt nicht mehr ──
-  const heroItem = userId
-    ? visibleUpcoming.find(i => i.ev.status === "active" && isUserRegistered(i.ev, userId))
-      ?? visibleUpcoming.find(i => (i.ev.status === "open" || i.ev.status === "closed") && isUserRegistered(i.ev, userId))
-    : undefined;
-
   // ── Gruppen: Läuft gerade / Heute / Diese Woche / danach pro Monat ──
   // "Läuft gerade" = laufendes Turnier, Abstimmungsphase oder ein schon gestartetes Zeitraum-Event
   // (Woche/Monat). Früher standen diese unter "Heute", obwohl sie z. B. "bis 30." laufen.
   const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric", timeZone: BERLIN_TZ });
-  const groups: { key: string; label: string; items: Item[] }[] = [];
+  const groups: { key: string; label: string; rail?: boolean; rank: number; items: Item[] }[] = [];
+  // Abstimmungsphase: das Event ist vorbei, nur die Umfrage läuft noch → eigene, kompakte Gruppe
+  const isPollPhase = (i: Item) => i.ev.status === "umfrage";
+  // Wochen-/Monats-Events, die schon laufen → schmale Leiste statt großer Kacheln
+  const isPeriodRunning = (i: Item) => isPeriodEvent(i.ev) && i.ev.startAt.getTime() <= now.getTime()
+    && (!i.ev.endAt || i.ev.endAt.getTime() > now.getTime());
   const isRunningNow = (i: Item) =>
-    i.ev.status === "active" || i.ev.status === "umfrage" || i.ev.startAt.getTime() <= now.getTime();
-  const groupOf = (i: Item) => {
-    if (isRunningNow(i)) return { key: "running", label: "Läuft gerade" };
+    i.ev.status === "active" || i.ev.startAt.getTime() <= now.getTime();
+  const groupOf = (i: Item): { key: string; label: string; rail?: boolean; rank: number } => {
+    if (isPollPhase(i)) return { key: "vote", label: "Abstimmung läuft", rail: true, rank: 2 };
+    if (isPeriodRunning(i)) return { key: "period", label: "Läuft über mehrere Tage", rail: true, rank: 1 };
+    if (isRunningNow(i)) return { key: "running", label: "Läuft gerade", rank: 0 };
     const bucket = dayBucket(i.ev.startAt, now, false);
-    if (bucket === "today") return { key: "today", label: "Heute" };
-    if (bucket === "week") return { key: "week", label: "Diese Woche" };
+    if (bucket === "today") return { key: "today", label: "Heute", rank: 3 };
+    if (bucket === "week") return { key: "week", label: "Diese Woche", rank: 4 };
     const p = getBerlinDateParts(i.ev.startAt);
     const label = MONTH_FORMATTER.format(i.ev.startAt);
-    return { key: `${p.year}-${p.month}`, label: label.charAt(0).toUpperCase() + label.slice(1) };
+    return { key: `${p.year}-${p.month}`, label: label.charAt(0).toUpperCase() + label.slice(1), rank: 5 + p.year * 12 + p.month };
   };
   const moreInGroup = new Map<string, number>();
   for (const item of visibleUpcoming) {
@@ -179,6 +182,14 @@ export default async function EventsPage() {
     }
     group.items.push(item);
   }
+  groups.sort((a, b) => a.rank - b.rank);
+  // (10) Gäste: je Gruppe, wie viele Events erst nach dem Login zu sehen sind
+  const guestHiddenByGroup = new Map<string, number>();
+  if (!userId) for (const item of upcomingItems.slice(visibleUpcoming.length)) {
+    const k = groupOf(item).key;
+    guestHiddenByGroup.set(k, (guestHiddenByGroup.get(k) ?? 0) + 1);
+  }
+  const hasLive = groups.some(g => g.key === "running");
   // Ausgeblendete Termine trotzdem im Wochen-Streifen zählen (Tag-Filter zeigt dann die Reihen-Karte)
   const dayKeyOf = (d: Date) => { const p = getBerlinDateParts(d); return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`; };
 
@@ -227,9 +238,11 @@ export default async function EventsPage() {
   const weekDays: EventFilterDay[] = Array.from({ length: 7 }, (_, d) => {
     const date = new Date(now.getTime() + d * 86_400_000);
     const key = dayKeyOf(date);
-    const count = visibleUpcoming.filter(i => dayKeysOf(i).includes(key)).length;
+    const count = visibleUpcoming.filter(i => !isPeriodEvent(i.ev) && dayKeyOf(i.ev.startAt) === key).length
+      + visibleUpcoming.filter(i => isPeriodEvent(i.ev) && dayKeyOf(i.ev.startAt) === key).length;
+    const running = visibleUpcoming.filter(i => isPeriodEvent(i.ev) && dayKeyOf(i.ev.startAt) !== key && dayKeysOf(i).includes(key)).length;
     const wd = new Intl.DateTimeFormat("de-DE", { weekday: "short", timeZone: BERLIN_TZ }).format(date).replace(".", "");
-    return { key, weekday: d === 0 ? "Heute" : wd, day: getBerlinDateParts(date).day, count };
+    return { key, weekday: d === 0 ? "Heute" : wd, day: getBerlinDateParts(date).day, count, running };
   });
 
   // ── Kürzlich beendet: Treppchen + eigene Platzierung ──
@@ -258,6 +271,97 @@ export default async function EventsPage() {
 
 
   const hasAnything = recentFinishedItems.length > 0 || upcomingItems.length > 0 || finishedItems.length > 0;
+
+  // ── (1) "Für dich": was dich gerade betrifft (Kurzfassung der Karte auf der Detailseite) ──
+  const forYouItems: ForYouItem[] = [];
+  if (userId) {
+    const regItems = visibleUpcoming.filter(i => isUserRegistered(i.ev, userId));
+    const regIds = regItems.map(i => i.ev.id);
+    const titleOf = new Map(allItems.map(i => [i.ev.id, i.ev.title]));
+    const [myRegs, oppReports, openPolls] = await Promise.all([
+      regIds.length ? prisma.eventRegistration.findMany({ where: { userId, eventId: { in: regIds } }, select: { eventId: true, checkedInAt: true, role: true } }) : Promise.resolve([]),
+      prisma.matchResultSubmission.findMany({
+        where: { status: "pending", forUserId: "", userId: { not: userId }, match: { OR: [{ player1Id: userId }, { player2Id: userId }] } },
+        select: { eventId: true, user: { select: { username: true, name: true } } },
+        take: 3,
+      }),
+      regIds.length ? prisma.eventPoll.findMany({
+        where: { eventId: { in: regIds }, startAt: { lte: now }, endAt: { gt: now } },
+        select: { eventId: true, votes: { where: { voterId: userId }, select: { id: true } } },
+      }) : Promise.resolve([]),
+    ]);
+    for (const r of oppReports) {
+      const t = titleOf.get(r.eventId);
+      if (!t) continue;
+      forYouItems.push({ key: `opp-${r.eventId}`, tone: "amber", glyph: "swords", title: `${r.user.username ?? r.user.name ?? "Dein Gegner"} hat ein Ergebnis gemeldet`, text: `${t} · stimmt das?`, href: `/tournament/${r.eventId}#dein-match`, cta: "Prüfen" });
+    }
+    for (const i of regItems) {
+      const reg = myRegs.find(r => r.eventId === i.ev.id);
+      if (!reg || reg.role === "spectator" || reg.checkedInAt || !i.ev.checkInEnabled) continue;
+      if (now >= checkInOpensAt(i.ev) && now < i.ev.startAt) {
+        forYouItems.push({ key: `ready-${i.ev.id}`, tone: "amber", glyph: "clock", title: "Meld dich bereit", text: `${i.ev.title} · startet ${startsInLabel(i.ev.startAt, now) ?? "gleich"}`, href: `/tournament/${i.ev.id}`, cta: "Bin bereit" });
+      }
+    }
+    const unvoted = new Set(openPolls.filter(p => p.votes.length === 0).map(p => p.eventId));
+    for (const id of unvoted) {
+      forYouItems.push({ key: `vote-${id}`, tone: "violet", glyph: "vote", title: "Deine Stimme fehlt", text: titleOf.get(id) ?? "", href: `/tournament/${id}#abstimmung`, cta: "Abstimmen" });
+    }
+    const next = regItems.find(i => i.ev.status !== "umfrage" && !isPeriodRunning(i));
+    if (next) {
+      const live = next.ev.startAt <= now;
+      forYouItems.push({
+        key: `next-${next.ev.id}`, tone: "teal", glyph: live ? "fire" : "calendar",
+        title: live ? `Läuft gerade: ${next.ev.title}` : `Dein nächstes Event: ${next.ev.title}`,
+        text: live ? "Du bist dabei" : `startet ${startsInLabel(next.ev.startAt, now) ?? "bald"}${next.ev.game ? ` · ${next.ev.game}` : ""}`,
+        href: `/tournament/${next.ev.id}`, cta: "Ansehen",
+      });
+    }
+  }
+
+  // ── (8) Beendet: die letzten Ergebnisse als Karten, der Rest aufklappbar ──
+  const finishedCards = recentResults.slice(0, 4);
+  const finishedList = [...recentFinishedItems.slice(4), ...visibleFinished];
+  const finishedSection = (finishedCards.length > 0 || finishedList.length > 0) ? (
+    <section aria-label="Beendet" className="space-y-2">
+      <h2 className="flex items-center gap-3 text-base font-extrabold text-fg">
+        Beendet <span className="text-xs font-semibold text-subtle">{finishedCards.length + finishedList.length}</span>
+        <span className="h-px flex-1 bg-line" />
+      </h2>
+      {finishedCards.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {finishedCards.map(r => <RecentResultCard key={r.id} r={r} />)}
+        </div>
+      )}
+      {finishedList.length > 0 && (
+        <details className="group">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-fg hover:border-line-strong [&::-webkit-details-marker]:hidden">
+            {finishedCards.length > 0 ? "Alle beendeten" : "Beendete Events"} anzeigen
+            <span className="text-xs font-semibold text-subtle tabular-nums">{finishedList.length}</span>
+            <ChevronDown className="ml-auto size-4 text-subtle transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="mt-1.5 divide-y divide-line overflow-hidden rounded-control border border-line bg-surface">
+            {finishedList.map(({ ev }) => (
+              <li key={`ev-fin-${ev.id}`}>
+                <EventCardLink href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
+                  className="group/row flex min-h-12 items-center gap-3 px-3 py-2 hover:bg-surface-2 transition-colors">
+                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-10 h-7 shrink-0" rounded="rounded" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-fg group-hover/row:text-primary-fg">
+                      {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}{ev.title}
+                    </span>
+                    <span className="block truncate text-xs text-subtle">
+                      {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}{ev.series && <> · {ev.series.name}</>}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-muted tabular-nums"><Users className="size-3.5" />{playersOf(ev).length}</span>
+                </EventCardLink>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  ) : null;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -289,153 +393,112 @@ export default async function EventsPage() {
           />
         )}
 
-        {heroItem && (
-          <NextEventHero
-            ev={cards.get(heroItem.ev.id)!}
-            startsIn={startsInLabel(heroItem.ev.startAt, now)}
-            discordUrl={eventDiscordUrl(heroItem.ev)}
-          />
-        )}
+        <ForYouStrip items={forYouItems.slice(0, 4)} />
 
-        {recentResults.length > 0 && (
-          <section aria-label="Kürzlich beendet" className="space-y-2">
-            <h2 className="flex items-center gap-3 text-xs font-semibold text-gray-300">
-              Kürzlich beendet <span className="h-px flex-1 bg-line" />
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {recentResults.map(r => <RecentResultCard key={r.id} r={r} />)}
-            </div>
-          </section>
-        )}
+        {/* Frische Ergebnisse (≤ 3 Tage) oben, sonst steht "Beendet" unten */}
+        {recentResults.length > 0 && finishedSection}
+
+        {hasLive && <div className="-mb-2 flex justify-end"><LiveRefresh /></div>}
 
         {visibleUpcoming.length > 0 && (
           <EventFilterShell games={gameChips} days={weekDays} loggedIn={!!userId}>
-            {groups.map(group => (
-              <section key={group.key} data-ev-section aria-label={group.label} className="mb-5 last:mb-0">
-                <h2 className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] lg:top-[4.5rem] z-20 flex items-center gap-3 py-2 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-xs font-semibold text-gray-300 tracking-wide">
-                  {group.label}
-                  <span className="text-gray-600 font-normal">{group.items.length}</span>
-                  <span className="h-px flex-1 bg-line" />
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mt-2">
-                  {group.items.map(item => {
-                    const card = cards.get(item.ev.id)!;
-                    return (
-                      <div key={item.ev.id} data-ev
-                        data-registered={card.isRegistered ? "1" : undefined}
-                        data-mine={card.relevance.length > 0 ? "1" : undefined}
-                        data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}
-                        data-kind={card.kind}
-                        data-days={dayKeysOf(item).join(" ")}>
-                        <ScrollReveal className="h-full">
-                          <EventCard ev={card} actions={<EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />}
-                            extra={(() => {
-                              if (!item.ev.seriesId) return undefined;
-                              const more = (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) + (moreInGroup.get(`${group.key}:${item.ev.seriesId}`) ?? 0);
-                              if (more <= 0) return undefined;
-                              return (
-                                <Link href={`/events/series/${item.ev.seriesId}`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-fg hover:text-fg">
-                                  <Repeat className="size-3.5" /> +{more} {more === 1 ? "weiterer Termin" : "weitere Termine"} dieser Reihe
-                                </Link>
-                              );
-                            })()} />
-                        </ScrollReveal>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
+            {groups.map(group => {
+              const hiddenForGuest = guestHiddenByGroup.get(group.key) ?? 0;
+              const renderItem = (item: Item, rail: boolean) => {
+                const card = cards.get(item.ev.id)!;
+                const actions = <EventCardActions ev={item.ev} card={card} viewer={viewer} userId={userId} />;
+                const more = item.ev.seriesId ? (moreCyclesBySeries.get(item.ev.seriesId) ?? 0) + (moreInGroup.get(`${group.key}:${item.ev.seriesId}`) ?? 0) : 0;
+                const extra = more > 0 ? (
+                  <Link href={`/events/series/${item.ev.seriesId}`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-fg hover:text-fg">
+                    <Repeat className="size-3.5" /> +{more} {more === 1 ? "weiterer Termin" : "weitere Termine"} dieser Reihe
+                  </Link>
+                ) : undefined;
+                return (
+                  <div key={item.ev.id} data-ev
+                    className={rail ? "w-[85%] shrink-0 snap-start sm:w-[22rem]" : undefined}
+                    data-registered={card.isRegistered ? "1" : undefined}
+                    data-mine={card.relevance.length > 0 ? "1" : undefined}
+                    data-game={item.ev.game ? gameNameKey(item.ev.game) : undefined}
+                    data-kind={card.kind}
+                    data-days={dayKeysOf(item).join(" ")}
+                    data-search={[item.ev.title, item.ev.game, item.ev.series?.name].filter(Boolean).join(" ").toLowerCase()}>
+                    {rail ? (
+                      <EventCard ev={card} variant="row" actions={actions} extra={extra} />
+                    ) : (
+                      <>
+                        {/* (5) Kacheln oder Liste: beide Varianten, die gewählte zeigt EventFilterShell */}
+                        <div className="ev-tile h-full"><ScrollReveal className="h-full"><EventCard ev={card} actions={actions} extra={extra} /></ScrollReveal></div>
+                        <div className="ev-row"><EventCard ev={card} variant="row" actions={actions} extra={extra} /></div>
+                      </>
+                    )}
+                  </div>
+                );
+              };
+              return (
+                <section key={group.key} data-ev-section aria-label={group.label} className="mb-6 last:mb-0">
+                  <h2 className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] lg:top-[4.5rem] z-20 flex items-center gap-3 py-2 -mx-5 px-5 sm:mx-0 sm:px-0 bg-canvas text-base font-extrabold text-fg">
+                    {group.key === "running" && <span className="size-2 rounded-full bg-live animate-pulse" aria-hidden />}
+                    {group.label}
+                    <span className="text-xs font-semibold text-subtle tabular-nums">{group.items.length}</span>
+                    <span className="h-px flex-1 bg-line" />
+                  </h2>
+                  {group.rail ? (
+                    // (3) Zeitraum-Events und Abstimmungen: schmale Leiste statt großer Kacheln
+                    <div className="mt-2 -mx-5 flex snap-x gap-2 overflow-x-auto scrollbar-none px-5 sm:mx-0 sm:px-0 pb-1">
+                      {group.items.map(item => renderItem(item, true))}
+                    </div>
+                  ) : (
+                    <div className="ev-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mt-2">
+                      {group.items.map(item => renderItem(item, false))}
+                      {/* (10) Gäste: an Ort und Stelle zeigen, dass hier mehr kommt */}
+                      {hiddenForGuest > 0 && (
+                        <GateLink href="/events" data-ev-placeholder=""
+                          className="flex min-h-24 items-center justify-center rounded-card border border-dashed border-line-strong px-4 text-center text-sm font-semibold text-muted hover:border-primary/40 hover:text-fg">
+                          +{hiddenForGuest} {hiddenForGuest === 1 ? "weiteres Event" : "weitere Events"} nach dem Login
+                        </GateLink>
+                      )}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </EventFilterShell>
         )}
       </div>
 
+      {recentResults.length === 0 && finishedSection}
+
       {isMod && hiddenEvents.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3 pb-1">
-            <div className="h-px flex-1 bg-rose-500/10" />
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-rose-400 uppercase tracking-widest">
-              <EyeOff className="w-3 h-3" /> Ausgeblendet · nur für Admins/Mods sichtbar
-            </span>
-            <div className="h-px flex-1 bg-rose-500/10" />
-          </div>
-
-          {hiddenEvents.map(ev => (
-            <GateLink key={`hidden-${ev.id}`}
-              href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
-              className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
-              <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-9 h-6 shrink-0" rounded="rounded" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
-                  {ev.title}
-                </p>
-                <p className="text-xs text-gray-600">
-                  {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
-                  {ev.series && <> · {ev.series.name}</>}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="flex items-center gap-1 text-xs text-gray-600">
-                  <Users className="w-3 h-3" />{ev._count.registrations}
-                </span>
-                <span className="flex items-center gap-1 text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
-                  <EyeOff className="w-2.5 h-2.5" /> Ausgeblendet
-                </span>
-              </div>
-            </GateLink>
-          ))}
-        </div>
+        <details className="group">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-control border border-warning/30 bg-warning-soft px-4 text-sm font-semibold text-fg [&::-webkit-details-marker]:hidden">
+            <EyeOff className="size-4 text-warning" /> Ausgeblendet
+            <span className="text-xs font-semibold text-muted tabular-nums">{hiddenEvents.length}</span>
+            <span className="text-xs font-normal text-muted">· nur für Mods sichtbar</span>
+            <ChevronDown className="ml-auto size-4 text-subtle transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="mt-1.5 divide-y divide-line overflow-hidden rounded-control border border-line bg-surface">
+            {hiddenEvents.map(ev => (
+              <li key={`hidden-${ev.id}`}>
+                <GateLink href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
+                  className="group/row flex min-h-12 items-center gap-3 px-3 py-2 hover:bg-surface-2 transition-colors">
+                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-10 h-7 shrink-0" rounded="rounded" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-fg group-hover/row:text-primary-fg">{ev.title}</span>
+                    <span className="block truncate text-xs text-subtle">
+                      {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}{ev.series && <> · {ev.series.name}</>}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-muted tabular-nums"><Users className="size-3.5" />{ev._count.registrations}</span>
+                </GateLink>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
-      {visibleFinished.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-3 pb-1">
-            <div className="h-px flex-1 bg-line" />
-            <span className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Abgeschlossen</span>
-            <div className="h-px flex-1 bg-line" />
-          </div>
-
-          {visibleFinished.map(({ ev }) => {
-              const discordUrl = eventDiscordUrl(ev);
-              const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
-              return (
-                <EventCardLink key={`ev-fin-${ev.id}`}
-                  href={cardHref}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-line bg-surface-2 opacity-50 hover:opacity-75 transition-opacity group">
-                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null} className="w-9 h-6 shrink-0" rounded="rounded" />
-                  <div className="flex-1 min-w-0">
-                    <GateLink href={`/tournament/${ev.id}`}
-                      className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
-                      {isOmaOriginal(ev) && <OmaTitlePrefix title={ev.title} />}
-                      {ev.title}
-                    </GateLink>
-                    <p className="text-xs text-gray-600">
-                      {formatBerlinDate(ev.startAt, { day: "2-digit", month: "short", year: "numeric" })}
-                      {ev.series && <> · {ev.series.name}</>}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="flex items-center gap-1 text-xs text-gray-600">
-                      <Users className="w-3 h-3" />{playersOf(ev).length}
-                    </span>
-                    {discordUrl && (
-                      <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-gray-700 hover:text-gray-500 transition-colors">
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    <span className="text-xs text-gray-600 bg-gray-800/60 border border-line px-1.5 py-0.5 rounded">
-                      Beendet
-                    </span>
-                  </div>
-                </EventCardLink>
-              );
-          })}
-        </div>
-      )}
       {guestHasMore && <GuestMoreCta message="Alle Events gibt's nach dem Login" />}
         </>}
-        myEventsPanel={userId ? <MyEventsPanel userId={userId} isModerator={isMod} /> : null}
+        loggedIn={!!userId}
         predictionsPanel={
           userId ? (
             <EventPredictionsPanel
