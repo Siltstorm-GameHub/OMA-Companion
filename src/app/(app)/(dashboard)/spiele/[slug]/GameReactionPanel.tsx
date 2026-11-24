@@ -75,19 +75,19 @@ export default function GameReactionPanel({
   const maxCount = Math.max(1, ...distribution.map(d => d.count));
 
   return (
-    <div className="surface rounded-2xl p-4 sm:p-5 grid sm:grid-cols-2 gap-5">
+    <div className="surface rounded-card p-4 sm:p-5 grid sm:grid-cols-2 gap-5">
       {/* Community-Schnitt */}
       <div className="flex items-center gap-4">
         <div className="text-center shrink-0 w-20">
-          <p className="font-display text-4xl font-extrabold text-white leading-none">{enough ? formatRating(avg!) : "–"}</p>
+          <p className="font-display text-4xl font-extrabold text-fg leading-none">{enough ? formatRating(avg!) : "–"}</p>
           <div className="mt-1.5 flex justify-center"><StarDisplay value={enough ? avg! : 0} className="w-3 h-3" /></div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-subtle mt-1">
             {stats.ratingCount} Bewertung{stats.ratingCount === 1 ? "" : "en"}
           </p>
         </div>
         <div className="flex-1 space-y-1">
           {distribution.map(d => (
-            <div key={d.stars} className="flex items-center gap-2 text-xs text-gray-500">
+            <div key={d.stars} className="flex items-center gap-2 text-xs text-subtle">
               <span className="w-2 text-right">{d.stars}</span>
               <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden">
                 <div className="h-full rounded-full bg-amber-400/80 transition-all duration-300" style={{ width: `${(d.count / maxCount) * 100}%` }} />
@@ -95,7 +95,7 @@ export default function GameReactionPanel({
               <span className="w-4 tabular-nums">{d.count}</span>
             </div>
           ))}
-          {!enough && <p className="text-xs text-gray-600 pt-0.5">Noch zu wenig Bewertungen für einen Schnitt.</p>}
+          {!enough && <p className="text-xs text-subtle pt-0.5">Noch zu wenig Bewertungen für einen Schnitt.</p>}
         </div>
       </div>
 
@@ -104,7 +104,7 @@ export default function GameReactionPanel({
         {canReact ? (
           <>
             <div>
-              <p className="text-xs font-semibold text-gray-300 mb-1">{mine.rating ? "Deine Bewertung" : "Wie findest du's?"}</p>
+              <p className="text-xs font-semibold text-fg/85 mb-1">{mine.rating ? "Deine Bewertung" : "Wie findest du's?"}</p>
               <StarRatingInput value={mine.rating} onChange={rating => save({ rating })} disabled={busy} />
             </div>
             <SwipeStatusButtons
@@ -113,12 +113,12 @@ export default function GameReactionPanel({
               counts={{ in: stats.inCount, wish: stats.wishCount }}
               disabled={busy}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               „Am Start“ sehen alle, „Würde ich holen“ bringt dir Angebots-Hinweise, „Nicht meins“ bleibt privat.
             </p>
           </>
         ) : (
-          <p className="text-xs text-gray-500">Bewertungen sind möglich, sobald das Spiel freigeschaltet ist.</p>
+          <p className="text-xs text-subtle">Bewertungen sind möglich, sobald das Spiel freigeschaltet ist.</p>
         )}
       </div>
     </div>

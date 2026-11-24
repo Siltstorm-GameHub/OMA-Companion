@@ -54,20 +54,20 @@ export default function VersusLobbyLive() {
   const running = live ? live.rooms.length - open.length : 0;
 
   return (
-    <section aria-label="Versus" className="glass rounded-2xl p-4 sm:p-5 flex flex-col gap-3 h-full">
+    <section aria-label="Versus" className="glass rounded-card p-4 sm:p-5 flex flex-col gap-3 h-full">
       <div className="flex items-start gap-3">
-        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
+        <span className="w-10 h-10 rounded-control flex items-center justify-center shrink-0" style={{ background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.25)" }}>
           <Swords className="w-5 h-5 text-violet-300" />
         </span>
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-violet-300/90">Versus</p>
-          <p className="text-xs text-gray-400">Echtzeit gegen bis zu 7 Leute, volle Linien schicken Garbage rüber.</p>
+          <p className="text-xs font-semibold text-violet-300/90">Versus</p>
+          <p className="text-xs text-muted">Echtzeit gegen bis zu 7 Leute, volle Linien schicken Garbage rüber.</p>
         </div>
       </div>
 
       {live ? (
         <div className="space-y-2">
-          <p className="flex items-center gap-1.5 text-xs text-gray-300">
+          <p className="flex items-center gap-1.5 text-xs text-fg/85">
             <span className={`w-2 h-2 rounded-full ${live.online > 0 ? "bg-emerald-400 animate-pulse" : "bg-gray-600"}`} />
             {live.online === 0
               ? "Gerade spielt niemand. Öffne einen Raum und teile den Link im Discord."
@@ -77,7 +77,7 @@ export default function VersusLobbyLive() {
             <Link
               key={r.code}
               href={`/games/blocks/versus?raum=${r.code}`}
-              className="flex items-center gap-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] px-3 py-2 transition-colors"
+              className="flex items-center gap-3 rounded-control bg-surface-2 hover:bg-surface-2 px-3 py-2 transition-colors"
             >
               <span className="flex -space-x-1.5 shrink-0">
                 {r.players.map((p, i) =>
@@ -85,34 +85,34 @@ export default function VersusLobbyLive() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img key={i} src={p.image} alt="" className="w-6 h-6 rounded-full ring-2 ring-[#15151b] object-cover" />
                   ) : (
-                    <span key={i} className="w-6 h-6 rounded-full ring-2 ring-[#15151b] bg-white/10 flex items-center justify-center">
-                      <Users className="w-3 h-3 text-gray-400" />
+                    <span key={i} className="w-6 h-6 rounded-full ring-2 ring-[#15151b] bg-surface-3 flex items-center justify-center">
+                      <Users className="w-3 h-3 text-muted" />
                     </span>
                   )
                 )}
               </span>
-              <span className="flex-1 min-w-0 text-xs text-gray-300 truncate">
-                Raum von <span className="text-white font-semibold">{r.players[0]?.name ?? "?"}</span> · {r.playerCount}/8
+              <span className="flex-1 min-w-0 text-xs text-fg/85 truncate">
+                Raum von <span className="text-fg font-semibold">{r.players[0]?.name ?? "?"}</span> · {r.playerCount}/8
               </span>
               <span className="text-xs font-semibold text-violet-300 shrink-0">Beitreten</span>
             </Link>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-500">Öffne einen Raum oder tritt über einen geteilten Link bei.</p>
+        <p className="text-xs text-subtle">Öffne einen Raum oder tritt über einen geteilten Link bei.</p>
       )}
 
       <Link href="/games/blocks/versus"
-        className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/15 hover:bg-violet-500/25 text-violet-100 font-semibold text-sm px-5 py-2.5 transition-colors">
+        className="mt-auto inline-flex items-center justify-center gap-2 rounded-control border border-violet-400/30 bg-violet-500/15 hover:bg-violet-500/25 text-violet-100 font-semibold text-sm px-5 py-2.5 transition-colors">
         <Plus className="w-4 h-4" /> Raum öffnen
       </Link>
 
       {/* Eigenes Versus-Turnier als Event planen (Event-Assistent mit OMA Blocks vorausgewählt) */}
       <Link href="/events/verwalten/neu?mode=event&blocks=1"
-        className="flex items-center gap-2 text-[11px] text-gray-500 hover:text-white group">
-        <Trophy className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+        className="flex items-center gap-2 text-xs text-subtle hover:text-fg group">
+        <Trophy className="w-3.5 h-3.5 text-coin shrink-0" />
         <span className="flex-1">Versus-Turnier planen, mit Gruppen, Finale und Anmeldung</span>
-        <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-white shrink-0" />
+        <ChevronRight className="w-3.5 h-3.5 text-subtle group-hover:text-fg shrink-0" />
       </Link>
     </section>
   );

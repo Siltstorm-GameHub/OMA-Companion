@@ -2,8 +2,6 @@
 import ImageUploadField from "@/components/ImageUploadField";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
-import { GENRES } from "@/lib/app-icons";
-import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { isBlocksGame } from "@/lib/oma-original";
@@ -12,7 +10,7 @@ import type { EventWizard } from "../useEventWizard";
 
 // ── Step 1 (Series): Reihen-Grunddaten ───────────────────────────────────────
 export default function StepSeriesData({ w }: { w: EventWizard }) {
-  const { squads, forceSquad, seriesName, setSeriesName, seriesDesc, setSeriesDesc, variousGames, setVariousGames, fixedGame, setFixedGame, fixedGenre, setFixedGenre, fixedPlatforms, setFixedPlatforms, seriesDiscordId, setSeriesDiscordId, seriesHidden, setSeriesHidden, seriesRegistrationLocked, setSeriesRegistrationLocked, seriesSquadId, setSeriesSquadId } = w;
+  const { squads, forceSquad, seriesName, setSeriesName, seriesDesc, setSeriesDesc, variousGames, setVariousGames, fixedGame, setFixedGame, setFixedGenre, fixedPlatforms, setFixedPlatforms, seriesDiscordId, setSeriesDiscordId, seriesHidden, setSeriesHidden, seriesRegistrationLocked, setSeriesRegistrationLocked, seriesSquadId, setSeriesSquadId } = w;
   return (
     <div className="space-y-4">
       <div>
@@ -65,22 +63,6 @@ export default function StepSeriesData({ w }: { w: EventWizard }) {
         )}
       </div>
 
-      {!variousGames && fixedGame && (
-        <div>
-          <label className={labelCls}>Genre</label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {GENRES.map(g => (
-              <button key={g.value} type="button" onClick={() => setFixedGenre(fixedGenre === g.value ? null : g.value)}
-                className={`flex flex-col items-center gap-1.5 rounded-control p-2 border transition-all ${
-                  fixedGenre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
-                }`}>
-                <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-xs font-medium leading-tight text-center ${fixedGenre === g.value ? "text-primary-fg" : "text-subtle"}`}>{g.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div>
         <label className={labelCls}>Plattform</label>

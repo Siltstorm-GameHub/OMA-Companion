@@ -57,7 +57,7 @@ export default function StepRewards({ w }: { w: EventWizard }) {
       </div>
 
       {eventType === "community" ? (
-        <p className="text-xs text-subtle -mt-3 px-1">Ohne Platzierung: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
+        <p className="text-xs text-subtle -mt-3 px-1">Freies Spiel: kein Sieger, es gibt nur die Teilnahme-Belohnung.</p>
       ) : (
       <div className="rounded-control p-4 border border-line bg-surface-2">
         <p className="text-sm font-medium text-fg mb-3 flex items-center gap-1.5">

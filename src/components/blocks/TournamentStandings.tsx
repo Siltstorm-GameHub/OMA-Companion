@@ -43,7 +43,7 @@ function Avatar({ row }: { row: StandingRow }) {
   return row.image ? (
     <Image src={row.image} alt="" width={20} height={20} className="rounded-full shrink-0" />
   ) : (
-    <span className="w-5 h-5 rounded-full bg-white/10 shrink-0" />
+    <span className="w-5 h-5 rounded-full bg-surface-3 shrink-0" />
   );
 }
 
@@ -55,17 +55,17 @@ function Table({
       {rows.map((r, i) => (
         <div
           key={r.userId}
-          className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 ${r.userId === viewerId ? "bg-teal-500/15" : ""} ${i < highlightTop ? "text-white" : "text-gray-300"}`}
+          className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 ${r.userId === viewerId ? "bg-primary/15" : ""} ${i < highlightTop ? "text-fg" : "text-fg/85"}`}
         >
           {showRank && (
-            <span className="w-4 text-right tabular-nums text-gray-500">
-              {i === 0 && r.points > 0 ? <Crown className="w-3.5 h-3.5 text-amber-300 inline" /> : i + 1}
+            <span className="w-4 text-right tabular-nums text-subtle">
+              {i === 0 && r.points > 0 ? <Crown className="w-3.5 h-3.5 text-coin inline" /> : i + 1}
             </span>
           )}
           <Avatar row={r} />
-          <span className={`flex-1 truncate font-semibold ${i < highlightTop ? "text-teal-200" : ""}`}>{r.name}</span>
-          <span className="text-gray-500 tabular-nums">{r.wins}S</span>
-          <span className="w-10 text-right font-bold tabular-nums text-white">{r.points} P</span>
+          <span className={`flex-1 truncate font-semibold ${i < highlightTop ? "text-primary-fg" : ""}`}>{r.name}</span>
+          <span className="text-subtle tabular-nums">{r.wins}S</span>
+          <span className="w-10 text-right font-bold tabular-nums text-fg">{r.points} P</span>
         </div>
       ))}
     </div>
@@ -75,10 +75,10 @@ function Table({
 function StageCard({ stage, viewerId, highlightTop }: { stage: StageView; viewerId: string | null; highlightTop: number }) {
   const done = stage.roundsPlayed >= stage.rounds;
   return (
-    <div className="rounded-xl bg-white/[0.04] border border-white/10 p-3 space-y-2">
+    <div className="rounded-control bg-surface-2 border border-line p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-white">{stage.label}</p>
-        <p className={`text-[11px] tabular-nums ${done ? "text-teal-300" : "text-gray-400"}`}>
+        <p className="text-sm font-bold text-fg">{stage.label}</p>
+        <p className={`text-xs tabular-nums ${done ? "text-primary-fg" : "text-muted"}`}>
           {done ? "fertig" : `Runde ${Math.min(stage.roundsPlayed + 1, stage.rounds)}/${stage.rounds}`}
         </p>
       </div>
@@ -94,20 +94,20 @@ export default function TournamentStandings({ state, viewerId }: { state: Tourna
     <div className="space-y-4">
       {state.phase === "done" && state.ranking.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Endstand</p>
+          <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest">Endstand</p>
           <Table rows={state.ranking} viewerId={viewerId} highlightTop={3} />
         </div>
       )}
       {state.final && state.phase !== "done" && <StageCard stage={state.final} viewerId={viewerId} highlightTop={1} />}
       {state.final && state.phase === "done" && (
         <details className="text-xs">
-          <summary className="cursor-pointer text-gray-400">Finale im Detail</summary>
+          <summary className="cursor-pointer text-muted">Finale im Detail</summary>
           <div className="mt-2"><StageCard stage={state.final} viewerId={viewerId} highlightTop={1} /></div>
         </details>
       )}
       {groupCount > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+          <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest">
             Vorrunde · die besten {advance} je Gruppe kommen ins Finale
           </p>
           <div className="grid sm:grid-cols-2 gap-2">
@@ -117,7 +117,7 @@ export default function TournamentStandings({ state, viewerId }: { state: Tourna
           </div>
         </div>
       )}
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-subtle">
         Punkte je Runde: {PLACE_POINTS.slice(0, 5).map((p, i) => `${i + 1}. = ${p}`).join(" · ")} · danach 1. Gleichstand: mehr Siege, dann bessere Durchschnittsplatzierung.
       </p>
     </div>

@@ -17,11 +17,11 @@ export default function GameListInfo({ info }: { info: Info | null }) {
   return (
     <Link
       href={`/spiele/${info.slug}`}
-      className="inline-flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-lg border border-line bg-surface-2 hover:bg-line hover:border-primary/30 px-2.5 py-1 text-xs text-gray-400 transition-colors max-lg:min-h-10"
-      title="In der Spieleliste ansehen und bewerten"
+      className="inline-flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-lg border border-line bg-surface-2 hover:bg-line hover:border-primary/30 px-2.5 py-1 text-xs text-muted transition-colors max-lg:min-h-10"
+      title="In OMA GameSwipe ansehen und bewerten"
     >
       {parts.length === 0 ? (
-        <span>In der Spieleliste bewerten</span>
+        <span>In GameSwipe bewerten</span>
       ) : (
         parts.map((p) => (
           <span key={p.text} className={`flex items-center gap-1 ${p.className ?? ""}`}>
@@ -29,7 +29,7 @@ export default function GameListInfo({ info }: { info: Info | null }) {
           </span>
         ))
       )}
-      <span className="text-primary-fg font-semibold">Spieleliste →</span>
+      <span className="text-primary-fg font-semibold">GameSwipe →</span>
     </Link>
   );
 }

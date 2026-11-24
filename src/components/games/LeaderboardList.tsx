@@ -26,7 +26,7 @@ const RANK_STYLE = [
 function RankBadge({ place }: { place: number }) {
   const style = RANK_STYLE[place - 1];
   if (!style) {
-    return <span className="w-6 text-center text-sm font-bold text-gray-500 shrink-0">{place}</span>;
+    return <span className="w-6 text-center text-sm font-bold text-subtle shrink-0">{place}</span>;
   }
   return (
     <div
@@ -50,10 +50,10 @@ function Row({ row, place, isViewer }: { row: LeaderboardEntry; place: number; i
       <RankBadge place={place} />
       <RankedAvatar userId={row.userId} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white truncate font-semibold">{row.name}</p>
-        <p className="text-xs text-gray-500 truncate">{row.detail}</p>
+        <p className="text-sm text-fg truncate font-semibold">{row.name}</p>
+        <p className="text-xs text-subtle truncate">{row.detail}</p>
       </div>
-      <span className="text-xs font-semibold text-white tabular-nums shrink-0 text-right">{row.value}</span>
+      <span className="text-xs font-semibold text-fg tabular-nums shrink-0 text-right">{row.value}</span>
     </Link>
   );
 }
@@ -79,9 +79,9 @@ export default function LeaderboardList({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
+      <div className="glass rounded-card p-6 flex flex-col items-center gap-2 text-center">
         <Trophy className="w-6 h-6 opacity-50" />
-        <p className="text-sm text-gray-500">{emptyText}</p>
+        <p className="text-sm text-subtle">{emptyText}</p>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function LeaderboardList({
 
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-xs text-gray-600 px-0.5">
+      <p className="flex items-center gap-1.5 text-xs text-subtle px-0.5">
         <Info className="w-3 h-3 shrink-0" />
         {note}
       </p>
@@ -101,12 +101,12 @@ export default function LeaderboardList({
       ))}
       {viewerOutside && (
         <>
-          <p className="text-center text-xs text-gray-600">⋯</p>
+          <p className="text-center text-xs text-subtle">⋯</p>
           <Row row={rows[viewerIndex]} place={viewerIndex + 1} isViewer />
         </>
       )}
       {viewerIndex === -1 && (
-        <p className="text-xs text-gray-500 text-center pt-1">{absentText}</p>
+        <p className="text-xs text-subtle text-center pt-1">{absentText}</p>
       )}
     </div>
   );

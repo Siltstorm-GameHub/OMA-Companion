@@ -38,7 +38,7 @@ export function StarRatingInput({
           className="p-0.5 rounded-md transition-transform active:scale-90 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
         >
           <Star
-            className={`${iconClass} transition-colors ${n <= shown ? "text-amber-400" : "text-white/15"}`}
+            className={`${iconClass} transition-colors ${n <= shown ? "text-warning" : "text-fg/15"}`}
           />
         </button>
       ))}
@@ -54,10 +54,10 @@ export function StarDisplay({ value, className = "w-3.5 h-3.5" }: { value: numbe
         const fill = Math.max(0, Math.min(1, value - (n - 1)));
         return (
           <span key={n} className="relative inline-block">
-            <Star className={`${className} text-white/15`} />
+            <Star className={`${className} text-fg/15`} />
             {fill > 0 && (
               <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
-                <Star className={`${className} text-amber-400`} />
+                <Star className={`${className} text-warning`} />
               </span>
             )}
           </span>

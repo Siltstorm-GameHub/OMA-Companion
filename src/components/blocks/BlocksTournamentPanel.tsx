@@ -36,7 +36,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { 
   };
 
   if (!state) {
-    return <div className="glass rounded-2xl p-4 text-sm text-gray-400">Turnierstand wird geladen …</div>;
+    return <div className="glass rounded-card p-4 text-sm text-muted">Turnierstand wird geladen …</div>;
   }
 
   const { me, phase } = state;
@@ -54,14 +54,14 @@ export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { 
   }
 
   return (
-    <div className="glass rounded-2xl p-4 space-y-4">
+    <div className="glass rounded-card p-4 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest flex items-center gap-1">
             <Swords className="w-3.5 h-3.5" /> <OmaWordmark product="blocks" size="sm" className="normal-case" /> Live-Turnier
           </p>
-          <p className="font-display text-lg font-bold text-white">{PHASE_LABEL[phase]}</p>
-          <p className="text-xs text-gray-400">
+          <p className="font-display text-lg font-bold text-fg">{PHASE_LABEL[phase]}</p>
+          <p className="text-xs text-muted">
             Vorrunde {state.groupRounds} {state.groupRounds === 1 ? "Runde" : "Runden"} · Finale {state.finalRounds}{" "}
             {state.finalRounds === 1 ? "Runde" : "Runden"} · {state.eligibleCount} {state.checkInEnabled ? "eingecheckt" : "angemeldet"}
           </p>
@@ -69,23 +69,23 @@ export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { 
         {me.canPlay && (
           <Link
             href={`/games/blocks/turnier/${eventId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-black font-bold text-sm px-4 py-2"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-hover text-primary-ink font-bold text-sm px-4 py-2"
           >
             <Play className="w-4 h-4" /> Zum Turnier-Raum
           </Link>
         )}
       </div>
 
-      {myLine && <p className="text-sm text-gray-200">{myLine}</p>}
+      {myLine && <p className="text-sm text-fg/90">{myLine}</p>}
 
       {phase !== "pending" && <TournamentStandings state={state} viewerId={viewerId} />}
 
       {canLead && phase !== "done" && (
-        <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 space-y-2">
-          <p className="text-[10px] font-semibold text-amber-300 uppercase tracking-widest">Turnierleitung</p>
+        <div className="rounded-control border border-coin/20 bg-amber-400/5 p-3 space-y-2">
+          <p className="text-[10px] font-semibold text-coin uppercase tracking-widest">Turnierleitung</p>
           {phase === "pending" ? (
             <>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted">
                 Lost alle {state.checkInEnabled ? "eingecheckten" : "angemeldeten"} Spieler ({state.eligibleCount}) zufällig auf Gruppen à max. 8 aus.
                 Bei bis zu 8 Spielern geht es direkt ins Finale.
               </p>
@@ -95,7 +95,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { 
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted">
                 Runden laufen automatisch. Hängt eine Gruppe (Spieler fehlen), kannst du die Phase mit dem aktuellen Stand beenden.
               </p>
               <Button size="sm" variant="outline" onClick={() => void act("advance")} loading={busy === "advance"}>
@@ -106,7 +106,7 @@ export default function BlocksTournamentPanel({ eventId, viewerId, canLead }: { 
         </div>
       )}
       {canLead && phase === "done" && (
-        <p className="text-xs text-amber-200/80">
+        <p className="text-xs text-coin">
           Endstand ist übernommen — schließe das Event jetzt wie gewohnt ab, dann werden die Belohnungen ausgezahlt.
         </p>
       )}

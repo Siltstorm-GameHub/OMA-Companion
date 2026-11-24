@@ -44,11 +44,11 @@ export default function MissingFieldsPanel({ slug, current, missing }: { slug: s
   }
 
   return (
-    <div className="surface rounded-2xl p-4 space-y-3">
+    <div className="surface rounded-card p-4 space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <Lightbulb className="w-4 h-4 text-amber-400 shrink-0" />
-        <p className="flex-1 min-w-0 text-xs text-gray-300">
-          <span className="text-gray-500">Fehlt noch:</span> {labels.join(", ")} — weißt du&apos;s?
+        <Lightbulb className="w-4 h-4 text-warning shrink-0" />
+        <p className="flex-1 min-w-0 text-xs text-fg/85">
+          <span className="text-subtle">Fehlt noch:</span> {labels.join(", ")} — weißt du&apos;s?
         </p>
         {!open && <Button size="sm" variant="accent" onClick={() => setOpen(true)}>Ergänzen</Button>}
       </div>
@@ -56,7 +56,7 @@ export default function MissingFieldsPanel({ slug, current, missing }: { slug: s
         <div className="space-y-4 pt-1">
           <GameFieldsForm value={value} onChange={setValue} only={missing} />
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-line">
-            <p className="text-xs text-gray-500">Du kannst nur leere Angaben füllen. Das Team sieht, wer was ergänzt hat.</p>
+            <p className="text-xs text-subtle">Du kannst nur leere Angaben füllen. Das Team sieht, wer was ergänzt hat.</p>
             <div className="flex gap-2 shrink-0">
               <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setValue(current); }}>Abbrechen</Button>
               <Button size="sm" onClick={save} loading={saving} disabled={changed.length === 0} icon={<Check className="w-3.5 h-3.5" />}>Speichern</Button>

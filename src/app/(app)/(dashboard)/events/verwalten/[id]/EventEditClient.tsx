@@ -67,7 +67,7 @@ export default function EventEditClient(props: EventEditProps) {
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl font-bold text-fg tracking-tight break-words">{event.title}</h1>
             <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <EventCategoryBadge category={event.category ?? "casual"} />
+              <EventCategoryBadge category={event.category ?? "fun"} />
               {event.hidden && <span className="rounded border border-danger/30 bg-danger-soft px-1.5 py-0.5 text-xs font-medium text-danger">Ausgeblendet</span>}
             </div>
           </div>

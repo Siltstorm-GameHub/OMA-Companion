@@ -26,7 +26,7 @@ export default function StepTournament({ w }: { w: EventWizard }) {
         <h2 className="text-base font-semibold text-fg mb-1">Format</h2>
         <p className="text-xs text-subtle mb-3">
           Ein gemeinsames Community-Ziel (z. B. „1.000 Tore zusammen“) gibt es bei Formaten mit „🎯 Ziel möglich“. Ganz ohne
-          Sieger geht es auch: wähle in Schritt 1 „Ohne Platzierung“.
+          Sieger geht es auch: wähle in Schritt 1 „Freies Spiel“.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {FORMATS.map(f => (

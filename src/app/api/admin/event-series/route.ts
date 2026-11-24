@@ -1,3 +1,5 @@
+import { eventGenreForGameName } from "@/lib/games/event-genre-server";
+import { normalizeCategory } from "@/lib/event-category";
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
 import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
@@ -151,6 +153,9 @@ export async function PATCH(req: NextRequest) {
   // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
   const oldSeries = fields.name !== undefined ? current : null;
 
+  // Festes Spiel gewechselt und kein Genre gesetzt → Genre aus der Spieleliste
+  const derivedGenre = fields.fixedGame !== undefined && !fields.genre ? await eventGenreForGameName(fields.fixedGame) : null;
+
   // 1) Reihe selbst aktualisieren
   const series = await prisma.eventSeries.update({
     where: { id: seriesId },
@@ -160,7 +165,8 @@ export async function PATCH(req: NextRequest) {
       ...(fields.rules                !== undefined && { rules:                fields.rules }),
       ...(fields.icon                 !== undefined && { icon:                 fields.icon || null }),
       ...(fields.coverImageUrl        !== undefined && { coverImageUrl:        fields.coverImageUrl || null }),
-      ...(fields.genre                !== undefined && { genre:                fields.genre }),
+      ...(fields.genre                !== undefined && { genre:                fields.genre || null }),
+      ...(derivedGenre && { genre: derivedGenre }),
       ...(fields.platform             !== undefined && { platform:             fields.platform }),
       ...(fields.fixedGame            !== undefined && { fixedGame:            fields.fixedGame }),
       ...(fields.fixedFormat          !== undefined && { fixedFormat:          fields.fixedFormat }),
@@ -171,7 +177,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.legacyStandings       !== undefined && { legacyStandings:       fields.legacyStandings }),
       ...(fields.placementRewardsJson  !== undefined && { placementRewardsJson:  fields.placementRewardsJson }),
       ...(fields.pollsConfigJson        !== undefined && { pollsConfigJson:       fields.pollsConfigJson }),
-      ...(fields.category              !== undefined && { category:              fields.category || null }),
+      ...(fields.category              !== undefined && { category:              normalizeCategory(fields.category) ?? "fun" }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
       ...(hiddenByModAt                !== undefined && { hiddenByModAt }),
       ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
@@ -240,7 +246,7 @@ export async function PATCH(req: NextRequest) {
   if (fields.fixedGame !== undefined) {
     await prisma.event.updateMany({
       where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
-      data:  { game: fields.fixedGame || null },
+      data:  { game: fields.fixedGame || null, ...(derivedGenre && { genre: derivedGenre }) },
     });
   }
 

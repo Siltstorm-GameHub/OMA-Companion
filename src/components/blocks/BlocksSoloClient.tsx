@@ -196,37 +196,37 @@ export default function BlocksSoloClient({
   let overlay: React.ReactNode = null;
   if (phase === "idle" || phase === "loading") {
     overlay = (
-      <div className="glass-heavy rounded-2xl p-5 text-center space-y-3 max-w-[85%]">
-        <p className="font-display text-xl font-black text-white">Marathon</p>
-        <p className="text-xs text-gray-400">Räume Linien, steig im Level auf und hol dir den Highscore. Alle 10 Linien wird es schneller.</p>
+      <div className="glass-heavy rounded-card p-5 text-center space-y-3 max-w-[85%]">
+        <p className="font-display text-xl font-black text-fg">Marathon</p>
+        <p className="text-xs text-muted">Räume Linien, steig im Level auf und hol dir den Highscore. Alle 10 Linien wird es schneller.</p>
         <Button data-pad-default onClick={() => void start()} loading={phase === "loading"} icon={<Play className="w-4 h-4" />} className="w-full">
           Spielen
         </Button>
-        <p className="text-[10px] text-gray-500 hidden sm:block">oder Enter / Start am Controller drücken</p>
+        <p className="text-[10px] text-subtle hidden sm:block">oder Enter / Start am Controller drücken</p>
       </div>
     );
   } else if (phase === "countdown") {
-    overlay = <p className="font-display text-6xl font-black text-white drop-shadow-lg">{countdown > 0 ? countdown : "LOS"}</p>;
+    overlay = <p className="font-display text-6xl font-black text-fg drop-shadow-lg">{countdown > 0 ? countdown : "LOS"}</p>;
   } else if (phase === "paused") {
     overlay = (
-      <div className="glass-heavy rounded-2xl p-5 text-center space-y-3">
-        <p className="font-display text-xl font-black text-white">Pause</p>
+      <div className="glass-heavy rounded-card p-5 text-center space-y-3">
+        <p className="font-display text-xl font-black text-fg">Pause</p>
         <Button data-pad-default onClick={togglePause} icon={<Play className="w-4 h-4" />} className="w-full">Weiter</Button>
         <Button variant="ghost" onClick={restart} className="w-full">Aufgeben</Button>
       </div>
     );
   } else if (phase === "submitting" || phase === "result") {
     overlay = (
-      <div className="glass-heavy rounded-2xl p-5 text-center space-y-3 max-w-[90%] w-72">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Game Over</p>
-        <p className="font-display text-4xl font-black text-white tabular-nums">{fmt(finalStats?.score ?? 0)}</p>
-        <p className="text-xs text-gray-400">{finalStats?.lines ?? 0} Linien · Level {finalStats?.level ?? 1}</p>
-        {phase === "submitting" && <p className="text-xs text-gray-500">Wird gewertet …</p>}
+      <div className="glass-heavy rounded-card p-5 text-center space-y-3 max-w-[90%] w-72">
+        <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest">Game Over</p>
+        <p className="font-display text-4xl font-black text-fg tabular-nums">{fmt(finalStats?.score ?? 0)}</p>
+        <p className="text-xs text-muted">{finalStats?.lines ?? 0} Linien · Level {finalStats?.level ?? 1}</p>
+        {phase === "submitting" && <p className="text-xs text-subtle">Wird gewertet …</p>}
         {result && (
           <div className="space-y-1 text-xs">
-            {result.newAllTimeBest && <p className="font-bold text-amber-300">Neuer All-Time-Rekord!</p>}
-            {!result.newAllTimeBest && result.newMonthBest && <p className="font-bold text-teal-300">Neue Monatsbestleistung!</p>}
-            <p className="text-gray-400">
+            {result.newAllTimeBest && <p className="font-bold text-coin">Neuer All-Time-Rekord!</p>}
+            {!result.newAllTimeBest && result.newMonthBest && <p className="font-bold text-primary-fg">Neue Monatsbestleistung!</p>}
+            <p className="text-muted">
               {result.monthPlace ? `Platz ${result.monthPlace} im ${seasonLabel}` : "Noch nicht in der Monatswertung"}
               {result.allTimePlace ? ` · Platz ${result.allTimePlace} All-Time` : ""}
             </p>
@@ -237,7 +237,7 @@ export default function BlocksSoloClient({
           <Button data-pad-default onClick={() => void start()} disabled={phase === "submitting"} icon={<RotateCcw className="w-4 h-4" />} className="flex-1">
             Nochmal
           </Button>
-          <Link href="/games" className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 hover:border-white/20 text-gray-300 hover:text-white text-sm px-3 py-2">
+          <Link href="/games/blocks" className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-line hover:border-line-strong text-fg/85 hover:text-fg text-sm px-3 py-2">
             <Trophy className="w-4 h-4" /> Rangliste
           </Link>
         </div>
@@ -250,7 +250,7 @@ export default function BlocksSoloClient({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         {inRound ? <span /> : (
-          <Link href="/games" className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white">
+          <Link href="/games/blocks" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-fg">
             <ArrowLeft className="w-4 h-4" /> OMA Blocks
           </Link>
         )}
@@ -281,9 +281,9 @@ export default function BlocksSoloClient({
           { label: "Level", value: String(hud.level) },
           { label: "Zeit", value: fmtTime(hud.frame), sub: `${pps} T/s` },
         ].map((s) => (
-          <div key={s.label} className="glass rounded-xl px-2 py-1.5">
-            <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest">{s.label}</p>
-            <p className="text-sm sm:text-base font-bold text-white tabular-nums leading-tight">{s.value}</p>
+          <div key={s.label} className="glass rounded-control px-2 py-1.5">
+            <p className="text-[9px] font-semibold text-subtle uppercase tracking-widest">{s.label}</p>
+            <p className="text-sm sm:text-base font-bold text-fg tabular-nums leading-tight">{s.value}</p>
           </div>
         ))}
       </div>
@@ -312,14 +312,14 @@ export default function BlocksSoloClient({
         overlay={overlay}
       />
 
-      <p className="text-center text-[11px] text-gray-500">
-        Bestwert {seasonLabel}: <span className="text-white font-semibold tabular-nums">{fmt(bests.month)}</span> · All-Time:{" "}
-        <span className="text-white font-semibold tabular-nums">{fmt(bests.all)}</span>
+      <p className="text-center text-xs text-subtle">
+        Bestwert {seasonLabel}: <span className="text-fg font-semibold tabular-nums">{fmt(bests.month)}</span> · All-Time:{" "}
+        <span className="text-fg font-semibold tabular-nums">{fmt(bests.all)}</span>
       </p>
 
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Einstellungen">
         <SettingsPanel settings={settings} onChange={saveSettings} />
-        <p className="text-[11px] text-gray-500 mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
+        <p className="text-xs text-subtle mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
       </Modal>
     </div>
     </FullscreenShell>

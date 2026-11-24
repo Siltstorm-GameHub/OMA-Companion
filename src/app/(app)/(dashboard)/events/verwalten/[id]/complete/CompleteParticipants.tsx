@@ -16,7 +16,7 @@ export default function CompleteParticipants({ ctx }: { ctx: EventComplete }) {
           </h2>
           <div className="rounded-control p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
             <p className="text-xs text-muted">
-              Ohne Platzierung: Es gibt keinen Sieger. Wer da war, bekommt die Teilnahme-Belohnung
+              Freies Spiel: Es gibt keinen Sieger. Wer da war, bekommt die Teilnahme-Belohnung
               {seriesId ? " (laut Eventreihe)" : ""}. Nimm den Haken bei allen raus, die nicht gekommen sind.
             </p>
             <p className="text-[10px] text-subtle">☑ war da · <Ban className="w-3 h-3 inline" /> disqualifizieren (war da, aber keine Belohnung, öffentlich als ungewertet sichtbar)</p>

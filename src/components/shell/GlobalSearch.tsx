@@ -22,7 +22,7 @@ function toHits(r: SearchResults): { title: string; hits: Hit[] }[] {
         hint: [formatBerlinDate(e.startAt, { day: "numeric", month: "short", year: "numeric" }), e.game].filter(Boolean).join(" · "),
       })),
     },
-    { title: "Spiele", hits: r.games.map((g): Hit => ({ key: `g-${g.slug}`, href: `/spiele/${g.slug}`, label: g.name, hint: "Spieleliste", kind: "game", image: g.coverUrl })) },
+    { title: "Spiele", hits: r.games.map((g): Hit => ({ key: `g-${g.slug}`, href: `/spiele/${g.slug}`, label: g.name, hint: "GameSwipe", kind: "game", image: g.coverUrl })) },
     { title: "Squads", hits: (r.squads ?? []).map((s): Hit => ({ key: `s-${s.id}`, href: `/squads/${s.id}`, label: s.name, hint: [s.game, `${s.members} Mitglieder`].filter(Boolean).join(" · "), kind: "squad" })) },
     { title: "Clips", hits: (r.clips ?? []).map((c): Hit => ({ key: `c-${c.id}`, href: c.url, label: c.title, hint: "Clip auf Twitch", kind: "clip", image: c.thumbnailUrl, external: true })) },
   ].filter((s) => s.hits.length > 0);

@@ -50,7 +50,7 @@ export default function KeyBindingsEditor({ bindings, onChange }: { bindings: Ke
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Tasten</p>
+        <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest">Tasten</p>
         <button
           type="button"
           onClick={() => {
@@ -58,7 +58,7 @@ export default function KeyBindingsEditor({ bindings, onChange }: { bindings: Ke
             setNotice("Standardbelegung wiederhergestellt.");
             setCapturing(null);
           }}
-          className="text-[11px] font-semibold text-gray-400 hover:text-white"
+          className="text-xs font-semibold text-muted hover:text-fg"
         >
           Standard wiederherstellen
         </button>
@@ -70,23 +70,23 @@ export default function KeyBindingsEditor({ bindings, onChange }: { bindings: Ke
           const isCapturing = capturing === a;
           return (
             <div key={a} className="flex items-center justify-between gap-2 min-h-8">
-              <span className="text-xs text-gray-400 shrink-0">{BINDABLE_LABELS[a]}</span>
+              <span className="text-xs text-muted shrink-0">{BINDABLE_LABELS[a]}</span>
               <span className="flex flex-wrap justify-end gap-1">
                 {keys.map((k) => (
-                  <span key={k} className="inline-flex items-center gap-1 rounded-md bg-white/[0.07] border border-white/10 pl-2 pr-1 py-0.5 text-[11px] font-semibold text-white">
+                  <span key={k} className="inline-flex items-center gap-1 rounded-md bg-white/[0.07] border border-line pl-2 pr-1 py-0.5 text-xs font-semibold text-fg">
                     {keyName(k)}
                     <button
                       type="button"
                       aria-label={`${keyName(k)} von ${BINDABLE_LABELS[a]} entfernen`}
                       onClick={() => onChange(unbindKey(bindings, a, k))}
-                      className="text-gray-500 hover:text-red-300 px-0.5"
+                      className="text-subtle hover:text-red-300 px-0.5"
                     >
                       ×
                     </button>
                   </span>
                 ))}
                 {isCapturing ? (
-                  <span className="rounded-md border border-teal-400/60 bg-teal-500/15 px-2 py-0.5 text-[11px] font-semibold text-teal-200 animate-pulse">
+                  <span className="rounded-md border border-primary/60 bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary-fg animate-pulse">
                     Taste drücken … (Esc)
                   </span>
                 ) : (
@@ -97,7 +97,7 @@ export default function KeyBindingsEditor({ bindings, onChange }: { bindings: Ke
                         setNotice(null);
                         setCapturing(a);
                       }}
-                      className="rounded-md border border-dashed border-white/15 px-2 py-0.5 text-[11px] font-semibold text-gray-400 hover:text-white hover:border-white/30"
+                      className="rounded-md border border-dashed border-line-strong px-2 py-0.5 text-xs font-semibold text-muted hover:text-fg hover:border-white/30"
                     >
                       + Taste
                     </button>
@@ -109,11 +109,11 @@ export default function KeyBindingsEditor({ bindings, onChange }: { bindings: Ke
         })}
       </div>
 
-      {notice && <p className="text-[11px] text-amber-300">{notice}</p>}
+      {notice && <p className="text-xs text-coin">{notice}</p>}
       {empty.length > 0 && (
-        <p className="text-[11px] text-red-300">Ohne Taste: {empty.map((a) => BINDABLE_LABELS[a]).join(", ")}</p>
+        <p className="text-xs text-red-300">Ohne Taste: {empty.map((a) => BINDABLE_LABELS[a]).join(", ")}</p>
       )}
-      <p className="text-[11px] text-gray-500">
+      <p className="text-xs text-subtle">
         Bis zu {MAX_KEYS_PER_ACTION} Tasten pro Aktion · gespeichert auf diesem Gerät · Pause und Neustart gelten nur im Solo-Modus.
       </p>
     </div>

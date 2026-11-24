@@ -90,16 +90,15 @@ export type SeasonPrefill = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const STEP_LABELS_EVENT  = ["Art & Kategorie", "Grunddaten", "Format", "Belohnungen", "Zusammenfassung"];
-export const STEP_LABELS_SERIES = ["Art & Kategorie", "Reihen-Info", "Termine", "Statistiken & Events", "Reihen-Belohnungen", "Zusammenfassung"];
+export const STEP_LABELS_EVENT  = ["Art des Events", "Grunddaten", "Format", "Belohnungen", "Zusammenfassung"];
+export const STEP_LABELS_SERIES = ["Art der Reihe", "Reihen-Info", "Termine", "Statistiken & Events", "Reihen-Belohnungen", "Zusammenfassung"];
 
+// Die 4 Kategorien (Casual/Community sind seit 2026-11 in "Fun" aufgegangen, siehe EventCategoryBadge)
 export const CATEGORIES: { value: EventCategory; label: string; desc: string; emoji: string; color: string; border: string; bg: string }[] = [
-  { value: "competitive",     label: "Kompetitiv", desc: "Ernsthaft spielen, Leistung zählt",              emoji: "🏆", color: "text-danger",    border: "border-danger/30",    bg: "bg-danger-soft" },
-  { value: "fun",             label: "Fun",        desc: "Spaßrunde, Lachen ist wichtiger als Gewinnen",   emoji: "🎉", color: "text-amber-400",  border: "border-amber-400/40",  bg: "bg-amber-500/10" },
-  { value: "casual",          label: "Casual",     desc: "Entspannt zusammen zocken, ohne Druck",          emoji: "🛋️", color: "text-success",border: "border-success/30",bg: "bg-success-soft" },
-  { value: "training",        label: "Training",   desc: "Üben und voneinander lernen",                    emoji: "🎓", color: "text-indigo-400", border: "border-indigo-500/40", bg: "bg-indigo-500/10" },
-  { value: "community_event", label: "Community",  desc: "Aktion für alle, z.B. ein Spieleabend",          emoji: "🤝", color: "text-violet-400", border: "border-violet-500/40", bg: "bg-violet-500/10" },
-  { value: "special",         label: "Special",    desc: "Besonderer Anlass, z.B. Jubiläum oder Feiertag", emoji: "⭐", color: "text-coin", border: "border-coin/40", bg: "bg-coin-soft" },
+  { value: "competitive",     label: "Kompetitiv", desc: "Ernsthaft spielen, Leistung zählt",                   emoji: "🏆", color: "text-danger",    border: "border-danger/30",    bg: "bg-danger-soft" },
+  { value: "training",        label: "Training",   desc: "Üben und voneinander lernen",                         emoji: "🎓", color: "text-indigo-400", border: "border-indigo-500/40", bg: "bg-indigo-500/10" },
+  { value: "special",         label: "Special",    desc: "Besonderer Anlass, z.B. Jubiläum oder Feiertag",      emoji: "⭐", color: "text-coin", border: "border-coin/40", bg: "bg-coin-soft" },
+  { value: "fun",             label: "Fun",        desc: "Zusammen zocken, Spaß geht vor — z.B. Spieleabend",   emoji: "🎉", color: "text-amber-400",  border: "border-amber-400/40",  bg: "bg-amber-500/10" },
 ];
 
 export const PLATFORMS: { value: string; label: string; icon: string }[] = [

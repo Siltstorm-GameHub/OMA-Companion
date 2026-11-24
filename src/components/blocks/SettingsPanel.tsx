@@ -12,11 +12,11 @@ function Slider({
   return (
     <label className="block space-y-1">
       <span className="flex justify-between text-xs">
-        <span className="font-semibold text-white">{label}</span>
-        <span className="tabular-nums text-teal-300">{format(value)}</span>
+        <span className="font-semibold text-fg">{label}</span>
+        <span className="tabular-nums text-primary-fg">{format(value)}</span>
       </span>
       <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-teal-400" />
-      <span className="block text-[11px] text-gray-500">{hint}</span>
+      <span className="block text-xs text-subtle">{hint}</span>
     </label>
   );
 }
@@ -45,31 +45,31 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-fg">
           <input type="checkbox" checked={settings.ghost} onChange={(e) => onChange({ ...settings, ghost: e.target.checked })} className="accent-teal-400" />
           Landeposition anzeigen
         </label>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-fg">
           Touch-Buttons
           <select
             value={settings.touchControls}
             onChange={(e) => onChange({ ...settings, touchControls: e.target.value as BlocksSettings["touchControls"] })}
-            className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs"
+            className="bg-surface-2 border border-line rounded-lg px-2 py-1 text-xs"
           >
             <option value="auto">automatisch</option>
             <option value="on">immer</option>
             <option value="off">nie</option>
           </select>
         </label>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-fg">
           <input type="checkbox" checked={settings.gestures} onChange={(e) => onChange({ ...settings, gestures: e.target.checked })} className="accent-teal-400" />
           Wischgesten
         </label>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-fg">
           <input type="checkbox" checked={settings.haptics} onChange={(e) => onChange({ ...settings, haptics: e.target.checked })} className="accent-teal-400" />
           Vibration
         </label>
-        <label className="flex items-center gap-2 text-white">
+        <label className="flex items-center gap-2 text-fg">
           <input type="checkbox" checked={settings.gamepad} onChange={(e) => onChange({ ...settings, gamepad: e.target.checked })} className="accent-teal-400" />
           Controller
         </label>
@@ -77,7 +77,7 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
 
       {settings.gestures && (
         <div>
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Gesten (Touch)</p>
+          <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest mb-2">Gesten (Touch)</p>
           <div className="mb-3">
             <Slider
               label="Wisch-Empfindlichkeit" hint="Höher = kürzere Wege pro Zelle und schon leichte Wischer lösen Hard Drop / Hold aus."
@@ -96,8 +96,8 @@ export default function SettingsPanel({ settings, onChange }: { settings: Blocks
               ["Tippen auf Hold-Box", "Hold"],
             ].map(([g, a]) => (
               <div key={g} className="flex justify-between gap-2">
-                <span className="text-gray-400">{g}</span>
-                <span className="text-white font-semibold">{a}</span>
+                <span className="text-muted">{g}</span>
+                <span className="text-fg font-semibold">{a}</span>
               </div>
             ))}
           </div>

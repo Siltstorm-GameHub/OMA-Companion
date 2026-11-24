@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
+import type { OmaProduct } from "@/components/OmaWordmark";
 import {
-  Bell, CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Home, Lightbulb, ScrollText, Server, ShoppingBag, Trophy, User, Users,
+  Bell, CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Home, Lightbulb, ScrollText, Server, Trophy, User, Users,
 } from "@/components/icons";
 
 /**
@@ -35,6 +36,8 @@ export interface NavChild {
   auth?: boolean;
   /** Zahl offener Aufgaben am Eintrag (wird in der Seitenleiste nachgeladen) */
   count?: "eventManage";
+  /** Eigenes OMA-Produkt: OMA-Logo vor dem Namen in Produktfarbe (components/OmaWordmark.tsx) */
+  brand?: OmaProduct;
 }
 
 /** Unterseiten des Events-Bereichs (Seitenleiste; am Handy: components/events/EventsSectionNav) */
@@ -45,9 +48,11 @@ export const EVENTS_SUBNAV: NavChild[] = [
 ];
 
 /** Unterseiten des Games-Bereichs (Seitenleiste; am Handy: components/games/GamesSectionTabs) */
+// /games = Übersicht mit beiden OMA-Produkten, /spiele = OMA GameSwipe, /games/blocks = OMA Blocks.
 export const GAMES_SUBNAV: NavChild[] = [
-  { href: "/spiele", label: "Spieleliste" },
-  { href: "/games", label: "Minispiele" },
+  { href: "/games", label: "Übersicht", exact: true },
+  { href: "/spiele", label: "GameSwipe", brand: "gameSwipe" },
+  { href: "/games/blocks", label: "Blocks", brand: "blocks" },
   { href: "/shop", label: "Shop" },
 ];
 
@@ -63,7 +68,7 @@ const COMMUNITY_BOARD_PATHS = ["/interviews"];
 export const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Übersicht", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true, children: EVENTS_SUBNAV },
-  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games", "/shop"], children: GAMES_SUBNAV },
+  { href: "/games", label: "Games", icon: Gamepad2, alsoActiveOn: ["/spiele", "/shop"], children: GAMES_SUBNAV },
   { href: "/leaderboard", label: "Rangliste", icon: Trophy },
 ];
 
@@ -78,7 +83,6 @@ export const COMMUNITY_NAV: NavItem[] = [
 export const ME_NAV: NavItem[] = [
   { href: "/profile", label: "Mein Profil", icon: User },
   { href: "/quests", label: "Quests", icon: ScrollText },
-  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/points", label: "Münzen-Verlauf", icon: Coins },
   { href: "/benachrichtigungen", label: "Benachrichtigungen", icon: Bell },
 ];
@@ -86,14 +90,14 @@ export const ME_NAV: NavItem[] = [
 export const MOBILE_NAV: NavItem[] = [
   { href: "/dashboard", label: "Übersicht", icon: Home },
   { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true },
-  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games"] },
+  { href: "/games", label: "Games", icon: Gamepad2, alsoActiveOn: ["/spiele", "/shop"] },
   {
     href: "/community",
     label: "Community",
     icon: Handshake,
     alsoActiveOn: ["/leaderboard", "/community-board", "/squads", "/clip-galerie", "/servers", "/donations", ...CLIP_PATHS, ...COMMUNITY_BOARD_PATHS],
   },
-  { href: "/profile", label: "Ich", icon: User, alsoActiveOn: ["/quests", "/shop", "/points", "/benachrichtigungen"] },
+  { href: "/profile", label: "Ich", icon: User, alsoActiveOn: ["/quests", "/points", "/benachrichtigungen"] },
 ];
 
 function matches(pathname: string, href: string) {

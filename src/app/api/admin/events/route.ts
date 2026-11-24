@@ -1,3 +1,5 @@
+import { eventGenreForGameName } from "@/lib/games/event-genre-server";
+import { normalizeCategory } from "@/lib/event-category";
 import { NextRequest, NextResponse, after } from "next/server";
 import { promoteFromWaitlist } from "@/lib/event-waitlist";
 import { parseEventKind } from "@/lib/event-placement";
@@ -146,8 +148,13 @@ export async function PATCH(req: NextRequest) {
 
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
   if (discordChannelId !== undefined && isModerator) data.discordChannelId = discordChannelId;
-  if (category !== undefined) data.category = category;
+  if (category !== undefined) data.category = normalizeCategory(category) ?? "fun";
   if (genre !== undefined) data.genre = genre || null;
+  // Spiel gewechselt und kein Genre gesetzt → Genre aus der Spieleliste (lib/games/event-genre-server.ts)
+  if (typeof data.game === "string" && !genre) {
+    const derived = await eventGenreForGameName(data.game);
+    if (derived) data.genre = derived;
+  }
   if (spectatorMode !== undefined) data.spectatorMode = spectatorMode;
   if (spectatorRewardJson !== undefined) data.spectatorRewardJson = rewards.spectatorRewardJson ? JSON.stringify(rewards.spectatorRewardJson) : null;
   if (pollsConfigJson !== undefined) data.pollsConfigJson = rewards.pollsConfigJson ? JSON.stringify(rewards.pollsConfigJson) : null;

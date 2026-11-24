@@ -6,7 +6,7 @@ import GroupFinderClient from "./GroupFinderClient";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Was zocken wir? · Spieleliste | OMA",
+  title: "Was zocken wir? · OMA GameSwipe | OMA",
   description: "Spiele finden, die alle in eurer Runde haben.",
 };
 

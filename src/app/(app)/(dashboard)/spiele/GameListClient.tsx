@@ -2,16 +2,16 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { buttonClasses } from "@/components/ui/button-styles";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GameCard from "@/components/games/GameCard";
 import SwipeDeck from "@/components/games/SwipeDeck";
 import OmaWordmark from "@/components/OmaWordmark";
-import OmaOriginalMark from "@/components/OmaOriginalMark";
 import type { SwipeDeckData } from "@/lib/games/deck";
 import AddGameModal from "@/components/games/AddGameModal";
 import { Chip } from "@/components/games/GameFieldsForm";
-import { ChevronDown, ChevronRight, Dices, Copy, Gamepad2, List, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
+import { ChevronDown, Dices, Copy, Gamepad2, List, Plus, Search, SearchX, Settings2, ShieldCheck, Users, X } from "@/components/icons";
 import {
   EMPTY_FILTERS, GAME_SORTS, activeFilterCount, filterGames, sortGames,
   type GameFilters, type GameListItem, type GameSort,
@@ -39,7 +39,7 @@ export default function GameListClient({
   isModerator: boolean;
   /** Reiter des Games-Bereichs (serverseitig gerendert, siehe GamesSectionTabs) */
   tabs?: ReactNode;
-  /** "Gerade im Angebot" (serverseitig gerendert, siehe GameSalesStrip) — nur in der Listenansicht */
+  /** "Gerade im Angebot" (serverseitig gerendert, siehe GameSalesStrip) — in beiden Ansichten */
   sales?: ReactNode;
   /** Erster Swipe-Stapel (nur für angemeldete Mitglieder) */
   swipe?: SwipeDeckData | null;
@@ -65,63 +65,47 @@ export default function GameListClient({
   };
 
   return (
-    <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in pb-28 sm:pb-6">
+    <div className="px-5 pt-0 sm:p-6 max-w-5xl mx-auto w-full min-w-0 space-y-5 animate-fade-in pb-28 sm:pb-6">
       {tabs}
-      {/* Kopf */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <PageHeader title="Spieleliste" description="Was zocken wir heute? Spiele für eure Runde finden — bewertet von der Community." />
-        <button type="button" onClick={() => setAddOpen(true)}
-          className="hidden sm:inline-flex min-h-10 items-center gap-1.5 rounded-control px-4 text-sm font-bold bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
-          <Plus className="w-4 h-4" /> Spiel hinzufügen
-        </button>
-      </div>
-
-      <Link href="/spiele/gruppe"
-        className="group flex items-center gap-3 rounded-2xl p-3 border border-primary/25 hover:border-primary/50 transition-colors"
-        style={{ background: "linear-gradient(110deg, color-mix(in srgb, var(--color-primary) 12%, transparent), color-mix(in srgb, var(--color-primary) 2%, transparent) 65%)" }}>
-        <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-primary/15 border border-primary/30">
-          <Users className="w-4.5 h-4.5 text-primary-fg" />
-        </span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-sm font-semibold text-white">Was zocken wir?</span>
-          <span className="block text-xs text-gray-400 truncate">Wähle, wer mitzockt — wir zeigen Spiele, die alle haben.</span>
-        </span>
-        <ChevronRight className="w-4 h-4 text-primary-fg shrink-0 transition-transform group-hover:translate-x-0.5" />
-      </Link>
+      {/* Kopf: OMA GameSwipe als eigenes Produkt — Logo + Name statt "Spieleliste" */}
+      <PageHeader
+        title={<OmaWordmark product="gameSwipe" size="lg" />}
+        description="Wisch dich durch die Spiele, bewerte sie und finde Mitspieler — oder such in allen Spielen."
+        actions={<>
+          <Link href="/spiele/gruppe" className={buttonClasses("secondary", "md")}><Users className="size-4" /> Was zocken wir?</Link>
+          <button type="button" onClick={() => setAddOpen(true)} className={buttonClasses("primary", "md", "max-sm:hidden")}>
+            <Plus className="size-4" /> Spiel hinzufügen
+          </button>
+        </>}
+      />
 
       {isModerator && pendingCount > 0 && (
-        <Link href="/admin/spiele" className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs bg-amber-500/10 border border-amber-500/20 text-amber-200 hover:bg-amber-500/15 transition-colors">
-          <ShieldCheck className="w-4 h-4 text-amber-400" />
+        <Link href="/admin/spiele" className="flex items-center gap-2 rounded-control border border-warning/30 bg-warning-soft px-3 py-2.5 text-xs text-warning transition-colors hover:border-warning/50">
+          <ShieldCheck className="size-4" />
           {pendingCount} {pendingCount === 1 ? "Vorschlag wartet" : "Vorschläge warten"} auf Freischaltung →
         </Link>
       )}
 
-      {/* Ansicht: GameSwipe oder Liste */}
+      {/* Ansicht: Wischen (Stapel) oder alle Spiele (Liste mit Suche und Filtern) */}
       {swipe && (
-        <div className="grid grid-cols-2 gap-1 rounded-xl p-1 bg-surface-2 border border-line max-w-xs">
-          {([["swipe", "GameSwipe", Copy], ["list", "Liste", List]] as const).map(([key, label, Icon]) => (
-            <button key={key} type="button" onClick={() => setView(key)} aria-pressed={view === key}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
-                view === key ? "bg-primary/15 text-white ring-1 ring-primary/40" : "text-gray-400 hover:text-white"
+        <div role="tablist" aria-label="Ansicht" className="grid max-w-sm grid-cols-2 gap-1 rounded-control border border-line bg-surface-2 p-1">
+          {([["swipe", "Wischen", Copy], ["list", "Alle Spiele", List]] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" role="tab" onClick={() => setView(key)} aria-selected={view === key}
+              className={`flex min-h-9 items-center justify-center gap-1.5 rounded-control text-sm font-semibold transition-colors ${
+                view === key ? "bg-surface-3 text-fg shadow-card" : "text-muted hover:text-fg"
               }`}>
-              <Icon className="w-3.5 h-3.5" /> {label}
+              <Icon className="size-4" /> {label}
             </button>
           ))}
         </div>
       )}
 
-      {view === "list" && sales}
+      {/* "Gerade im Angebot" in beiden Ansichten (schmale Leiste) */}
+      {sales}
 
       {view === "swipe" && swipe ? (
         <div className="space-y-3">
-          {/* OMA GameSwipe als eigenes Produkt der Old Masters Allies */}
-          <div className="flex items-end justify-between gap-3 flex-wrap">
-            <div className="space-y-1">
-              <h2><OmaWordmark product="gameSwipe" size="md" /></h2>
-              <p className="text-xs text-gray-500">Wisch dich durch die Spieleliste: am Start, würde ich holen oder nicht meins.</p>
-            </div>
-            <OmaOriginalMark />
-          </div>
+          <p className="text-xs text-subtle">Am Start, würde ich holen oder nicht meins — deine Wahl hilft, Mitspieler und Gruppen-Games zu finden.</p>
           <SwipeDeck initial={swipe} onShowList={() => setView("list")} />
         </div>
       ) : (
@@ -129,7 +113,7 @@ export default function GameListClient({
       {/* Suche + Sortierung */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={filters.q}
             onChange={e => set("q", e.target.value)}
@@ -139,7 +123,7 @@ export default function GameListClient({
           />
           {filters.q && (
             <button type="button" onClick={() => set("q", "")} aria-label="Suche leeren"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-white">
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-subtle hover:text-fg">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -150,11 +134,11 @@ export default function GameListClient({
             className="input-glass h-full appearance-none rounded-control pl-3 pr-8 text-sm text-fg">
             {(Object.keys(GAME_SORTS) as GameSort[]).map(s => <option key={s} value={s}>{GAME_SORTS[s]}</option>)}
           </select>
-          <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <ChevronDown className="w-3.5 h-3.5 text-subtle absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </label>
         <button type="button" onClick={pickRandom} disabled={visible.length === 0} title="Zufälliges Spiel aus den Treffern"
           aria-label="Zufälliges Spiel aus den Treffern"
-          className="shrink-0 w-11 rounded-xl border border-line-strong text-gray-300 hover:text-teal-200 hover:border-primary/40 flex items-center justify-center disabled:opacity-40 transition-colors">
+          className="shrink-0 w-11 rounded-control border border-line-strong text-fg/85 hover:text-primary-fg hover:border-primary/40 flex items-center justify-center disabled:opacity-40 transition-colors">
           <Dices className="w-4.5 h-4.5" />
         </button>
       </div>
@@ -162,7 +146,7 @@ export default function GameListClient({
       {/* Schnellfilter */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
-          <span className="text-xs text-gray-500 shrink-0 mr-0.5">Wir sind</span>
+          <span className="text-xs text-subtle shrink-0 mr-0.5">Wir sind</span>
           {PLAYER_CHOICES.map(n => (
             <Chip key={n} active={filters.players === n} onClick={() => set("players", filters.players === n ? null : n)}>
               {n === PLAYER_CHOICES[PLAYER_CHOICES.length - 1] ? `${n}+` : n}
@@ -170,6 +154,7 @@ export default function GameListClient({
           ))}
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+          <span className="text-xs text-subtle shrink-0 mr-0.5">Wie</span>
           <Chip active={filters.modes.includes("coop")} onClick={() => toggleMode("coop")}>Koop</Chip>
           <Chip active={filters.modes.includes("pvp")} onClick={() => toggleMode("pvp")}>Gegeneinander</Chip>
           <Chip active={filters.freeOnly} onClick={() => set("freeOnly", !filters.freeOnly)}>Kostenlos</Chip>
@@ -178,19 +163,19 @@ export default function GameListClient({
           <Chip active={filters.mineOnly} onClick={() => set("mineOnly", !filters.mineOnly)}>Meine</Chip>
           <button type="button" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              moreCount > 0 ? "border-primary/60 text-teal-100 bg-primary/10" : "border-line text-gray-300 hover:border-line-strong"} max-lg:min-h-10`}>
+              moreCount > 0 ? "border-primary/60 text-primary-fg bg-primary/10" : "border-line text-fg/85 hover:border-line-strong"} max-lg:min-h-10`}>
             <Settings2 className="w-3.5 h-3.5" /> Mehr Filter{moreCount > 0 ? ` (${moreCount})` : ""}
           </button>
           {filterCount > 0 && (
             <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })}
-              className="shrink-0 text-xs text-gray-500 hover:text-white px-2">Zurücksetzen</button>
+              className="shrink-0 text-xs text-subtle hover:text-fg px-2">Zurücksetzen</button>
           )}
         </div>
 
         {showMore && (
-          <div className="surface rounded-2xl p-4 space-y-4">
+          <div className="surface rounded-card p-4 space-y-4">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-300">Genre</p>
+              <p className="text-xs font-semibold text-fg/85">Genre</p>
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(GAME_GENRES) as GameGenre[]).map(g => (
                   <Chip key={g} active={filters.genre === g} onClick={() => set("genre", filters.genre === g ? null : g)}>{GAME_GENRES[g]}</Chip>
@@ -198,7 +183,7 @@ export default function GameListClient({
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-300">Plattform</p>
+              <p className="text-xs font-semibold text-fg/85">Plattform</p>
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(GAME_PLATFORMS) as GamePlatform[]).map(p => (
                   <Chip key={p} active={filters.platforms.includes(p)} onClick={() => set("platforms", toggle(filters.platforms, p))}>{GAME_PLATFORMS[p]}</Chip>
@@ -207,7 +192,7 @@ export default function GameListClient({
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-300">Im Abo enthalten</p>
+              <p className="text-xs font-semibold text-fg/85">Im Abo enthalten</p>
               <div className="flex flex-wrap gap-1.5">
                 {ALL_SUBS.map(sub => (
                   <Chip key={sub} active={filters.subscriptions.includes(sub)}
@@ -218,7 +203,7 @@ export default function GameListClient({
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-300">Rundenlänge</p>
+              <p className="text-xs font-semibold text-fg/85">Rundenlänge</p>
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(SESSION_LENGTHS) as (keyof typeof SESSION_LENGTHS)[]).map(s => (
                   <Chip key={s} active={filters.sessionLength === s} onClick={() => set("sessionLength", filters.sessionLength === s ? null : s)}>{SESSION_LENGTHS[s]}</Chip>
@@ -231,34 +216,34 @@ export default function GameListClient({
 
       {/* Ergebnis */}
       {games.length === 0 ? (
-        <div className="surface rounded-2xl p-10 text-center space-y-3">
-          <Gamepad2 className="w-8 h-8 text-gray-600 mx-auto" />
-          <p className="text-white font-semibold">Die Spieleliste ist noch leer</p>
-          <p className="text-sm text-gray-500">Füge das erste Spiel hinzu{isModerator ? " – oder übernimm alle Spiele aus Events & Profilen im Admin-Bereich" : ""}.</p>
+        <div className="surface rounded-card p-10 text-center space-y-3">
+          <Gamepad2 className="w-8 h-8 text-subtle mx-auto" />
+          <p className="text-fg font-semibold">Die Spieleliste ist noch leer</p>
+          <p className="text-sm text-subtle">Füge das erste Spiel hinzu{isModerator ? " – oder übernimm alle Spiele aus Events & Profilen im Admin-Bereich" : ""}.</p>
           <div className="flex justify-center gap-2 flex-wrap">
             <button type="button" onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
+              className="inline-flex items-center gap-1.5 rounded-control px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
               <Plus className="w-4 h-4" /> Spiel hinzufügen
             </button>
             {isModerator && (
-              <Link href="/admin/spiele" className="inline-flex items-center rounded-xl px-3.5 py-2 text-sm border border-line-strong text-gray-300 hover:text-white">
+              <Link href="/admin/spiele" className="inline-flex items-center rounded-control px-3.5 py-2 text-sm border border-line-strong text-fg/85 hover:text-fg">
                 Zum Admin-Bereich
               </Link>
             )}
           </div>
         </div>
       ) : visible.length === 0 ? (
-        <div className="surface rounded-2xl p-10 text-center space-y-3">
-          <SearchX className="w-8 h-8 text-gray-600 mx-auto" />
-          <p className="text-white font-semibold">Kein passendes Spiel gefunden</p>
+        <div className="surface rounded-card p-10 text-center space-y-3">
+          <SearchX className="w-8 h-8 text-subtle mx-auto" />
+          <p className="text-fg font-semibold">Kein passendes Spiel gefunden</p>
           <div className="flex justify-center gap-2 flex-wrap">
             {filterCount > 0 && (
               <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })}
-                className="rounded-xl px-3.5 py-2 text-sm border border-line-strong text-gray-300 hover:text-white">Filter zurücksetzen</button>
+                className="rounded-control px-3.5 py-2 text-sm border border-line-strong text-fg/85 hover:text-fg">Filter zurücksetzen</button>
             )}
             {filters.q.trim().length >= 2 && (
               <button type="button" onClick={() => setAddOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
+                className="inline-flex items-center gap-1.5 rounded-control px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink">
                 <Plus className="w-4 h-4" /> „{filters.q.trim()}“ hinzufügen
               </button>
             )}
@@ -266,7 +251,12 @@ export default function GameListClient({
         </div>
       ) : (
         <>
-          <p className="text-xs text-gray-500">{visible.length} {visible.length === 1 ? "Spiel" : "Spiele"}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-subtle">{visible.length} {visible.length === 1 ? "Spiel" : "Spiele"}{filterCount > 0 ? ` · ${filterCount} ${filterCount === 1 ? "Filter" : "Filter"} aktiv` : ""}</p>
+            {filterCount > 0 && (
+              <button type="button" onClick={() => setFilters({ ...EMPTY_FILTERS, q: filters.q })} className={buttonClasses("ghost", "sm")}>Filter zurücksetzen</button>
+            )}
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {visible.map(g => <GameCard key={g.id} game={g} />)}
           </div>
@@ -275,11 +265,13 @@ export default function GameListClient({
       </>
       )}
 
-      {/* Mobil: schwebender Button über der Navigation */}
-      <button type="button" onClick={() => setAddOpen(true)} aria-label="Spiel hinzufügen"
-        className="sm:hidden fixed right-4 bottom-24 z-30 w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-primary-ink shadow-[0_8px_24px_rgba(20,184,166,0.35)] flex items-center justify-center active:scale-95 transition-transform">
-        <Plus className="w-6 h-6" />
-      </button>
+      {/* Mobil: schwebender Button über der Navigation — nur in der Liste (im Stapel stört er die Wisch-Knöpfe) */}
+      {view === "list" && (
+        <button type="button" onClick={() => setAddOpen(true)} aria-label="Spiel hinzufügen"
+          className="sm:hidden fixed right-4 bottom-24 z-30 grid size-14 place-items-center rounded-full bg-primary text-primary-ink shadow-pop transition-transform hover:bg-primary-hover active:scale-95">
+          <Plus className="size-6" />
+        </button>
+      )}
 
       <AddGameModal open={addOpen} onClose={() => setAddOpen(false)} initialQuery={filters.q.trim()} />
     </div>

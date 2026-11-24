@@ -262,22 +262,22 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
         }
       `}</style>
 
-      <div className="glass card-shine rounded-2xl border border-amber-500/15 overflow-hidden">
+      <div className="glass card-shine rounded-card border border-coin/15 overflow-hidden">
         <div className="p-5 space-y-5">
 
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-control bg-coin-soft border border-coin/20 flex items-center justify-center shrink-0">
               <span className="text-xl">🎡</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Täglicher Gratis-Spin</p>
-              <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 200 Münzen!</p>
+              <p className="text-sm font-semibold text-fg">Täglicher Gratis-Spin</p>
+              <p className="text-xs text-subtle">Einmal täglich drehen — gewinne bis zu 200 Münzen!</p>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shrink-0"
               style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)" }}>
               <CoinIcon size={18} />
-              <span className="text-sm font-bold text-amber-400 tabular-nums">{points.toLocaleString("de-DE")}</span>
+              <span className="text-sm font-bold text-coin tabular-nums">{points.toLocaleString("de-DE")}</span>
             </div>
           </div>
 
@@ -442,11 +442,11 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
             <button
               onClick={handleSpin}
               disabled={done || spinning}
-              className={`w-full max-w-[220px] py-3 rounded-xl text-sm font-semibold transition-all ${
+              className={`w-full max-w-[220px] py-3 rounded-control text-sm font-semibold transition-all ${
                 done
-                  ? "bg-line text-gray-600 border border-line cursor-not-allowed"
+                  ? "bg-line text-subtle border border-line cursor-not-allowed"
                   : spinning
-                  ? "bg-amber-700/60 text-amber-300 cursor-wait"
+                  ? "bg-amber-700/60 text-coin cursor-wait"
                   : "bg-amber-500 hover:bg-amber-400 text-black active:scale-[0.97]"
               }`}
             >
@@ -458,10 +458,10 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
         {/* Ergebnis-Footer */}
         {done && result && (
           <div className="result-pop border-t border-line px-5 py-2.5 flex items-center justify-between gap-4">
-            <p className="text-xs text-gray-500">
-              Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span>
+            <p className="text-xs text-subtle">
+              Ergebnis: <span className="text-coin font-medium">{result.prizeLabel}</span>
             </p>
-            <p className="text-xs text-gray-600 shrink-0 tabular-nums">
+            <p className="text-xs text-subtle shrink-0 tabular-nums">
               {countdown ? `Nächster Spin in ${countdown}` : ""}
             </p>
           </div>

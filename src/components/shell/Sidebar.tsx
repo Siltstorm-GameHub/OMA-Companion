@@ -1,5 +1,6 @@
 "use client";
 
+import OmaWordmark from "@/components/OmaWordmark";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -107,7 +108,9 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
                         "flex min-h-9 items-center gap-2 rounded-control px-2.5 text-sm transition-colors",
                         on ? "bg-surface-2 font-semibold text-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
                       )}>
-                      <span className="flex-1 truncate">{c.label}</span>
+                      {c.brand
+                        ? <span className="flex-1 truncate"><OmaWordmark product={c.brand} size="xs" plainName={!on} /></span>
+                        : <span className="flex-1 truncate">{c.label}</span>}
                       {n > 0 && (
                         <span className="min-w-5 rounded-full bg-warning px-1.5 text-center text-xs font-bold leading-5 tabular-nums text-canvas" aria-label={`${n} offen`}>
                           {n > 99 ? "99+" : n}

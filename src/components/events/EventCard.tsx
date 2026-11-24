@@ -36,7 +36,7 @@ export type EventCardData = {
   /** "Max, Lena" — Freunde unter den Teilnehmenden (max. 2) */
   friendNames: string[];
   communityBy: string | null;
-  /** Event-Typ: Mit Platzierung ("tournament") oder Ohne Platzierung ("community", nur Teilnahme), lib/event-placement.ts */
+  /** Event-Typ: Turnier ("tournament", mit Platzierung) oder Freies Spiel ("community", nur Teilnahme), lib/event-placement.ts */
   kind?: EventKind;
   /** Event-Absprachen: Nachrichten gesamt / ungelesen (nachträglich gesetzt, lib/event-comments.ts) */
   comments?: { total: number; unread: number } | null;
@@ -131,10 +131,10 @@ export default function EventCard({
           )}
           {ev.kind && (
             <span
-              title={ev.kind === "community" ? "Ohne Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
-              aria-label={EVENT_KIND_LABEL[ev.kind].label}
-              className={`absolute bottom-2 left-2 grid size-8 place-items-center rounded-full bg-canvas/90 shadow-card ${ev.kind === "community" ? "text-violet-300" : "text-coin"}`}>
-              <Glyph name={ev.kind === "community" ? "handshake" : "trophy"} className="size-4" />
+              title={EVENT_KIND_LABEL[ev.kind].hint}
+              className={`absolute bottom-2 left-2 grid size-8 place-items-center rounded-full bg-canvas/90 shadow-card ${EVENT_KIND_LABEL[ev.kind].tone}`}>
+              <Glyph name={EVENT_KIND_LABEL[ev.kind].glyph} className="size-4" />
+              <span className="sr-only">{EVENT_KIND_LABEL[ev.kind].label}</span>
             </span>
           )}
           {ev.phase.phase === "period" && ev.phase.progress != null && (
@@ -183,9 +183,10 @@ export default function EventCard({
           )}
           {ev.kind && row && (
             <span
-              title={ev.kind === "community" ? "Keine Platzierung — alle bekommen die Teilnahme-Belohnung" : "Mit Platzierung und Sieger"}
-              className={`inline-flex items-center gap-1 rounded px-1.5 py-px text-xs font-medium ${ev.kind === "community" ? "bg-violet-500/15 text-violet-300" : "bg-amber-500/15 text-amber-300"}`}>
-              <Glyph name={ev.kind === "community" ? "handshake" : "trophy"} className="size-3.5" />{EVENT_KIND_LABEL[ev.kind].label}
+              title={EVENT_KIND_LABEL[ev.kind].hint}
+              className={`inline-grid size-5 shrink-0 place-items-center rounded-full bg-surface-2 ${EVENT_KIND_LABEL[ev.kind].tone}`}>
+              <Glyph name={EVENT_KIND_LABEL[ev.kind].glyph} className="size-3.5" />
+              <span className="sr-only">{EVENT_KIND_LABEL[ev.kind].label}</span>
             </span>
           )}
           {ev.metaLine && row && <span className="text-xs text-gray-500 truncate">{ev.metaLine}</span>}

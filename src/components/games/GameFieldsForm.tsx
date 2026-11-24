@@ -16,8 +16,8 @@ export function Chip({ active, onClick, children, disabled }: { active: boolean;
       disabled={disabled}
       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-50 ${
         active
-          ? "bg-primary/20 border-primary/60 text-teal-100"
-          : "border-line text-gray-300 hover:border-primary/40 hover:bg-primary/10"
+          ? "bg-primary/20 border-primary/60 text-primary-fg"
+          : "border-line text-fg/85 hover:border-primary/40 hover:bg-primary/10"
       }`}
     >
       {children}
@@ -37,10 +37,10 @@ function SourceBadge({ source }: { source?: FieldSource }) {
 function Section({ label, hint, source, children }: { label: string; hint?: string; source?: FieldSource; children: ReactNode }) {
   return (
     <fieldset className="space-y-2">
-      <legend className="flex items-center gap-2 text-xs font-semibold text-gray-300 mb-2">
+      <legend className="flex items-center gap-2 text-xs font-semibold text-fg/85 mb-2">
         {label}
         <SourceBadge source={source} />
-        {hint && <span className="font-normal text-gray-600">{hint}</span>}
+        {hint && <span className="font-normal text-subtle">{hint}</span>}
       </legend>
       {children}
     </fieldset>
@@ -88,7 +88,7 @@ export default function GameFieldsForm({
   const set = <K extends keyof GameFields>(key: K, v: GameFields[K]) => onChange({ ...value, [key]: v });
   const shows = (...fields: (keyof GameFields)[]) => !only || fields.some(f => only.includes(f));
   const locked = (field: keyof GameFields) => !!only && !only.includes(field);
-  const inputClass = "w-20 bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40";
+  const inputClass = "w-20 bg-line border border-line-strong rounded-lg px-2.5 py-1.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary/40";
 
   return (
     <div className="space-y-5">
@@ -100,7 +100,7 @@ export default function GameFieldsForm({
 
       {shows("minPlayers", "maxPlayers") && (
       <Section label="Spieleranzahl" hint="leer lassen, wenn unbekannt" source={sources.minPlayers ?? sources.maxPlayers}>
-        <div className="flex items-center gap-2 text-sm text-gray-400">
+        <div className="flex items-center gap-2 text-sm text-muted">
           <label className="flex items-center gap-2">
             von
             <NumberInput
@@ -125,7 +125,7 @@ export default function GameFieldsForm({
       {shows("platforms") && (
       <Section label="Plattformen" source={sources.platforms}>
         <MultiChips options={GAME_PLATFORMS} value={value.platforms} onChange={v => set("platforms", v)} />
-        {(!only || only.includes("crossplay")) && <label className="flex items-center gap-2 text-xs text-gray-300 pt-1 cursor-pointer w-fit">
+        {(!only || only.includes("crossplay")) && <label className="flex items-center gap-2 text-xs text-fg/85 pt-1 cursor-pointer w-fit">
           <input type="checkbox" checked={value.crossplay} onChange={e => set("crossplay", e.target.checked)} className="accent-primary w-4 h-4" />
           Crossplay (plattformübergreifend)
           <SourceBadge source={sources.crossplay} />

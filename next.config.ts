@@ -31,13 +31,14 @@ const nextConfig: NextConfig = {
     // public/event-covers: Vorlagen-Cover, die branded-cover.ts für Discord von der Platte liest
     ].map((route) => [route, ["node_modules/sharp/**/*", "node_modules/@img/**/*", "public/event-covers/**/*"]]),
   ),
-  // Der Games-Hub liegt unter /games (nur noch OMA Blocks). OMA Gems ist entfernt, ebenso das frühere
+  // /games ist die Übersicht des Games-Bereichs (OMA GameSwipe + OMA Blocks), OMA Blocks liegt unter /games/blocks
+  // (Solo: /games/blocks/solo). OMA Gems ist entfernt, ebenso das frühere
   // Karten-/Kampfsystem (Battle Cards), OMA Quest und OMA Duels — alte Links leiten dauerhaft (308) weiter.
   async redirects() {
     return [
       { source: "/blocks", destination: "/games/blocks", permanent: false },
-      // Bis 2026-11 lag der Hub unter /gems — OMA Blocks zieht mit, alles andere landet im Hub.
-      { source: "/gems/blocks", destination: "/games/blocks", permanent: true },
+      // Bis 2026-11 lag der Hub unter /gems — OMA Blocks zieht mit, alles andere landet in der Übersicht.
+      { source: "/gems/blocks", destination: "/games/blocks/solo", permanent: true },
       { source: "/gems/blocks/:path+", destination: "/games/blocks/:path+", permanent: true },
       { source: "/gems", destination: "/games", permanent: true },
       { source: "/gems/:path+", destination: "/games", permanent: true },

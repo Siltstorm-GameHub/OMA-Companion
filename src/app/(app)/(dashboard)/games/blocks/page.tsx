@@ -1,36 +1,30 @@
 // ============================================
-// /games/blocks — OMA Blocks Solo (Marathon)
+// /games/blocks — OMA Blocks im Games-Bereich (Übersicht · GameSwipe · Blocks · Shop, siehe GamesSectionTabs):
+// Start Solo und Versus, laufende Blocks-Events, Belohnungen, Ranglisten (components/blocks/BlocksHubPanel).
 // ============================================
+// Bis 2026-11 lag das direkt unter /games — dort ist jetzt die Games-Übersicht. Das Solo-Spiel selbst liegt
+// unter /games/blocks/solo. Früher lag der Hub unter /gems; alte Adressen leiten um (next.config.ts).
 
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { seasonKey, seasonLabel } from "@/lib/month-season";
-import { ALL_TIME } from "@/lib/blocks/scores";
-import BlocksSoloClient from "@/components/blocks/BlocksSoloClient";
+import BlocksHubPanel from "@/components/blocks/BlocksHubPanel";
+import GamesSectionTabs from "@/components/games/GamesSectionTabs";
 
 export const metadata = {
   title: "OMA Blocks | Games | OMA",
 };
 
-export default async function BlocksSoloPage() {
+export default async function BlocksPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login?notice=login_required&callbackUrl=/games/blocks");
+  if (!session?.user?.id) {
+    redirect("/login?notice=login_required&callbackUrl=/games/blocks");
+  }
   const userId = session.user.id;
-  const season = seasonKey();
-
-  const bests = await prisma.blocksBest.findMany({
-    where: { userId, season: { in: [season, ALL_TIME] } },
-    select: { season: true, score: true },
-  });
 
   return (
-    <div className="p-3 sm:p-6 max-w-3xl mx-auto animate-fade-in">
-      <BlocksSoloClient
-        initialMonthBest={bests.find((b) => b.season === season)?.score ?? 0}
-        initialAllTimeBest={bests.find((b) => b.season === ALL_TIME)?.score ?? 0}
-        seasonLabel={seasonLabel(season)}
-      />
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-5xl mx-auto w-full min-w-0 space-y-5 animate-fade-in">
+      <GamesSectionTabs active="blocks" />
+      <BlocksHubPanel userId={userId} />
     </div>
   );
 }

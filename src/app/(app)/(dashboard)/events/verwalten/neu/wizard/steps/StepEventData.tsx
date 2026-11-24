@@ -1,8 +1,6 @@
 "use client";
 import ImageUploadField from "@/components/ImageUploadField";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
-import { GENRES } from "@/lib/app-icons";
-import AppIcon from "@/components/AppIcon";
 import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
@@ -14,7 +12,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 
 // ── Step 1 (Event): Grunddaten ────────────────────────────────────────────────
 export default function StepEventData({ w }: { w: EventWizard }) {
-  const { series, squads, forceSquad, setEventType, title, setTitle, startAt, setStartAt, endAt, setEndAt, game, setGame, genre, setGenre, maxPlayers, setMaxPlayers, description, setDescription, discordChannelId, setDiscordChannelId, seriesMode, setSeriesMode, selectedSeriesId, setSelectedSeriesId, newSeriesName, setNewSeriesName, newSeriesDesc, setNewSeriesDesc, publishMode, setPublishMode, publishAt, setPublishAt, startInPast, eventRegistrationLocked, setEventRegistrationLocked, eventSquadId, setEventSquadId, eventDataProblem } = w;
+  const { series, squads, forceSquad, setEventType, title, setTitle, startAt, setStartAt, endAt, setEndAt, game, setGame, maxPlayers, setMaxPlayers, description, setDescription, discordChannelId, setDiscordChannelId, seriesMode, setSeriesMode, selectedSeriesId, setSelectedSeriesId, newSeriesName, setNewSeriesName, newSeriesDesc, setNewSeriesDesc, publishMode, setPublishMode, publishAt, setPublishAt, startInPast, eventRegistrationLocked, setEventRegistrationLocked, eventSquadId, setEventSquadId, eventDataProblem } = w;
   return (
     <div className="space-y-4">
       <div>
@@ -71,22 +69,6 @@ export default function StepEventData({ w }: { w: EventWizard }) {
         />
       )}
 
-      {game && (
-        <div>
-          <label className={labelCls}>Genre</label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {GENRES.map(g => (
-              <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
-                className={`flex flex-col items-center gap-1.5 rounded-control p-2 border transition-all ${
-                  genre === g.value ? "border-primary/60 bg-primary/10" : "border-line bg-surface-2 hover:border-line-strong"
-                }`}>
-                <AppIcon kind="genre" name={g.value} size={32} />
-                <span className={`text-xs font-medium leading-tight text-center ${genre === g.value ? "text-primary-fg" : "text-subtle"}`}>{g.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div>
         <label className={labelCls}>Beschreibung (optional)</label>

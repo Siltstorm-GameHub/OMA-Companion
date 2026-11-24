@@ -1,3 +1,5 @@
+import { eventGenreForGameName } from "@/lib/games/event-genre-server";
+import { normalizeCategory } from "@/lib/event-category";
 import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -113,6 +115,10 @@ export async function POST(req: NextRequest) {
   if (genre && !(Object.values(EventGenre) as string[]).includes(genre)) {
     return NextResponse.json({ error: "Unbekanntes Genre" }, { status: 400 });
   }
+  // Genre kommt aus der Spieleliste, wenn keins gesetzt ist (der Assistent fragt es nicht mehr ab);
+  // Kategorie: Altwerte Casual/Community → Fun (lib/event-category.ts)
+  const eventGenre: EventGenre | null = genre || (await eventGenreForGameName(game));
+  const eventCategory = normalizeCategory(category) ?? "fun";
   const newSeriesName = typeof body.newSeries?.name === "string" ? body.newSeries.name.trim() : "";
   const newSeriesDescription = typeof body.newSeries?.description === "string" ? body.newSeries.description.trim() || null : null;
   if (body.newSeries && !newSeriesName) {
@@ -231,7 +237,7 @@ export async function POST(req: NextRequest) {
           data: {
             name: newSeriesName,
             description: newSeriesDescription,
-            category: category || "casual",
+            category: eventCategory,
             // Captains brauchen die Squad-Bindung, um die Reihe später selbst verwalten zu können
             squadId: isModerator ? null : (squadId || null),
             createdById: currentUser.id,
@@ -244,8 +250,8 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       description,
       game,
-      genre:           genre || null,
-      category:        category || "casual",
+      genre:           eventGenre,
+      category:        eventCategory,
       startAt: startDate,
       endAt: endDate,
       maxPlayers: maxPlayersValue,

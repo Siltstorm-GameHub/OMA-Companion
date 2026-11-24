@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { buttonClasses } from "@/components/ui/button-styles";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -66,9 +67,9 @@ function ItemPreview({ item, image, name }: { item: Cosmetic; image: string | nu
 
 function TagBadge({ a, item }: { a: ItemAvailability; item: Cosmetic }) {
   const base = "absolute top-2.5 right-2.5 z-10 text-xs font-extrabold px-2 py-0.5 rounded-full";
-  if (a.tag === "offer" && a.discountPct) return <span className={`${base} bg-rose-500 text-white`}>−{a.discountPct} %</span>;
-  if (a.tag === "exclusive") return <span className={`${base} bg-fuchsia-500/90 text-white`}>Exklusiv</span>;
-  if (a.tag === "season" && item.season) return <span className={`${base} bg-orange-500/90 text-white`}>{SEASONS[item.season].emoji}</span>;
+  if (a.tag === "offer" && a.discountPct) return <span className={`${base} bg-rose-500 text-fg`}>−{a.discountPct} %</span>;
+  if (a.tag === "exclusive") return <span className={`${base} bg-fuchsia-500/90 text-fg`}>Exklusiv</span>;
+  if (a.tag === "season" && item.season) return <span className={`${base} bg-orange-500/90 text-fg`}>{SEASONS[item.season].emoji}</span>;
   return null;
 }
 
@@ -298,12 +299,12 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
         role="button" tabIndex={0}
         onClick={() => showSet(s.id)}
         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showSet(s.id); } }}
-        className={`glass rounded-2xl p-3 flex flex-col gap-3 cursor-pointer border transition-all ${isPreviewed ? "border-white/30" : "border-transparent hover:border-line-strong"}`}
+        className={`glass rounded-card p-3 flex flex-col gap-3 cursor-pointer border transition-all ${isPreviewed ? "border-white/30" : "border-transparent hover:border-line-strong"}`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">{set.name}</p>
-            <p className="text-xs text-gray-500">{set.description}</p>
+            <p className="text-sm font-semibold text-fg">{set.name}</p>
+            <p className="text-xs text-subtle">{set.description}</p>
           </div>
           {!complete && s.discountPct > 0 && <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-500 text-black">−{s.discountPct} %</span>}
         </div>
@@ -316,7 +317,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
             if (!c) return null;
             const have = owned.has(id);
             return (
-              <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${have ? "border-primary/40 text-primary-fg bg-primary/10" : "border-line-strong text-gray-400"}`}>
+              <span key={id} className={`text-xs px-1.5 py-0.5 rounded-full border ${have ? "border-primary/40 text-primary-fg bg-primary/10" : "border-line-strong text-muted"}`}>
                 {have && "✓ "}{c.name}
               </span>
             );
@@ -364,49 +365,53 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
   return (
     <div className="space-y-5">
       {/* Kopf */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <PageHeader title="Shop" description="Rahmen, Auren, Hintergründe, Titel und Namensfarben" />
-        <Link href="/points" title="Woher kommen Münzen?"
-          className="group glass rounded-card px-4 py-2 flex items-center gap-2 hover:bg-line transition-colors">
-          <CoinIcon size={18} />
-          <span className="text-lg font-extrabold text-amber-300 tabular-nums">{fmt(state.balance)}</span>
-          <span className="flex items-center gap-0.5 border-l border-line-strong pl-2 text-xs font-semibold text-amber-200/80 group-hover:text-amber-200">
-            Münzen verdienen <ChevronRight className="w-3.5 h-3.5" />
-          </span>
-        </Link>
-      </div>
+      <PageHeader
+        title="Shop"
+        description="Gib deine Münzen aus: Rahmen, Auren, Hintergründe, Titel und Namensfarben."
+        actions={<>
+          <a href="#gluecksrad" className={buttonClasses("secondary", "md")}>Glücksrad</a>
+          <Link href="/points" title="Woher kommen Münzen?"
+            className="group inline-flex min-h-10 items-center gap-2 rounded-control border border-coin/30 bg-coin-soft px-3 transition-colors hover:border-coin/50">
+            <CoinIcon size={18} />
+            <span className="text-base font-extrabold text-coin tabular-nums">{fmt(state.balance)}</span>
+            <span className="flex items-center gap-0.5 border-l border-coin/30 pl-2 text-xs font-semibold text-coin/80 group-hover:text-coin">
+              Münzen verdienen <ChevronRight className="size-3.5" />
+            </span>
+          </Link>
+        </>}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[17rem_1fr] gap-5 items-start">
         {/* ── Vorschau (Desktop: bleibt beim Scrollen stehen) ── */}
         <aside className="lg:sticky lg:top-[5.5rem] space-y-3">
-          <div className={`relative rounded-2xl border transition-colors ${hasPreview ? "border-amber-400/40" : "border-line-strong"}`}>
-            <LookPreview look={previewLook} image={image} name={displayName} size={72} className="!rounded-2xl !border-0 min-h-[7rem]" />
-            <span className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${hasPreview ? "bg-amber-400 text-black" : "bg-line text-gray-300"}`}>
+          <div className={`relative rounded-card border transition-colors ${hasPreview ? "border-coin/40" : "border-line-strong"}`}>
+            <LookPreview look={previewLook} image={image} name={displayName} size={72} className="!rounded-card !border-0 min-h-[7rem]" />
+            <span className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${hasPreview ? "bg-amber-400 text-black" : "bg-line text-fg/85"}`}>
               {hasPreview ? "Vorschau" : "Aktuell"}
             </span>
           </div>
           {hasPreview ? (
             <button onClick={() => { setPreview(null); setPreviewSet(null); }}
-              className="w-full flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-white py-1.5 rounded-lg bg-line transition-colors">
+              className="w-full flex items-center justify-center gap-1 text-xs text-muted hover:text-fg py-1.5 rounded-lg bg-line transition-colors">
               <Undo2 className="w-3 h-3" /> Vorschau zurücksetzen
             </button>
           ) : (
-            <p className="text-xs text-gray-600 text-center">Tippe auf einen Artikel oder ein Set für die Vorschau.</p>
+            <p className="text-xs text-subtle text-center">Tippe auf einen Artikel oder ein Set für die Vorschau.</p>
           )}
 
           {/* Aktuell angelegt — schnell ablegen */}
-          <div className="glass rounded-2xl divide-y divide-line hidden lg:block">
+          <div className="glass rounded-card divide-y divide-line hidden lg:block">
             {CATEGORY_ORDER.map(cat => {
               const item = getCosmetic(currentLook[cat]);
               return (
                 <div key={cat} className="flex items-center justify-between gap-2 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="text-xs text-gray-500">{CATEGORY_META[cat].label}</p>
-                    <p className={`text-xs truncate ${item ? "text-white" : "text-gray-600"}`}>{item?.name ?? "—"}</p>
+                    <p className="text-xs text-subtle">{CATEGORY_META[cat].label}</p>
+                    <p className={`text-xs truncate ${item ? "text-fg" : "text-subtle"}`}>{item?.name ?? "—"}</p>
                   </div>
                   {item && (
                     <button onClick={() => equip(cat, null)} disabled={!!busy}
-                      className="text-xs text-gray-500 hover:text-white transition-colors disabled:opacity-50">
+                      className="text-xs text-subtle hover:text-fg transition-colors disabled:opacity-50">
                       ablegen
                     </button>
                   )}
@@ -433,7 +438,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                     icon={<Sparkles className="w-3.5 h-3.5 text-rose-400" />}
                     title="Angebote der Woche"
                     right={state.weekEndsAt && (
-                      <span className="text-xs text-gray-500 flex items-center gap-1" suppressHydrationWarning>
+                      <span className="text-xs text-subtle flex items-center gap-1" suppressHydrationWarning>
                         <Clock className="w-3 h-3" /> neu am Montag · {timeLeft(state.weekEndsAt)}
                       </span>
                     )}
@@ -443,7 +448,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               )}
 
               {seasonItems.length > 0 && (
-                <section className="rounded-2xl p-3 border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.06] to-transparent">
+                <section className="rounded-card p-3 border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.06] to-transparent">
                   <SectionHead
                     icon={<span>{activeSeasons.map(s => SEASONS[s].emoji).join(" ")}</span>}
                     title={`Saison: ${activeSeasons.map(s => SEASONS[s].name).join(" & ")}`}
@@ -458,14 +463,14 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
               )}
 
               {highlightCount === 0 && (
-                <div className="glass rounded-2xl p-8 text-center text-sm text-gray-500">Gerade gibt es keine Angebote — schau am Montag wieder vorbei.</div>
+                <div className="glass rounded-card p-8 text-center text-sm text-subtle">Gerade gibt es keine Angebote — schau am Montag wieder vorbei.</div>
               )}
 
               {sets.length > 0 && (
                 <button onClick={() => setTab("sets")}
-                  className="w-full glass rounded-2xl px-4 py-3 flex items-center justify-between text-sm text-gray-300 hover:text-white hover:bg-line transition-colors">
+                  className="w-full glass rounded-card px-4 py-3 flex items-center justify-between text-sm text-fg/85 hover:text-fg hover:bg-line transition-colors">
                   <span>🎁 {sets.length} Sets — zusammen günstiger</span>
-                  <span className="text-xs text-amber-300">Ansehen →</span>
+                  <span className="text-xs text-coin">Ansehen →</span>
                 </button>
               )}
             </div>
@@ -474,7 +479,7 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
           {tab === "sets" && (
             sets.length > 0
               ? <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{sets.map(renderSet)}</div>
-              : <div className="glass rounded-2xl p-8 text-center text-sm text-gray-500">Gerade sind keine Sets im Angebot.</div>
+              : <div className="glass rounded-card p-8 text-center text-sm text-subtle">Gerade sind keine Sets im Angebot.</div>
           )}
 
           {tab === "all" && (
@@ -483,16 +488,16 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                 {CATEGORY_ORDER.map(c => (
                   <button key={c} onClick={() => { setCategory(c); setConfirmBuy(null); }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      c === category ? "bg-amber-500/15 text-amber-200 ring-1 ring-amber-500/25" : "text-gray-500 hover:text-gray-300 hover:bg-line"
+                      c === category ? "bg-coin-soft text-coin ring-1 ring-amber-500/25" : "text-subtle hover:text-fg/85 hover:bg-line"
                     }`}>
                     {CATEGORY_META[c].plural}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-gray-500">{CATEGORY_META[category].hint} Günstigste zuerst.</p>
+              <p className="text-xs text-subtle">{CATEGORY_META[category].hint} Günstigste zuerst.</p>
               {categoryItems.length > 0
                 ? <div className={GRID}>{categoryItems.map(renderItem)}</div>
-                : <div className="glass rounded-2xl p-8 text-center text-sm text-gray-500">Gerade gibt es hier nichts im Angebot.</div>}
+                : <div className="glass rounded-card p-8 text-center text-sm text-subtle">Gerade gibt es hier nichts im Angebot.</div>}
             </div>
           )}
 
@@ -511,11 +516,11 @@ export default function CosmeticsShop({ userId, displayName, image, initial }: {
                 })}
               </div>
             ) : (
-              <div className="glass rounded-2xl p-8 text-center text-sm text-gray-500">Du besitzt noch keine Artikel — stöbere in den Highlights.</div>
+              <div className="glass rounded-card p-8 text-center text-sm text-subtle">Du besitzt noch keine Artikel — stöbere in den Highlights.</div>
             )
           )}
 
-          <p className="text-xs text-gray-600 flex items-start gap-1.5 pt-2">
+          <p className="text-xs text-subtle flex items-start gap-1.5 pt-2">
             <Crown className="w-3 h-3 mt-0.5 shrink-0" />
             Belohnungs-Artikel (Turniersieg, Clip des Monats/Jahres, Veteran, Spende) und die Community-Job-Titel sind nicht käuflich —
             du findest sie unter „Alle Artikel“ und schaltest sie frei.

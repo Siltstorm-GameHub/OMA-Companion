@@ -256,7 +256,7 @@ model EventSeries {
   fixedGame              String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat            String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId       String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
-  category               EventCategory @default(casual)
+  category               EventCategory @default(fun)
   genre                  EventGenre?
   platform               String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
   recurrenceType         String? // "weekly" | "biweekly" | "monthly"
@@ -326,7 +326,7 @@ model Event {
   rules               String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
   game                String?
   genre               EventGenre?
-  category            EventCategory @default(casual)
+  category            EventCategory @default(fun)
   startAt             DateTime
   endAt               DateTime? // Optionales Ende (Datum/Uhrzeit) — generisch für alle Event-Typen, siehe formatBerlinRange
   maxPlayers          Int?
@@ -1273,6 +1273,9 @@ model WanderpocalStat {
 
 // ── Event-Enums ───────────────────────────────────────────────────────────────
 
+// Seit 2026-11 nur noch 4 Kategorien: competitive, training, special, fun. "casual" und "community_event"
+// bleiben als Altwerte (Pokale/Wanderpokale der Vergangenheit, db push ohne Datenverlust) — Events und Reihen
+// wurden per prisma/manual-sql/event_categories_to_four.sql auf "fun" umgestellt, die UI zeigt sie als Fun.
 enum EventCategory {
   competitive
   fun

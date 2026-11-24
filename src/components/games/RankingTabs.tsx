@@ -8,14 +8,14 @@ export default function RankingTabs({ tabs }: { tabs: { key: string; label: stri
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="font-display text-lg font-bold text-white">Rangliste</h2>
+        <h2 className="font-display text-lg font-bold text-fg">Rangliste</h2>
         <div className="flex rounded-lg bg-line p-0.5 text-xs font-semibold">
           {tabs.map((t) => (
             <button
               key={t.key}
               type="button"
               onClick={() => setActive(t.key)}
-              className={`px-3 py-1.5 rounded-md transition-colors ${active === t.key ? "bg-primary/20 text-teal-200" : "text-gray-400 hover:text-white"}`}
+              className={`px-3 py-1.5 rounded-md transition-colors ${active === t.key ? "bg-primary/20 text-primary-fg" : "text-muted hover:text-fg"}`}
             >
               {t.label}
             </button>

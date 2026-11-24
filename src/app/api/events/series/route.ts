@@ -1,3 +1,5 @@
+import { eventGenreForGameName } from "@/lib/games/event-genre-server";
+import { normalizeCategory } from "@/lib/event-category";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, requireModeratorOrSquadCaptain, hasMinRole } from "@/lib/roles";
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
@@ -55,6 +57,9 @@ export async function POST(req: NextRequest) {
   } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
+  // Genre aus der Spieleliste, wenn keins gesetzt ist; Kategorie-Altwerte → Fun
+  const seriesGenre = genre || (await eventGenreForGameName(fixedGame)) || null;
+  const seriesCategory = normalizeCategory(category) ?? "fun";
   const coverUrl = allowedCoverUrl(rawBody.coverImageUrl, isModerator);
   if (startDate && firstEventEndAt && new Date(firstEventEndAt) <= new Date(startDate)) {
     return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
@@ -118,8 +123,8 @@ export async function POST(req: NextRequest) {
         data: {
           name: name.trim(),
           description: description?.trim() || null,
-          category: category ?? null,
-          genre: genre ?? null,
+          category: seriesCategory,
+          genre: seriesGenre,
           fixedGame: fixedGame?.trim() || null,
           fixedFormat: fixedFormat || null,
           discordChannelId: discordChannelId?.trim() || null,
@@ -199,8 +204,8 @@ export async function POST(req: NextRequest) {
               seriesId: series.id,
               createdById: series.createdById,
               approvalStatus: series.approvalStatus,
-              category: category ?? "casual",
-              genre: genre ?? null,
+              category: seriesCategory,
+              genre: seriesGenre,
               game: fixedGame?.trim() || null,
               format: fixedFormat || null,
               discordChannelId: discordChannelId?.trim() || null,
@@ -224,8 +229,8 @@ export async function POST(req: NextRequest) {
             seriesId: series.id,
             createdById: series.createdById,
             approvalStatus: series.approvalStatus,
-            category: category ?? "casual",
-            genre: genre ?? null,
+            category: seriesCategory,
+            genre: seriesGenre,
             game: fixedGame?.trim() || null,
             format: fixedFormat || null,
             discordChannelId: discordChannelId?.trim() || null,

@@ -50,7 +50,7 @@ function clearTimers(list: ReturnType<typeof setTimeout>[]): void {
 function Avatar({ src, name, size = 28 }: { src: string | null; name: string; size?: number }) {
   if (!src) {
     return (
-      <span className="rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white shrink-0" style={{ width: size, height: size }}>
+      <span className="rounded-full bg-surface-3 flex items-center justify-center text-xs font-bold text-fg shrink-0" style={{ width: size, height: size }}>
         {name.slice(0, 1).toUpperCase()}
       </span>
     );
@@ -82,11 +82,11 @@ function MiniBoard({
         {dead && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-black/40">
             <Skull className={compact ? "w-3.5 h-3.5 text-red-400" : "w-5 h-5 text-red-400"} />
-            {place && <span className={`${compact ? "text-[10px]" : "text-xs"} font-black text-white`}>#{place}</span>}
+            {place && <span className={`${compact ? "text-[10px]" : "text-xs"} font-black text-fg`}>#{place}</span>}
           </div>
         )}
       </div>
-      <p className={`${compact ? "text-[9px]" : "text-[11px]"} text-center text-gray-300 truncate font-semibold`}>{name}</p>
+      <p className={`${compact ? "text-[9px]" : "text-xs"} text-center text-fg/85 truncate font-semibold`}>{name}</p>
     </div>
   );
 }
@@ -361,8 +361,8 @@ export default function BlocksVersusClient({
   const header = (
     <div className="flex items-center justify-between gap-2">
       {fullscreen ? <span /> : <Link
-        href={tourMode ? `/tournament/${tournamentEventId}` : "/games"}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white"
+        href={tourMode ? `/tournament/${tournamentEventId}` : "/games/blocks"}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-fg"
       >
         <ArrowLeft className="w-4 h-4" /> {tourMode ? "Zum Event" : "OMA Blocks"}
       </Link>}
@@ -383,20 +383,20 @@ export default function BlocksVersusClient({
 
   if (status === "connecting") {
     body = (
-      <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 text-sm text-gray-400">
+      <div className="glass rounded-card p-8 flex flex-col items-center gap-3 text-sm text-muted">
         <Loader2 className="w-6 h-6 animate-spin" /> Verbinde mit dem Versus-Server …
       </div>
     );
   } else if (status === "unavailable" || status === "closed") {
     body = (
-      <div className="glass rounded-2xl p-8 flex flex-col items-center gap-3 text-center">
-        <p className="text-sm text-gray-300">{statusText}</p>
+      <div className="glass rounded-card p-8 flex flex-col items-center gap-3 text-center">
+        <p className="text-sm text-fg/85">{statusText}</p>
         {status === "closed" && (
           <Button data-pad-default onClick={() => setConnectNonce((n) => n + 1)} icon={<RefreshCw className="w-4 h-4" />}>
             Neu verbinden
           </Button>
         )}
-        <Link href="/games/blocks" className="text-xs text-gray-400 hover:text-white">Solange Solo spielen →</Link>
+        <Link href="/games/blocks/solo" className="text-xs text-muted hover:text-fg">Solange Solo spielen →</Link>
       </div>
     );
   } else if (tourMode && !room) {
@@ -413,9 +413,9 @@ export default function BlocksVersusClient({
     }
     body = (
       <div className="space-y-4">
-        <div className="glass rounded-2xl p-5 space-y-3 text-center">
+        <div className="glass rounded-card p-5 space-y-3 text-center">
           <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">{tourState ? PHASE_LABEL[tourState.phase] : "Turnier"}</p>
-          {text ? <p className="text-sm text-gray-300">{text}</p> : <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />}
+          {text ? <p className="text-sm text-fg/85">{text}</p> : <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted" />}
           {tourState?.me.canPlay && (
             <Button data-pad-default onClick={() => void joinTournament()} loading={tourJoining} icon={<Play className="w-4 h-4" />}>
               Turnier-Raum betreten
@@ -423,29 +423,29 @@ export default function BlocksVersusClient({
           )}
         </div>
         {tourState && tourState.phase !== "pending" && (
-          <div className="glass rounded-2xl p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>
+          <div className="glass rounded-card p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>
         )}
       </div>
     );
   } else if (!room) {
     body = (
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="glass rounded-2xl p-5 space-y-3">
+        <div className="glass rounded-card p-5 space-y-3">
           <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-teal-300" />
-            <h2 className="font-display text-lg font-bold text-white">Schnelles Spiel</h2>
+            <Zap className="w-5 h-5 text-primary-fg" />
+            <h2 className="font-display text-lg font-bold text-fg">Schnelles Spiel</h2>
           </div>
-          <p className="text-xs text-gray-400">Tritt einem offenen Raum bei oder eröffne einen — andere können jederzeit dazukommen.</p>
+          <p className="text-xs text-muted">Tritt einem offenen Raum bei oder eröffne einen — andere können jederzeit dazukommen.</p>
           <Button data-pad-default onClick={() => { requestBrowserFullscreen(); send({ t: "quick" }); }} className="w-full" icon={<Play className="w-4 h-4" />}>
             Mitspielen
           </Button>
         </div>
-        <div className="glass rounded-2xl p-5 space-y-3">
+        <div className="glass rounded-card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-violet-300" />
-            <h2 className="font-display text-lg font-bold text-white">Privater Raum</h2>
+            <h2 className="font-display text-lg font-bold text-fg">Privater Raum</h2>
           </div>
-          <p className="text-xs text-gray-400">Erstelle einen Raum und schick den Link an deine Freunde — oder tritt mit Code bei.</p>
+          <p className="text-xs text-muted">Erstelle einen Raum und schick den Link an deine Freunde — oder tritt mit Code bei.</p>
           <Button variant="outline" onClick={() => send({ t: "create", isPublic: false })} className="w-full">
             Raum erstellen
           </Button>
@@ -460,7 +460,7 @@ export default function BlocksVersusClient({
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, ROOM_CODE_LENGTH))}
               placeholder="CODE"
-              className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-white placeholder:text-gray-600"
+              className="flex-1 min-w-0 bg-surface-2 border border-line rounded-lg px-3 py-2 text-sm font-mono tracking-widest text-fg placeholder:text-subtle"
             />
             <Button type="submit" variant="outline" disabled={joinCode.length !== ROOM_CODE_LENGTH}>
               Beitreten
@@ -468,20 +468,20 @@ export default function BlocksVersusClient({
           </form>
         </div>
 
-        <div className="glass rounded-2xl p-5 space-y-3 sm:col-span-2">
+        <div className="glass rounded-card p-5 space-y-3 sm:col-span-2">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-bold text-white">Offene Räume</h2>
-            <span className="text-[11px] text-gray-500 tabular-nums">{publicRooms.length}</span>
+            <h2 className="font-display text-lg font-bold text-fg">Offene Räume</h2>
+            <span className="text-xs text-subtle tabular-nums">{publicRooms.length}</span>
           </div>
           {publicRooms.length === 0 ? (
-            <p className="text-xs text-gray-500">Gerade ist kein Raum offen — eröffne einen über „Mitspielen“, dann sehen ihn alle hier.</p>
+            <p className="text-xs text-subtle">Gerade ist kein Raum offen — eröffne einen über „Mitspielen“, dann sehen ihn alle hier.</p>
           ) : (
             <ul className="space-y-2">
               {publicRooms.map((r) => {
                 const full = r.playerCount >= MAX_ROOM_PLAYERS;
                 const host = r.players[0]?.name ?? "Spieler";
                 return (
-                  <li key={r.code} className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2">
+                  <li key={r.code} className="flex items-center gap-3 rounded-control bg-surface-2 border border-line px-3 py-2">
                     <div className="flex -space-x-2 shrink-0">
                       {r.players.map((p, i) => (
                         <span key={i} className="rounded-full ring-2 ring-[#0b0f17]">
@@ -490,13 +490,13 @@ export default function BlocksVersusClient({
                       ))}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">Raum von {host}</p>
-                      <p className="text-[11px] text-gray-500">
+                      <p className="text-sm font-semibold text-fg truncate">Raum von {host}</p>
+                      <p className="text-xs text-subtle">
                         <span className="tabular-nums">{r.playerCount}/{MAX_ROOM_PLAYERS}</span> Spieler ·{" "}
                         {r.phase === "lobby" ? (
-                          <span className="text-teal-300">wartet auf Spieler</span>
+                          <span className="text-primary-fg">wartet auf Spieler</span>
                         ) : (
-                          <span className="text-amber-300">Runde läuft — du spielst ab der nächsten mit</span>
+                          <span className="text-coin">Runde läuft — du spielst ab der nächsten mit</span>
                         )}
                       </p>
                     </div>
@@ -505,7 +505,7 @@ export default function BlocksVersusClient({
                       onClick={() => void copyInvite(r.code)}
                       title="Einladungslink kopieren"
                       aria-label="Einladungslink kopieren"
-                      className="shrink-0 p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5"
+                      className="shrink-0 p-2 rounded-lg text-muted hover:text-fg hover:bg-surface-2"
                     >
                       <Copy className="w-4 h-4" />
                     </button>
@@ -529,13 +529,13 @@ export default function BlocksVersusClient({
     const secs = tour.startsAt ? Math.max(0, Math.ceil((tour.startsAt - now) / 1000)) : null;
     body = (
       <div className="space-y-4">
-        <div className="glass rounded-2xl p-5 space-y-4">
+        <div className="glass rounded-card p-5 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <p className="text-[10px] font-semibold text-violet-300 uppercase tracking-widest">{tourState?.title ?? "Live-Turnier"}</p>
-              <p className="font-display text-2xl font-black text-white">{tour.stage === "final" ? "Finale" : groupLabel(tour.group)}</p>
+              <p className="font-display text-2xl font-black text-fg">{tour.stage === "final" ? "Finale" : groupLabel(tour.group)}</p>
             </div>
-            <p className="text-sm font-bold text-white tabular-nums">
+            <p className="text-sm font-bold text-fg tabular-nums">
               {tour.done ? "Alle Runden gespielt" : `Runde ${room.round + 1} von ${tour.rounds}`}
             </p>
           </div>
@@ -545,40 +545,40 @@ export default function BlocksVersusClient({
               const p = playerById.get(id);
               const name = p?.name ?? rosterNames.get(id) ?? "Spieler";
               return (
-                <div key={id} className={`flex items-center gap-3 rounded-xl px-3 py-2 bg-white/[0.03] ${id === myId ? "ring-1 ring-teal-500/40" : ""} ${present.has(id) ? "" : "opacity-40"}`}>
+                <div key={id} className={`flex items-center gap-3 rounded-control px-3 py-2 bg-surface-2 ${id === myId ? "ring-1 ring-teal-500/40" : ""} ${present.has(id) ? "" : "opacity-40"}`}>
                   <Avatar src={p?.image ?? null} name={name} />
-                  <span className="flex-1 min-w-0 truncate text-sm font-semibold text-white">{name}</span>
-                  <span className={`text-[11px] ${present.has(id) ? "text-teal-300" : "text-gray-500"}`}>{present.has(id) ? "da" : "fehlt"}</span>
+                  <span className="flex-1 min-w-0 truncate text-sm font-semibold text-fg">{name}</span>
+                  <span className={`text-xs ${present.has(id) ? "text-primary-fg" : "text-subtle"}`}>{present.has(id) ? "da" : "fehlt"}</span>
                 </div>
               );
             })}
           </div>
 
           {tour.done ? (
-            <p className="text-center text-sm text-gray-300">
+            <p className="text-center text-sm text-fg/85">
               {tour.stage === "final"
                 ? "Das Finale ist gespielt — der Endstand steht unten."
                 : "Deine Gruppe ist fertig. Wer weiterkommt, wechselt automatisch ins Finale, sobald alle Gruppen durch sind."}
             </p>
           ) : secs !== null ? (
-            <p className="text-center text-sm text-white">Nächste Runde startet in <span className="font-black tabular-nums">{secs}</span> s</p>
+            <p className="text-center text-sm text-fg">Nächste Runde startet in <span className="font-black tabular-nums">{secs}</span> s</p>
           ) : (
-            <p className="text-center text-xs text-gray-400">
+            <p className="text-center text-xs text-muted">
               Wartet auf Mitspieler — die Runde startet automatisch, sobald alle da sind (spätestens 90 Sekunden nachdem der zweite Spieler da ist).
             </p>
           )}
         </div>
-        {tourState && <div className="glass rounded-2xl p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>}
+        {tourState && <div className="glass rounded-card p-4"><TournamentStandings state={tourState} viewerId={myId} /></div>}
       </div>
     );
   } else if (!inGame) {
     // Lobby
     body = (
-      <div className="glass rounded-2xl p-5 space-y-4">
+      <div className="glass rounded-card p-5 space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">{room.isPublic ? "Öffentlicher Raum" : "Privater Raum"}</p>
-            <p className="font-mono text-2xl font-black text-white tracking-[0.3em]">{room.code}</p>
+            <p className="text-[10px] font-semibold text-subtle uppercase tracking-widest">{room.isPublic ? "Öffentlicher Raum" : "Privater Raum"}</p>
+            <p className="font-mono text-2xl font-black text-fg tracking-[0.3em]">{room.code}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => void copyInvite()} icon={<Copy className="w-4 h-4" />}>
             Einladungslink
@@ -587,18 +587,18 @@ export default function BlocksVersusClient({
 
         <div className="space-y-1.5">
           {room.players.map((p) => (
-            <div key={p.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 bg-white/[0.03] ${p.id === myId ? "ring-1 ring-teal-500/40" : ""}`}>
+            <div key={p.id} className={`flex items-center gap-3 rounded-control px-3 py-2 bg-surface-2 ${p.id === myId ? "ring-1 ring-teal-500/40" : ""}`}>
               <Avatar src={p.image} name={p.name} />
-              <span className="flex-1 min-w-0 truncate text-sm font-semibold text-white">{p.name}</span>
-              {p.host && <Crown className="w-4 h-4 text-amber-300" />}
-              <span className="text-xs text-gray-400 tabular-nums">{p.wins} {p.wins === 1 ? "Sieg" : "Siege"}</span>
+              <span className="flex-1 min-w-0 truncate text-sm font-semibold text-fg">{p.name}</span>
+              {p.host && <Crown className="w-4 h-4 text-coin" />}
+              <span className="text-xs text-muted tabular-nums">{p.wins} {p.wins === 1 ? "Sieg" : "Siege"}</span>
             </div>
           ))}
         </div>
 
         {end && (
-          <p className="text-xs text-gray-400">
-            Letzte Runde: <span className="text-white font-semibold">{end.winnerId ? playerById.get(end.winnerId)?.name ?? "—" : "kein Sieger"}</span> hat gewonnen.
+          <p className="text-xs text-muted">
+            Letzte Runde: <span className="text-fg font-semibold">{end.winnerId ? playerById.get(end.winnerId)?.name ?? "—" : "kein Sieger"}</span> hat gewonnen.
           </p>
         )}
 
@@ -607,7 +607,7 @@ export default function BlocksVersusClient({
             {room.players.length < 2 ? "Warte auf Mitspieler …" : "Runde starten"}
           </Button>
         ) : (
-          <p className="text-center text-xs text-gray-500">Warte, bis der Host die Runde startet …</p>
+          <p className="text-center text-xs text-subtle">Warte, bis der Host die Runde startet …</p>
         )}
       </div>
     );
@@ -617,29 +617,29 @@ export default function BlocksVersusClient({
     const myPlace = myId ? kos[myId] ?? end?.placements.find((p) => p.id === myId)?.place ?? null : null;
     let overlay: React.ReactNode = null;
     if (countdown !== null) {
-      overlay = <p className="font-display text-6xl font-black text-white drop-shadow-lg">{countdown}</p>;
+      overlay = <p className="font-display text-6xl font-black text-fg drop-shadow-lg">{countdown}</p>;
     } else if (end) {
       overlay = (
-        <div className="glass-heavy rounded-2xl p-4 w-64 max-w-[90%] space-y-2 text-center">
-          <p className="font-display text-xl font-black text-white">
+        <div className="glass-heavy rounded-card p-4 w-64 max-w-[90%] space-y-2 text-center">
+          <p className="font-display text-xl font-black text-fg">
             {end.winnerId === myId ? "Gewonnen!" : myPlace ? `Platz ${myPlace}` : "Runde vorbei"}
           </p>
           <ol className="space-y-1 text-left">
             {end.placements.map((p) => (
               <li key={p.id} className="flex items-center gap-2 text-xs">
-                <span className="w-5 text-gray-500 tabular-nums">{p.place}.</span>
-                <span className={`truncate ${p.id === myId ? "text-teal-300 font-bold" : "text-white"}`}>{playerById.get(p.id)?.name ?? "Spieler"}</span>
+                <span className="w-5 text-subtle tabular-nums">{p.place}.</span>
+                <span className={`truncate ${p.id === myId ? "text-primary-fg font-bold" : "text-fg"}`}>{playerById.get(p.id)?.name ?? "Spieler"}</span>
               </li>
             ))}
           </ol>
-          <p className="text-[10px] text-gray-500">Gleich geht es zurück in den Raum.</p>
+          <p className="text-[10px] text-subtle">Gleich geht es zurück in den Raum.</p>
         </div>
       );
     } else if (myPlace) {
       overlay = (
-        <div className="glass-heavy rounded-2xl p-4 text-center">
-          <p className="font-display text-xl font-black text-white">Platz {myPlace}</p>
-          <p className="text-xs text-gray-400">Du schaust den anderen zu …</p>
+        <div className="glass-heavy rounded-card p-4 text-center">
+          <p className="font-display text-xl font-black text-fg">Platz {myPlace}</p>
+          <p className="text-xs text-muted">Du schaust den anderen zu …</p>
         </div>
       );
     }
@@ -668,8 +668,8 @@ export default function BlocksVersusClient({
         {compact && opponents.length > 0 && (
           <div className="w-full flex items-start gap-2 -mb-2">
             <div className="shrink-0 pt-1 text-center">
-              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest">Gegner</p>
-              <p className="text-sm font-black text-white tabular-nums">{aliveCount}<span className="text-gray-500">/{opponents.length}</span></p>
+              <p className="text-[9px] font-semibold text-subtle uppercase tracking-widest">Gegner</p>
+              <p className="text-sm font-black text-fg tabular-nums">{aliveCount}<span className="text-subtle">/{opponents.length}</span></p>
             </div>
             <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto pb-1">{opponentBoards(true)}</div>
           </div>
@@ -698,7 +698,7 @@ export default function BlocksVersusClient({
               overlay={overlay}
             />
           ) : (
-            <div className="glass rounded-2xl p-6 text-center text-sm text-gray-400">Diese Runde läuft schon — du bist in der nächsten dabei.</div>
+            <div className="glass rounded-card p-6 text-center text-sm text-muted">Diese Runde läuft schon — du bist in der nächsten dabei.</div>
           )}
         </div>
         {!compact && (
@@ -717,7 +717,7 @@ export default function BlocksVersusClient({
           <span className="sr-only">OMA Blocks · </span>
           <OmaWordmark product="blocks" size="md" suffix={tourMode ? (tourState?.title ?? "Turnier") : "Versus"} />
         </h1>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           {tourMode
             ? "Live-Turnier: Punkte je Runde nach Platz, die Besten jeder Gruppe kommen ins Finale."
             : "Echtzeit gegen bis zu 7 andere — abgeräumte Linien landen als Garbage beim Gegner."}
@@ -726,7 +726,7 @@ export default function BlocksVersusClient({
       {body}
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Einstellungen">
         <SettingsPanel settings={settings} onChange={saveSettings} />
-        <p className="text-[11px] text-gray-500 mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
+        <p className="text-xs text-subtle mt-4">Geänderte Steuerung gilt ab der nächsten Runde.</p>
       </Modal>
     </div>
     </FullscreenShell>

@@ -198,7 +198,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
       since: e.createdAt.toISOString(), href: `/events/verwalten/${e.id}`,
       facts: [
         when(e.startAt),
-        parseEventKind(e.type) === "tournament" ? "Mit Platzierung" : "Ohne Platzierung",
+        parseEventKind(e.type) === "tournament" ? "Turnier" : "Freies Spiel",
         `${e._count.registrations}${e.maxPlayers ? `/${e.maxPlayers}` : ""} angemeldet`,
         rewardSummary(eventPayout(e)),
       ],

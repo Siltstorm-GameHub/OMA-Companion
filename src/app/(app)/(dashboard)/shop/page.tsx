@@ -42,8 +42,8 @@ export default async function ShopPage() {
   );
 
   return (
-    <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
-      <GamesSectionTabs active="shop" userId={me.id} />
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-5xl mx-auto w-full min-w-0 space-y-5 animate-fade-in">
+      <GamesSectionTabs active="shop" />
       {!todaySpin && wheel}
       <CosmeticsShop
         userId={me.id}

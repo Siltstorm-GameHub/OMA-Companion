@@ -10,8 +10,8 @@ import { GAME_SORTS, type GameSort } from "@/lib/games/filter";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Spieleliste | OMA",
-  description: "Was zocken wir heute? Spiele für eure Runde finden — bewertet von der Community.",
+  title: "OMA GameSwipe | Games | OMA",
+  description: "Was zocken wir heute? Spiele entdecken, bewerten und Mitspieler finden — OMA GameSwipe.",
 };
 
 export default async function SpielePage({ searchParams }: { searchParams: Promise<{ q?: string; neu?: string; sort?: string; ansicht?: string }> }) {
@@ -36,7 +36,7 @@ export default async function SpielePage({ searchParams }: { searchParams: Promi
       openAdd={neu === "1"}
       pendingCount={pendingCount}
       isModerator={isModerator}
-      tabs={<GamesSectionTabs active="spieleliste" userId={user?.id} />}
+      tabs={<GamesSectionTabs active="gameswipe" />}
       sales={user ? <GameSalesStrip userId={user.id} /> : null}
       swipe={swipe}
       initialView={listFirst ? "list" : "swipe"}

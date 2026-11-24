@@ -11,8 +11,8 @@ export default function Shortfall({ price, balance, basePrice }: { price: number
         <div className="h-full rounded-full bg-amber-400/70" style={{ width: `${pct}%` }} />
       </div>
       <p className="flex items-center justify-between gap-1 text-xs">
-        <span className="text-gray-400">noch <span className="font-semibold text-amber-200 tabular-nums">{fmt(price - balance)}</span></span>
-        <span className="inline-flex items-center gap-0.5 text-gray-500 tabular-nums">
+        <span className="text-muted">noch <span className="font-semibold text-coin tabular-nums">{fmt(price - balance)}</span></span>
+        <span className="inline-flex items-center gap-0.5 text-subtle tabular-nums">
           <CoinIcon size={11} /> {fmt(price)}
           {basePrice != null && basePrice > price && <span className="line-through opacity-60">{fmt(basePrice)}</span>}
         </span>

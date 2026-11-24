@@ -40,15 +40,15 @@ export default function TipPanel({ slug, initial, isModerator }: {
   }
 
   return (
-    <div className="surface rounded-2xl p-4 space-y-3">
+    <div className="surface rounded-card p-4 space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
         <Flame className="w-4 h-4 text-orange-400 shrink-0" />
-        <p className="flex-1 min-w-0 text-xs text-gray-300">
+        <p className="flex-1 min-w-0 text-xs text-fg/85">
           {state === "approved"
-            ? <>Für den nächsten <span className="text-white font-semibold">Drop der Woche</span> in OMA GameSwipe vorgemerkt.</>
+            ? <>Für den nächsten <span className="text-fg font-semibold">Drop der Woche</span> in OMA GameSwipe vorgemerkt.</>
             : state === "pending"
-              ? <>Für den Drop der Woche empfohlen <span className="text-gray-500">— das Team schaut drüber.</span></>
-              : <>Sollten mehr Leute das Spiel kennen? <span className="text-gray-500">Empfiehl es für den Drop der Woche in OMA GameSwipe.</span></>}
+              ? <>Für den Drop der Woche empfohlen <span className="text-subtle">— das Team schaut drüber.</span></>
+              : <>Sollten mehr Leute das Spiel kennen? <span className="text-subtle">Empfiehl es für den Drop der Woche in OMA GameSwipe.</span></>}
         </p>
         {state === null && !open && <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Empfehlen</Button>}
       </div>
@@ -61,7 +61,7 @@ export default function TipPanel({ slug, initial, isModerator }: {
             className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
           />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-subtle">
               {isModerator ? "Als Moderator kommt es direkt in den nächsten Drop." : "Das Team prüft Empfehlungen, bevor sie im Drop landen."}
             </span>
             <div className="flex gap-2">

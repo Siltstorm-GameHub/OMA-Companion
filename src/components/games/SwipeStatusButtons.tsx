@@ -4,9 +4,9 @@ import { Check, Heart, X } from "@/components/icons";
 import { SWIPE_LABELS, type SwipeStatus } from "@/lib/games/swipe";
 
 const STYLE: Record<SwipeStatus, { icon: typeof Check; on: string; off: string; iconOn: string }> = {
-  in:   { icon: Check, on: "bg-emerald-500/15 border-emerald-400/50 text-emerald-100", off: "hover:border-emerald-400/40 hover:bg-emerald-500/10", iconOn: "text-emerald-300" },
+  in:   { icon: Check, on: "bg-success-soft border-success/50 text-emerald-100", off: "hover:border-success/40 hover:bg-success-soft", iconOn: "text-success" },
   wish: { icon: Heart, on: "bg-rose-500/15 border-rose-400/50 text-rose-100", off: "hover:border-rose-400/40 hover:bg-rose-500/10", iconOn: "text-rose-300" },
-  out:  { icon: X, on: "bg-line border-white/25 text-gray-200", off: "hover:border-line-strong hover:bg-line", iconOn: "text-gray-300" },
+  out:  { icon: X, on: "bg-line border-line-strong text-fg/90", off: "hover:border-line-strong hover:bg-line", iconOn: "text-fg/85" },
 };
 
 /** Die drei Entscheidungen als Knöpfe (Detailseite) — gleiche Bedeutung wie die Swipe-Richtungen.
@@ -35,12 +35,12 @@ export default function SwipeStatusButtons({
             aria-pressed={on}
             title={s === "in" ? "Hab ich und würde spielen — für alle sichtbar" : s === "wish" ? "Hab ich noch nicht, würde ich holen — du bekommst Angebots-Hinweise" : "Nur für dich sichtbar"}
             className={`inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold border transition-colors disabled:opacity-60 ${
-              on ? st.on : `border-line-strong text-gray-300 ${st.off}`
+              on ? st.on : `border-line-strong text-fg/85 ${st.off}`
             }`}
           >
-            <Icon className={`w-4 h-4 ${on ? st.iconOn : "text-gray-500"}`} />
+            <Icon className={`w-4 h-4 ${on ? st.iconOn : "text-subtle"}`} />
             {SWIPE_LABELS[s]}
-            {count !== undefined && <span className="text-xs text-gray-500 tabular-nums">{count}</span>}
+            {count !== undefined && <span className="text-xs text-subtle tabular-nums">{count}</span>}
           </button>
         );
       })}

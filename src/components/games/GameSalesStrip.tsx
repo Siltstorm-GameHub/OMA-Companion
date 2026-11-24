@@ -13,11 +13,11 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
   return (
     <section className="space-y-2.5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-display text-base font-bold text-white">
+        <h2 className="flex items-center gap-2 font-display text-base font-bold text-fg">
           <Tag className="w-4 h-4 text-rose-300" /> Gerade im Angebot
         </h2>
-        <Link href="/spiele?sort=sale" className="flex items-center gap-0.5 text-xs font-semibold text-primary-fg hover:text-teal-200 shrink-0">
-          {total > games.length ? `Alle ${total}` : "Spieleliste"} <ChevronRight className="w-3.5 h-3.5" />
+        <Link href="/spiele?sort=sale" className="flex items-center gap-0.5 text-xs font-semibold text-primary-fg hover:text-primary-fg shrink-0">
+          {total > games.length ? `Alle ${total}` : "Alle Spiele"} <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
       <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 snap-x">
@@ -28,25 +28,25 @@ export default async function GameSalesStrip({ userId }: { userId: string }) {
             <Link
               key={g.slug}
               href={`/spiele/${g.slug}`}
-              className={`group snap-start shrink-0 w-40 rounded-xl overflow-hidden border bg-surface-2 hover:bg-line transition-colors ${
+              className={`group snap-start shrink-0 w-40 rounded-control overflow-hidden border bg-surface-2 hover:bg-line transition-colors ${
                 g.onMyList ? "border-rose-400/40" : "border-line hover:border-line-strong"
               }`}
             >
               <div className="relative">
                 <GameCover game={g.name} coverUrl={g.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
-                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-white tabular-nums">
+                <span className="absolute top-1.5 left-1.5 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-fg tabular-nums">
                   −{g.discountPercent} %
                 </span>
               </div>
               <div className="p-2 space-y-0.5">
-                <p className="text-xs font-semibold text-white truncate group-hover:text-primary-fg transition-colors">{g.name}</p>
+                <p className="text-xs font-semibold text-fg truncate group-hover:text-primary-fg transition-colors">{g.name}</p>
                 {price && (
                   <p className="text-xs tabular-nums">
-                    <span className="text-white font-semibold">{price}</span>
-                    {before && <span className="ml-1.5 text-gray-500 line-through">{before}</span>}
+                    <span className="text-fg font-semibold">{price}</span>
+                    {before && <span className="ml-1.5 text-subtle line-through">{before}</span>}
                   </p>
                 )}
-                <p className={`flex items-center gap-1 text-xs ${g.onMyList ? "text-rose-300" : "text-gray-500"}`}>
+                <p className={`flex items-center gap-1 text-xs ${g.onMyList ? "text-rose-300" : "text-subtle"}`}>
                   <Heart className="w-2.5 h-2.5 shrink-0" />
                   {g.onMyList
                     ? "Auf deiner Wunschliste"

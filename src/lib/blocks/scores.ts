@@ -162,7 +162,7 @@ export async function finalizeDueBlocksSeasons(now: Date = new Date()): Promise<
         body:
           `Mit ${ranking[i].score.toLocaleString("de-DE")} Punkten bist du auf Platz ${i + 1} der Monatswertung gelandet.` +
           (label ? ` Deine Belohnung: ${label}.` : ""),
-        url: "/games",
+        url: "/games/blocks",
       });
     }
     await payGoals(season);
@@ -192,7 +192,7 @@ async function payGoals(season: string): Promise<void> {
       type: "badge",
       title: `OMA Blocks: Monatsziel erreicht`,
       body: `Dein Bestwert im ${seasonLabel(season)}: ${row.score.toLocaleString("de-DE")} Punkte — Ziel ${reached.score.toLocaleString("de-DE")} geschafft. Deine Belohnung: ${label}.`,
-      url: "/games",
+      url: "/games/blocks",
     });
   }
 }

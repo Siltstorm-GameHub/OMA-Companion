@@ -74,11 +74,9 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
               <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
                 <option value="">– Keine Kategorie –</option>
                 <option value="competitive">🏆 Kompetitiv</option>
-                <option value="fun">🎉 Fun</option>
-                <option value="casual">🛋️ Casual</option>
                 <option value="training">🎓 Training</option>
-                <option value="community_event">🤝 Community</option>
                 <option value="special">⭐ Special</option>
+                <option value="fun">🎉 Fun</option>
               </select>
             </Field>
             <Field label="Icon">

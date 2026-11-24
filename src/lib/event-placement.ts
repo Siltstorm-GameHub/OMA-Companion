@@ -14,10 +14,15 @@ export function parseEventKind(value: unknown): EventKind | null {
   return value === "community" || value === "tournament" ? value : null;
 }
 
-/** Anzeige des Event-Typs (Badge auf Karten, Auswahl im Bearbeiten) */
-export const EVENT_KIND_LABEL: Record<EventKind, { emoji: string; label: string }> = {
-  community:  { emoji: "🤝", label: "Ohne Platzierung" },
-  tournament: { emoji: "🏆", label: "Mit Platzierung" },
+/**
+ * Anzeige des Event-Typs: "Turnier" (mit Platzierung) und "Freies Spiel" (ohne Platzierung). Technisch bleibt es
+ * type "tournament" | "community". In Listen steht nur das Symbol (glyph) mit hint als Tooltip.
+ */
+export const EVENT_KIND_LABEL: Record<EventKind, {
+  emoji: string; label: string; short: string; hint: string; glyph: "trophy" | "handshake"; tone: string;
+}> = {
+  tournament: { emoji: "🏆", label: "Turnier",      short: "mit Platzierung",  hint: "Turnier — mit Platzierung und Sieger", glyph: "trophy", tone: "text-coin" },
+  community:  { emoji: "🤝", label: "Freies Spiel", short: "ohne Platzierung", hint: "Freies Spiel — ohne Platzierung, alle bekommen die Teilnahme-Belohnung", glyph: "handshake", tone: "text-violet-300" },
 };
 
 export const eventKindOf = (ev: { type?: string | null }): EventKind => (eventHasPlacement(ev) ? "tournament" : "community");

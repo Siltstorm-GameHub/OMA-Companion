@@ -43,7 +43,7 @@ export default function TabRewards({ ctx }: { ctx: EventEdit }) {
                   </div>
                 </div>
                 {!hasPlacement && (
-                  <p className="text-xs text-subtle">Ohne Platzierung: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
+                  <p className="text-xs text-subtle">Freies Spiel: kein Sieger, alle Teilnehmer bekommen nur diese Teilnahme-Belohnung.</p>
                 )}
               </div>
 

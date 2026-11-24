@@ -260,20 +260,20 @@ export default function SwipeDeck({
   return (
     <div className="space-y-4">
       {drop && (
-        <div className="max-w-sm mx-auto flex items-center gap-3 rounded-2xl border border-orange-400/30 px-4 py-2.5"
+        <div className="max-w-sm mx-auto flex items-center gap-3 rounded-card border border-orange-400/30 px-4 py-2.5"
           style={{ background: "linear-gradient(110deg, rgba(249,115,22,0.16), transparent 75%)" }}>
           <Flame className="w-5 h-5 text-orange-300 shrink-0" />
           <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-white">Drop der Woche</span>
-            <span className="block text-xs text-gray-400">
+            <span className="block text-sm font-bold text-fg">Drop der Woche</span>
+            <span className="block text-xs text-muted">
               {drop.open > 0 ? `${drop.open} von ${drop.total} Karten offen` : `Alle ${drop.total} Karten entschieden`} ·{" "}
               {daysLeftLabel(drop.daysLeft)}
             </span>
           </span>
-          {drop.open === 0 && <Check className="w-5 h-5 text-emerald-300 shrink-0" />}
+          {drop.open === 0 && <Check className="w-5 h-5 text-success shrink-0" />}
         </div>
       )}
-      <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
+      <div className="flex items-center justify-between gap-2 text-xs text-subtle">
         <span>{remaining > 0 ? `Noch ${remaining} ${remaining === 1 ? "Spiel" : "Spiele"} zu entscheiden` : "Alles entschieden"}</span>
         <span className="hidden sm:inline">← nicht meins · ↑ würde ich holen · → am Start · I Details · Z rückgängig</span>
       </div>
@@ -283,10 +283,10 @@ export default function SwipeDeck({
         {!top && (
           <div className="absolute inset-0 rounded-3xl border border-line bg-surface-2 flex flex-col items-center justify-center text-center p-6 gap-3">
             <span className="text-4xl" aria-hidden>🎉</span>
-            <p className="font-display text-lg font-bold text-white">Alles durch!</p>
-            <p className="text-xs text-gray-400">Neue Karten kommen täglich dazu, jeden Montag gibt es den Drop der Woche. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
+            <p className="font-display text-lg font-bold text-fg">Alles durch!</p>
+            <p className="text-xs text-muted">Neue Karten kommen täglich dazu, jeden Montag gibt es den Drop der Woche. Bis dahin: schau, wer bei deinen Spielen am Start ist.</p>
             {onShowList && (
-              <button type="button" onClick={onShowList} className="text-sm font-semibold text-primary-fg hover:text-teal-200">
+              <button type="button" onClick={onShowList} className="text-sm font-semibold text-primary-fg hover:text-primary-fg">
                 Zur Liste →
               </button>
             )}
@@ -344,24 +344,24 @@ export default function SwipeDeck({
       {/* Match */}
       {match && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setMatch(null)}>
-          <div className="w-full max-w-sm rounded-3xl border border-emerald-400/40 p-6 text-center space-y-4"
+          <div className="w-full max-w-sm rounded-3xl border border-success/40 p-6 text-center space-y-4"
             style={{ background: "linear-gradient(160deg, rgba(16,185,129,0.25), #121216 65%)" }}
             onClick={e => e.stopPropagation()}>
             <p className="text-4xl" aria-hidden>🎮</p>
-            <p className="font-display text-2xl font-extrabold text-white">Match!</p>
-            <p className="text-sm text-gray-300">
-              <span className="text-white font-semibold">{othersLabel(match)}</span>{" "}
+            <p className="font-display text-2xl font-extrabold text-fg">Match!</p>
+            <p className="text-sm text-fg/85">
+              <span className="text-fg font-semibold">{othersLabel(match)}</span>{" "}
               {match.count > 2 ? "sind" : "ist"} bei{" "}
-              <span className="text-white font-semibold">{match.gameName}</span> auch am Start.
+              <span className="text-fg font-semibold">{match.gameName}</span> auch am Start.
             </p>
             <div className="flex flex-col gap-2">
               {match.gameSlug && (
                 <Link href={planRoundUrl(match.gameSlug)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+                  className="inline-flex items-center justify-center gap-1.5 rounded-control px-4 py-2.5 text-sm font-semibold bg-emerald-600 hover:bg-emerald-500 text-fg">
                   <CalendarPlus className="w-4 h-4" /> Runde planen
                 </Link>
               )}
-              <button type="button" onClick={() => setMatch(null)} className="text-sm text-gray-400 hover:text-white py-1">Weiter swipen</button>
+              <button type="button" onClick={() => setMatch(null)} className="text-sm text-muted hover:text-fg py-1">Weiter swipen</button>
             </div>
           </div>
         </div>
@@ -376,12 +376,12 @@ function RoundButton({
   label: string; onClick: () => void; disabled?: boolean; children: React.ReactNode; tone?: SwipeStatus; small?: boolean;
 }) {
   const color = tone === "in"
-    ? "text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/15"
+    ? "text-success border-success/40 hover:bg-success-soft"
     : tone === "wish"
       ? "text-rose-300 border-rose-400/40 hover:bg-rose-500/15"
       : tone === "out"
-        ? "text-gray-300 border-line-strong hover:bg-line"
-        : "text-gray-400 border-line-strong hover:bg-line";
+        ? "text-fg/85 border-line-strong hover:bg-line"
+        : "text-muted border-line-strong hover:bg-line";
   return (
     <button
       type="button"
@@ -397,8 +397,8 @@ function RoundButton({
 }
 
 const STAMP: Record<SwipeStatus, { text: string; cls: string }> = {
-  in: { text: "AM START", cls: "text-emerald-300 border-emerald-300 -rotate-12 left-4" },
-  out: { text: "NICHT MEINS", cls: "text-gray-200 border-gray-200 rotate-12 right-4" },
+  in: { text: "AM START", cls: "text-success border-emerald-300 -rotate-12 left-4" },
+  out: { text: "NICHT MEINS", cls: "text-fg/90 border-gray-200 rotate-12 right-4" },
   wish: { text: "WÜRDE ICH HOLEN", cls: "text-rose-300 border-rose-300 left-1/2 -translate-x-1/2" },
 };
 
@@ -414,19 +414,19 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         <GameCover game={card.name} coverUrl={card.coverUrl} className="w-full aspect-[16/9]" rounded="rounded-none" fallbackVariant="plain" />
         <span className="absolute top-3 left-3 flex flex-col items-start gap-1">
           {card.drop && (
-            <span className="flex items-center gap-1 rounded-full bg-orange-600/90 px-2.5 py-1 text-xs font-bold text-white">
+            <span className="flex items-center gap-1 rounded-full bg-orange-600/90 px-2.5 py-1 text-xs font-bold text-fg">
               <Flame className="w-3 h-3" /> Drop der Woche
             </span>
           )}
-          <span className="rounded-full bg-black/70 border border-line-strong px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="rounded-full bg-black/70 border border-line-strong px-2.5 py-1 text-xs font-semibold text-fg">
             {reasonLabel(card)}
           </span>
         </span>
         {card.discountPercent > 0 && (
-          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-white">−{card.discountPercent} %</span>
+          <span className="absolute top-3 right-3 rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-extrabold text-fg">−{card.discountPercent} %</span>
         )}
         {hint && (
-          <span className={`absolute top-1/2 -translate-y-1/2 border-4 rounded-xl px-3 py-1 font-display text-2xl font-extrabold tracking-wider bg-black/40 ${STAMP[hint].cls}`}>
+          <span className={`absolute top-1/2 -translate-y-1/2 border-4 rounded-control px-3 py-1 font-display text-2xl font-extrabold tracking-wider bg-black/40 ${STAMP[hint].cls}`}>
             {STAMP[hint].text}
           </span>
         )}
@@ -435,13 +435,13 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
         <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg leading-tight line-clamp-2">{card.name}</p>
         <div className="flex flex-wrap gap-1.5">
           {f.genres.slice(0, 3).map(g => (
-            <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-line text-gray-300">{GAME_GENRES[g]}</span>
+            <span key={g} className="text-xs px-2 py-0.5 rounded-full bg-line text-fg/85">{GAME_GENRES[g]}</span>
           ))}
           {f.modes.map(m => (
-            <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-teal-200">{GAME_MODES[m]}</span>
+            <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary-fg">{GAME_MODES[m]}</span>
           ))}
         </div>
-        <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+        <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
           {players && <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {players}</span>}
           {avg !== null && <span className="flex items-center gap-1"><StarDisplay value={avg} className="w-3 h-3" /> {formatRating(avg)}</span>}
           {f.isFree === true ? <span>Kostenlos</span> : price && <span>{price}</span>}
@@ -451,11 +451,11 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
             💬 Empfohlen{card.tip.by ? ` von ${card.tip.by}` : ""}{card.tip.note ? `: „${card.tip.note}“` : ""}
           </p>
         )}
-        {f.description && <p className={`text-xs text-gray-400 ${card.kind === "game" && card.tip ? "line-clamp-2" : "line-clamp-3"}`}>{f.description}</p>}
+        {f.description && <p className={`text-xs text-muted ${card.kind === "game" && card.tip ? "line-clamp-2" : "line-clamp-3"}`}>{f.description}</p>}
         {link && (card.kind === "game" || card.source === "free") && (
           <a href={link.href} target="_blank" rel="noreferrer"
             onPointerDown={e => e.stopPropagation()} onClick={e => e.stopPropagation()}
-            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-xs font-semibold text-teal-200 max-lg:min-h-10">
+            className="self-start inline-flex items-center gap-1 rounded-lg bg-line hover:bg-line px-2.5 py-1 text-xs font-semibold text-primary-fg max-lg:min-h-10">
             {link.label} <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -467,10 +467,10 @@ function CardFront({ card, hint }: { card: DeckCard; hint: SwipeStatus | null })
                   <PersonAvatar key={p.id} name={p.name} image={p.image} />
                 ))}
               </span>
-              <span className="text-xs text-emerald-300">{card.inCount} am Start</span>
+              <span className="text-xs text-success">{card.inCount} am Start</span>
             </>
           ) : (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-subtle">
               {card.kind !== "discover"
                 ? "Noch niemand am Start"
                 : card.source === "steam_soon" || card.source === "upcoming"
@@ -489,7 +489,7 @@ function PersonAvatar({ name, image }: { name: string; image: string | null }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img src={image} alt={name} title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] object-cover" />
   ) : (
-    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-line flex items-center justify-center text-xs text-gray-300">
+    <span title={name} className="w-7 h-7 rounded-full ring-2 ring-[#141418] bg-line flex items-center justify-center text-xs text-fg/85">
       {name.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -538,15 +538,15 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
   return (
     <div className="h-full flex flex-col cursor-pointer" onClick={onBackClick}>
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-line">
-        <p className="font-display text-base font-bold text-white truncate">{card.name}</p>
-        <button type="button" onClick={onClose} className="text-xs font-semibold text-primary-fg hover:text-teal-200 shrink-0">Zurück zur Karte</button>
+        <p className="font-display text-base font-bold text-fg truncate">{card.name}</p>
+        <button type="button" onClick={onClose} className="text-xs font-semibold text-primary-fg hover:text-primary-fg shrink-0">Zurück zur Karte</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
         {correcting && card.kind === "game" ? (
           <CorrectFieldsForm slug={card.slug} current={fields} onDone={saved => { if (saved) setFields(saved); setCorrecting(false); }} />
         ) : (
           <>
-            {fields.description && <p className="text-gray-300 leading-relaxed">{fields.description}</p>}
+            {fields.description && <p className="text-fg/85 leading-relaxed">{fields.description}</p>}
             <dl className="grid grid-cols-2 gap-2">
               <Fact label="Spieler">{players ?? "unbekannt"}</Fact>
               <Fact label="Rundenlänge">{labelOf(SESSION_LENGTHS, fields.sessionLength) ?? "unbekannt"}</Fact>
@@ -558,7 +558,7 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
             </dl>
 
             {card.kind === "game" && card.nextEvent && (
-              <Link href={`/tournament/${card.nextEvent.id}`} className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-400/30 px-3 py-2 text-amber-100">
+              <Link href={`/tournament/${card.nextEvent.id}`} className="flex items-center gap-2 rounded-control bg-warning-soft border border-warning/30 px-3 py-2 text-warning">
                 <CalendarPlus className="w-4 h-4 shrink-0" />
                 <span className="flex-1 truncate">{card.nextEvent.title} · {fmtDate(card.nextEvent.startAt)}</span>
                 <ChevronRight className="w-4 h-4 shrink-0" />
@@ -567,12 +567,12 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
 
             {card.kind === "game" && card.inPeople.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-gray-500">Am Start ({card.inCount})</p>
+                <p className="text-subtle">Am Start ({card.inCount})</p>
                 <div className="flex flex-wrap gap-1.5">
                   {card.inPeople.map(p => (
                     <span key={p.id} className="flex items-center gap-1.5 rounded-full bg-line pr-2.5">
                       <PersonAvatar name={p.name} image={p.image} />
-                      <span className="text-gray-200">{p.name}</span>
+                      <span className="text-fg/90">{p.name}</span>
                     </span>
                   ))}
                 </div>
@@ -582,14 +582,14 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
             {card.kind === "game" ? (
               <>
                 <div className="space-y-1">
-                  <p className="text-gray-500">{rating ? "Deine Bewertung" : "Schon gespielt? Bewerte es"}</p>
+                  <p className="text-subtle">{rating ? "Deine Bewertung" : "Schon gespielt? Bewerte es"}</p>
                   <StarRatingInput value={rating} onChange={rate} disabled={saving} size="md" />
                 </div>
                 <div className="flex items-center justify-between gap-2 pt-1">
-                  <button type="button" onClick={() => setCorrecting(true)} className="inline-flex items-center gap-1.5 text-gray-400 hover:text-white">
+                  <button type="button" onClick={() => setCorrecting(true)} className="inline-flex items-center gap-1.5 text-muted hover:text-fg">
                     <Pencil className="w-3.5 h-3.5" /> Angaben korrigieren
                   </button>
-                  <Link href={`/spiele/${card.slug}`} className="inline-flex items-center gap-0.5 font-semibold text-primary-fg hover:text-teal-200">
+                  <Link href={`/spiele/${card.slug}`} className="inline-flex items-center gap-0.5 font-semibold text-primary-fg hover:text-primary-fg">
                     Zur Spielseite <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -598,11 +598,11 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
               <>
                 {store && (
                   <a href={store.href} target="_blank" rel="noreferrer"
-                    className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg ring-1 ring-sky-300/40 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 active:scale-[0.98] transition">
+                    className="flex items-center justify-center gap-2 w-full rounded-control px-4 py-3 text-sm font-bold text-fg shadow-lg ring-1 ring-sky-300/40 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 active:scale-[0.98] transition">
                     <ExternalLink className="w-4 h-4" /> {store.label}
                   </a>
                 )}
-                <p className="text-gray-500">
+                <p className="text-subtle">
                   Steht noch nicht in unserer Spieleliste. Sag „Am Start“, dann nehmen wir es auf — danach kannst du es bewerten und
                   Angaben ergänzen.
                   {card.releaseDate && <> Erscheint am {fmtDay(card.releaseDate)}.</>}
@@ -618,9 +618,9 @@ function CardBack({ card, onClose, onRated }: { card: DeckCard; onClose: () => v
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-surface-2 border border-line px-3 py-2">
-      <dt className="text-xs uppercase tracking-wider text-gray-500">{label}</dt>
-      <dd className="text-white mt-0.5">{children}</dd>
+    <div className="rounded-control bg-surface-2 border border-line px-3 py-2">
+      <dt className="text-xs uppercase tracking-wider text-subtle">{label}</dt>
+      <dd className="text-fg mt-0.5">{children}</dd>
     </div>
   );
 }

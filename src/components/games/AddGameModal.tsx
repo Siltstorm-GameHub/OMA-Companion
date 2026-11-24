@@ -149,7 +149,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
       {step.kind === "search" && (
         <div className="space-y-4">
           <div className="relative">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-subtle absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               ref={inputRef}
               autoFocus
@@ -160,23 +160,23 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
               maxLength={MAX_GAME_NAME_LENGTH}
               className="w-full bg-surface-2 border border-line rounded-control pl-9 pr-9 py-2.5 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary"
             />
-            {searching && <Loader2 className="w-4 h-4 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />}
+            {searching && <Loader2 className="w-4 h-4 text-subtle absolute right-3 top-1/2 -translate-y-1/2 animate-spin" />}
           </div>
 
           {trimmed.length < 2 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-subtle">
               Tippe den Namen ein und wähle das Spiel aus. Was Steam über das Spiel weiß, füllen wir automatisch aus.
             </p>
           )}
 
           {result && result.local.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Schon in der Spieleliste</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-subtle">Schon in der Spieleliste</p>
               {result.local.map(g => (
                 <Link key={g.slug} href={`/spiele/${g.slug}`} onClick={onClose}
-                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 bg-primary/[0.06] border border-primary/20 hover:bg-primary/10 transition-colors">
+                  className="flex items-center gap-3 rounded-control px-2.5 py-2 bg-primary/[0.06] border border-primary/20 hover:bg-primary/10 transition-colors">
                   <GameCover game={g.name} coverUrl={g.coverUrl} className="w-14 h-8" rounded="rounded-md" fallbackVariant="plain" />
-                  <span className="flex-1 min-w-0 text-sm text-white truncate">{g.name}</span>
+                  <span className="flex-1 min-w-0 text-sm text-fg truncate">{g.name}</span>
                   <span className="text-xs text-primary-fg shrink-0">{g.status === "PENDING" ? "Wartet auf Freischaltung" : "Ansehen"}</span>
                   <ChevronRight className="w-3.5 h-3.5 text-primary-fg shrink-0" />
                 </Link>
@@ -186,21 +186,21 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
           {result && result.steam.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Bei Steam gefunden</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-subtle">Bei Steam gefunden</p>
               {result.steam.map(s => s.existingSlug ? (
                 <Link key={s.appId} href={`/spiele/${s.existingSlug}`} onClick={onClose}
-                  className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
+                  className="flex items-center gap-3 rounded-control px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
-                  <span className="flex-1 min-w-0 text-sm text-gray-300 truncate">{s.name}</span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
+                  <span className="flex-1 min-w-0 text-sm text-fg/85 truncate">{s.name}</span>
+                  <span className="text-xs text-subtle flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
                 </Link>
               ) : (
                 <button key={s.appId} type="button" onClick={() => pick({ steamAppId: s.appId }, s.name)}
-                  className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
+                  className="w-full text-left flex items-center gap-3 rounded-control px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={s.thumbUrl} alt="" className="w-14 h-8 rounded-md object-cover shrink-0" />
-                  <span className="flex-1 min-w-0 text-sm text-white truncate">{s.name}</span>
+                  <span className="flex-1 min-w-0 text-sm text-fg truncate">{s.name}</span>
                   <Plus className="w-4 h-4 text-primary shrink-0" />
                 </button>
               ))}
@@ -209,27 +209,27 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
           {result && result.igdb.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Weitere Treffer <span className="normal-case tracking-normal font-normal">(Konsole, Handy, andere Launcher)</span></p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-subtle">Weitere Treffer <span className="normal-case tracking-normal font-normal">(Konsole, Handy, andere Launcher)</span></p>
               {result.igdb.map(g => {
                 const sub = [g.year, g.platforms.map(p => labelOf(GAME_PLATFORMS, p)).filter(Boolean).join(", ")].filter(Boolean).join(" · ");
                 const inner = (
                   <>
                     <GameCover game={g.name} coverUrl={g.thumbUrl} className="w-14 h-8" rounded="rounded-md" fallbackVariant="plain" imgClassName="w-full h-full object-cover" />
                     <span className="flex-1 min-w-0">
-                      <span className={`block text-sm truncate ${g.existingSlug ? "text-gray-300" : "text-white"}`}>{g.name}</span>
-                      {sub && <span className="block text-xs text-gray-500 truncate">{sub}</span>}
+                      <span className={`block text-sm truncate ${g.existingSlug ? "text-fg/85" : "text-fg"}`}>{g.name}</span>
+                      {sub && <span className="block text-xs text-subtle truncate">{sub}</span>}
                     </span>
                   </>
                 );
                 return g.existingSlug ? (
                   <Link key={g.igdbId} href={`/spiele/${g.existingSlug}`} onClick={onClose}
-                    className="flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
+                    className="flex items-center gap-3 rounded-control px-2.5 py-2 border border-line opacity-70 hover:opacity-100 transition-opacity">
                     {inner}
-                    <span className="text-xs text-gray-500 flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
+                    <span className="text-xs text-subtle flex items-center gap-1 shrink-0"><Check className="w-3 h-3" /> Schon drin</span>
                   </Link>
                 ) : (
                   <button key={g.igdbId} type="button" onClick={() => pick({ igdbId: g.igdbId }, g.name)}
-                    className="w-full text-left flex items-center gap-3 rounded-xl px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
+                    className="w-full text-left flex items-center gap-3 rounded-control px-2.5 py-2 border border-line hover:border-primary/40 hover:bg-primary/10 transition-colors">
                     {inner}
                     <Plus className="w-4 h-4 text-primary shrink-0" />
                   </button>
@@ -239,24 +239,24 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
           )}
 
           {result && result.steamError && result.igdbError && (
-            <p className="text-xs text-amber-300/90">Steam und IGDB sind gerade nicht erreichbar — du kannst das Spiel trotzdem von Hand eintragen.</p>
+            <p className="text-xs text-warning/90">Steam und IGDB sind gerade nicht erreichbar — du kannst das Spiel trotzdem von Hand eintragen.</p>
           )}
           {result && result.steamError && !result.igdbError && (
-            <p className="text-xs text-amber-300/90">Steam ist gerade nicht erreichbar — Treffer kommen nur aus IGDB.</p>
+            <p className="text-xs text-warning/90">Steam ist gerade nicht erreichbar — Treffer kommen nur aus IGDB.</p>
           )}
 
           {result && (
             <button type="button" onClick={startManual}
-              className="w-full text-left rounded-xl px-3 py-2.5 border border-dashed border-line-strong hover:border-white/25 text-sm text-gray-400 hover:text-white transition-colors">
-              {result.steam.length === 0 && result.igdb.length === 0 && result.local.length === 0 && !result.steamError && <span className="block text-xs text-gray-500 mb-0.5">Nichts gefunden.</span>}
-              „{trimmed}“ ohne Steam eintragen <span className="text-gray-600">(z.B. Konsolen-, Handy- oder Brettspiele)</span>
+              className="w-full text-left rounded-control px-3 py-2.5 border border-dashed border-line-strong hover:border-line-strong text-sm text-muted hover:text-fg transition-colors">
+              {result.steam.length === 0 && result.igdb.length === 0 && result.local.length === 0 && !result.steamError && <span className="block text-xs text-subtle mb-0.5">Nichts gefunden.</span>}
+              „{trimmed}“ ohne Steam eintragen <span className="text-subtle">(z.B. Konsolen-, Handy- oder Brettspiele)</span>
             </button>
           )}
         </div>
       )}
 
       {step.kind === "loading" && (
-        <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-400">
+        <div className="flex flex-col items-center gap-3 py-10 text-sm text-muted">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           Hole Infos zu „{step.name}“ …
         </div>
@@ -264,11 +264,11 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
 
       {step.kind === "exists" && (
         <div className="space-y-4 py-4 text-center">
-          <p className="text-sm text-gray-300">„{step.name}“ ist schon in der Spieleliste.</p>
+          <p className="text-sm text-fg/85">„{step.name}“ ist schon in der Spieleliste.</p>
           <div className="flex justify-center gap-2">
             <Button variant="ghost" onClick={back} icon={<ArrowLeft className="w-4 h-4" />}>Zurück</Button>
             <Link href={`/spiele/${step.slug}`} onClick={onClose}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
+              className="inline-flex items-center gap-1.5 rounded-control px-3.5 py-2 text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-ink transition-colors">
               Zum Spiel <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
@@ -281,7 +281,7 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
             <GameCover game={step.name} coverUrl={step.coverUrl} className="w-28 h-16" rounded="rounded-lg" fallbackVariant="plain" />
             <div className="flex-1 min-w-0">
               {step.steamAppId || step.igdbId ? (
-                <p className="font-semibold text-white leading-tight">{step.name}</p>
+                <p className="font-semibold text-fg leading-tight">{step.name}</p>
               ) : (
                 <input
                   value={step.name}
@@ -291,15 +291,15 @@ export default function AddGameModal({ open, onClose, initialQuery = "" }: { ope
                   className="w-full bg-surface-2 border border-line rounded-control px-2.5 py-1.5 text-sm text-fg focus:outline-none focus:border-primary"
                 />
               )}
-              {step.description && <p className="text-xs text-gray-400 mt-1 line-clamp-3">{step.description}</p>}
+              {step.description && <p className="text-xs text-muted mt-1 line-clamp-3">{step.description}</p>}
               {(step.steamAppId || step.igdbId) && Object.keys(step.sources).length > 0 && (
                 <p className="text-xs text-sky-300/80 mt-1.5">Automatisch vorausgefüllt — bitte nur kurz prüfen und ergänzen.</p>
               )}
               {step.sourceError && Object.keys(step.sources).length === 0 && (
-                <p className="text-xs text-amber-300/90 mt-1.5">Die Spieldaten sind gerade nicht erreichbar. Cover und Angaben holt das Team später nach.</p>
+                <p className="text-xs text-warning/90 mt-1.5">Die Spieldaten sind gerade nicht erreichbar. Cover und Angaben holt das Team später nach.</p>
               )}
               {!step.steamAppId && !step.igdbId && (
-                <p className="text-xs text-gray-500 mt-1.5">Ohne Treffer schaut das Team kurz drüber, bevor das Spiel erscheint.</p>
+                <p className="text-xs text-subtle mt-1.5">Ohne Treffer schaut das Team kurz drüber, bevor das Spiel erscheint.</p>
               )}
             </div>
           </div>

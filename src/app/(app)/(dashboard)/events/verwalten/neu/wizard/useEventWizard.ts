@@ -1,5 +1,6 @@
 // Zustand, abgeleitete Werte und Aktionen des Event-Wizards (aufgeteilt aus EventSetupWizard.tsx).
 // Die Schritt-Komponenten unter ./steps bekommen dieses Objekt und lesen nur, was sie brauchen.
+import { normalizeCategory } from "@/lib/event-category";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -67,7 +68,7 @@ export function useEventWizard({
   const [loading, setLoading] = useState(false);
 
   // ── Shared (Step 0) ──────────────────────────────────────────────────────────
-  const [category, setCategory]       = useState<EventCategory>(seasonPrefill?.category ?? tpl?.category ?? "casual");
+  const [category, setCategory]       = useState<EventCategory>(normalizeCategory(seasonPrefill?.category ?? tpl?.category) ?? "fun");
   // OMA Blocks läuft immer als Turnier bzw. Challenge (siehe StepEventData)
   const [eventType, setEventType]     = useState<"community" | "tournament">(
     seasonPrefill?.eventType ?? tpl?.eventType ?? (gamePrefill?.name === BLOCKS_GAME ? "tournament" : "community"),
@@ -488,7 +489,9 @@ export function useEventWizard({
       startAt: fromDatetimeLocalBerlin(startAt).toISOString(),
       endAt: endAt ? fromDatetimeLocalBerlin(endAt).toISOString() : null,
       game: game || null,
-      genre: genre || null,
+      // Genre fragt der Assistent nicht mehr ab: nur ein vorbelegtes (Vorlage/Spieleliste) mitschicken, solange
+      // das Spiel dasselbe ist — sonst ermittelt der Server es aus der Spieleliste (lib/games/event-genre-server.ts)
+      genre: (game === (tpl?.game ?? gamePrefill?.name ?? "") && genre) || null,
       category,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       description: description || null,
@@ -616,7 +619,7 @@ export function useEventWizard({
         description: seriesDesc.trim() || null,
         ...(seriesCoverUrl.trim() && { coverImageUrl: seriesCoverUrl.trim() }),
         category,
-        genre: fixedGenre || null,
+        genre: (fixedGame === (seasonPrefill?.fixedGame ?? "") && fixedGenre) || null,
         platform: fixedPlatforms.length > 0 ? fixedPlatforms.join(", ") : null,
         fixedGame: variousGames ? null : (fixedGame || null),
         // "Ohne Platzierung" mit Community-Ziel: Werte-Erfassung (Punktewertung) für alle Termine

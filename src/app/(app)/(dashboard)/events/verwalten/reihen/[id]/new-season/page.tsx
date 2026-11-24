@@ -1,3 +1,4 @@
+import { normalizeCategory } from "@/lib/event-category";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
@@ -114,7 +115,7 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     seasonNumber: nextSeasonNumber,
     name: suggestNextSeasonName(series.name, nextSeasonNumber - 1),
     description: series.description ?? "",
-    category: (series.category ?? "casual") as EventCategory,
+    category: (normalizeCategory(series.category) ?? "fun") as EventCategory,
     eventType: (sampleEvent?.type === "tournament" ? "tournament" : "community") as "community" | "tournament",
     fixedGenre: (series.genre ?? null) as EventGenre | null,
     platforms: series.platform ? series.platform.split(",").map(p => p.trim()).filter(Boolean) : [],

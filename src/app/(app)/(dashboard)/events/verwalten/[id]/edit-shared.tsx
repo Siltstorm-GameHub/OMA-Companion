@@ -39,13 +39,12 @@ export const DEFAULT_REWARDS: RewardsConfig = {
 // Punkt 3: zentrale Format-Liste (siehe @/lib/tournament-formats) statt eigener Kopie —
 // verhindert, dass dieser Reiter, TournamentManager.tsx und der Erstellungs-Wizard auseinanderlaufen.
 export const TMT_FORMATS = TOURNAMENT_FORMATS;
+// Die 4 Kategorien (Altwerte Casual/Community zeigt die Bearbeitung als Fun, siehe useEventEdit)
 export const CATEGORIES: { value: EventCategory; label: string; emoji: string }[] = [
   { value: "competitive",     label: "Kompetitiv", emoji: "🏆" },
-  { value: "fun",             label: "Fun",        emoji: "🎉" },
-  { value: "casual",          label: "Casual",     emoji: "🛋️" },
   { value: "training",        label: "Training",   emoji: "🎓" },
-  { value: "community_event", label: "Community",  emoji: "🤝" },
   { value: "special",         label: "Special",    emoji: "⭐" },
+  { value: "fun",             label: "Fun",        emoji: "🎉" },
 ];
 /** Sieg/Unentschieden-Münzen pro Match (Liga-Modus "Sieg/Unentschieden-Münzen") aus pointsConfig.
  *  Platzierungsbelohnungen stehen NICHT mehr in pointsConfig, sondern im Reiter "Belohnungen"

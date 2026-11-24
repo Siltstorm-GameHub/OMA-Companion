@@ -1,4 +1,5 @@
 "use client";
+import { normalizeCategory } from "@/lib/event-category";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -35,7 +36,7 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
   const [rules, setRules]             = useState<string>(event.rules ?? "");
   const [game, setGame]               = useState<string>(event.game ?? "");
   const [genre, setGenre]             = useState<EventGenre | null>(event.genre ?? null);
-  const [category, setCategory]       = useState<EventCategory>(event.category ?? "casual");
+  const [category, setCategory]       = useState<EventCategory>(normalizeCategory(event.category) ?? "fun");
   const [startAt, setStartAt]         = useState<string>(toDatetimeLocalBerlin(event.startAt));
   // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar.
   const [endAt, setEndAt] = useState<string>(event.endAt ? toDatetimeLocalBerlin(event.endAt) : "");

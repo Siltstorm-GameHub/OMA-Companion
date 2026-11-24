@@ -24,7 +24,7 @@ const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: GlyphNa
   { key: "quest",  label: "Quests",           desc: "Quest abgeschlossen & Belohnung erhalten",      icon: "star" },
   { key: "points", label: "Punkte & Münzen",  desc: "Münzen oder Rang-Punkte erhalten",              icon: "coins" },
   { key: "clip",   label: "Clip des Monats",  desc: "Abstimmung & Ergebnisse",                       icon: "clip" },
-  { key: "game",   label: "Spieleliste",      desc: "Angebote, Drop der Woche & neue Karten (OMA GameSwipe)", icon: "gamepad" },
+  { key: "game",   label: "GameSwipe",      desc: "Angebote, Drop der Woche & neue Karten (OMA GameSwipe)", icon: "gamepad" },
   { key: "admin",  label: "Admin-Nachrichten",desc: "Direkte Nachrichten vom Admin-Team",            icon: "megaphone" },
 ];
 

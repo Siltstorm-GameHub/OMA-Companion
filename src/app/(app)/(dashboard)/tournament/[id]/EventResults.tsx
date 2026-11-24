@@ -53,7 +53,7 @@ export default function EventResults({
               </span>
             )}
           </div>
-          <p className="text-xs text-subtle">Ohne Platzierung: kein Sieger, alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
+          <p className="text-xs text-subtle">Freies Spiel: kein Sieger, alle Teilnehmer haben die Teilnahme-Belohnung bekommen.</p>
           {community.people.length > 0 && (
             <div className="flex flex-wrap gap-x-3 gap-y-2">
               {community.people.map(({ user: u, spectator }) => {
