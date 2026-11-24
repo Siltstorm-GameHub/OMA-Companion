@@ -1,7 +1,7 @@
 export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Dashboard",        url: "/dashboard" },
   { label: "Events",           url: "/events" },
-  { label: "Events – Vorhersagen", url: "/events?tab=predictions" },
+  { label: "Events – Vorhersagen", url: "/events/vorhersagen" },
   { label: "Leaderboard",      url: "/leaderboard" },
   { label: "Shop",             url: "/shop" },
   { label: "Profil",           url: "/profile" },

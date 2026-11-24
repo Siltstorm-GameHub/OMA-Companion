@@ -11,7 +11,7 @@ import PollBadge from "@/components/PollBadge";
 import AdminNav from "@/app/(app)/(dashboard)/admin/AdminNav";
 import { HUB_ONLINE_EVENT, readHubOnline, toggleHub } from "@/lib/hub-events";
 import { cn } from "@/lib/utils";
-import { COMMUNITY_NAV, MAIN_NAV, isActive, type NavItem } from "./nav-config";
+import { COMMUNITY_NAV, MAIN_NAV, isActive, isChildActive, type NavItem } from "./nav-config";
 import { LiveNow } from "./LiveNow";
 
 /** Spendenpool-Fortschritt für die Support-Karte (berechnet im Dashboard-Layout). */
@@ -60,14 +60,27 @@ export function Sidebar({ support }: { support: SupportProgress | null }) {
 }
 
 function NavSection(props: { title: string; items: NavItem[]; pathname: string; label: string }) {
+  const { status } = useSession();
+  const loggedIn = status === "authenticated";
+  // Zahl am Untermenü "Verwalten" — nur nachladen, wenn der Events-Bereich offen ist
+  const eventsOpen = props.items.some(i => i.children?.some(c => c.count === "eventManage") && isActive(props.pathname, i));
+  const [manageCount, setManageCount] = useState(0);
+  useEffect(() => {
+    if (!eventsOpen || !loggedIn) return;
+    let cancelled = false;
+    fetch("/api/events/manage-count").then(r => (r.ok ? r.json() : null)).then(d => { if (!cancelled && d) setManageCount(d.count ?? 0); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [eventsOpen, loggedIn, props.pathname]);
+
   return (
     <nav aria-label={props.label} className="flex flex-col gap-0.5">
       <p className="mb-1.5 px-2.5 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-subtle">{props.title}</p>
       {props.items.map((item) => {
         const active = isActive(props.pathname, item);
+        const children = active ? (item.children ?? []).filter(c => loggedIn || !c.auth) : [];
         return (
+          <div key={item.href}>
           <GateLink
-            key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
@@ -81,6 +94,32 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
             </span>
             {item.label}
           </GateLink>
+          {/* Unterseiten des aktiven Bereichs (statt Reitern oben auf der Seite) */}
+          {children.length > 0 && (
+            <ul className="mb-1 ml-[1.375rem] mt-0.5 space-y-0.5 border-l border-line pl-2.5">
+              {children.map((c) => {
+                const on = isChildActive(props.pathname, c);
+                const n = c.count === "eventManage" ? manageCount : 0;
+                return (
+                  <li key={c.href}>
+                    <GateLink href={c.href} aria-current={on ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-9 items-center gap-2 rounded-control px-2.5 text-sm transition-colors",
+                        on ? "bg-surface-2 font-semibold text-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
+                      )}>
+                      <span className="flex-1 truncate">{c.label}</span>
+                      {n > 0 && (
+                        <span className="min-w-5 rounded-full bg-warning px-1.5 text-center text-xs font-bold leading-5 tabular-nums text-canvas" aria-label={`${n} offen`}>
+                          {n > 99 ? "99+" : n}
+                        </span>
+                      )}
+                    </GateLink>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          </div>
         );
       })}
     </nav>

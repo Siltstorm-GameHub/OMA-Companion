@@ -18,13 +18,11 @@ import EventCardLink from "./EventCardLink";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import { formatBerlinDate, getBerlinDateParts, BERLIN_TZ } from "@/lib/time";
 import { syncDueEventActivations } from "@/lib/event-lifecycle";
-import EventsTabs from "./EventsTabs";
+import EventsSectionNav from "@/components/events/EventsSectionNav";
+import { redirect } from "next/navigation";
 import { loadManageAttentionCount } from "@/lib/admin-inbox";
 import { getCaptainedSquadIds } from "@/lib/roles";
 import { attachCommentCounts } from "@/lib/event-comments";
-import SquadsList from "../squads/SquadsList";
-import EventPredictionsPanel from "./EventPredictionsPanel";
-import type { MyPrediction } from "@/components/MyPredictionsList";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import EventCard, { type EventCardData } from "@/components/events/EventCard";
 import ForYouStrip, { type ForYouItem } from "@/components/events/ForYouStrip";
@@ -41,7 +39,12 @@ import { gameNameKey } from "@/lib/games/slug";
 const MAX_GAME_CHIPS = 5;
 
 
-export default async function EventsPage() {
+export default async function EventsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  // Alte Reiter-Links: Vorhersagen und Squads haben eigene Seiten ("duels" = noch älterer Name)
+  const { tab } = await searchParams;
+  if (tab === "predictions" || tab === "duels") redirect("/events/vorhersagen");
+  if (tab === "squads") redirect("/squads");
+
   // Lazy Auto-Aktivierung fälliger Events (nur bei Spieler-Anmeldungen), muss vor dem Event-Fetch
   // unten abgeschlossen sein (siehe src/lib/event-lifecycle.ts).
   await syncDueEventActivations();
@@ -74,35 +77,6 @@ export default async function EventsPage() {
       : Promise.resolve([]),
     loadEventViewerContext(userId),
   ]);
-
-  const emptyPredictionRows: { event: { id: string; title: string; startAt: Date }; predictedUser: { id: string; username: string | null; name: string | null; image: string | null }; wager: number; resolved: boolean; correct: boolean | null; coinsAwarded: number }[] = [];
-
-  const [myPredictionRows, predictionStreakRow, pendingPredictions] = userId
-    ? await Promise.all([
-        prisma.eventWinnerPrediction.findMany({
-          where: { userId },
-          include: {
-            event: { select: { id: true, title: true, startAt: true } },
-            predictedUser: { select: { id: true, username: true, name: true, image: true } },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        }),
-        prisma.predictionStreak.findUnique({ where: { userId } }),
-        prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
-      ])
-    : [emptyPredictionRows, null, 0];
-
-  const myPredictions: MyPrediction[] = myPredictionRows.map(p => ({
-    eventId: p.event.id,
-    eventTitle: p.event.title,
-    eventStartAt: p.event.startAt.toISOString(),
-    predictedUser: p.predictedUser,
-    wager: p.wager,
-    resolved: p.resolved,
-    correct: p.correct,
-    coinsAwarded: p.coinsAwarded,
-  }));
 
   type Item = { ev: EventCardSource; finished: boolean; endedAt: number };
   const allItems: Item[] = events.map(ev => ({
@@ -381,9 +355,8 @@ export default async function EventsPage() {
         </>}
       />
 
-      <EventsTabs
-        manageCount={await manageCountPromise}
-        eventsPanel={<>
+      <EventsSectionNav active="events" manageCount={await manageCountPromise} loggedIn={!!userId} />
+      <>
       <div className="space-y-5">
         {!hasAnything && (
           <EmptyState
@@ -497,23 +470,7 @@ export default async function EventsPage() {
       )}
 
       {guestHasMore && <GuestMoreCta message="Alle Events gibt's nach dem Login" />}
-        </>}
-        loggedIn={!!userId}
-        predictionsPanel={
-          userId ? (
-            <EventPredictionsPanel
-              myPredictions={myPredictions}
-              predictionStreak={{ current: predictionStreakRow?.current ?? 0, best: predictionStreakRow?.best ?? 0 }}
-              pendingPredictions={pendingPredictions}
-            />
-          ) : (
-            <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">
-              Melde dich an, um deine Vorhersagen zu sehen.
-            </div>
-          )
-        }
-        squadsPanel={<SquadsList />}
-      />
+      </>
     </div>
   );
 }

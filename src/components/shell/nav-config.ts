@@ -19,6 +19,42 @@ export interface NavItem {
   alsoActiveOn?: string[];
   /** Abzeichen für offene Umfragen anzeigen (nur Events). */
   pollBadge?: boolean;
+  /** Unterseiten — klappen in der Seitenleiste (ab lg) unter dem Eintrag auf, sobald der Bereich aktiv ist.
+   *  Am Handy stehen dieselben Unterseiten als Reiter oben auf der Seite. */
+  children?: NavChild[];
+}
+
+export interface NavChild {
+  href: string;
+  label: string;
+  /** Weitere Pfade (Präfixe), bei denen der Untereintrag aktiv ist */
+  alsoActiveOn?: string[];
+  /** Nur genau diese URL (nicht ihre Unterpfade) — z. B. die Liste unter /events */
+  exact?: boolean;
+  /** Nur für eingeloggte Mitglieder */
+  auth?: boolean;
+  /** Zahl offener Aufgaben am Eintrag (wird in der Seitenleiste nachgeladen) */
+  count?: "eventManage";
+}
+
+/** Unterseiten des Events-Bereichs (Seitenleiste; am Handy: components/events/EventsSectionNav) */
+export const EVENTS_SUBNAV: NavChild[] = [
+  { href: "/events", label: "Alle Events", exact: true, alsoActiveOn: ["/tournament", "/events/series"] },
+  { href: "/events/vorhersagen", label: "Vorhersagen" },
+  { href: "/events/verwalten", label: "Verwalten", auth: true, count: "eventManage" },
+];
+
+/** Unterseiten des Games-Bereichs (Seitenleiste; am Handy: components/games/GamesSectionTabs) */
+export const GAMES_SUBNAV: NavChild[] = [
+  { href: "/spiele", label: "Spieleliste" },
+  { href: "/games", label: "Minispiele" },
+  { href: "/shop", label: "Shop" },
+];
+
+export function isChildActive(pathname: string, child: NavChild): boolean {
+  const hit = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+  if (child.exact ? pathname === child.href : hit(child.href)) return true;
+  return (child.alsoActiveOn ?? []).some(hit);
 }
 
 const CLIP_PATHS = ["/clip-des-monats", "/clip-des-jahres"];
@@ -26,8 +62,8 @@ const COMMUNITY_BOARD_PATHS = ["/interviews"];
 
 export const MAIN_NAV: NavItem[] = [
   { href: "/dashboard", label: "Übersicht", icon: Home },
-  { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true },
-  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games", "/shop"] },
+  { href: "/events", label: "Events", icon: CalendarDays, alsoActiveOn: ["/tournament"], pollBadge: true, children: EVENTS_SUBNAV },
+  { href: "/spiele", label: "Games", icon: Gamepad2, alsoActiveOn: ["/games", "/shop"], children: GAMES_SUBNAV },
   { href: "/leaderboard", label: "Rangliste", icon: Trophy },
 ];
 

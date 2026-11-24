@@ -13,13 +13,14 @@ const TABS: { key: GamesSection; label: string; href: string; icon: typeof Gamep
   { key: "shop", label: "Shop", href: "/shop", icon: ShoppingBag },
 ];
 
-/** Reiter des Games-Bereichs (Spielen · Spieleliste · Shop) — oben auf /games, /spiele und /shop.
+/** Reiter des Games-Bereichs (Spielen · Spieleliste · Shop) — oben auf /games, /spiele und /shop, nur am
+ *  Handy/Tablet; ab lg stehen sie als Untermenü unter "Games" in der Seitenleiste (nav-config GAMES_SUBNAV).
  *  Der Shop-Reiter zeigt den Münzstand, damit Spielen und Ausgeben zusammengehören. */
 export default async function GamesSectionTabs({ active, userId }: { active: GamesSection; userId?: string | null }) {
   const coins = userId ? (await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0 : null;
 
   return (
-    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-card p-1 bg-surface border border-line">
+    <nav aria-label="Games-Bereich" className="grid grid-cols-3 gap-1 rounded-card p-1 bg-surface border border-line lg:hidden">
       {TABS.map((t) => {
         const on = t.key === active;
         const Icon = t.icon;
