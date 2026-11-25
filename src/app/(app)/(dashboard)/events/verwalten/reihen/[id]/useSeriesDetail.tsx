@@ -12,6 +12,7 @@ import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recur
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
+import { upcomingGoalOverrides } from "@/lib/event-goal";
 import { SeriesEvent, SettingsTabKey, PlacementReward, PollConfig, parseRewards, parsePollConfigs, Section, type SeriesDetailProps } from "./series-shared";
 
 /** Zustand, abgeleitete Werte und Aktionen von SeriesDetailClient (aufgeteilt in Hook + Reiter-Komponenten). */
@@ -263,11 +264,28 @@ export function useSeriesDetail({
   }
 
   async function saveSettings() {
+    // Reihen-Ziel geändert? Kommende Termine, die erben, übernehmen es automatisch; laufende und beendete
+    // behalten ihr Ziel (Server). Kommende Termine mit eigenem Ziel bzw. "kein Ziel" bleiben nur, wenn
+    // der Admin das will — sonst würde die Änderung bei ihnen still nicht greifen.
+    let applyGoalToOpenEvents = false;
+    const savedGoal = parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null;
+    const nextGoal = parseTournamentTemplate(JSON.stringify(tournamentTemplate)).communityGoal ?? null;
+    if (!isArchived && JSON.stringify(savedGoal) !== JSON.stringify(nextGoal)) {
+      const overrides = upcomingGoalOverrides(series.events as { startAt: string | Date; status: string; statConfigJson?: string | null }[], Date.now());
+      if (overrides.length > 0) {
+        applyGoalToOpenEvents = await confirm({
+          title: "Neues Ziel auch für Termine mit eigenem Ziel?",
+          description: `Kommende Termine übernehmen das geänderte Ziel der Reihe. ${overrides.length === 1 ? "1 kommender Termin hat" : `${overrides.length} kommende Termine haben`} aber ein eigenes Ziel oder bewusst keins. Laufende und abgeschlossene Termine bleiben in jedem Fall unverändert.`,
+          confirmLabel: "Neues Ziel für alle kommenden",
+          cancelLabel: "Eigene Ziele behalten",
+        });
+      }
+    }
     setSaving(true);
     const res = await fetch("/api/admin/event-series", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesId: series.id, ...settingsBody }),
+      body: JSON.stringify({ seriesId: series.id, ...settingsBody, ...(applyGoalToOpenEvents && { applyGoalToOpenEvents: true }) }),
     });
     setSaving(false);
     if (res.ok) {

@@ -93,3 +93,32 @@ export function withGoalMode(
   if (mode === "off") next.goalOff = true;
   return Object.keys(next).length > 0 ? JSON.stringify(next) : null;
 }
+
+/**
+ * Das Reihen-Ziel ändert sich (auch: kommt neu hinzu oder fällt weg). Ein Termin, der schon
+ * gestartet ist (laufend oder beendet) und bisher geerbt hat, behält, was bisher für ihn galt: das
+ * alte Reihen-Ziel als eigenes Ziel bzw. "kein Ziel", falls die Reihe vorher keins hatte.
+ * Gibt die neue statConfigJson zurück — undefined, wenn der Termin unverändert bleibt (er hat schon
+ * eine eigene Einstellung).
+ */
+export function freezeGoalForStartedEvent(
+  statConfigJson: string | null | undefined,
+  oldSeriesGoal: CommunityGoal | null,
+): string | null | undefined {
+  const own = parseOwnGoalConfig(statConfigJson);
+  if (own.goal || own.off) return undefined;
+  return oldSeriesGoal ? withGoalMode(statConfigJson, "override", oldSeriesGoal) : withGoalMode(statConfigJson, "off", null);
+}
+
+/** Kommende Termine (noch nicht gestartet, nicht beendet) mit eigenem Ziel oder "kein Ziel" — sie
+ *  folgen einer Änderung des Reihen-Ziels nur, wenn man sie ausdrücklich zurücksetzt. */
+export function upcomingGoalOverrides<T extends { startAt: Date | string; status: string; statConfigJson?: string | null }>(
+  events: T[],
+  now: number,
+): T[] {
+  return events.filter(e => {
+    if (e.status === "finished" || e.status === "closed" || new Date(e.startAt).getTime() <= now) return false;
+    const own = parseOwnGoalConfig(e.statConfigJson);
+    return !!own.goal || own.off;
+  });
+}
