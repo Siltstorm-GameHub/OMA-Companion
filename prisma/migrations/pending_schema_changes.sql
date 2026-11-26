@@ -698,3 +698,21 @@ ALTER TABLE "JobReport" ADD COLUMN IF NOT EXISTS "gameCoverName" TEXT;
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "joinInstructions" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Community-Gameserver: Server-Kandidaten aus der Spieleliste
+-- (Server-Tauglichkeit je Spiel + "Ich wäre dabei"-Zusagen)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Game" ADD COLUMN IF NOT EXISTS "serverCapable" BOOLEAN;
+ALTER TABLE "Game" ADD COLUMN IF NOT EXISTS "serverSource" TEXT;
+
+CREATE TABLE IF NOT EXISTS "GameServerInterest" (
+  "userId"    TEXT         NOT NULL REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "gameId"    TEXT         NOT NULL REFERENCES "Game"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  "level"     TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "GameServerInterest_pkey" PRIMARY KEY ("userId", "gameId")
+);
+CREATE INDEX IF NOT EXISTS "GameServerInterest_gameId_idx" ON "GameServerInterest"("gameId");

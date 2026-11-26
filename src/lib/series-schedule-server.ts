@@ -42,7 +42,7 @@ export async function ensureSeriesSchedule(seriesId: string, now: Date = new Dat
   try {
     const series = await prisma.eventSeries.findUnique({
       where: { id: seriesId },
-      select: { status: true, scheduleMode: true, scheduleJson: true, events: { select: { slotIndex: true, startAt: true, endAt: true } } },
+      select: { status: true, scheduleMode: true, scheduleJson: true, events: { select: { slotIndex: true, startAt: true, endAt: true, status: true } } },
     });
     if (!series || series.status === "archived" || !series.scheduleMode) return 0;
     const schedule = parseSchedule(series.scheduleJson);

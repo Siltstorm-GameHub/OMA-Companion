@@ -4,6 +4,7 @@ import { APPROVAL_PENDING, pendingApprovalEventWhere } from "./community-events"
 import type { AdminCounts } from "./admin-nav";
 import { eventScopeWhere, type EventScope } from "./roles";
 import { coinsAwarded, isLate, pulse, type PulseValue } from "./admin-overview";
+import { getReadyServerCandidates } from "./games/server-candidates-server";
 
 /*
  * Admin: offene Aufgaben für die Zähler in der Seitenleiste (/api/admin/nav-counts) und die
@@ -101,6 +102,8 @@ export async function loadAdminInbox(now: Date = new Date()) {
   const weekAgo = new Date(now.getTime() - 7 * DAY_MS);
   const twoWeeksAgo = new Date(now.getTime() - 14 * DAY_MS);
   const disputeQuery = { where: DISPUTED, orderBy: { createdAt: "asc" as const }, take: 1, select: { createdAt: true } };
+  // Server-Kandidaten mit genug Zusagen — parallel zu den übrigen Abfragen
+  const readyServersP = getReadyServerCandidates().catch(err => { console.error("[admin] Server-Kandidaten", err); return []; });
 
   const [
     counts, tournaments, pollEvents, overdue, pendingEvents, pendingSeries, applications, games,
@@ -205,6 +208,11 @@ export async function loadAdminInbox(now: Date = new Date()) {
     title: `Gameserver-Bewerbung: ${a.server.name}`, hint: `von ${who(a.user)}`,
   });
   more(applications.length, counts.serverApplications, "Bewerbungen", "/admin/servers", "Server");
+  for (const c of (await readyServersP).slice(0, MAX_PER_KIND)) review.push({
+    key: `sc-${c.id}`, tone: "violet", icon: "Server", href: "/servers#kandidaten", since: null, action: "Ansehen",
+    title: `Server-Kandidat bereit: ${c.name}`,
+    hint: `${plural(c.regular + c.casual, "Zusage", "Zusagen")}, davon ${c.regular} regelmäßig · Server einrichten oder als nicht tauglich markieren`,
+  });
   for (const g of games) review.push({
     key: `g-${g.id}`, tone: "teal", icon: "Gamepad2", href: "/admin/spiele", since: g.createdAt, action: "Prüfen",
     title: `Spiel vorgeschlagen: ${g.name}`, hint: g.addedBy ? `von ${who(g.addedBy)}` : "für die Spieleliste freischalten",

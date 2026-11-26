@@ -8,7 +8,7 @@ import { RefreshCw, Save, Coins, ExternalLink, Archive, Vote, Trash2, EyeOff, Cl
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { formatBerlinDate } from "@/lib/time";
-import { inputCls, SETTINGS_TABS, needsAttention, eventDot, STATUS_CONFIG, EventHiddenToggle, type SeriesEvent, type SeriesDetailProps } from "./series-shared";
+import { InstantBadge, inputCls, SETTINGS_TABS, needsAttention, eventDot, STATUS_CONFIG, EventHiddenToggle, type SeriesEvent, type SeriesDetailProps } from "./series-shared";
 import { Podium } from "@/components/ui/Podium";
 import { useSeriesDetail } from "./useSeriesDetail";
 import SeriesTabGeneral from "./SeriesTabGeneral";
@@ -17,7 +17,6 @@ import SeriesTabGoal from "./SeriesTabGoal";
 import SeriesTabRewards from "./SeriesTabRewards";
 import SeriesTabPolls from "./SeriesTabPolls";
 import SeriesTabStats from "./SeriesTabStats";
-import SeriesTabLegacy from "./SeriesTabLegacy";
 
 /** Verwaltung einer Eventreihe: Kopf, Einstellungs-Reiter, Termine. Zustand und Aktionen in
  *  ./useSeriesDetail.tsx, die Reiter in ./SeriesTab*.tsx, gemeinsame Bausteine in ./series-shared.tsx. */
@@ -168,8 +167,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
 
           {/* Settings-Tabs */}
           <div className="flex gap-1 border-b border-line overflow-x-auto">
-            {/* Legacy (Altpunkte für beliebige Mitglieder) pflegen nur Mods */}
-            {SETTINGS_TABS.filter(tab => isModerator || tab.key !== "legacy").map(tab => (
+            {SETTINGS_TABS.map(tab => (
               <button key={tab.key} type="button" onClick={() => setActiveSettingsTab(tab.key)}
                 className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
                   activeSettingsTab === tab.key
@@ -180,6 +178,11 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               </button>
             ))}
           </div>
+
+          {/* Speicherart einheitlich: alles über die Speicherleiste, außer Bereichen mit "Wirkt sofort" */}
+          <p className="text-xs text-subtle">
+            Änderungen sicherst du unten mit „Speichern“. Bereiche mit <InstantBadge /> speichern direkt.
+          </p>
 
           {/* ── Tab: Allgemein ── */}
           {activeSettingsTab === "general" && <SeriesTabGeneral ctx={ctx} />}
@@ -195,8 +198,6 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
           {/* ── Tab: Stats & Bonus ── */}
           {activeSettingsTab === "stats" && <SeriesTabStats ctx={ctx} />}
 
-          {/* ── Tab: Legacy ── */}
-          {activeSettingsTab === "legacy" && <SeriesTabLegacy ctx={ctx} />}
         </div>
 
         {/* ── Right column: Events ── */}

@@ -58,7 +58,7 @@ export function parseLegacyStandings(json: string | null | undefined): LegacySta
 
 /** Ein Termin gilt als offen, solange seine Spielphase nicht abgeschlossen ist. */
 export function isOpenSeasonEvent(ev: { status: string; completionData: string | null }): boolean {
-  if (ev.status === "finished") return false;
+  if (ev.status === "finished" || ev.status === "cancelled") return false;
   if (!ev.completionData) return true;
   try { return (JSON.parse(ev.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete !== true; }
   catch { return true; }

@@ -49,7 +49,7 @@ export default function StepSchedule({ w }: { w: EventWizard }) {
           {schedule.mode === "runden" && (
             <p className="text-xs text-subtle mt-2">
               Challenge-Reihe: Jede Runde hat genau ein Match. Teilnehmer tragen ihre Werte selbst ein — eine neue Meldung ersetzt die vorige.
-              Am besten passen „Punktewertung“ oder „Durchschnittswerte“, dort startet das Match automatisch mit der Runde.
+              Bei „Freie Wertung“, „Punktewertung“ und „Durchschnittswerte“ startet das Match automatisch mit der Runde.
             </p>
           )}
         </div>

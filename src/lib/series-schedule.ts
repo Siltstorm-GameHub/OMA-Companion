@@ -307,7 +307,7 @@ export function describeSchedule(s: SeriesSchedule): string {
 
 // ── Planung kommender Termine ───────────────────────────────────────────────
 
-export type ScheduleEvent = { id?: string; slotIndex: number | null; startAt: Date; endAt: Date | null };
+export type ScheduleEvent = { id?: string; slotIndex: number | null; startAt: Date; endAt: Date | null; status?: string };
 export type PlannedTerm = { slotIndex: number; startAt: Date; endAt: Date | null };
 
 /**
@@ -318,8 +318,10 @@ export type PlannedTerm = { slotIndex: number; startAt: Date; endAt: Date | null
 export function planUpcoming(s: SeriesSchedule, events: ScheduleEvent[], now: Date = new Date()): PlannedTerm[] {
   if (!s.rhythm) return [];
   const slotted = events.filter(e => e.slotIndex != null).sort((a, b) => a.slotIndex! - b.slotIndex!);
-  let future = slotted.filter(e => e.startAt > now).length;
-  let total = slotted.length;
+  // Abgesagte Termine belegen ihren Platz, zählen aber weder zum Vorlauf noch zur Anzahl der Reihe
+  const held = slotted.filter(e => e.status !== "cancelled");
+  let future = held.filter(e => e.startAt > now).length;
+  let total = held.length;
   const endAt = s.end.type === "date" ? new Date(s.end.at) : null;
   const reachedEnd = (start: Date) =>
     (endAt && start > endAt) || (s.end.type === "count" && total >= s.end.count);
@@ -554,6 +556,31 @@ export function suggestSchedule(legacy: LegacySeries, events: { startAt: Date; e
 export function termNumber(eventId: string, events: { id: string; startAt: Date | string }[]): number {
   const sorted = [...events].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   return sorted.findIndex(e => e.id === eventId) + 1;
+}
+
+const MONTHS_SHORT = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."];
+
+/** Kalendertage eines Zeitraums kurz: "17.–23. Nov.", "28. Nov. – 4. Dez.", "1.–30. Nov." */
+export function shortDayRange(start: Date | string, end: Date | string): string {
+  const a = getBerlinDateParts(new Date(start));
+  const b = getBerlinDateParts(new Date(end));
+  if (a.year === b.year && a.month === b.month) {
+    return a.day === b.day ? `${a.day}. ${MONTHS_SHORT[a.month - 1]}` : `${a.day}.–${b.day}. ${MONTHS_SHORT[b.month - 1]}`;
+  }
+  return `${a.day}. ${MONTHS_SHORT[a.month - 1]} – ${b.day}. ${MONTHS_SHORT[b.month - 1]}`;
+}
+
+/**
+ * Bezeichnung eines Termins in seiner Reihe — "Runde 12 · 17.–23. Nov." (Challenge-Reihe),
+ * "Termin 7" bzw. "Sondertermin" (Eventreihe). null ohne Ablaufart (alte Reihen).
+ */
+export function termLabel(mode: string | null | undefined, ev: { slotIndex: number | null; startAt: Date | string; endAt?: Date | string | null }): string | null {
+  if (mode === "runden") {
+    const n = ev.slotIndex != null ? `Runde ${ev.slotIndex + 1}` : "Runde";
+    return ev.endAt ? `${n} · ${shortDayRange(ev.startAt, ev.endAt)}` : n;
+  }
+  if (mode === "termine") return ev.slotIndex != null ? `Termin ${ev.slotIndex + 1}` : "Sondertermin";
+  return null;
 }
 
 /** Zeigt die Events-Übersicht nur den nächsten Termin dieser Reihe? (alle Reihen mit Planung, Altbestand mit Zyklen) */

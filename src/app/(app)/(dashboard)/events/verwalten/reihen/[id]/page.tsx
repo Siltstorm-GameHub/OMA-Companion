@@ -3,14 +3,18 @@ import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-li
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
+import type { SettingsTabKey } from "./series-shared";
 import ApprovalBanner from "../../ApprovalBanner";
 import { APPROVAL_PENDING, APPROVAL_REJECTED } from "@/lib/community-events";
 import { parseSeriesCompletion, parseStatConfig, seasonStandings } from "@/lib/series-seasons";
-import GameVoteSettings from "./GameVoteSettings";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 
-export default async function AdminSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminSeriesDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { id } = await params;
+  const { tab } = await searchParams;
+  // (Werte aus series-shared.tsx — das ist ein Client-Modul, daher hier als Liste)
+  const TAB_KEYS: SettingsTabKey[] = ["general", "schedule", "goal", "rewards", "polls", "stats"];
+  const initialTab = TAB_KEYS.find(k => k === tab);
   const user = await requireSeriesManager(id);
   const isModerator = hasMinRole(user.role, "moderator");
   const captainedSquadIds = isModerator ? null : await getCaptainedSquadIds(user.id);
@@ -22,7 +26,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         events: {
           orderBy: { startAt: "desc" },
           select: {
-            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true, type: true, slotIndex: true,
+            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true, type: true, slotIndex: true, spectatorMode: true, spectatorRewardJson: true,
             format: true, statConfigJson: true, goalStateJson: true,
             _count: { select: { registrations: true } },
           },
@@ -120,16 +124,13 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         isAdmin={user.role === "admin"} canUndoCompletion={canUndoCompletion}
         seasonCount={groupSeasons.length} groupStatFields={groupStatFields}
         goalLimits={goalLimits} rewardLimits={rewardLimits} top3={top3}
+        initialTab={initialTab}
+        gameVote={isModerator && series.status !== "archived" ? {
+          initial: parseGameVoteConfig(series.gameVoteJson),
+          upcoming: upcomingWithoutVote.map(e => ({ ...e, startAt: e.startAt.toISOString() })),
+          squadName,
+        } : null}
       />
-      {isModerator && series.status !== "archived" && (
-        <GameVoteSettings
-          seriesId={series.id}
-          initial={parseGameVoteConfig(series.gameVoteJson)}
-          fixedGame={series.fixedGame}
-          upcoming={upcomingWithoutVote.map(e => ({ ...e, startAt: e.startAt.toISOString() }))}
-          squadName={squadName}
-        />
-      )}
     </>
   );
 }

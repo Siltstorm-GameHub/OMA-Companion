@@ -70,7 +70,7 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
         )}
       </Section>
 
-      <Section title="Ziel je Termin">
+      <Section title="Ziel je Termin" instant>
         <p className="text-xs text-subtle mb-2">Änderungen in diesem Abschnitt gelten sofort, ohne „Speichern“.</p>
         <SeriesCycleGoals
           events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}

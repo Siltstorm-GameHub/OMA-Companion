@@ -22,6 +22,7 @@ import { effectiveStatus, type SwipeStatus } from "./swipe";
 import { GAME_SUBSCRIPTIONS, pickKeys, type GameGenre, type GameMode, type GamePlatform, type GameStatus, type GameTag, type SessionLength } from "./options";
 import { gameNameKey, uniqueGameSlug } from "./slug";
 import { searchSteamGames } from "./steam";
+import { SERVER_EDIT_FIELD, revertServerEdit } from "./server-candidates-server";
 
 /** Wie viele Spiele ein normales Mitglied pro 24 h hinzufügen darf */
 export const DAILY_ADD_LIMIT = 10;
@@ -915,6 +916,10 @@ export async function revertGameEdit(editId: string): Promise<Result<{ slug: str
   const edit = await prisma.gameEdit.findUnique({ where: { id: editId }, include: { game: true } });
   if (!edit) return { ok: false, status: 404, error: "Eintrag nicht gefunden" };
   if (edit.revertedAt) return { ok: false, status: 400, error: "Schon zurückgesetzt" };
+  if (edit.field === SERVER_EDIT_FIELD) {
+    const r = await revertServerEdit(edit);
+    return r.ok ? { ok: true, slug: edit.game.slug } : r;
+  }
   if (!(FILLABLE_FIELDS as readonly string[]).includes(edit.field)) return { ok: false, status: 400, error: "Unbekanntes Feld" };
   const field = edit.field as FillableField;
 

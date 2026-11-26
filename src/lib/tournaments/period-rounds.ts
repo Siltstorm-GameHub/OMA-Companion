@@ -11,7 +11,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { isPeriodEvent } from "@/lib/event-period";
-import { supportsMatchWin } from "@/lib/tournaments/stat-rounds";
+import { isStatFormat, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 import { prepareTournamentPool } from "@/lib/tournaments/participants";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 
@@ -22,8 +22,11 @@ export function shouldAutoStartRound(ev: {
   startAt: Date;
   endAt: Date | null;
   matchCount: number;
+  /** Termin einer Challenge-Reihe: dort hat jede Runde genau ein Match — es startet bei allen Wertungsformaten */
+  challenge?: boolean;
 }, now: Date = new Date()): boolean {
-  if (!supportsMatchWin(ev.format)) return false; // Punktewertung oder Durchschnittswerte
+  // Punktewertung oder Durchschnittswerte — in Challenge-Reihen auch Freie Wertung (ffa)
+  if (!(ev.challenge ? isStatFormat(ev.format) : supportsMatchWin(ev.format))) return false;
   if (ev.status === "finished" || ev.status === "closed" || ev.status === "umfrage") return false;
   if (!ev.endAt || !isPeriodEvent(ev)) return false;
   if (ev.startAt > now || ev.endAt <= now) return false;
@@ -35,17 +38,17 @@ export async function autoStartPeriodRounds(now: Date = new Date()): Promise<num
   try {
     const candidates = await prisma.event.findMany({
       where: {
-        format: { in: ["coop_stats", "avg_stats"] },
+        format: { in: ["ffa", "coop_stats", "avg_stats"] },
         status: { in: ["open", "active"] },
         startAt: { lte: now },
         endAt: { gt: now },
         matches: { none: {} },
       },
-      select: { id: true, format: true, status: true, startAt: true, endAt: true },
+      select: { id: true, format: true, status: true, startAt: true, endAt: true, series: { select: { scheduleMode: true } } },
     });
     let started = 0;
     for (const ev of candidates) {
-      if (!shouldAutoStartRound({ ...ev, matchCount: 0 }, now)) continue;
+      if (!shouldAutoStartRound({ ...ev, matchCount: 0, challenge: ev.series?.scheduleMode === "runden" }, now)) continue;
       if (await startFirstRound(ev.id)) started++;
     }
     return started;

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Undo2 } from "@/components/icons";
-import { FIELD_LABELS, formatFieldValue, type FillableField } from "@/lib/games/edits";
+import { editFieldLabel, formatFieldValue } from "@/lib/games/edits";
 
 export interface GameEditRow {
   id: string;
@@ -51,7 +51,7 @@ export default function GameEditsLog({ edits }: { edits: GameEditRow[] }) {
               <div className="flex-1 min-w-0">
                 <p className="text-gray-200 truncate">
                   <Link href={`/spiele/${e.game.slug}`} className="font-semibold text-white hover:text-primary-fg">{e.game.name}</Link>
-                  {" · "}{FIELD_LABELS[e.field as FillableField] ?? e.field}: <span className="text-teal-200">{formatFieldValue(e.field, e.newValue)}</span>
+                  {" · "}{editFieldLabel(e.field)}: <span className="text-teal-200">{formatFieldValue(e.field, e.newValue)}</span>
                 </p>
                 <p className="text-xs text-gray-500">
                   {e.userName ?? "Unbekannt"} · {new Date(e.createdAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" })}

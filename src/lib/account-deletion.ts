@@ -98,6 +98,7 @@ export async function buildUserExport(userId: string) {
       eventComments: { include: { event: { select: { title: true, startAt: true } } } },
       eventCommentReactions: true,
       gameReactions: { include: { game: { select: { name: true } } } },
+      serverInterests: { include: { game: { select: { name: true } } } },
       gameEdits: { include: { game: { select: { name: true } } } },
       gameTips: { include: { game: { select: { name: true } } } },
       clipSubmissions: true,

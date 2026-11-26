@@ -1,12 +1,15 @@
 import { auth } from "@/auth";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getVisibleServers } from "@/lib/gameservers";
+import { getServerCandidates } from "@/lib/games/server-candidates-server";
 import ServerList from "./ServerList";
+import ServerCandidates from "./ServerCandidates";
 import { EmptyState } from "@/components/EmptyState";
 
 export default async function ServersPage() {
   const session = await auth();
-  const servers = await getVisibleServers(session?.user?.id);
+  const userId = session?.user?.id;
+  const [servers, candidates] = await Promise.all([getVisibleServers(userId), getServerCandidates(userId)]);
 
   return (
     <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-6">
@@ -24,6 +27,8 @@ export default async function ServersPage() {
       ) : (
         <ServerList servers={servers} />
       )}
+
+      <ServerCandidates candidates={candidates} canInterest={!!userId} />
     </div>
   );
 }

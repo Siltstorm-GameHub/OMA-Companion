@@ -8,6 +8,7 @@ import { type StatRow } from "@/components/admin/StatRowsEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
 import { parseSchedule, addWallMinutes } from "@/lib/series-schedule";
+import { parseTermTemplate, templateFromEvent, type TermTemplate } from "@/lib/series-term-template";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
@@ -18,6 +19,7 @@ import { SeriesEvent, SettingsTabKey, PlacementReward, PollConfig, parseRewards,
 export function useSeriesDetail({
   series, allUsers, squads = [], hasActiveSibling = true, isModerator = true,
   isAdmin = false, canUndoCompletion = false, seasonCount = 1, groupStatFields = [], goalLimits = null, rewardLimits = null,
+  gameVote = null, initialTab,
 }: SeriesDetailProps) {
   const router = useRouter();
   // Abgeschlossene Saison: Punkteregeln, Belohnungen, Umfragen, Legacy, Spiel und Format sind gesperrt
@@ -29,7 +31,8 @@ export function useSeriesDetail({
   const [undoConfirm, setUndoConfirm] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabKey>("general");
+  // Direkt auf einen Reiter verlinkbar (?tab=termine …), z.B. aus der Termin-Bearbeitung
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabKey>(initialTab ?? "general");
   const [generatingNext, setGeneratingNext] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateDateStr, setGenerateDateStr] = useState("");
@@ -61,6 +64,17 @@ export function useSeriesDetail({
   // Terminplanung (lib/series-schedule.ts) — eigener Reiter "Termine" mit eigener Speicherung
   const scheduleMode: "termine" | "runden" | null = series.scheduleMode ?? null;
   const schedule = parseSchedule(series.scheduleJson ?? null);
+  // Vorlage für neue Termine (lib/series-term-template.ts) — Teil der Speicherleiste. Ältere Reihen ohne
+  // Vorlage: vorbelegt mit dem letzten Termin (so verhielt es sich bisher)
+  const [termTemplate, setTermTemplate] = useState<TermTemplate>(() => {
+    const saved = parseTermTemplate(series.termTemplateJson ?? null);
+    if (saved) return saved;
+    const last = [...(series.events as { startAt: string | Date; maxPlayers: number | null; spectatorMode?: boolean; spectatorRewardJson?: string | null }[])]
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())[0];
+    return templateFromEvent(last ? { maxPlayers: last.maxPlayers, spectatorMode: !!last.spectatorMode, spectatorRewardJson: last.spectatorRewardJson ?? null } : null);
+  });
+  // Vorlage beim Speichern auch auf schon angelegte, kommende Termine übertragen (einmalig, nicht Teil des Stands)
+  const [applyTermTemplate, setApplyTermTemplate] = useState(false);
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
@@ -198,6 +212,7 @@ export function useSeriesDetail({
         fixedGame:            fixedGame.trim() || null,
         fixedFormat:          fixedFormat || null,
         discordChannelId:     discordChannelId.trim() || null,
+        termTemplateJson:     JSON.stringify(termTemplate),
         genre:    genre.trim() || null,
         platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
@@ -230,7 +245,7 @@ export function useSeriesDetail({
   };
   const settingsSnapshot = JSON.stringify(settingsBody);
   const [savedSettings, setSavedSettings] = useState(settingsSnapshot);
-  const settingsDirty = settingsSnapshot !== savedSettings;
+  const settingsDirty = settingsSnapshot !== savedSettings || applyTermTemplate;
   useEffect(() => {
     if (!settingsDirty) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -265,12 +280,17 @@ export function useSeriesDetail({
     const res = await fetch("/api/admin/event-series", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesId: series.id, ...settingsBody, ...(applyGoalToOpenEvents && { applyGoalToOpenEvents: true }) }),
+      body: JSON.stringify({
+        seriesId: series.id, ...settingsBody,
+        ...(applyGoalToOpenEvents && { applyGoalToOpenEvents: true }),
+        ...(applyTermTemplate && { applyTermTemplateToUpcoming: true }),
+      }),
     });
     setSaving(false);
     if (res.ok) {
       setSavedSettings(settingsSnapshot);
-      toast.success(isArchived ? "Saison gespeichert" : "Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
+      setApplyTermTemplate(false);
+      toast.success(isArchived ? "Saison gespeichert" : "Reihe gespeichert – geänderte Einstellungen gelten auch für die offenen Termine");
       router.refresh();
     } else {
       toast.error((await res.json().catch(() => null))?.error ?? "Fehler beim Speichern");
@@ -455,7 +475,7 @@ export function useSeriesDetail({
     }
   }
 
-  return { series, rewardLimits, settingsDirty, discardSettings, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, generateEndStr, setGenerateEndStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, scheduleMode, schedule, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
+  return { series, gameVote, rewardLimits, settingsDirty, discardSettings, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, generateEndStr, setGenerateEndStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, scheduleMode, schedule, termTemplate, setTermTemplate, applyTermTemplate, setApplyTermTemplate, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
 }
 
 export type SeriesDetail = ReturnType<typeof useSeriesDetail>;

@@ -49,6 +49,8 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { MEDAL, Podium, type PodiumEntry } from "@/components/ui/Podium";
 import EventJumpBar from "@/app/(app)/(dashboard)/tournament/[id]/EventJumpBar";
 import StandingsHeader from "./StandingsHeader";
+import { termLabel } from "@/lib/series-schedule";
+import { formatBerlinDateTime } from "@/lib/time";
 
 type ArchivedSeason = {
   id: string; name: string; seasonNumber: number | null; archivedAt: Date | null;
@@ -429,6 +431,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     ...openEvents.slice(0, Math.max(0, 5 - activeEvents.length)),
   ].map(e => e.id);
   const pastEventIds = finishedEvents.map(e => e.id);
+  // Abgesagte kommende Termine bleiben sichtbar ("fällt aus"), damit niemand sie sucht (lib/event-cancel.ts)
+  const cancelledUpcoming = series.events.filter(e => e.status === "cancelled" && e.startAt > now).sort(byStart).slice(0, 3);
+  const renderCancelled = (e: (typeof series.events)[number]) => (
+    <div key={e.id} className="flex items-center gap-3 rounded-card border border-dashed border-red-800/40 bg-surface px-4 py-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-muted line-through truncate">{termLabel(series.scheduleMode, e) ?? e.title}</p>
+        <p className="text-xs text-subtle">{formatBerlinDateTime(e.startAt, { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+      </div>
+      <span className="shrink-0 text-xs font-semibold text-danger bg-danger-soft border border-red-800/40 rounded-full px-2 py-0.5">Fällt aus</span>
+    </div>
+  );
 
   // Kacheln wie auf /events (EventCard, Zeilen-Variante) — eigene Abfrage mit den Kachel-Relationen
   const [cardSources, viewer] = await Promise.all([
@@ -646,13 +659,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   // ── Saison-Verlauf ────────────────────────────────────────────────────────
   const gamePhaseDoneIds = new Set(gamePhaseCompleteEvents.map(e => e.id));
-  const timelineSource = [...series.events].filter(e => !e.hidden).sort(byStart);
+  // Abgesagte Termine sind ausgeblendet, stehen im Verlauf aber als "fällt aus"
+  const timelineSource = [...series.events].filter(e => !e.hidden || e.status === "cancelled").sort(byStart);
   const timelineStateList = timelineStates(timelineSource.map(e => ({ status: e.status, gamePhaseDone: gamePhaseDoneIds.has(e.id) })));
   const timelineEvents: TimelineEvent[] = timelineSource.map((e, i) => {
     const state = timelineStateList[i];
     const winnerId = state === "done" && eventHasPlacement(e) ? parseRanking(e.finalRankingJson)[0] : undefined;
     const winner = winnerId ? e.registrations.find(r => r.userId === winnerId)?.user ?? null : null;
-    return { id: e.id, title: e.title, startAt: e.startAt, state, winner };
+    return { id: e.id, title: termLabel(series.scheduleMode, e) ?? e.title, startAt: e.startAt, state, winner };
   });
 
   // ── Dein Stand ────────────────────────────────────────────────────────────
@@ -1003,7 +1017,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           {!isArchived && (
             <div id="termine" className="scroll-mt-36">
             <SeriesEventList
-              upcoming={upcomingEventIds.map(renderSeriesCard)}
+              upcoming={[...upcomingEventIds.map(renderSeriesCard), ...cancelledUpcoming.map(renderCancelled)]}
               past={pastEventIds.map(renderSeriesCard)}
             />
             </div>

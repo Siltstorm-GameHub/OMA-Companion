@@ -11,14 +11,14 @@ import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
 import IconPicker from "@/components/IconPicker";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
-import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { inputCls, PLATFORMS, Section, Field } from "./series-shared";
+import GameVoteSettings from "./GameVoteSettings";
 import type { SeriesDetail } from "./useSeriesDetail";
 
 /** Reiter "Allgemein": Kategorie, Cover, Spiel und Format, Turniervorlage und Discord.
  *  Das Community-Ziel hat einen eigenen Reiter (SeriesTabGoal). */
 export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
-  const { series, isModerator, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, omaOriginal, eventStatFields, saveOmaOriginal, lockedNotice, setActiveSettingsTab,
+  const { series, isModerator, isArchived, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, omaOriginal, saveOmaOriginal, lockedNotice, gameVote,
     name, setName, description, setDescription, rules, setRules, hidden, hiddenBusy, toggleHidden, registrationLocked,
     registrationLockedBusy, toggleRegistrationLocked, squads, squadId, squadIdBusy, saveSquadId } = ctx;
   return (
@@ -38,8 +38,11 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
           </Section>
 
           {/* Sofort wirksam (eigene Knöpfe, nicht über die Speicherleiste) */}
-          <Section title="Sichtbarkeit und Anmeldung">
-            <p className="text-xs text-subtle -mt-1">Diese Schalter gelten sofort für die Reihe und alle Termine.</p>
+          <Section title="Sichtbarkeit und Anmeldung" instant>
+            <p className="text-xs text-subtle -mt-1">Diese Schalter gelten für die Reihe und alle Termine.</p>
+            {isModerator && (
+              <OmaOriginalToggle kind="series" checked={omaOriginal} onChange={saveOmaOriginal} blocksGame={isBlocksGame(series.fixedGame)} />
+            )}
             <div className="flex items-center gap-2 flex-wrap">
               <button type="button" onClick={toggleHidden} disabled={hiddenBusy}
                 className={`flex items-center gap-1.5 text-xs border rounded-control px-3 py-1.5 transition-all disabled:opacity-50 ${
@@ -84,9 +87,6 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
 
           {/* Eigenes Reihen-Cover */}
           <Section title="Reihen-Cover">
-            {isModerator && (
-              <OmaOriginalToggle kind="series" checked={omaOriginal} onChange={saveOmaOriginal} blocksGame={isBlocksGame(series.fixedGame)} />
-            )}
             <ImageUploadField
               value={coverImageUrl}
               onChange={setCoverImageUrl}
@@ -144,19 +144,15 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
           </Section>
           </fieldset>
 
-          {/* Turniervorlage für neue Termine */}
-          {isTournamentSeries && (
-            <Section title="Turniervorlage für neue Termine">
-              <p className="text-xs text-subtle">
-                Jeder neu angelegte Termin der Reihe übernimmt diese Einstellungen — bestehende Termine bleiben unverändert.
-                Eine neue Saison übernimmt die Vorlage automatisch.
-              </p>
-              <TournamentTemplateEditor format={fixedFormat} value={tournamentTemplate} onChange={setTournamentTemplate} statFields={eventStatFields} disabled={isArchived} hideGoal />
-              <button type="button" onClick={() => setActiveSettingsTab("goal")} className="mt-2 text-xs font-semibold text-primary-fg hover:text-primary-fg">
-                🎯 Community-Ziel der Reihe einstellen →
-              </button>
+          {/* Spielwahl (nur Mods, laufende Saison) — speichert selbst */}
+          {gameVote && (
+            <Section title="🗳️ Spielwahl" instant>
+              <GameVoteSettings seriesId={series.id} initial={gameVote.initial} fixedGame={series.fixedGame ?? null}
+                upcoming={gameVote.upcoming} squadName={gameVote.squadName} />
             </Section>
           )}
+
+          {/* Turnier-Einstellungen für neue Termine: Reiter "Termine" → Vorlage für neue Termine */}
 
           {/* Ankündigungskanal — legen nur Mods fest (die API ignoriert ihn für Mitglieder). Termine und
               Wiederholung stehen im Reiter "Termine". */}

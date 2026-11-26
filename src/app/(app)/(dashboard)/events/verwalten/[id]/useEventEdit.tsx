@@ -636,11 +636,16 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
   const [loadedAt] = useState(() => Date.now());
   const isUpcoming = new Date(event.startAt).getTime() > loadedAt;
   const canDelete = isModerator || !event.completionData;
+  // Kommender Reihen-Termin: absagen statt löschen — er bleibt in der Reihe als "fällt aus" sichtbar
+  // (lib/event-cancel.ts). Einzel-Events und vergangene Termine werden wie bisher gelöscht.
+  const cancelInsteadOfDelete = isUpcoming && !!event.series;
   async function deleteEvent() {
     const regs = event._count.registrations;
     if (!(await confirm(isUpcoming ? {
       title: "Event absagen",
-      description: `„${event.title}“ absagen?\n\n${regs > 0 ? `${regs} Angemeldete bekommen eine Benachrichtigung. ` : ""}Das Event und die Discord-Ankündigung werden entfernt. Das lässt sich nicht rückgängig machen.`,
+      description: cancelInsteadOfDelete
+        ? `„${event.title}“ absagen?\n\nDer Termin bleibt in der Reihe als „fällt aus“ sichtbar. ${regs > 0 ? `Die Anmeldungen werden aufgelöst, ${regs} Angemeldete bekommen eine Benachrichtigung. ` : ""}Die Discord-Ankündigung wird entfernt. Das lässt sich nicht rückgängig machen.`
+        : `„${event.title}“ absagen?\n\n${regs > 0 ? `${regs} Angemeldete bekommen eine Benachrichtigung. ` : ""}Das Event und die Discord-Ankündigung werden entfernt. Das lässt sich nicht rückgängig machen.`,
       variant: "danger",
       confirmLabel: "Absagen",
     } : {
@@ -650,7 +655,9 @@ export function useEventEdit({ event, registeredUsers, squads = [], rewardLimits
       typedConfirmText: "LÖSCHEN",
     }))) return;
     setLoading(true);
-    const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
+    const res = cancelInsteadOfDelete
+      ? await fetch(`/api/admin/events/${event.id}/cancel`, { method: "POST" })
+      : await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
     setLoading(false);
     if (res.ok) {
       setSavedSnapshot(formSnapshot); // keine Verlassen-Warnung mehr

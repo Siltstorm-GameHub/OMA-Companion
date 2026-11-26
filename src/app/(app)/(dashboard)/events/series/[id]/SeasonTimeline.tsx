@@ -22,13 +22,14 @@ const shortDate = (d: Date) => formatBerlinDate(d, { day: "2-digit", month: "2-d
 export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length < 2) return null;
   const doneCount = events.filter(e => e.state === "done").length;
+  const heldCount = events.filter(e => e.state !== "cancelled").length;
   const next = events.find(e => e.state === "live" || e.state === "next");
 
   return (
     <section aria-label="Saison-Verlauf" className="rounded-card border border-line bg-surface shadow-card px-4 py-3">
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <h2 className="text-xs font-semibold text-muted">
-          Saison-Verlauf <span className="text-subtle font-normal tabular-nums">· {doneCount} von {events.length} gespielt</span>
+          Saison-Verlauf <span className="text-subtle font-normal tabular-nums">· {doneCount} von {heldCount} gespielt</span>
         </h2>
         {next && (
           <Link href={`/tournament/${next.id}`} className="text-xs font-medium text-primary-fg hover:text-primary-fg">
@@ -44,7 +45,7 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
           const lineDone = e.state === "done" && events[i + 1]?.state === "done";
           return (
             <li key={e.id} className={`flex items-start ${last ? "" : "flex-1 min-w-[44px]"}`}>
-              <Link href={`/tournament/${e.id}`} title={`${e.title} · ${shortDate(e.startAt)}${e.winner ? ` · Sieg: ${e.winner.username ?? e.winner.name}` : ""}`}
+              <Link href={`/tournament/${e.id}`} title={`${e.title} · ${shortDate(e.startAt)}${e.state === "cancelled" ? " · fällt aus" : ""}${e.winner ? ` · Sieg: ${e.winner.username ?? e.winner.name}` : ""}`}
                 className="group flex flex-col items-center gap-1 shrink-0 w-8">
                 {e.state === "done" ? (
                   e.winner ? (
@@ -56,6 +57,8 @@ export default function SeasonTimeline({ events }: { events: TimelineEvent[] }) 
                   )
                 ) : e.state === "live" ? (
                   <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-red-400"><span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" /></span>
+                ) : e.state === "cancelled" ? (
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full border border-dashed border-red-400/60 text-red-400 text-xs" aria-label="Fällt aus">✕</span>
                 ) : e.state === "next" ? (
                   <span className="h-[22px] w-[22px] rounded-full border-2 border-primary-fg bg-primary-soft group-hover:bg-primary/30" />
                 ) : (

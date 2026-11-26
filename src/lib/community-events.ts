@@ -62,7 +62,7 @@ export const notAwaitingApprovalWhere = {
 
 /** Beendete Events: zählen nicht mehr zum Limit und brauchen keine Freigabe mehr.
  *  "closed" heißt nur "voll" — das Event steht noch an und zählt weiter. */
-const DONE_EVENT_STATUSES = ["finished", "archived"];
+const DONE_EVENT_STATUSES = ["finished", "archived", "cancelled"];
 
 /** Prisma-Filter: Einzel-Events, die auf eine Freigabe warten (Termine wartender Reihen werden mit
  *  der Reihe freigegeben und erscheinen nicht einzeln). Für Verwalten-Liste und Admin-Inbox. */

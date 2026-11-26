@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
 import { getServersWithAdminCounts, trafficLight } from "@/lib/gameservers";
 import { pickServerFields, validateServerInput } from "@/lib/gameserver-input";
+import { onServerCreated } from "@/lib/games/server-candidates-server";
 
 export async function GET() {
   await requireRole("moderator");
@@ -20,5 +21,12 @@ export async function POST(req: NextRequest) {
     data: { ...result.data, createdBy: admin.id },
   });
 
-  return NextResponse.json({ ...server, occupied: 0, pendingCount: 0, light: trafficLight(server.maxSlots, server.maxSlots) }, { status: 201 });
+  // Wer beim passenden Server-Kandidaten zugesagt hat: Bewerbung anlegen und benachrichtigen
+  const { notified } = await onServerCreated(server).catch(err => {
+    console.error("[servers] Zusagen übernehmen", err);
+    return { notified: 0 };
+  });
+  const pendingCount = server.openAccess || notified === 0 ? 0 : Math.min(notified, server.maxSlots);
+
+  return NextResponse.json({ ...server, occupied: 0, pendingCount, interestedNotified: notified, light: trafficLight(server.maxSlots, server.maxSlots) }, { status: 201 });
 }

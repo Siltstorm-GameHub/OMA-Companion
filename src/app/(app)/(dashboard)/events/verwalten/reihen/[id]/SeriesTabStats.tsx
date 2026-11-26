@@ -1,4 +1,5 @@
 "use client";
+import SeriesTabLegacy from "./SeriesTabLegacy";
 import { Coins, Vote, Flame } from "@/components/icons";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import StatRowsEditor from "@/components/admin/StatRowsEditor";
@@ -11,7 +12,7 @@ import type { SeriesDetail } from "./useSeriesDetail";
 
 /** Reiter "Stats & Bonus": Statistiken, Sieger-Ermittlung, Dominion Bonus. */
 export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
-  const { rewardLimits, isArchived, statRows, setStatRows, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, polls, lockedNotice, aliasSection } = ctx;
+  const { isModerator, rewardLimits, isArchived, statRows, setStatRows, eventStatFields, winnerStatField, setWinnerStatField, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, polls, lockedNotice, aliasSection } = ctx;
   return (
     <>
           {lockedNotice}
@@ -116,6 +117,16 @@ export default function SeriesTabStats({ ctx }: { ctx: SeriesDetail }) {
 
           </fieldset>
           {aliasSection}
+
+          {/* Selten gebraucht: Altstand aus der Zeit vor der App (nur Mods) — eingeklappt */}
+          {isModerator && (
+            <details className="rounded-control border border-line bg-surface-2/50">
+              <summary className="cursor-pointer select-none px-4 py-2.5 text-xs font-semibold text-subtle uppercase tracking-wider">
+                Erweitert: Altstand (Legacy)
+              </summary>
+              <div className="p-3"><SeriesTabLegacy ctx={ctx} /></div>
+            </details>
+          )}
           </>
   );
 }

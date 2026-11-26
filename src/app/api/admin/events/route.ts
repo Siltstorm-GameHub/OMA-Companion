@@ -66,12 +66,20 @@ export async function PATCH(req: NextRequest) {
   // Cover: Nicht-Moderatoren nur Vorlagen (oder entfernen) — eine eigene URL bleibt unverändert stehen
   if (!isModerator && "coverImageUrl" in data && data.coverImageUrl && !isPresetCover(data.coverImageUrl)) delete data.coverImageUrl;
 
-  // Abgeschlossene Saisons nehmen keine weiteren Termine auf
-  if ("seriesId" in data && data.seriesId) {
-    const target = await prisma.eventSeries.findUnique({ where: { id: data.seriesId }, select: { status: true } });
+  // Abgeschlossene Saisons nehmen keine weiteren Termine auf; Challenge-Reihen keine Termine von Hand
+  // (ihre Runden entstehen nur als lückenlose Kette, lib/series-schedule.ts)
+  let seriesChanged = false;
+  if ("seriesId" in data) {
     const current = await prisma.event.findUnique({ where: { id: eventId }, select: { seriesId: true } });
-    if (target?.status === "archived" && current?.seriesId !== data.seriesId) {
-      return NextResponse.json({ error: "Diese Saison ist abgeschlossen — Termine können nicht mehr hinzugefügt werden." }, { status: 409 });
+    seriesChanged = (current?.seriesId ?? null) !== (data.seriesId || null);
+    if (data.seriesId && seriesChanged) {
+      const target = await prisma.eventSeries.findUnique({ where: { id: data.seriesId }, select: { status: true, scheduleMode: true } });
+      if (target?.status === "archived") {
+        return NextResponse.json({ error: "Diese Saison ist abgeschlossen — Termine können nicht mehr hinzugefügt werden." }, { status: 409 });
+      }
+      if (target?.scheduleMode === "runden") {
+        return NextResponse.json({ error: "In eine Challenge-Reihe lassen sich keine Termine verschieben — ihre Runden entstehen automatisch." }, { status: 409 });
+      }
     }
   }
 
@@ -200,8 +208,10 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Runden einer Reihe bleiben lückenlos: geändertes Ende/Start verschiebt die angrenzende Runde mit
-  // (lib/series-schedule-server.ts). Der Soll-Platz (slotIndex) ändert sich hier nie.
+  // (lib/series-schedule-server.ts). Der Soll-Platz (slotIndex) ändert sich hier nie — außer der Termin
+  // wechselt die Reihe: dann gilt er in der neuen Reihe als Sondertermin (sonst falscher/doppelter Platz).
   delete data.slotIndex;
+  if (seriesChanged) data.slotIndex = null;
   if (data.startAt !== undefined || endAt !== undefined) {
     const chain = await checkRoundChain(eventId, {
       ...(data.startAt && { startAt: new Date(data.startAt) }),

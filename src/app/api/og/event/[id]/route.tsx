@@ -23,6 +23,7 @@ const STATUS_TEXT: Record<string, string> = {
   umfrage:  "Umfrage läuft",
   closed:   "Geschlossen",
   finished: "Beendet",
+  cancelled: "Fällt aus",
 };
 
 function formatStart(date: Date): string {

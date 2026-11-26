@@ -160,7 +160,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true, omaOriginal: true, fixedGame: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true, placementRewardsJson: true, approvalStatus: true, tournamentTemplateJson: true, omaOriginal: true, fixedGame: true, rules: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       blocksTournament: { select: { stage: true } },
       blocksChallenge: { select: { id: true } },
@@ -213,7 +213,12 @@ export default async function TournamentDetailPage({
       proofsByEntry[key] = [...new Set([...(proofsByEntry[key] ?? []), ...urls])];
     }
   }
-  const isHidden = event.hidden || !!event.series?.hidden;
+  // Abgesagte Termine (lib/event-cancel.ts) sind nur aus Übersichten ausgeblendet — über den Link bleiben
+  // sie mit dem Hinweis "fällt aus" erreichbar, damit niemand sie sucht
+  // Regeln: eigene des Termins, sonst die der Reihe (Termine aus der Planung haben keine eigenen)
+  const eventRules = event.rules || event.series?.rules || null;
+  const isCancelled = event.status === "cancelled";
+  const isHidden = (event.hidden && !isCancelled) || !!event.series?.hidden;
   if (isHidden && !isMod && !canManage) notFound();
   // Spiel in der Spieleliste → Name wird zum Link auf die Spiel-Seite, dazu eine Kurzinfo (wer es hat …)
   const gameInfo = event.game ? await getGameListInfo(event.game) : null;
@@ -1214,7 +1219,7 @@ export default async function TournamentDetailPage({
     { href: "#teilnehmer", label: "Teilnehmer", show: sortedRegistrations.length > 0 },
     { href: "#absprachen", label: "Absprachen", show: !!userId },
     { href: "#beitraege", label: "Beiträge", show: postCount > 0 },
-    { href: "#regeln", label: "Regeln", show: !!event.rules },
+    { href: "#regeln", label: "Regeln", show: !!eventRules },
   ].filter(l => l.show);
   const unreadComments = commentCounts.get(event.id)?.unread ?? 0;
   const openPollsForMe = initialPolls.filter(p => !p.myVote && new Date(p.startAt) <= new Date() && new Date(p.endAt) > new Date()).length;
@@ -1343,28 +1348,28 @@ export default async function TournamentDetailPage({
   const descriptionCard = event.description ? (
     <p className="rounded-card border border-line bg-surface shadow-card px-4 py-4 sm:px-5 mb-5 text-sm text-fg/90 leading-relaxed whitespace-pre-line">{event.description}</p>
   ) : null;
-  const collapseBackground = pagePhase === "after" && (!!event.description || !!event.rules);
+  const collapseBackground = pagePhase === "after" && (!!event.description || !!eventRules);
   const descriptionNode = collapseBackground ? (
     // Sprung "Regeln" öffnet die Zeile (data-jump-target, siehe SectionJumpLink)
     <details data-jump-target="regeln" className="group mb-5 scroll-mt-36">
       <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 rounded-card border border-line bg-surface px-4 shadow-card hover:border-line-strong [&::-webkit-details-marker]:hidden">
         <Glyph name="scroll" className="size-4 text-muted" />
-        <span className="text-base font-extrabold text-fg">{event.description && event.rules ? "Beschreibung & Regeln" : event.rules ? "Regeln" : "Beschreibung"}</span>
+        <span className="text-base font-extrabold text-fg">{event.description && eventRules ? "Beschreibung & Regeln" : eventRules ? "Regeln" : "Beschreibung"}</span>
         <span className="text-xs font-semibold text-subtle">Ablauf vor dem Event</span>
         <ChevronDown className="ml-auto size-4 text-subtle transition-transform group-open:rotate-180" />
       </summary>
       <div className="mt-3">
         {descriptionCard}
-        <RulesSection id="regeln" rules={event.rules} className="mb-0" />
+        <RulesSection id="regeln" rules={eventRules} className="mb-0" />
       </div>
     </details>
   ) : descriptionCard;
 
   const gameVoteNode = gameVote ? (
-    <GameVoteSection eventId={event.id} view={gameVote} canManage={canManageVote} addable={gameVoteAddable} rules={event.rules} format={event.format} isRegistered={isRegistered} isSpectator={isSpectator} />
+    <GameVoteSection eventId={event.id} view={gameVote} canManage={canManageVote} addable={gameVoteAddable} rules={eventRules} format={event.format} isRegistered={isRegistered} isSpectator={isSpectator} />
   ) : null;
 
-  const rulesNode = collapseBackground ? null : <RulesSection id="regeln" rules={event.rules} preview={isPrePhase(pagePhase) ? 4 : 3} className="mb-5" />;
+  const rulesNode = collapseBackground ? null : <RulesSection id="regeln" rules={eventRules} preview={isPrePhase(pagePhase) ? 4 : 3} className="mb-5" />;
 
   const blocksNode = (event.blocksTournament || event.blocksChallenge) ? (
     <BlocksEventSection
@@ -1735,6 +1740,17 @@ export default async function TournamentDetailPage({
           Mitglieder-Event von <span className="font-semibold text-fg">@{communityBy}</span>
           {awaitingApproval && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-bold text-warning">wartet auf Freigabe durch einen Mod</span>}
         </p>
+      )}
+
+      {/* ── Abgesagt ── */}
+      {isCancelled && (
+        <div className="rounded-card px-4 py-3 mb-5 border border-red-800/40 bg-danger-soft">
+          <p className="text-sm text-fg">
+            <span className="font-semibold text-danger">Dieser Termin fällt aus.</span>{" "}
+            Anmeldungen wurden aufgelöst, Angemeldete wurden benachrichtigt.
+            {event.series && <> Die nächsten Termine findest du in der <Link href={`/events/series/${event.series.id}`} className="font-semibold text-primary-fg hover:underline">Reihe</Link>.</>}
+          </p>
+        </div>
       )}
 
       {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ── */}

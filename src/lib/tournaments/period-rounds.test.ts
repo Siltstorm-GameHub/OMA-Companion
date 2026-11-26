@@ -21,4 +21,10 @@ describe("Zeitraum-Events: Runde 1 automatisch", () => {
     assert.equal(shouldAutoStartRound({ ...base, status: "finished" }, during), false);
     assert.equal(shouldAutoStartRound(base, new Date(start.getTime() + 31 * D)), false, "nach dem Ende");
   });
+
+  test("Challenge-Reihe: auch Freie Wertung startet, K.O. weiterhin nicht", () => {
+    assert.equal(shouldAutoStartRound({ ...base, format: "ffa" }, during), false);
+    assert.equal(shouldAutoStartRound({ ...base, format: "ffa", challenge: true }, during), true);
+    assert.equal(shouldAutoStartRound({ ...base, format: "single_elimination", challenge: true }, during), false);
+  });
 });

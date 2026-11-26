@@ -11,6 +11,7 @@ import { formatLabel } from "@/lib/event-placeholders";
 import { eventPayout } from "@/lib/placement-rewards";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { resolveSeriesColor } from "@/lib/series-icons";
+import { termLabel } from "@/lib/series-schedule";
 
 /** Relationen, die eine Event-Kachel braucht */
 export const EVENT_CARD_INCLUDE = {
@@ -82,7 +83,8 @@ export function toEventCardData(
   return {
     id: ev.id,
     href: `/tournament/${ev.id}`,
-    title: ev.title,
+    // Challenge-Reihe: "Runde 12 · 17.–23. Nov." statt des fortlaufenden Titels (lib/series-schedule.ts)
+    title: ev.series?.scheduleMode === "runden" ? (termLabel("runden", ev) ?? ev.title) : ev.title,
     // Reihen mit festem Spiel: Termine ohne eigenes Spiel erben es (Cover, "Dein Spiel", Filter)
     game: ev.game ?? ev.series?.fixedGame ?? null,
     coverUrl: ev.coverImageUrl ?? ev.series?.coverImageUrl ?? null,

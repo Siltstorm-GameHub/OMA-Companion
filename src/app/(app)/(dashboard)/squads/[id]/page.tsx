@@ -12,7 +12,7 @@ import { getGameListInfo } from "@/lib/games/service";
 import GameListInfo from "@/components/games/GameListInfo";
 
 const EVENT_STATUS_LABEL: Record<string, string> = {
-  open: "Offen", active: "Läuft", closed: "Voll", umfrage: "Umfragephase", finished: "Beendet",
+  open: "Offen", active: "Läuft", closed: "Voll", umfrage: "Umfragephase", finished: "Beendet", cancelled: "Fällt aus",
 };
 
 const userName = (u: { name: string | null; username: string | null }) => u.username ?? u.name ?? "?";

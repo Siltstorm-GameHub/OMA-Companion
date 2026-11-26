@@ -26,3 +26,30 @@ export function seriesEventStatFieldsFromConfig(seriesStatConfig: string | null 
     return fields;
   } catch { return []; }
 }
+
+/**
+ * Stat-Felder (Event.statFields), die ein neuer bzw. offener Termin von der Reihe bekommt: bevorzugt die
+ * gepflegten eventStatFields, sonst die Reihen-Stats ohne Sieger- und Match-Win-Stats (die werden
+ * automatisch gesetzt). Gleiche Regel für das Anlegen (series-generate) und das Übertragen beim Speichern.
+ */
+export function seriesTermStatFields(seriesStatConfig: string | null | undefined): string[] {
+  if (!seriesStatConfig) return [];
+  try {
+    const { stats, eventStatFields } = JSON.parse(seriesStatConfig) as { stats?: SeriesStatRowLike[]; eventStatFields?: string[] };
+    const fields = eventStatFields?.length
+      ? eventStatFields.filter((f): f is string => typeof f === "string" && !!f.trim()).map(f => f.trim())
+      : deriveEventStatFields(stats ?? []);
+    return [...new Set(fields)];
+  } catch { return []; }
+}
+
+/**
+ * Neue Stat-Felder eines Termins, wenn sich die Reihen-Felder ändern: die neuen Reihen-Felder plus die
+ * Zusatz-Felder, die nur dieser Termin hat (sie standen nicht in den alten Reihen-Feldern) — sonst würde
+ * jedes Speichern der Reihe die Zusatz-Stats einzelner Termine löschen.
+ */
+export function mergeTermStatFields(eventFields: string[] | null, oldSeries: string[], newSeries: string[]): string[] {
+  const old = new Set(oldSeries);
+  const extras = (eventFields ?? []).filter(f => !old.has(f) && !newSeries.includes(f));
+  return [...newSeries, ...extras];
+}

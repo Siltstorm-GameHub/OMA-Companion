@@ -1,4 +1,4 @@
-import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
+import { seriesEventStatFieldsFromConfig, seriesTermStatFields } from "@/lib/series-stat-fields";
 import { after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +6,7 @@ import { publishEvent } from "@/lib/event-publish";
 import { parseTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { parseGameVoteConfig } from "@/lib/game-vote/rules";
 import { createGameVote } from "@/lib/game-vote/service";
+import { parseTermTemplate, templateTermFields } from "@/lib/series-term-template";
 
 export type GenerateResult =
   | { ok: true; event: Awaited<ReturnType<typeof prisma.event.create>>; gameVote: { shortened?: boolean } | { error?: string } | null }
@@ -52,23 +53,6 @@ export async function createSeriesTerm(seriesId: string, term: SeriesTerm, publi
     return m ? `${m[1]}${Number(m[2]) + 1}${m[3]}` : lastTitle;
   }
 
-  // Stat-Felder aus der Reihen-Konfiguration
-  function derivedStatFields(): string | null {
-    if (!series?.seriesStatConfig) return null;
-    try {
-      const { stats, eventStatFields } = JSON.parse(series.seriesStatConfig) as {
-        stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
-        eventStatFields?: string[];
-      };
-      // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats
-      // (ohne Sieger-Stats und Match-Win-Stats, die automatisch/aus dem Match-Win-Haken gesetzt werden)
-      const fields = eventStatFields?.length
-        ? eventStatFields.filter(Boolean)
-        : (stats?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field).map(s => s.field) ?? []);
-      return fields.length ? JSON.stringify(fields) : null;
-    } catch { return null; }
-  }
-
   const lastEvent = series.events.length > 0 ? series.events[series.events.length - 1] : null;
 
   // Spielwahl (lib/game-vote): Termin entsteht als Platzhalter ohne Spiel, Mitglieder wählen es
@@ -79,7 +63,16 @@ export async function createSeriesTerm(seriesId: string, term: SeriesTerm, publi
   const pollsConfigJson = series.pollsConfigJson ?? lastEvent?.pollsConfigJson ?? null;
   const category = series.category ?? lastEvent?.category ?? undefined;
   const genre    = series.genre    ?? lastEvent?.genre    ?? null;
-  const statFields = derivedStatFields();
+  // Stat-Felder aus der Reihen-Konfiguration — gleiche Regel wie beim Übertragen (series-stat-fields.ts)
+  const termFields = seriesTermStatFields(series.seriesStatConfig);
+  const statFields = termFields.length ? JSON.stringify(termFields) : null;
+  // Termin-Vorlage der Reihe (lib/series-term-template.ts) — ältere Reihen ohne Vorlage: vom letzten Termin
+  const termTemplate = parseTermTemplate(series.termTemplateJson);
+  const tplFields = termTemplate ? templateTermFields(termTemplate) : {
+    maxPlayers: lastEvent?.maxPlayers ?? null,
+    spectatorMode: lastEvent?.spectatorMode ?? false,
+    spectatorRewardJson: lastEvent?.spectatorRewardJson ?? null,
+  };
 
   let newEvent;
   try {
@@ -92,7 +85,7 @@ export async function createSeriesTerm(seriesId: string, term: SeriesTerm, publi
         startAt: term.startAt,
         endAt: term.endAt,
         slotIndex: term.slotIndex,
-        maxPlayers:  lastEvent?.maxPlayers  ?? null,
+        maxPlayers:  tplFields.maxPlayers,
         pointReward: lastEvent?.pointReward ?? 0,
         type:        lastEvent?.type        ?? "community",
         discordChannelId,
@@ -102,10 +95,10 @@ export async function createSeriesTerm(seriesId: string, term: SeriesTerm, publi
         createdById: series.createdById,
         approvalStatus: series.approvalStatus,
         hidden: series.hidden,
-        // Zuschauer-Modus, Sieger-Ermittlung und Platzierungs-Belohnungen sind Event-Einstellungen —
-        // vom letzten Termin übernehmen, damit sie nicht bei jedem neuen Termin verloren gehen.
-        spectatorMode:         lastEvent?.spectatorMode       ?? false,
-        spectatorRewardJson:   lastEvent?.spectatorRewardJson ?? null,
+        // Spieler-Limit und Zuschauer aus der Termin-Vorlage; Sieger-Ermittlung und Platzierungs-
+        // Belohnungen (Turnier-Einstellungen des Termins) weiter vom letzten Termin.
+        spectatorMode:         tplFields.spectatorMode,
+        spectatorRewardJson:   tplFields.spectatorRewardJson,
         ...(lastEvent?.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
         ...(lastEvent?.placementRewardsJson && { placementRewardsJson: lastEvent.placementRewardsJson }),
         ...(series.fixedFormat && { format: series.fixedFormat }),

@@ -31,7 +31,7 @@ export type ManageAction = { kind: "tournament" | "poll" | "complete"; label: st
 
 // Client-sicher (keine Server-Importe): wird auch von der Suche im Browser genutzt.
 // Achtung: "closed" heißt "voll / Anmeldung geschlossen" — das Event steht noch an und ist NICHT beendet.
-const CLOSED = ["finished", "archived"];
+const CLOSED = ["finished", "archived", "cancelled"];
 /** Ab 2 Tagen gilt ein vorbeigegangenes, nicht abgeschlossenes Event als überfällig */
 const LATE_MS = 2 * 24 * 60 * 60 * 1000;
 const isLate = (since: Date, now: Date) => now.getTime() - since.getTime() >= LATE_MS;
@@ -39,7 +39,7 @@ const isEnded = (e: Pick<ManageEvent, "startAt" | "endAt">, now: Date) => (e.end
 
 /** Braucht dieses Event gerade eine Handlung? (Turnier, Umfragephase, vorbei und nicht abgeschlossen) */
 export function actionFor(e: ManageEvent, now: Date = new Date()): ManageAction | null {
-  if (e.status === "finished" || e.status === "archived") return null;
+  if (CLOSED.includes(e.status)) return null;
   if (e.tournamentStatus === "active" || e.tournamentStatus === "pending") {
     return {
       kind: "tournament", button: "Spielplan", href: `/events/verwalten/${e.id}/bracket`, since: null, late: false,
@@ -64,6 +64,7 @@ export function actionFor(e: ManageEvent, now: Date = new Date()): ManageAction 
 
 /** Status in Klartext statt Admin-Begriffen (open/active/closed …) */
 export function statusText(e: ManageEvent, now: Date = new Date()): string {
+  if (e.status === "cancelled") return "Fällt aus";
   if (e.status === "finished" || e.status === "archived") return e.completed ? "Abgeschlossen" : "Beendet";
   if (e.status === "umfrage") return "Umfragephase";
   if (e.startAt <= now && !isEnded(e, now)) return "Läuft";

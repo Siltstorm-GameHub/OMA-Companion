@@ -8,6 +8,7 @@ import { timelineStates, type TimelineState } from "@/lib/series-timeline";
 import { eventPayout } from "@/lib/placement-rewards";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { cachedInMemory } from "@/lib/memory-cache";
+import { MODE_LABEL, termLabel } from "@/lib/series-schedule";
 
 export type SeriesContextEvent = { id: string; title: string; startAt: Date; state: TimelineState };
 
@@ -15,6 +16,10 @@ export interface SeriesContext {
   id: string;
   name: string;
   color: string;
+  /** "Eventreihe" | "Challenge-Reihe" (null = alte Reihe ohne Ablaufart) */
+  kindLabel: string | null;
+  /** Bezeichnung dieses Termins: "Runde 12 · 17.–23. Nov.", "Termin 7", "Sondertermin" (lib/series-schedule.ts) */
+  termLabel: string | null;
   /** 1-basiert */
   position: number;
   total: number;
@@ -53,12 +58,13 @@ async function loadSeriesBase(seriesId: string, eventId: string) {
   const series = await prisma.eventSeries.findUnique({
     where: { id: seriesId },
     select: {
-      id: true, name: true, icon: true, seriesStatConfig: true, legacyStandings: true, placementRewardsJson: true,
+      id: true, name: true, icon: true, seriesStatConfig: true, legacyStandings: true, placementRewardsJson: true, scheduleMode: true,
       events: {
-        where: { OR: [{ hidden: false }, { id: eventId }] },
+        // Abgesagte Termine sind ausgeblendet, stehen im Zeitstrahl aber als "fällt aus"
+        where: { OR: [{ hidden: false }, { id: eventId }, { status: "cancelled" }] },
         orderBy: { startAt: "asc" },
         select: {
-          id: true, title: true, startAt: true, status: true, completionData: true, finalRankingJson: true, goalStateJson: true,
+          id: true, title: true, startAt: true, endAt: true, slotIndex: true, status: true, completionData: true, finalRankingJson: true, goalStateJson: true,
           registrations: { select: { userId: true, role: true } },
           matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
         },
@@ -71,7 +77,7 @@ async function loadSeriesBase(seriesId: string, eventId: string) {
   if (idx < 0) return null;
 
   const states = timelineStates(series.events.map(e => ({ status: e.status, gamePhaseDone: isGamePhaseDone(e.completionData) })));
-  const events: SeriesContextEvent[] = series.events.map((e, i) => ({ id: e.id, title: e.title, startAt: e.startAt, state: states[i] }));
+  const events: SeriesContextEvent[] = series.events.map((e, i) => ({ id: e.id, title: termLabel(series.scheduleMode, e) ?? e.title, startAt: e.startAt, state: states[i] }));
 
   // Reihentabelle (für den eigenen Platz) — gleiche Berechnung wie die Reihen-Seite,
   // Tabelle = alle mit Punkten oder Teilnahme
@@ -95,10 +101,12 @@ async function loadSeriesBase(seriesId: string, eventId: string) {
     id: series.id,
     name: series.name,
     color: resolveSeriesColor(series.icon),
+    kindLabel: series.scheduleMode === "termine" || series.scheduleMode === "runden" ? MODE_LABEL[series.scheduleMode] : null,
+    termLabel: termLabel(series.scheduleMode, series.events[idx]),
     position: idx + 1,
     total: series.events.length,
-    prev: prev ? { id: prev.id, title: prev.title } : null,
-    next: next ? { id: next.id, title: next.title } : null,
+    prev: prev ? { id: prev.id, title: events[idx - 1].title } : null,
+    next: next ? { id: next.id, title: events[idx + 1].title } : null,
     events,
     standings, tableSize,
     finalFirst: finalFirst ? { coins: finalFirst.coins, rankPoints: finalFirst.rankPoints } : null,

@@ -106,7 +106,9 @@ export default async function NewEventPage({
 
   const [series, squads, eventTemplate, communityLimits] = await Promise.all([
     prisma.eventSeries.findMany({
-      where: { status: "active", ...seriesScopeWhere(scope) },
+      // Challenge-Reihen nehmen keine Termine von Hand auf (Runden entstehen automatisch)
+      // (NULL zählt mit — ein NOT allein würde in SQL auch Reihen ohne Ablaufart ausschließen)
+      where: { status: "active", AND: [{ OR: [{ scheduleMode: null }, { scheduleMode: "termine" }] }], ...seriesScopeWhere(scope) },
       orderBy: { name: "asc" },
       select: {
         id: true,

@@ -172,6 +172,7 @@ model User {
   gameSwipeState              GameSwipeState?
   gameMatches                 GameMatch[]
   gameVoteBallots             GameVoteBallot[]
+  serverInterests             GameServerInterest[]
   gamesAdded                  Game[]                       @relation("GameAddedBy")
   gameEdits                   GameEdit[]
 }
@@ -266,6 +267,9 @@ model EventSeries {
   // JSON: SeriesSchedule { mode, rhythm, monthlyMode, intervalDays, anchorAt, durationMinutes,
   // aheadCount, carryParticipants, end, skippedSlots } — siehe lib/series-schedule.ts
   scheduleJson           String?
+  // Termin-Vorlage (lib/series-term-template.ts): Einstellungen, die jeder neue Termin übernimmt —
+  // JSON { maxPlayers, spectatorMode, spectatorReward: { coins, rankPoints } }. null = vom letzten Termin erben
+  termTemplateJson       String?
   // Alte Planung (vor scheduleMode) — nur noch gelesen, um alte Reihen umzustellen
   recurrenceType         String? // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode  String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
@@ -2420,6 +2424,10 @@ model Game {
   ownCount      Int       @default(0) // alt ("Hab ich") — abgelöst durch inCount, entfällt später
   inCount       Int       @default(0) // "Am Start" (hat es und würde spielen, siehe GameReaction.status)
   wishCount     Int       @default(0) // "Würde ich holen" (Wunschliste)
+  // Community-Gameserver (lib/games/server-candidates.ts): Kommt das Spiel für einen eigenen OMA-Server in
+  // Frage? null = unbekannt. serverSource: "auto" (bekannte Server-Spiele) | "user" (Mitglied) | "team".
+  serverCapable Boolean?
+  serverSource  String?
   addedById     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -2430,6 +2438,7 @@ model Game {
   matches   GameMatch[]
   tips      GameTip[]
   voteCandidates GameVoteCandidate[]
+  serverInterests GameServerInterest[]
 
   @@index([status])
   @@index([igdbId])
@@ -2588,6 +2597,22 @@ model GameMatch {
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   @@unique([userId, gameId])
+  @@index([gameId])
+}
+
+/// "Ich wäre dabei" für einen möglichen Community-Gameserver (lib/games/server-candidates.ts) — pro User
+/// und Spiel ein Eintrag. level: "casual" (gelegentlich) | "regular" (regelmäßig).
+model GameServerInterest {
+  userId    String
+  gameId    String
+  level     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
   @@index([gameId])
 }
 

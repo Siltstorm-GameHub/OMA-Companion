@@ -50,12 +50,16 @@ export async function POST(req: NextRequest) {
   const series = seriesId
     ? await prisma.eventSeries.findUnique({
         where: { id: seriesId },
-        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true, status: true, tournamentTemplateJson: true, approvalStatus: true },
+        select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, squadId: true, status: true, tournamentTemplateJson: true, approvalStatus: true, scheduleMode: true },
       })
     : null;
   if (seriesId && !series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 400 });
   if (series?.status === "archived") {
     return NextResponse.json({ error: "Diese Saison ist abgeschlossen — neue Termine gehören in die aktuelle Saison." }, { status: 409 });
+  }
+  // Challenge-Reihe: Runden entstehen nur automatisch als lückenlose Kette (lib/series-schedule.ts)
+  if (series?.scheduleMode === "runden") {
+    return NextResponse.json({ error: "Einer Challenge-Reihe lassen sich keine Termine von Hand hinzufügen — ihre Runden entstehen automatisch." }, { status: 409 });
   }
 
   // Jeder eingeloggte User darf Events erstellen (Community-Events). Nicht-Moderatoren:

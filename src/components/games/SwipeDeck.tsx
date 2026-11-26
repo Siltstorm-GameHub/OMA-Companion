@@ -93,7 +93,32 @@ function storeLink(c: DeckCard): { href: string; label: string } | null {
   return null;
 }
 
-const daysLeftLabel = (days: number) => (days <= 1 ? "endet heute" : `noch ${days} Tage`);
+/** Hinweis nach "Am Start"/"Würde ich holen" bei server-tauglichen Spielen: "Ich wäre dabei" mit einem Klick */
+function offerServerInterest(slug: string, name: string) {
+  toast(`${name} eignet sich für einen OMA-Server`, {
+    description: "Würdest du auf einem Community-Server mitspielen?",
+    duration: 8000,
+    action: {
+      label: "Ich wäre dabei",
+      onClick: async () => {
+        try {
+          const res = await fetch(`/api/games/${encodeURIComponent(slug)}/server-interest`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ level: "casual" }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error ?? "Speichern fehlgeschlagen");
+          toast.success("Zusage gespeichert", { description: "Unter Gameserver → Kandidaten kannst du „regelmäßig“ wählen." });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
+        }
+      },
+    },
+  });
+}
+
+const daysLeftLabel =(days: number) => (days <= 1 ? "endet heute" : `noch ${days} Tage`);
 
 export default function SwipeDeck({
   initial, onShowList,
@@ -175,6 +200,10 @@ export default function SwipeDeck({
           setMatch({ ...hit, gameName: card.name, gameSlug: slug });
         }
         if (adopted) toast.success(`${card.name} ist jetzt in der Spieleliste`);
+        // Server-taugliches Spiel: gleich fragen, ob man auf einem OMA-Server mitspielen würde
+        if (card.kind === "game" && card.serverCapable && !card.myServerInterest && (status === "in" || status === "wish") && !hit?.isNew) {
+          offerServerInterest(card.slug, card.name);
+        }
         if (refill) load();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");

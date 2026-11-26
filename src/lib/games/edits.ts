@@ -24,6 +24,12 @@ export const FIELD_LABELS: Record<FillableField, string> = {
   isFree: "Kosten",
 };
 
+/** Bezeichnung eines Protokoll-Felds (auch für Angaben außerhalb von FILLABLE_FIELDS) */
+export function editFieldLabel(field: string): string {
+  if (field === "serverCapable") return "OMA-Server-tauglich";
+  return FIELD_LABELS[field as FillableField] ?? field;
+}
+
 /** Felder, die Mitglieder auch korrigieren (überschreiben) dürfen, nicht nur ergänzen */
 export const OVERWRITABLE_FIELDS: readonly FillableField[] = ["minPlayers", "maxPlayers", "sessionLength", "platforms", "crossplay"];
 
@@ -40,6 +46,11 @@ export function missingFields(f: GameFields): FillableField[] {
 
 /** Anzeige eines gespeicherten Werts ("Koop, Gegeneinander", "4", "Kostenlos" …) */
 export function formatFieldValue(field: string, value: unknown): string {
+  if (field === "serverCapable") {
+    // Protokoll-Wert { value, source } (server-candidates-server.ts)
+    const v = value && typeof value === "object" && !Array.isArray(value) ? (value as { value?: unknown }).value : value;
+    return v === true ? "Ja" : v === false ? "Nein" : "Unbekannt";
+  }
   if (isEmptyValue(value)) return "–";
   if (field === "isFree") return value ? "Kostenlos" : "Kostenpflichtig";
   if (field === "crossplay") return value ? "Ja" : "Nein";

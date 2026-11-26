@@ -236,7 +236,9 @@ function AttentionRow({ icon, tone, title, href, hint, hintTone, children }: {
  * (Läuft gerade / Heute / Diese Woche / Später) und Beendete — mit gemeinsamer Suche.
  * Logik in lib/event-manage.ts.
  */
-export default function ManageClient({ isStaff, nowIso, events, series, approvals, pastLimit, createActions, views, limits }: {
+export default function ManageClient({ isStaff, nowIso, events, series, approvals, pastLimit, createActions, views, limits, notice = null }: {
+  /** Hinweis oben, z.B. Reihen, deren Ablaufart noch festgelegt werden muss */
+  notice?: ReactNode;
   isStaff: boolean; nowIso: string; events: ManageEventDTO[]; series: ManageSeriesDTO[]; approvals: ManageApproval[];
   /** gesetzt, wenn bei Beendeten nur die letzten N geladen sind */
   pastLimit: number | null;
@@ -326,6 +328,7 @@ export default function ManageClient({ isStaff, nowIso, events, series, approval
         <div className="flex shrink-0 flex-wrap items-center gap-2">{createActions}</div>
       </div>
 
+      {notice}
       {limits}
 
       {(views || !empty) && (

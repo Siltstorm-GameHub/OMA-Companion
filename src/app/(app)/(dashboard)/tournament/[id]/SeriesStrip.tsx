@@ -36,6 +36,8 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
                 ? <span className="block h-2.5 w-2.5 rounded-full bg-primary" />
                 : e.state === "live"
                   ? <span className="block h-2.5 w-2.5 rounded-full bg-red-400 animate-pulse" />
+                  : e.state === "cancelled"
+                  ? <span className="block h-2.5 w-2.5 rounded-full border border-dashed border-red-400/70" title="Fällt aus" />
                   : <span className="block h-2.5 w-2.5 rounded-full bg-line-strong" />;
             return (
               <li key={e.id} className="flex items-center">
@@ -57,6 +59,13 @@ export default function SeriesStrip({ ctx, currentId }: { ctx: SeriesContext; cu
           </Link>
         ) : <span className="w-8" />}
       </div>
+
+      {/* Welcher Termin/welche Runde (Challenge-Reihe: Zeitraum der Runde) */}
+      {ctx.termLabel && (
+        <span className="text-xs font-semibold text-fg">
+          {ctx.termLabel}{ctx.kindLabel && <span className="font-normal text-subtle"> · {ctx.kindLabel}</span>}
+        </span>
+      )}
 
       {/* Dein Stand + Endwertung */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted min-w-0">

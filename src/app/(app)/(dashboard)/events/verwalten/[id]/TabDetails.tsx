@@ -18,7 +18,8 @@ import { fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import GameCover from "@/components/GameCover";
 import { EVENT_KIND_LABEL, type EventKind } from "@/lib/event-placement";
 import { NumberInput } from "@/components/ui/NumberInput";
-import { TMT_FORMATS, CATEGORIES, STATUS_OPTIONS, STATUS_STYLES, inputCls, labelCls, STATUS_LABELS_DE, Panel, Switch } from "./edit-shared";
+import { parseTermTemplate } from "@/lib/series-term-template";
+import { TMT_FORMATS, CATEGORIES, STATUS_OPTIONS, STATUS_STYLES, inputCls, labelCls, STATUS_LABELS_DE, Panel, Switch, SeriesValueHint } from "./edit-shared";
 import type { EventEdit } from "./useEventEdit";
 
 /** Reiter "Details": Grunddaten, Zeit und Teilnahme, Darstellung, Vorschau, Sichtbarkeit, Erweitert. */
@@ -76,10 +77,9 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                     <div>
                       <label className={`${labelCls} flex items-center justify-between`}>
                         <span>Spiel</span>
-                        {seriesGame && game && seriesGame !== game && (
-                          <span className="flex items-center gap-1 text-amber-400 text-xs">
-                            <AlertCircle className="w-3 h-3" /> Abweichend von Reihe ({seriesGame})
-                          </span>
+                        {event.series && seriesGame && (
+                          <SeriesValueHint seriesId={event.series.id} tab="general" differs={!!game && seriesGame !== game}
+                            seriesLabel={seriesGame} onReset={() => setGame(seriesGame)} />
                         )}
                       </label>
                       <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
@@ -99,7 +99,14 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                       {kindLocked && <p className="mt-1 text-xs text-subtle">Nach dem Abschluss nicht mehr änderbar.</p>}
                     </div>
                     <div>
-                      <label className={labelCls}>Kategorie</label>
+                      <label className={`${labelCls} flex items-center justify-between`}>
+                        <span>Kategorie</span>
+                        {event.series?.category && (
+                          <SeriesValueHint seriesId={event.series.id} tab="general" differs={category !== event.series.category}
+                            seriesLabel={CATEGORIES.find(c => c.value === event.series!.category)?.label ?? null}
+                            onReset={() => setCategory(event.series!.category as EventCategory)} />
+                        )}
+                      </label>
                       <select value={category} onChange={e => setCategory(e.target.value as EventCategory)} className={inputCls}>
                         {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.label}</option>)}
                       </select>
@@ -131,9 +138,15 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                       rows={3} placeholder="Wird auch im Discord angezeigt" className={`${inputCls} resize-none`} />
                   </div>
                   <div>
-                    <label className={labelCls}>Regelwerk</label>
+                    <label className={`${labelCls} flex items-center justify-between`}>
+                      <span>Regelwerk</span>
+                      {event.series?.rules && (
+                        <SeriesValueHint seriesId={event.series.id} tab="general" differs={!!rules.trim() && rules.trim() !== event.series.rules.trim()}
+                          onReset={() => setRules("")} />
+                      )}
+                    </label>
                     <textarea value={rules} onChange={e => setRules(e.target.value)}
-                      rows={4} placeholder="Wird über dem Punktesystem angezeigt" className={`${inputCls} resize-none`} />
+                      rows={4} placeholder={event.series?.rules ? "Leer = es gelten die Regeln der Reihe" : "Wird über dem Punktesystem angezeigt"} className={`${inputCls} resize-none`} />
                   </div>
                   {event.series && titleDescChanged && (
                     <label className="flex items-center gap-2 cursor-pointer text-sm">
@@ -167,6 +180,10 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
                   </div>
                 )}
               </div>
+              <DateHints scheduleMode={event.series?.scheduleMode ?? null} slotIndex={event.slotIndex ?? null} startAt={startAt} endAt={endAt} />
+              {isSeriesEvent && event.series?.scheduleMode && (
+                <p className="text-xs text-subtle">Spieler-Limit legst du in der Reihe fest (<Link href={`/events/verwalten/reihen/${event.series!.id}?tab=schedule`} className="text-primary-fg hover:underline">Reiter „Termine“ → Vorlage</Link>).</p>
+              )}
               {!registrationLocked && (
                 <div>
                   <label className={labelCls}>Anmeldeschluss (optional)</label>
@@ -183,6 +200,16 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
               <Switch checked={spectatorMode} onChange={setSpectatorMode}
                 label="Zuschauer erlauben"
                 hint={spectatorMode ? "Mitglieder können sich bis zum Abschluss als Zuschauer anmelden (Belohnung im Reiter Belohnungen)" : "Nur Spieler"} />
+              {(() => {
+                // Reihe mit Vorlage für neue Termine: Zuschauer kommen von dort
+                const tpl = event.series ? parseTermTemplate(event.series.termTemplateJson ?? null) : null;
+                return tpl && event.series ? (
+                  <div className="-mt-1 flex justify-end">
+                    <SeriesValueHint seriesId={event.series.id} tab="schedule" differs={tpl.spectatorMode !== spectatorMode}
+                      seriesLabel={tpl.spectatorMode ? "Zuschauer an" : "Zuschauer aus"} onReset={() => setSpectatorMode(tpl.spectatorMode)} />
+                  </div>
+                ) : null;
+              })()}
               {squads.length > 0 && (
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm text-fg/90">Nur für ein Squad</span>
@@ -342,5 +369,33 @@ export default function TabDetails({ ctx }: { ctx: EventEdit }) {
             </Panel>
           </aside>
         </div>
+  );
+}
+
+/**
+ * Was eine Datumsänderung hier bewirkt — sonst passiert es still: Runden ziehen die Nachbar-Runde mit,
+ * feste Termine behalten ihren Platz in der Regel, Termine über 24 Std. gelten als Zeitraum-Event.
+ */
+function DateHints({ scheduleMode, slotIndex, startAt, endAt }: { scheduleMode: string | null; slotIndex: number | null; startAt: string; endAt: string }) {
+  let longerThanDay = false;
+  try {
+    longerThanDay = !!startAt && !!endAt && fromDatetimeLocalBerlin(endAt).getTime() - fromDatetimeLocalBerlin(startAt).getTime() > 24 * 60 * 60 * 1000;
+  } catch { /* unvollständige Eingabe */ }
+  const hints: string[] = [];
+  if (scheduleMode === "runden" && slotIndex != null) {
+    hints.push(`Runde ${slotIndex + 1} einer Challenge-Reihe: Änderst du das Ende, beginnt die nächste Runde automatisch direkt danach. Änderst du den Start, endet die vorige direkt davor.`);
+  } else if (scheduleMode === "termine" && slotIndex != null) {
+    hints.push(`Termin ${slotIndex + 1} der Regel: Verschiebst du ihn, behält er seinen Platz — der nächste Termin kommt wieder regulär.`);
+  } else if (scheduleMode === "termine") {
+    hints.push("Sondertermin außerhalb der Regel — die übrigen Termine bleiben unberührt.");
+  }
+  if (longerThanDay && scheduleMode !== "runden") {
+    hints.push("Länger als 24 Std.: Das ist ein Zeitraum-Event — Anmeldung bis zum Ende offen, Anzeige mit Restlaufzeit statt „Live“.");
+  }
+  if (hints.length === 0) return null;
+  return (
+    <div className="space-y-1">
+      {hints.map(h => <p key={h} className="text-xs text-primary-fg/90">ℹ️ {h}</p>)}
+    </div>
   );
 }

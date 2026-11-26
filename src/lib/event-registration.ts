@@ -47,6 +47,7 @@ const REGISTRATION_SELECT = {
 
 /** Gemeinsame Sperren für Spieler und Zuschauer: beendet, unsichtbar/abgelehnt, gesperrt, Anmeldeschluss, Start. */
 function commonBlock(event: EventForRegistration, now: Date): RegistrationBlock | null {
+  if (event.status === "cancelled") return { status: 400, error: "Dieser Termin fällt aus", reason: "closed" };
   if (["finished", "archived", "umfrage"].includes(event.status)) return { status: 400, error: "Die Anmeldung ist geschlossen", reason: "closed" };
   // Ausgeblendete oder abgelehnte Events nehmen keine Anmeldungen an (auch nicht per direktem Link/API)
   if (isEventHidden(event) || event.approvalStatus === "rejected") return { status: 404, error: "Event nicht gefunden", reason: "hidden" };

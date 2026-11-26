@@ -1,6 +1,6 @@
 // Saison-Verlauf einer Eventreihe: Zustand je Termin für den Zeitstrahl (SeasonTimeline.tsx).
 
-export type TimelineState = "done" | "live" | "next" | "upcoming";
+export type TimelineState = "done" | "live" | "next" | "upcoming" | "cancelled";
 
 /**
  * Abgeschlossen (beendet oder Spielphase fertig) → "done", läuft/Abstimmung → "live", der erste
@@ -9,7 +9,8 @@ export type TimelineState = "done" | "live" | "next" | "upcoming";
  */
 export function timelineStates(events: { status: string; gamePhaseDone: boolean }[]): TimelineState[] {
   const base: TimelineState[] = events.map(e =>
-    e.status === "finished" || e.gamePhaseDone ? "done"
+    e.status === "cancelled" ? "cancelled"
+      : e.status === "finished" || e.gamePhaseDone ? "done"
       : e.status === "active" || e.status === "umfrage" ? "live"
         : "upcoming");
   if (base.includes("live")) return base;

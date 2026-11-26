@@ -7,6 +7,7 @@ import { syncDueEventActivations } from "@/lib/event-lifecycle";
 import { APPROVAL_PENDING, APPROVAL_REJECTED, getCreatorUsage, pendingApprovalEventWhere } from "@/lib/community-events";
 import { getCommunityLimits } from "@/lib/community-event-limits";
 import { seriesProgress } from "@/lib/event-manage";
+import { MODE_LABEL, describeSchedule, parseSchedule } from "@/lib/series-schedule";
 import { eventPayout } from "@/lib/placement-rewards";
 import { parseEventKind } from "@/lib/event-placement";
 import { formatBerlinDateTime } from "@/lib/time";
@@ -74,7 +75,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
       where: { status: "active", ...seriesWhere },
       orderBy: { name: "asc" },
       select: {
-        id: true, name: true, icon: true, seasonNumber: true, hidden: true, approvalStatus: true, seriesCompletionData: true,
+        id: true, name: true, icon: true, seasonNumber: true, hidden: true, approvalStatus: true, seriesCompletionData: true, scheduleMode: true,
         createdBy: { select: { name: true, username: true } },
         events: { orderBy: { startAt: "asc" }, select: { id: true, startAt: true, endAt: true, status: true } },
       },
@@ -97,7 +98,7 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
           where: { approvalStatus: APPROVAL_PENDING, status: "active" },
           orderBy: { createdAt: "asc" },
           select: {
-            id: true, name: true, createdAt: true, fixedGame: true, recurrenceType: true,
+            id: true, name: true, createdAt: true, fixedGame: true, scheduleMode: true, scheduleJson: true,
             createdBy: { select: { name: true, username: true } },
             events: { orderBy: { startAt: "asc" }, take: 1, select: { startAt: true } },
             _count: { select: { events: true } },
@@ -182,13 +183,12 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
     });
   }
 
-  const RECURRENCE: Record<string, string> = { weekly: "wöchentlich", biweekly: "alle zwei Wochen", monthly: "monatlich" };
   const approvals: ManageApproval[] = [
     ...pendingSeries.map((s) => ({
       kind: "series" as const, id: s.id, title: `Eventreihe „${s.name}“`, by: who(s.createdBy) ?? "Unbekannt",
       since: s.createdAt.toISOString(), href: `/events/verwalten/reihen/${s.id}`,
       facts: [
-        `${s._count.events} ${s._count.events === 1 ? "Termin" : "Termine"}${s.recurrenceType && RECURRENCE[s.recurrenceType] ? `, ${RECURRENCE[s.recurrenceType]}` : ""}`,
+        `${s._count.events} ${s._count.events === 1 ? "Termin" : "Termine"}${(() => { const sc = parseSchedule(s.scheduleJson); return sc ? ` · ${MODE_LABEL[sc.mode]}: ${describeSchedule(sc)}` : ""; })()}`,
         s.events[0] ? `ab ${when(s.events[0].startAt)}` : "noch kein Termin",
         s.fixedGame ?? "verschiedene Spiele",
       ],
@@ -204,6 +204,9 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
       ],
     })),
   ];
+
+  // Alte Reihen ohne Ablaufart (lib/series-schedule.ts) — bekommen keine neuen Termine, bis sie umgestellt sind
+  const unconverted = series.filter(s => !s.scheduleMode).map(s => ({ id: s.id, name: s.name }));
 
   const canCreateEvent = isStaff || usage.openEvents < limits.maxOpenEvents;
   const canCreateSeries = isStaff || usage.activeSeries < limits.maxActiveSeries;
@@ -240,6 +243,25 @@ export default async function EventsManagePage({ searchParams }: { searchParams:
       pastLimit={pastEvents.length >= PAST_LIMIT ? PAST_LIMIT : null}
       createActions={createActions}
       views={viewCounts ? VIEWS.map((v) => ({ ...v, count: viewCounts[v.key], active: v.key === view })) : null}
+      notice={unconverted.length > 0 ? (
+        <div className="rounded-card border border-warning/40 bg-warning-soft p-4 space-y-2">
+          <p className="text-sm font-semibold text-warning">
+            {unconverted.length === 1 ? "1 Reihe braucht" : `${unconverted.length} Reihen brauchen`} noch eine Ablaufart
+          </p>
+          <p className="text-xs text-fg/90">
+            Bis du festlegst, ob sie Eventreihe oder Challenge-Reihe sind, entstehen dort keine neuen Termine automatisch.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {unconverted.map(s => (
+              <li key={s.id}>
+                <Link href={`/events/verwalten/reihen/${s.id}`} className="inline-flex items-center rounded-control border border-warning/40 bg-surface px-2.5 py-1 text-xs font-semibold text-fg hover:border-warning max-lg:min-h-10">
+                  {s.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       limits={!isStaff ? (
         <LimitMeter
           openEvents={usage.openEvents} maxOpenEvents={limits.maxOpenEvents}

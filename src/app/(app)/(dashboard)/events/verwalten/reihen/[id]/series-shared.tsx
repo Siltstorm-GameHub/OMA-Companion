@@ -20,8 +20,8 @@ export type SeriesEvent = {
   _count: { registrations: number };
 };
 // "closed" heißt nur "voll" und braucht nach dem Termin trotzdem einen Abschluss
-export const NOT_ACTIVE_STATUSES = ["finished", "archived"];
-export type SettingsTabKey = "general" | "schedule" | "goal" | "rewards" | "polls" | "stats" | "legacy";
+export const NOT_ACTIVE_STATUSES = ["finished", "archived", "cancelled"];
+export type SettingsTabKey = "general" | "schedule" | "goal" | "rewards" | "polls" | "stats";
 export const SETTINGS_TABS: { key: SettingsTabKey; label: string }[] = [
   { key: "general", label: "Allgemein" },
   { key: "schedule", label: "📅 Termine" },
@@ -29,7 +29,6 @@ export const SETTINGS_TABS: { key: SettingsTabKey; label: string }[] = [
   { key: "rewards", label: "Belohnungen" },
   { key: "polls",   label: "Umfragen" },
   { key: "stats",   label: "Stats & Bonus" },
-  { key: "legacy",  label: "Legacy" },
 ];
 // Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
 // auch direkt in der Eventreihe sieht, welches Event gerade Handlung braucht.
@@ -95,6 +94,7 @@ export const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   active:   { label: "Läuft",           cls: "text-success bg-success-soft border-success/30" },
   umfrage:  { label: "Umfragephase",    cls: "text-warning bg-warning-soft border-warning/30" },
   finished: { label: "Beendet",         cls: "text-subtle bg-surface-2 border-line" },
+  cancelled: { label: "Fällt aus",      cls: "text-danger bg-danger-soft border-red-800/40" },
 };
 export function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
@@ -159,14 +159,25 @@ export function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean 
 }
 export type SquadOption = { id: string; name: string };
 /* ── Small helper components ── */
-export function Section({ title, children, overflowVisible }: { title: string; children: React.ReactNode; overflowVisible?: boolean }) {
+/** Abschnitt eines Reiters. instant = speichert selbst und sofort (nicht über die Speicherleiste) — einheitlich
+ *  mit "Wirkt sofort" gekennzeichnet, damit klar ist, welche Bereiche "Speichern" brauchen. */
+export function Section({ title, children, overflowVisible, instant }: { title: string; children: React.ReactNode; overflowVisible?: boolean; instant?: boolean }) {
   return (
     <div className={`rounded-control border border-line bg-surface-2/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
-      <div className="px-4 py-2.5 border-b border-line">
-        <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">{title}</h3>
+      <div className="px-4 py-2.5 border-b border-line flex items-center gap-2">
+        <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider flex-1">{title}</h3>
+        {instant && <InstantBadge />}
       </div>
       <div className="px-4 py-3 space-y-3">{children}</div>
     </div>
+  );
+}
+/** Kennzeichen für Bereiche/Knöpfe, die sofort speichern */
+export function InstantBadge() {
+  return (
+    <span className="shrink-0 rounded-full border border-primary/30 bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary-fg" title="Speichert direkt — ohne „Speichern“ unten">
+      ⚡ Wirkt sofort
+    </span>
   );
 }
 export function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
@@ -200,6 +211,10 @@ export type SeriesDetailProps = {
   goalLimits?: { coins: number; seriesPoints: number } | null;
   /** Mitglieder: Obergrenzen der Reihen-Belohnungen (Anzeige an den Feldern; der Server kürzt beim Speichern) */
   rewardLimits?: import("@/lib/captain-reward-limits").RewardLimits | null;
+  /** Reiter beim Öffnen (aus ?tab=) */
+  initialTab?: SettingsTabKey;
+  /** Mods, laufende Saison: Spielwahl-Einstellungen (Reiter "Allgemein") */
+  gameVote?: { initial: import("@/lib/game-vote/rules").GameVoteConfig; upcoming: { id: string; title: string; startAt: string; game: string | null }[]; squadName: string | null } | null;
   /** Übersicht: die ersten drei der Reihentabelle */
   top3?: { id: string; name: string; image: string | null; points: number }[];
 };

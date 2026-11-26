@@ -56,6 +56,8 @@ export function isEventRunning(ev: { status: string; startAt: DateLike; endAt?: 
 
 export function eventPhase(ev: EventPhaseInput, now: DateLike = Date.now()): EventPhaseInfo {
   if (ev.status === "finished") return { phase: "finished", label: "Beendet", tone: "muted" };
+  // Abgesagter Termin (lib/event-cancel.ts) — gilt wie beendet, ohne Anmeldung/Countdown
+  if (ev.status === "cancelled") return { phase: "finished", label: "Fällt aus", tone: "muted" };
   if (ev.status === "umfrage") return { phase: "poll", label: "Abstimmung läuft", tone: "violet" };
   if (ev.status === "active") {
     // Vor dem Start ausgelost: noch nicht "Live"

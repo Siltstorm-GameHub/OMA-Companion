@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   assignSlots, chainIssues, defaultSchedule, describeSchedule, missingSlots, planUpcoming, previewTerms,
   sanitizeSchedule, scheduleProblem, slotEnd, slotStart, suggestSchedule, ruleChanged, showsOnlyNextTerm,
+  termLabel, shortDayRange, nextSeasonSchedule,
   type SeriesSchedule,
 } from "./series-schedule";
 
@@ -184,5 +185,30 @@ describe("Terminplanung: Zuordnung bestehender Termine", () => {
     assert.equal(showsOnlyNextTerm({ scheduleMode: "termine" }), true);
     assert.equal(showsOnlyNextTerm({ scheduleMode: null, cycleConfigJson: '{"enabled":true}' }), true);
     assert.equal(showsOnlyNextTerm({ scheduleMode: null, cycleConfigJson: null }), false);
+  });
+});
+
+describe("Terminplanung: Anzeige und Sonderfälle", () => {
+  test("Bezeichnung je Ablaufart", () => {
+    assert.equal(termLabel("runden", { slotIndex: 11, startAt: d("2026-11-15T23:00:00Z"), endAt: d("2026-11-22T22:59:00Z") }), "Runde 12 · 16.–22. Nov.");
+    assert.equal(termLabel("termine", { slotIndex: 6, startAt: d("2026-11-05T19:00:00Z") }), "Termin 7");
+    assert.equal(termLabel("termine", { slotIndex: null, startAt: d("2026-11-05T19:00:00Z") }), "Sondertermin");
+    assert.equal(termLabel(null, { slotIndex: 1, startAt: d("2026-11-05T19:00:00Z") }), null);
+    assert.equal(shortDayRange(d("2026-11-29T23:00:00Z"), d("2026-12-06T22:59:00Z")), "30. Nov. – 6. Dez.");
+  });
+
+  test("abgesagter Termin belegt seinen Platz, zählt aber nicht zum Vorlauf", () => {
+    const events = [
+      { slotIndex: 0, startAt: d("2026-11-05T19:00:00Z"), endAt: null },
+      { slotIndex: 1, startAt: d("2026-11-12T19:00:00Z"), endAt: null, status: "cancelled" },
+    ];
+    // Vorlauf 2: Platz 1 ist abgesagt → es kommen Platz 2 und 3 dazu
+    assert.deepEqual(planUpcoming(thursdays(), events, d("2026-11-10T12:00:00Z")).map(p => p.slotIndex), [2, 3]);
+  });
+
+  test("neue Saison beginnt am nächsten regulären Platz", () => {
+    const next = nextSeasonSchedule(thursdays({ skippedSlots: [2] }), [{ startAt: d("2026-11-26T19:00:00Z"), endAt: d("2026-11-26T22:00:00Z") }], d("2026-11-27T12:00:00Z"));
+    assert.equal(next.anchorAt, "2026-12-03T19:00:00.000Z");
+    assert.deepEqual(next.skippedSlots, []);
   });
 });

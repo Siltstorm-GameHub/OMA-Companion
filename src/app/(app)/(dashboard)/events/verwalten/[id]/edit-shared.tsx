@@ -164,6 +164,7 @@ export const STATUS_STYLES: Record<string, string> = {
   active:   "text-success bg-success-soft border-success/30",
   umfrage:  "text-amber-400 bg-amber-500/10 border-warning/30",
   finished: "text-subtle bg-surface-2 border-line",
+  cancelled: "text-danger bg-danger-soft border-red-800/40",
 };
 export const inputCls = "w-full rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
 export const numCls   = "w-24 rounded-control px-3 py-2 text-sm text-fg outline-none bg-gray-800 border border-gray-700 focus:border-primary/50 transition-colors";
@@ -207,7 +208,7 @@ export function parseSpectatorReward(json: string | null | undefined) {
 }
 export type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series" | "goal";
 export type SquadOption = { id: string; name: string };
-export const STATUS_LABELS_DE: Record<string, string> = { open: "Anmeldung offen", active: "Läuft", umfrage: "Umfragephase", finished: "Beendet" };
+export const STATUS_LABELS_DE: Record<string, string> = { open: "Anmeldung offen", active: "Läuft", umfrage: "Umfragephase", finished: "Beendet", cancelled: "Fällt aus" };
 /** Karte einer Formular-Gruppe (Grunddaten, Zeit und Teilnahme, …) */
 export function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -290,3 +291,37 @@ export type GoalStatus = {
   /** Wer etwas bekommen hat (Münzen aus Belohnung + Serien-Bonus, Tabellenpunkte) */
   rewarded: { id: string; name: string; coins: number | null; seriesPoints: number }[];
 };
+
+/**
+ * Kennzeichnung eines Feldes, das ein Reihen-Termin von seiner Reihe bekommt: "aus der Reihe" (mit Link
+ * zum passenden Reiter) oder "weicht von der Reihe ab" mit Knopf, um den Wert der Reihe zu übernehmen.
+ * So sieht man beim Bearbeiten eines Termins, wo man von der Reihe abweicht.
+ */
+export function SeriesValueHint({ seriesId, tab, differs, seriesLabel, onReset }: {
+  seriesId: string;
+  /** Reiter der Reihen-Verwaltung, in dem der Wert gepflegt wird */
+  tab: "general" | "schedule" | "goal" | "rewards" | "polls" | "stats";
+  differs: boolean;
+  /** Wert der Reihe zur Anzeige ("Valorant") */
+  seriesLabel?: string | null;
+  onReset?: () => void;
+}) {
+  const href = `/events/verwalten/reihen/${seriesId}?tab=${tab}`;
+  if (!differs) {
+    return (
+      <Link href={href} className="text-xs font-normal text-primary-fg/80 hover:text-primary-fg" title="Wird in der Reihe gepflegt">
+        🔗 aus der Reihe
+      </Link>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs font-normal text-amber-400">
+      ⚠ weicht von der Reihe ab{seriesLabel ? ` (${seriesLabel})` : ""}
+      {onReset && (
+        <button type="button" onClick={onReset} className="font-semibold underline underline-offset-2 hover:text-amber-300">
+          übernehmen
+        </button>
+      )}
+    </span>
+  );
+}

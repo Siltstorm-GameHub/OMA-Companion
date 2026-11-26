@@ -5,7 +5,7 @@
 // Runde mit der höchsten Nummer.
 
 import { prisma } from "@/lib/prisma";
-import { supportsMatchWin } from "@/lib/tournaments/stat-rounds";
+import { isStatFormat, supportsMatchWin } from "@/lib/tournaments/stat-rounds";
 
 /** Reine Auswahl (testbar): welche Runde bekommt den Nachzügler? */
 export function pickCurrentRound<T extends { id: string; position: number; startedAt: Date | null }>(rounds: T[]): T | null {
@@ -20,8 +20,13 @@ export function pickCurrentRound<T extends { id: string; position: number; start
  * passt, es noch keine Runde gibt oder er schon drinsteht. Wirft nie.
  */
 export async function addLateJoinerToCurrentRound(eventId: string, userId: string, format: string | null | undefined): Promise<void> {
-  // Gleiche Formate wie Match Win: Punktewertung (coop_stats) und Durchschnittswerte (avg_stats)
-  if (!supportsMatchWin(format)) return;
+  // Gleiche Formate wie Match Win: Punktewertung (coop_stats) und Durchschnittswerte (avg_stats) —
+  // in Challenge-Reihen (ein Match je Runde) alle Wertungsformate
+  if (!supportsMatchWin(format)) {
+    if (!isStatFormat(format)) return;
+    const ev = await prisma.event.findUnique({ where: { id: eventId }, select: { series: { select: { scheduleMode: true } } } }).catch(() => null);
+    if (ev?.series?.scheduleMode !== "runden") return;
+  }
   try {
     const rounds = await prisma.match.findMany({
       where: { eventId },

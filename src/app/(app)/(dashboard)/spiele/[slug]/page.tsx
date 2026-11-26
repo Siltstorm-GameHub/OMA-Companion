@@ -13,6 +13,8 @@ import GameReactionPanel from "./GameReactionPanel";
 import MissingFieldsPanel from "./MissingFieldsPanel";
 import CorrectFieldsPanel from "./CorrectFieldsPanel";
 import TipPanel from "./TipPanel";
+import ServerFitPanel from "./ServerFitPanel";
+import { getGameServerFit } from "@/lib/games/server-candidates-server";
 import { userMatchFor } from "@/lib/games/matches";
 import { othersLabel, planRoundUrl } from "@/lib/games/swipe";
 import { missingFields } from "@/lib/games/edits";
@@ -63,6 +65,12 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
   const missing = missingFields(fields);
   // Match: man ist am Start und andere User auch → "Runde planen"
   const match = user && game.status === "APPROVED" && detail.myReaction.status === "in" ? await userMatchFor(user.id, game.id) : null;
+  // OMA-Server: server-tauglich? Zusagen ("Ich wäre dabei")
+  const serverFit = user && game.status === "APPROVED"
+    ? await getGameServerFit(game, { id: user.id, isModerator })
+    : null;
+  // Oben zeigen, wenn server-tauglich oder naheliegend (Frage) — sonst unter "Mithelfen"
+  const serverFitOnTop = !!serverFit && (serverFit.serverCapable === true || serverFit.mightBe);
   // Offene Empfehlung für den GameSwipe-Drop der Woche?
   const openTip = user && game.status === "APPROVED"
     ? await prisma.gameTip.findFirst({ where: { gameId: game.id, status: { in: ["pending", "approved"] } }, select: { status: true } })
@@ -178,6 +186,11 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
         </div>
       )}
 
+      {/* Server-taugliche Spiele (Zusagen) und naheliegende Kandidaten (Frage) gleich hier oben */}
+      {serverFit && serverFitOnTop && (
+        <ServerFitPanel slug={game.slug} initial={serverFit} isModerator={isModerator} />
+      )}
+
       {/* Steckbrief */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Fact label="Spielmodus">{modes || <span className="text-subtle">unbekannt</span>}</Fact>
@@ -288,6 +301,9 @@ export default async function GameDetailPage({ params }: { params: Promise<{ slu
       {game.status === "APPROVED" && !!user && (
         <section aria-labelledby="help-title" className="space-y-3">
           <h2 id="help-title" className="text-xs font-semibold uppercase tracking-widest text-subtle">Mithelfen</h2>
+          {serverFit && !serverFitOnTop && (
+            <ServerFitPanel slug={game.slug} initial={serverFit} isModerator={isModerator} />
+          )}
           {missing.length > 0 && (
             <MissingFieldsPanel slug={game.slug} current={fields} missing={missing} />
           )}

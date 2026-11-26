@@ -69,10 +69,10 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
   );
 
   return (
-    <section className="glass rounded-card p-5 mt-5 space-y-4">
+    // Steht im Reiter "Allgemein" in einem Abschnitt (Section, "Wirkt sofort") — eigener Speichern-Knopf
+    <div className="space-y-4">
       <div>
-        <h2 className="text-base font-bold text-fg">🗳️ Spielwahl</h2>
-        <p className="text-xs text-muted mt-1 max-w-2xl">
+        <p className="text-xs text-muted max-w-2xl">
           Mitglieder wählen das Spiel jedes Termins: Beim Anlegen des nächsten Termins entsteht ein Platzhalter ohne Spiel und eine
           Abstimmung mit Kandidaten aus der Spieleliste (nach Passt-Wert, Platz 2 und 3 der letzten Wahl sind wieder dabei). Wer
           abstimmt, ist automatisch als Mitspieler angemeldet. Nach der Wahl legt ein Mod die Regeln fest — erst dann kann ausgelost werden.
@@ -136,6 +136,6 @@ export default function GameVoteSettings({ seriesId, initial, fixedGame, upcomin
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }

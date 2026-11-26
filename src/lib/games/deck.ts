@@ -53,6 +53,9 @@ export interface DeckGameCard extends Price {
   subscriptions: string[];
   /** Laufende Gratis-Aktion (reason "free") */
   promo: { freeUntil: string | null; store: "epic" | "steam" | null; storeUrl: string | null } | null;
+  /** Für einen OMA-Server geeignet (server-candidates.ts) und die eigene Zusage dazu */
+  serverCapable: boolean | null;
+  myServerInterest: string | null;
 }
 
 export interface DeckDiscoverCard extends Price {
@@ -172,6 +175,12 @@ export async function buildSwipeDeck(userId: string, limit = 20): Promise<SwipeD
         select: { gameId: true, user: { select: { id: true, name: true, username: true, image: true } } },
       })
     : [];
+  // Eigene "Ich wäre dabei"-Zusagen (OMA-Server) zu den Spielen dieser Seite
+  const myInterests = pageGameIds.length
+    ? new Map((await prisma.gameServerInterest.findMany({
+        where: { userId, gameId: { in: pageGameIds } }, select: { gameId: true, level: true },
+      })).map(r => [r.gameId, r.level]))
+    : new Map<string, string>();
   const peopleOf = (gameId: string) =>
     inRows
       .filter(r => r.gameId === gameId)
@@ -192,6 +201,7 @@ export async function buildSwipeDeck(userId: string, limit = 20): Promise<SwipeD
         nextEvent: ev ? { id: ev.id, title: ev.title, startAt: ev.startAt.toISOString() } : null,
         reason: c.reason, drop: c.drop, tip: c.tip, subscriptions: g.subscriptions,
         promo: c.promo ? { freeUntil: c.promo.freeUntil, store: c.promo.store, storeUrl: c.promo.storeUrl } : null,
+        serverCapable: g.serverCapable, myServerInterest: myInterests.get(g.id) ?? null,
         priceCents: g.priceCents, priceInitialCents: g.priceInitialCents, discountPercent: g.discountPercent, priceCurrency: g.priceCurrency,
       });
     } else {

@@ -9,6 +9,7 @@ import { isOpenSeasonEvent, parseSeriesCompletion, parseTournamentTemplate, seri
 import { prisma } from "@/lib/prisma";
 import { assignSlots, previewTerms, sanitizeSchedule, scheduleProblem, serializeSchedule } from "@/lib/series-schedule";
 import { ensureSeriesSchedule } from "@/lib/series-schedule-server";
+import { sanitizeTermTemplate } from "@/lib/series-term-template";
 import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
@@ -135,6 +136,12 @@ export async function POST(req: NextRequest) {
           discordChannelId: discordChannelId?.trim() || null,
           scheduleMode: schedule?.mode ?? null,
           scheduleJson: schedule ? serializeSchedule(schedule) : null,
+          // Termin-Vorlage aus dem Assistenten (Zuschauer) — neue Termine übernehmen sie
+          termTemplateJson: JSON.stringify(sanitizeTermTemplate({
+            maxPlayers: rawBody.maxPlayers ?? null,
+            spectatorMode: spectatorEnabled,
+            spectatorReward: spectatorJson ? JSON.parse(spectatorJson) : undefined,
+          })),
           placementRewardsJson: placementJson,
           pollsConfigJson: pollsJson,
           seriesStatConfig: seriesStatConfig ?? null,

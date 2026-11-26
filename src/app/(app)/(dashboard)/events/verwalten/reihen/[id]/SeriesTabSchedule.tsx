@@ -10,6 +10,7 @@ import {
 } from "@/lib/series-schedule";
 import { formatBerlinDateTime } from "@/lib/time";
 import { Section } from "./series-shared";
+import TermTemplateEditor from "./TermTemplateEditor";
 import type { SeriesDetail } from "./useSeriesDetail";
 
 type Ev = { id: string; title: string; startAt: string | Date; endAt?: string | Date | null; status: string; slotIndex?: number | null };
@@ -98,17 +99,17 @@ export default function SeriesTabSchedule({ ctx }: { ctx: SeriesDetail }) {
   async function cancelTerm(ev: Ev) {
     if (!(await confirm({
       title: "Termin fällt aus",
-      description: `„${ev.title}“ am ${fmt(ev.startAt)} wird gelöscht, Angemeldete werden benachrichtigt. Der Platz bleibt frei — die Terminplanung legt ihn nicht neu an.`,
+      description: `„${ev.title}“ am ${fmt(ev.startAt)} wird abgesagt: Er bleibt in der Reihe als „fällt aus“ sichtbar, Anmeldungen werden aufgelöst und die Angemeldeten benachrichtigt. Die Terminplanung legt ihn nicht neu an.`,
       confirmLabel: "Termin absagen", variant: "danger",
     }))) return;
-    const res = await fetch(`/api/admin/events?eventId=${encodeURIComponent(ev.id)}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/events/${encodeURIComponent(ev.id)}/cancel`, { method: "POST" });
     if (res.ok) { toast.success("Termin abgesagt"); router.refresh(); }
     else { const d = await res.json().catch(() => ({})); toast.error(d.error ?? "Absagen fehlgeschlagen"); }
   }
 
   const term = TERM_LABEL[draft?.mode ?? mode ?? "termine"];
   const upcoming = events
-    .filter(e => new Date(e.startAt) > now && e.status !== "finished")
+    .filter(e => new Date(e.startAt) > now && e.status !== "finished" && e.status !== "cancelled")
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
   // ── Ansicht ohne Bearbeitung ──
@@ -129,7 +130,7 @@ export default function SeriesTabSchedule({ ctx }: { ctx: SeriesDetail }) {
           </div>
         )}
         {mode && current && (
-          <Section title={`${mode === "runden" ? "🔁" : "📅"} ${MODE_LABEL[mode]}`}>
+          <Section title={`${mode === "runden" ? "🔁" : "📅"} ${MODE_LABEL[mode]}`} instant>
             <div className="space-y-1 text-sm text-fg/90">
               <p>{describeSchedule(current)}</p>
               {current.rhythm && (
@@ -154,7 +155,7 @@ export default function SeriesTabSchedule({ ctx }: { ctx: SeriesDetail }) {
         {isArchived && !mode && <p className="text-sm text-subtle">Abgeschlossene Saison ohne Terminplanung.</p>}
 
         {mode === "termine" && !isArchived && upcoming.length > 0 && (
-          <Section title="Kommende Termine">
+          <Section title="Kommende Termine" instant>
             <ul className="divide-y divide-line">
               {upcoming.map(ev => (
                 <li key={ev.id} className="flex items-center gap-2 py-2">
@@ -172,6 +173,7 @@ export default function SeriesTabSchedule({ ctx }: { ctx: SeriesDetail }) {
             <p className="text-xs text-subtle mt-2">Verschieben: Termin öffnen und Datum ändern — sein Platz in der Regel bleibt, der nächste Termin kommt wieder regulär.</p>
           </Section>
         )}
+        <TermTemplateEditor ctx={ctx} termLabel={mode === "runden" ? "Runde" : "Termin"} />
         {mode === "runden" && !isArchived && (
           <p className="text-xs text-subtle">
             Runden schließen lückenlos aneinander an. Änderst du das Ende einer Runde, beginnt die nächste automatisch direkt danach.
@@ -189,7 +191,7 @@ export default function SeriesTabSchedule({ ctx }: { ctx: SeriesDetail }) {
   };
 
   return (
-    <Section title={mode ? "Planung bearbeiten" : "Ablaufart festlegen"}>
+    <Section title={mode ? "Planung bearbeiten" : "Ablaufart festlegen"} instant>
       <div className="space-y-5">
         <ScheduleEditor value={draft} onChange={setDraft} lockMode={!!mode} previewCount={3} />
 

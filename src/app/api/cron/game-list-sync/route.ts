@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { enrichPendingGames, importCommunityGames } from "@/lib/games/service";
 import { syncStores } from "@/lib/games/store-sync";
+import { applyServerAutoDetection } from "@/lib/games/server-candidates-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,8 @@ function isAuthorized(req: NextRequest): boolean {
 
 // Spieleliste aktuell halten: neue Spielnamen aus Events, Spieltagen, Gameservern, Profilen und
 // Ideen übernehmen, einen Schwung Einträge mit Steam/IGDB ergänzen, Steam-Preise/Rabatte und den
-// Game-Pass-Katalog abgleichen (neue Angebote → Hinweis an alle mit dem Spiel auf der Wunschliste).
+// Game-Pass-Katalog abgleichen (neue Angebote → Hinweis an alle mit dem Spiel auf der Wunschliste) und
+// bekannte Server-Spiele als OMA-Server-tauglich markieren (nur, wo noch nichts eingetragen ist).
 // Wird täglich um 05:20 UTC von Vercel Cron aufgerufen.
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
@@ -21,5 +23,6 @@ export async function GET(req: NextRequest) {
   const imported = await importCommunityGames();
   const enriched = await enrichPendingGames(10);
   const stores = await syncStores();
-  return NextResponse.json({ imported, enriched, stores });
+  const servers = await applyServerAutoDetection().catch(err => ({ error: String(err) }));
+  return NextResponse.json({ imported, enriched, stores, servers });
 }
