@@ -254,17 +254,17 @@ export default function CommunityGoalEditor({
                       <p className="text-xs text-gray-400 mb-1">🔥 Serien-Bonus</p>
                       <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
                         <span>Alle</span>
-                        <NumberInput min={0} value={value.streakLength} aria-label="Zyklen in Folge"
+                        <NumberInput min={0} value={value.streakLength} aria-label="Termine in Folge"
                           onChange={e => set({ streakLength: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className={`${inputCls} w-20`} />
-                        <span>Zyklen in Folge geschafft →</span>
+                        <span>Termine in Folge geschafft →</span>
                         <NumberInput min={0} value={value.streakCoins} aria-label="Bonus-Münzen"
                           onChange={e => set({ streakCoins: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className={`${inputCls} w-24`} />
                         <span>Bonus-Münzen</span>
                       </div>
                       <Limit value={value.streakCoins} max={rewardLimit} />
                       <p className="text-xs text-gray-500 mt-1">
-                        Bei 3 z. B. nach 3, 6, 9 … geschafften Zyklen in Folge. Zyklen ohne Ziel unterbrechen die Serie nicht.
-                        Mindestens 2 Zyklen, 0 = aus.
+                        Bei 3 z. B. nach 3, 6, 9 … geschafften Terminen in Folge. Termine ohne Ziel unterbrechen die Serie nicht.
+                        Mindestens 2 Termine, 0 = aus.
                       </p>
                     </div>
                     <div>

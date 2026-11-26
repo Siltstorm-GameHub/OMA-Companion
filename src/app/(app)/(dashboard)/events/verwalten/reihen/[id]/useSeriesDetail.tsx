@@ -1,5 +1,4 @@
 "use client";
-import { parseCycleConfig, type CycleConfig } from "@/lib/series-cycles-config";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +7,7 @@ import { Lock } from "@/components/icons";
 import { type StatRow } from "@/components/admin/StatRowsEditor";
 import { deriveEventStatFields } from "@/lib/series-stat-fields";
 import { TURNIERPUNKTE_STAT } from "@/lib/series-event-points";
-import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
+import { parseSchedule, addWallMinutes } from "@/lib/series-schedule";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { toDatetimeLocalBerlin, fromDatetimeLocalBerlin, formatBerlinDate } from "@/lib/time";
 import { parseStatAliases, parseTournamentTemplate, type StatAliases, type TournamentTemplate } from "@/lib/series-seasons";
@@ -33,6 +32,7 @@ export function useSeriesDetail({
   const [generatingNext, setGeneratingNext] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateDateStr, setGenerateDateStr] = useState("");
+  const [generateEndStr, setGenerateEndStr] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteRevertCoins, setDeleteRevertCoins] = useState(false);
@@ -57,10 +57,9 @@ export function useSeriesDetail({
     series.platform ? series.platform.split(",").map((p: string) => p.trim()).filter(Boolean) : []
   );
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
-  const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
-  // Zyklus-Automatik (lib/series-cycles.ts) — nur Mods
-  const [cycleConfig, setCycleConfig] = useState<CycleConfig>(() => parseCycleConfig(series.cycleConfigJson ?? null));
-  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
+  // Terminplanung (lib/series-schedule.ts) — eigener Reiter "Termine" mit eigener Speicherung
+  const scheduleMode: "termine" | "runden" | null = series.scheduleMode ?? null;
+  const schedule = parseSchedule(series.scheduleJson ?? null);
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
@@ -132,22 +131,6 @@ export function useSeriesDetail({
   , null);
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
 
-  // Ältestes Event dient als Referenz für den Monatsmodus (Tag-des-Monats / n-ter Wochentag),
-  // muss mit der Berechnung in der API-Route übereinstimmen.
-  const oldestEvent = (series.events as SeriesEvent[]).reduce<SeriesEvent | null>((oldest, ev) =>
-    !oldest || new Date(ev.startAt).getTime() < new Date(oldest.startAt).getTime() ? ev : oldest
-  , null);
-
-  function suggestedNextDate(): Date | null {
-    if (!recurrenceType || !latestEvent || !oldestEvent) return null;
-    return calcNextDate(
-      new Date(latestEvent.startAt),
-      recurrenceType as RecurrenceType,
-      recurrenceMonthlyMode as MonthlyMode,
-      new Date(oldestEvent.startAt),
-    );
-  }
-
   function updatePlacementReward(place: number, key: keyof PlacementReward, value: number) {
     setPlacementRewards(prev => prev.map(r => r.place === place ? { ...r, [key]: value } : r));
   }
@@ -214,9 +197,6 @@ export function useSeriesDetail({
         fixedGame:            fixedGame.trim() || null,
         fixedFormat:          fixedFormat || null,
         discordChannelId:     discordChannelId.trim() || null,
-        recurrenceType:       recurrenceType || null,
-        recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        ...(isModerator && { cycleConfigJson: JSON.stringify(cycleConfig) }),
         genre:    genre.trim() || null,
         platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
@@ -347,28 +327,34 @@ export function useSeriesDetail({
     }
   }
 
+  // Sondertermin: von Hand gewählter Termin außerhalb der Regel. Vorbelegt mit morgen zur Uhrzeit des
+  // letzten Termins, Ende aus der Dauer der Planung (sonst leer = Dauer vom letzten Termin)
   function openGenerateModal() {
-    const suggested = suggestedNextDate();
-    setGenerateDateStr(toDatetimeLocalBerlin(suggested ?? new Date()));
+    const base = latestEvent ? new Date(latestEvent.startAt) : new Date();
+    const start = new Date(Math.max(Date.now(), base.getTime()) + 24 * 60 * 60 * 1000);
+    setGenerateDateStr(toDatetimeLocalBerlin(start));
+    setGenerateEndStr(schedule && schedule.durationMinutes > 0 ? toDatetimeLocalBerlin(addWallMinutes(start, schedule.durationMinutes)) : "");
     setShowGenerateModal(true);
   }
 
   async function generateNextEvent() {
     if (!generateDateStr) return;
-    const overrideDate = fromDatetimeLocalBerlin(generateDateStr);
-    if (isNaN(overrideDate.getTime())) { toast.error("Ungültiges Datum"); return; }
+    const startAt = fromDatetimeLocalBerlin(generateDateStr);
+    if (isNaN(startAt.getTime())) { toast.error("Ungültiges Datum"); return; }
+    const endAt = generateEndStr ? fromDatetimeLocalBerlin(generateEndStr) : null;
+    if (endAt && endAt <= startAt) { toast.error("Das Ende muss nach dem Start liegen"); return; }
 
     setGeneratingNext(true);
     const res = await fetch("/api/admin/event-series/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesId: series.id, overrideDate: overrideDate.toISOString() }),
+      body: JSON.stringify({ seriesId: series.id, startAt: startAt.toISOString(), ...(endAt && { endAt: endAt.toISOString() }) }),
     });
     setGeneratingNext(false);
     if (res.ok) {
       const { event: newEv } = await res.json();
       const dateStr = formatBerlinDate(newEv.startAt, { day: "2-digit", month: "2-digit", year: "numeric" });
-      toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
+      toast.success(`Sondertermin erstellt: ${newEv.title} am ${dateStr}`);
       setShowGenerateModal(false);
       router.refresh();
     } else {
@@ -451,7 +437,7 @@ export function useSeriesDetail({
     }
   }
 
-  return { series, rewardLimits, settingsDirty, discardSettings, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, oldestEvent, suggestedNextDate, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
+  return { series, rewardLimits, settingsDirty, discardSettings, goalLimits, confirm, ConfirmDialogElement, allUsers, squads, hasActiveSibling, isModerator, isAdmin, canUndoCompletion, seasonCount, groupStatFields, router, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, statAliases, setStatAliases, undoConfirm, setUndoConfirm, undoing, setUndoing, saving, setSaving, activeSettingsTab, setActiveSettingsTab, generatingNext, setGeneratingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, generateEndStr, setGenerateEndStr, deleteConfirm, setDeleteConfirm, deleting, setDeleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, setName, description, setDescription, rules, setRules, icon, setIcon, coverImageUrl, setCoverImageUrl, seriesColor, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, scheduleMode, schedule, hidden, setHidden, hiddenBusy, setHiddenBusy, registrationLocked, setRegistrationLocked, registrationLockedBusy, setRegistrationLockedBusy, omaOriginal, setOmaOriginal, squadId, setSquadId, squadIdBusy, setSquadIdBusy, initialStatCfg, statParticipationPts, setStatParticipationPts, statSpectatorPts, setStatSpectatorPts, statParticipationCoins, setStatParticipationCoins, statSpectatorCoins, setStatSpectatorCoins, statTransferToGlobal, setStatTransferToGlobal, statRows, setStatRows, eventPlacementCoins, setEventPlacementCoins, eventPlacementPoints, setEventPlacementPoints, eventStatFields, winnerStatField, setWinnerStatField, initialDom, dominionEnabled, setDominionEnabled, dominionTriggerStats, setDominionTriggerStats, dominionThreshold, setDominionThreshold, dominionCoins, setDominionCoins, dominionSeriesPoints, setDominionSeriesPoints, legacyRows, setLegacyRows, legacySearch, setLegacySearch, initialRewards, placementRewards, setPlacementRewards, polls, setPolls, expandedPoll, setExpandedPoll, sortedSeriesEvents, latestEvent, latestStartAt, updatePlacementReward, updateEventPlacementCoins, updateEventPlacementPoints, calcLegacyPoints, upcomingTermineCount, applyingGoal, setApplyingGoal, applyGoalNow, saveSettings, toggleHidden, toggleRegistrationLocked, saveOmaOriginal, saveSquadId, openGenerateModal, generateNextEvent, undoCompletion, lockedNotice, aliasSection, deleteSeries };
 }
 
 export type SeriesDetail = ReturnType<typeof useSeriesDetail>;

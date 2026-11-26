@@ -1,26 +1,24 @@
 "use client";
-import { MAX_CYCLES_AHEAD } from "@/lib/series-cycles-config";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
 import { Hash } from "@/components/icons";
-import { RefreshCw, Gamepad2, Swords, Monitor, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
+import { Gamepad2, Swords, Monitor, Eye, EyeOff, Lock, Unlock } from "@/components/icons";
 import ImageUploadField from "@/components/ImageUploadField";
 import OmaOriginalToggle from "@/components/OmaOriginalToggle";
 import { isBlocksGame } from "@/lib/oma-original";
 import { EVENT_COVER_PRESETS } from "@/lib/event-cover-presets";
 import GameNameInput from "@/components/GameNameInput";
 import DiscordChannelSelect from "@/components/DiscordChannelSelect";
-import { describeMonthlyModes } from "@/lib/recurrence";
 import IconPicker from "@/components/IconPicker";
 import { SERIES_FORMAT_OPTIONS } from "@/lib/tournament-formats";
 import TournamentTemplateEditor from "@/components/TournamentTemplateEditor";
 import { inputCls, PLATFORMS, Section, Field } from "./series-shared";
 import type { SeriesDetail } from "./useSeriesDetail";
 
-/** Reiter "Allgemein": Kategorie, Cover, Spiel und Format, Turniervorlage, Discord und Wiederholung.
+/** Reiter "Allgemein": Kategorie, Cover, Spiel und Format, Turniervorlage und Discord.
  *  Das Community-Ziel hat einen eigenen Reiter (SeriesTabGoal). */
 export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
-  const { series, isModerator, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, recurrenceType, setRecurrenceType, cycleConfig, setCycleConfig, recurrenceMonthlyMode, setRecurrenceMonthlyMode, omaOriginal, eventStatFields, latestStartAt, saveOmaOriginal, lockedNotice, setActiveSettingsTab,
+  const { series, isModerator, isArchived, isTournamentSeries, tournamentTemplate, setTournamentTemplate, icon, setIcon, coverImageUrl, setCoverImageUrl, category, setCategory, fixedGame, setFixedGame, fixedFormat, setFixedFormat, genre, setGenre, platforms, setPlatforms, discordChannelId, setDiscordChannelId, omaOriginal, eventStatFields, saveOmaOriginal, lockedNotice, setActiveSettingsTab,
     name, setName, description, setDescription, rules, setRules, hidden, hiddenBusy, toggleHidden, registrationLocked,
     registrationLockedBusy, toggleRegistrationLocked, squads, squadId, squadIdBusy, saveSquadId } = ctx;
   return (
@@ -160,95 +158,16 @@ export default function SeriesTabGeneral({ ctx }: { ctx: SeriesDetail }) {
             </Section>
           )}
 
-          {/* Discord & Wiederholung */}
-          <Section title="Discord & Wiederholung">
-            {/* Ankündigungskanal legen nur Mods fest (die API ignoriert ihn für Mitglieder) */}
-            {isModerator && (
+          {/* Ankündigungskanal — legen nur Mods fest (die API ignoriert ihn für Mitglieder). Termine und
+              Wiederholung stehen im Reiter "Termine". */}
+          {isModerator && (
+            <Section title="Discord">
               <Field label={<><Hash className="w-3 h-3" /> Discord-Kanal</>}>
                 <DiscordChannelSelect value={discordChannelId} onChange={setDiscordChannelId} emptyLabel="Standard (News-Kanal)" />
                 <p className="text-xs text-subtle mt-1">Wird auf alle Events der Reihe angewendet</p>
               </Field>
-            )}
-            <Field label={<><RefreshCw className="w-3 h-3" /> Wiederholung</>}>
-              <select value={recurrenceType} onChange={e => setRecurrenceType(e.target.value as typeof recurrenceType)} className={inputCls}>
-                <option value="">Keine Wiederholung</option>
-                <option value="weekly">Wöchentlich</option>
-                <option value="biweekly">Alle 2 Wochen</option>
-                <option value="monthly">Monatlich</option>
-              </select>
-              {recurrenceType === "monthly" && (() => {
-                const labels = describeMonthlyModes(latestStartAt);
-                return (
-                  <div className="mt-2 space-y-1.5">
-                    {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
-                      <button key={mode} type="button" onClick={() => setRecurrenceMonthlyMode(mode)}
-                        className="w-full text-left px-3 py-2 rounded-control text-xs transition-all"
-                        style={recurrenceMonthlyMode === mode
-                          ? { background: "color-mix(in srgb, var(--color-primary) 15%, transparent)", border: "1px solid color-mix(in srgb, var(--color-primary) 35%, transparent)", color: "#2dd4bf" }
-                          : { background: "transparent", border: "1px solid var(--color-line)", color: "#6b7280" }
-                        }>
-                        {labels[mode]}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
-            </Field>
-            {isModerator && recurrenceType && (
-              <Field label={<><RefreshCw className="w-3 h-3" /> Zyklen automatisch fortführen</>}>
-                <label className="flex items-start gap-2 text-sm text-fg/90 cursor-pointer select-none">
-                  <input type="checkbox" checked={cycleConfig.enabled} className="rounded mt-0.5"
-                    onChange={e => setCycleConfig(c => ({ ...c, enabled: e.target.checked }))} />
-                  <span>
-                    Reihe läuft dauerhaft — neue Zyklen legt das System selbst an
-                    <span className="block text-xs text-subtle">
-                      Jeder Zyklus bleibt ein eigener Termin mit Anmeldung, Meldungen, Sieger und Abschluss. Startzeit und
-                      Dauer folgen dem letzten Termin und der Wiederholung. Abschließen musst du die Zyklen weiterhin selbst.
-                    </span>
-                  </span>
-                </label>
-                {cycleConfig.enabled && (
-                  <div className="mt-3 space-y-3 pl-6">
-                    <div>
-                      <label className="text-xs text-subtle mb-1 block">Vorab veröffentlichte Zyklen</label>
-                      <select value={cycleConfig.aheadCount} className={inputCls}
-                        onChange={e => setCycleConfig(c => ({ ...c, aheadCount: Number(e.target.value) }))}>
-                        {Array.from({ length: MAX_CYCLES_AHEAD }, (_, i) => i + 1).map(n => (
-                          <option key={n} value={n}>{n === 1 ? "Immer der nächste Zyklus" : `Immer die nächsten ${n} Zyklen`}</option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-subtle mt-1">
-                        So lange vorher können sich User anmelden und das Ziel des Zyklus sehen. In der Events-Übersicht
-                        erscheint trotzdem nur der nächste Zyklus der Reihe.
-                      </p>
-                    </div>
-                    <label className="flex items-start gap-2 text-sm text-fg/90 cursor-pointer select-none">
-                      <input type="checkbox" checked={cycleConfig.carryParticipants} className="rounded mt-0.5"
-                        onChange={e => setCycleConfig(c => ({ ...c, carryParticipants: e.target.checked }))} />
-                      <span>
-                        Teilnehmer automatisch übernehmen
-                        <span className="block text-xs text-subtle">Wer im laufenden oder einem kommenden Zyklus angemeldet ist, ist im neuen Zyklus direkt dabei.</span>
-                      </span>
-                    </label>
-                    <div>
-                      <label className="text-xs text-subtle mb-1 block">Reihe endet am (optional)</label>
-                      <input type="date" className={inputCls}
-                        value={cycleConfig.endsAt ? cycleConfig.endsAt.slice(0, 10) : ""}
-                        onChange={e => setCycleConfig(c => {
-                          const { endsAt: _drop, ...rest } = c;
-                          void _drop;
-                          return e.target.value ? { ...rest, endsAt: new Date(`${e.target.value}T23:59:59`).toISOString() } : rest;
-                        })} />
-                      <p className="text-xs text-subtle mt-1">Danach entstehen keine neuen Zyklen mehr.</p>
-                    </div>
-                    {series.events.length === 0 && (
-                      <p className="text-xs text-amber-400">Lege den ersten Zyklus einmal selbst an — Start, Ende und Einstellungen werden dann übernommen.</p>
-                    )}
-                  </div>
-                )}
-              </Field>
-            )}
-          </Section>
+            </Section>
+          )}
           </>
   );
 }

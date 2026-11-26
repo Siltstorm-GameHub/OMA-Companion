@@ -85,7 +85,7 @@ export default function CommunityGoalCard({
           )}
           {goal.streakBonus && (
             <p className="text-xs text-orange-300/80 mt-0.5">
-              <Glyph name="fire" className="inline size-3.5 align-[-2px]" /> Serien-Bonus: alle {goal.streakBonus.length} geschafften Zyklen in Folge +{goal.streakBonus.coins} Münzen
+              <Glyph name="fire" className="inline size-3.5 align-[-2px]" /> Serien-Bonus: alle {goal.streakBonus.length} geschafften Termine in Folge +{goal.streakBonus.coins} Münzen
               {reached && streak && streak >= 2 ? ` · jetzt ${streak}× in Folge!` : ""}
             </p>
           )}

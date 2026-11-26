@@ -556,7 +556,7 @@ export default async function TournamentDetailPage({
         ? (isGroupKnockout && duelStand.current.groupIndex != null ? "Gruppenphase" : matchStage(duelStand.current, false).replace(/ · (Hin|Rück)spiel$/, "")) + " läuft"
         : duelStand.total > 0 ? "alle Matches gespielt" : null)
     : statStand
-      ? (statStand.next ? `${statRoundLabel(statStand.next)} als Nächstes` : statStand.total > 0 ? "alle Runden eingetragen" : null)
+      ? (statStand.next ? `${statRoundLabel(statStand.next)} als Nächstes` : statStand.total > 0 ? "alle Matches eingetragen" : null)
       : null;
   const myOpenMatch = upcomingMatches.find(m => m.mine) ?? null;
   const myOpenReport = myOpenMatch ? reportMatches.find(r => r.id === myOpenMatch.id) ?? null : null;
@@ -1499,7 +1499,7 @@ export default async function TournamentDetailPage({
               <p className="text-sm text-muted">
                 <span className="font-extrabold text-fg">{FORMAT_LABELS[format] ?? format}</span>
                 {event.status === "finished" ? " · beendet" : standStage ? ` · ${standStage}` : ""}
-                <span className="text-subtle"> · {played} von {total} {duelStand ? "Matches" : "Runden"} gespielt</span>
+                <span className="text-subtle"> · {played} von {total} Matches gespielt</span>
               </p>
               <div className="h-2 rounded-full bg-surface-3 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />

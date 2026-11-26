@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 import { closeSubmissionsAfterAdminEntry, confirmProvisionalMatch } from "@/lib/tournaments/matchSubmissions";
 import { isStatFormat } from "@/lib/tournaments/stat-rounds";
+import { singleMatchViolation } from "@/lib/series-schedule-server";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
@@ -11,6 +12,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { title, round, position, player1Id, player2Id, scheduledAt, notes, entries } = await req.json();
 
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { format: true } });
+  const single = await singleMatchViolation(eventId);
+  if (single) return NextResponse.json({ error: single }, { status: 409 });
   // Stat-Formate: Rundennummer = position (round bleibt 1), ohne Angabe höchste vergebene Nummer + 1
   const statFormat = isStatFormat(event?.format);
   const resolvedRound = statFormat ? 1 : (round ?? 1);

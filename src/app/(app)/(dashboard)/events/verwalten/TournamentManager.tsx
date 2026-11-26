@@ -121,7 +121,10 @@ export function nowForDatetimeLocal(): string {
 export default function TournamentManager({
   event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints, standaloneEvent = false,
   pendingSubmissions = [], pendingCount = 0, pointsCfg = null, goal = null, avgDirection = "high", notReadyNames = null,
+  singleMatch = false,
 }: {
+  /** Challenge-Reihe (lib/series-schedule.ts): jede Runde hat genau ein Match, neue Meldungen ersetzen die vorige */
+  singleMatch?: boolean;
   /** Check-in an: Namen der angemeldeten Spieler, die noch nicht bereit sind (werden nicht ausgelost). null = kein Check-in */
   notReadyNames?: string[] | null;
   /** Offene Ergebnis-Meldungen der Spieler (nur Turnier-Seite) — direkt übernehmen/ablehnen */
@@ -296,6 +299,8 @@ export default function TournamentManager({
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
   const isGroupKnockout = tournament.format === GROUP_KNOCKOUT_FORMAT;
+  // Challenge-Reihe: nur ein Match je Runde (Server prüft das ebenfalls, siehe singleMatchViolation)
+  const addBlocked = singleMatch && tournament.matches.length > 0;
   const isBracketFormat = tournament.format === "single_elimination";
   // Wer ausgelost werden kann: angemeldete Spieler (allUsers) + direkt eingetragene Teilnehmer.
   // Bei aktivem Check-in filtert der Server zusätzlich auf Eingecheckte.
@@ -586,7 +591,7 @@ export default function TournamentManager({
     }
     const u = await res.json() as { position: number; title: string | null };
     setTournament(prev => prev ? { ...prev, matches: prev.matches.map(m => m.id === matchId ? { ...m, position: u.position, title: u.title } : m) } : prev);
-    toast.success("Runde aktualisiert");
+    toast.success("Match aktualisiert");
     router.refresh();
     return true;
   }
@@ -1238,7 +1243,7 @@ export default function TournamentManager({
                     className="w-full flex items-center justify-between px-3 py-2.5 bg-surface-2 hover:bg-surface-3 text-left"
                     onClick={() => setExpanded(prev => { const s = new Set(prev); s.has(match.id) ? s.delete(match.id) : s.add(match.id); return s; })}>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-fg">Runde {match.position}</span>
+                      <span className="text-sm text-fg">Match {match.position}</span>
                       {statRoundNote(match) && <span className="text-sm text-muted">· {statRoundNote(match)}</span>}
                       {match.scheduledAt && (
                         <span className="text-xs text-subtle flex items-center gap-1">
@@ -1363,7 +1368,7 @@ export default function TournamentManager({
                         })()}
                         {trackPlacement && placementPoints && (
                           <p className="text-xs text-subtle mb-2">
-                            Platzierung dieser Runde → Punkte: {Object.entries(placementPoints)
+                            Platzierung in diesem Match → Punkte: {Object.entries(placementPoints)
                               .sort(([a], [b]) => Number(a) - Number(b))
                               .map(([place, pts]) => `Platz ${place} = ${pts}`).join(" · ")}
                           </p>
@@ -1492,7 +1497,7 @@ export default function TournamentManager({
   const statusDe = tournament.status === "active" ? "Läuft" : tournament.status === "finished" ? "Beendet" : "Noch nicht gestartet";
   const stage = dp
     ? (dp.current ? duelStageLabel(dp.current) : dp.total > 0 ? "alle Matches gespielt" : "noch keine Matches")
-    : sp ? (sp.next ? `Runde ${sp.next.position} als Nächstes` : sp.total > 0 ? "alle Runden eingetragen" : "noch keine Runden") : "";
+    : sp ? (sp.next ? `Match ${sp.next.position} als Nächstes` : sp.total > 0 ? "alle Matches eingetragen" : "noch keine Matches") : "";
   // Liga mit Sieg/Unentschieden-Münzen: Münzen je Match (stand früher im alten Kopf)
   const matchCoins = supportsDraw ? `Sieg ${getCoinsVal("win")} · Unentschieden ${getCoinsVal("draw")} Münzen pro Match` : "";
   const statusLine = [statusDe, stage, matchCoins].filter(Boolean).join(" · ");
@@ -1585,7 +1590,7 @@ export default function TournamentManager({
     : allPlayed
       ? { label: "Turnier abschließen", href: `/events/verwalten/${event.id}/complete` }
       : (nextDuels.length > 0 || sp?.next)
-        ? { label: is1v1 ? "Nächstes Match eintragen" : "Nächste Runde eintragen", onClick: focusNext }
+        ? { label: "Nächstes Match eintragen", onClick: focusNext }
         : null;
   const viewTools = (([["auto", "Ansicht: automatisch"], ["touch", "Ansicht: Touch (große Knöpfe)"], ["desktop", "Ansicht: Desktop (Tabellen)"]] as const)
     .filter(([v]) => v !== viewMode)
@@ -1597,7 +1602,7 @@ export default function TournamentManager({
     }] : []),
     ...(canResetDraw ? [{ label: "Auslosung zurücksetzen", onClick: resetDrawAction, disabled: loading }] : []),
     ...(isDrawn ? [{ label: showReplace ? "Ersetzen schließen" : "Spieler ersetzen", onClick: () => setShowReplace(v => !v) }] : []),
-    ...(!isGroupKnockout ? [{ label: isFfa ? "Runde hinzufügen" : "Match hinzufügen", onClick: openAdd }] : []),
+    ...(!isGroupKnockout && !addBlocked ? [{ label: "Match hinzufügen", onClick: openAdd }] : []),
     ...viewTools,
   ];
 
@@ -1626,7 +1631,7 @@ export default function TournamentManager({
         statusLine={statusLine}
         played={dp ? dp.played : sp ? sp.played : 0}
         total={dp ? dp.total : sp ? sp.total : 0}
-        unit={isFfa ? "Runden" : "Matches"}
+        unit="Matches"
         resultsHref={resultsHref}
         pendingCount={pendingCount}
         tools={tools}
@@ -1723,7 +1728,7 @@ export default function TournamentManager({
       {isFfa && statRounds.length > 0 && latecomers.length > 0 && (
         <div className="rounded-control border border-warning/30 bg-warning-soft p-3 space-y-2">
           <p className="text-sm font-semibold text-amber-300">
-            Neu dabei — noch in keiner Runde ({latecomers.length})
+            Neu dabei — noch in keinem Match ({latecomers.length})
           </p>
           <div className="space-y-1.5">
             {latecomers.map(u => (
@@ -1738,7 +1743,7 @@ export default function TournamentManager({
                 <button type="button" disabled={loading}
                   onClick={() => changeMatchPlayer(latecomerRound[u.id] ?? statRounds[statRounds.length - 1].id, u.id, "add")}
                   className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-control bg-warning hover:brightness-110 text-canvas transition-colors disabled:opacity-50 max-lg:min-h-10">
-                  <Plus className="w-3.5 h-3.5" /> Zur Runde
+                  <Plus className="w-3.5 h-3.5" /> Ins Match
                 </button>
               </div>
             ))}
@@ -1765,6 +1770,7 @@ export default function TournamentManager({
           allUsers={allUsers}
           loading={loading}
           isFfa={isFfa}
+          addBlocked={addBlocked}
           isCoop={isCoop}
           trackMatchWin={trackMatchWin}
           trackPlacement={trackPlacement}
@@ -1924,7 +1930,7 @@ export default function TournamentManager({
       {isFfa && statRounds.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-1">
-            {([["table", "Tabelle"], ["rounds", "Runden"]] as const).map(([k, label]) => (
+            {([["table", "Tabelle"], ["rounds", "Matches"]] as const).map(([k, label]) => (
               <button key={k} type="button" onClick={() => setStatView(k)} aria-pressed={statView === k}
                 className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors ${
                   statView === k ? "bg-primary/15 text-primary-fg ring-1 ring-primary/25" : "text-subtle hover:text-fg/90 hover:bg-line"
@@ -1934,8 +1940,8 @@ export default function TournamentManager({
             ))}
             <span className="ml-auto text-xs text-subtle">
               {statView === "table"
-                ? (hasEventPoints ? "Wertung nach Eventpunkten, wie beim Abschluss" : tournament.format === "avg_stats" ? `Wertung nach Ø pro Runde · ${avgDirection === "low" ? "niedrigster" : "höchster"} gewinnt` : `Wertung nach ${visibleStatFields[0] ?? "erstem Stat"}`)
-                : "Runde aufklappen zum Korrigieren"}
+                ? (hasEventPoints ? "Wertung nach Eventpunkten, wie beim Abschluss" : tournament.format === "avg_stats" ? `Wertung nach Ø pro Match · ${avgDirection === "low" ? "niedrigster" : "höchster"} gewinnt` : `Wertung nach ${visibleStatFields[0] ?? "erstem Stat"}`)
+                : "Match aufklappen zum Korrigieren"}
             </span>
           </div>
           {goalBar}
@@ -2013,19 +2019,22 @@ export default function TournamentManager({
       {/* ── Add Match ────────────────────────────────────────────────── */}
       {/* Gruppenphase + K.O.: Matches entstehen nur über Auslosung bzw. K.O.-Runde */}
       <div ref={addRef} className="scroll-mt-24">
-      {!isGroupKnockout && (!showAdd ? (
+      {addBlocked && (
+        <p className="text-xs text-subtle text-center">Challenge-Reihe: Diese Runde hat genau ein Match. Neue Meldungen der Teilnehmer ersetzen ihre vorige.</p>
+      )}
+      {!isGroupKnockout && !addBlocked && (!showAdd ? (
         <button onClick={() => {
           if (isFfa) { openAddStatRound(); return; }
           setMScheduled(nowForDatetimeLocal());
           setShowAdd(true);
         }}
           className="flex items-center gap-2 text-sm text-muted hover:text-fg border border-line-strong hover:border-gray-500 rounded-control px-4 py-2 w-full justify-center transition-colors">
-          <Plus className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
+          <Plus className="w-4 h-4" /> Match hinzufügen
         </button>
       ) : (
         <div className="border border-primary/40 rounded-control p-4 bg-primary-soft/60 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-fg">{isFfa ? "Neue Runde" : "Neues Match"}</p>
+            <p className="text-sm font-medium text-fg">Neues Match</p>
             <button onClick={() => setShowAdd(false)} className="text-subtle hover:text-fg">
               <X className="w-4 h-4" />
             </button>
@@ -2112,7 +2121,7 @@ export default function TournamentManager({
 
           <button onClick={addMatch} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
             className="flex items-center gap-2 text-sm bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-ink rounded-control px-4 py-2">
-            <Plus className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
+            <Plus className="w-4 h-4" /> {isFfa ? `Match ${mRound} erstellen` : "Match erstellen"}
           </button>
         </div>
       ))}

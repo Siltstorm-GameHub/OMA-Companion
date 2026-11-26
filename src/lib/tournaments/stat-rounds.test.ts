@@ -4,10 +4,10 @@ import { isStatFormat, nextStatRoundNumber, sortStatRounds, statRoundLabel, supp
 
 describe("stat-rounds", () => {
   test("Label: Nummer plus Zusatz, wiederholte Nummer im Titel entfällt", () => {
-    assert.equal(statRoundLabel({ position: 3, title: "Server A" }), "Runde 3 · Server A");
-    assert.equal(statRoundLabel({ position: 3, title: null }), "Runde 3");
-    assert.equal(statRoundLabel({ position: 3, title: " runde 3 " }), "Runde 3");
-    assert.equal(statRoundLabel({ position: 3, title: "Runde 4" }), "Runde 3 · Runde 4");
+    assert.equal(statRoundLabel({ position: 3, title: "Server A" }), "Match 3 · Server A");
+    assert.equal(statRoundLabel({ position: 3, title: null }), "Match 3");
+    assert.equal(statRoundLabel({ position: 3, title: " runde 3 " }), "Match 3");
+    assert.equal(statRoundLabel({ position: 3, title: "Runde 4" }), "Match 3 · Runde 4");
   });
 
   test("nächste Nummer = höchste + 1, Lücken bleiben frei", () => {

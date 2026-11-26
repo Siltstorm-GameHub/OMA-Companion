@@ -2,7 +2,7 @@
 import { EventCategory, EventGenre } from "@prisma/client";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import type { CommunityGoalForm } from "@/components/CommunityGoalEditor";
-import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
+import type { SeriesSchedule } from "@/lib/series-schedule";
 import type { TournamentTemplate } from "@/lib/series-seasons";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -57,8 +57,8 @@ export type SeasonPrefill = {
   fixedGame: string;
   seriesFormat: string;
   seriesDiscordId: string;
-  recurrenceType: "none" | RecurrenceType;
-  recurrenceMonthlyMode: MonthlyMode;
+  /** Terminplanung der Vorsaison, erster Termin auf den nächsten regulären Platz gelegt (null = keine Planung) */
+  schedule: SeriesSchedule | null;
   seriesHidden: boolean;
   seriesRegistrationLocked: boolean;
   seriesSquadId: string;
@@ -114,13 +114,6 @@ export const FORMATS: { value: string; label: string; desc: string; hasStat: boo
   ...f,
   hasStat: f.value === "coop_stats" || f.value === "avg_stats",
 }));
-
-export const RECURRENCE_OPTS: { value: string; label: string; desc: string }[] = [
-  { value: "none",      label: "Keine",          desc: "Manuell Termine hinzufügen" },
-  { value: "weekly",    label: "Wöchentlich",    desc: "Jeden Woche am selben Wochentag" },
-  { value: "biweekly",  label: "Zweiwöchentlich",desc: "Alle zwei Wochen" },
-  { value: "monthly",   label: "Monatlich",      desc: "Einmal pro Monat" },
-];
 
 export const inputCls   = "w-full rounded-control px-3 py-2.5 text-sm text-fg outline-none";
 export const inputStyle = { background: "var(--color-surface-2)", border: "1px solid color-mix(in srgb, var(--color-primary) 18%, transparent)" };

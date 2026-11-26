@@ -12,7 +12,7 @@ const GOAL_FORMAT_NAMES = [...new Set(GOAL_FORMATS.filter(f => f !== "liga").map
 /**
  * Reiter "🎯 Ziel" der Eventreihe: die eine Stelle für Community-Ziele der Reihe — Ziel der Reihe
  * (gespeichert mit "Speichern" oben, wie die übrigen Einstellungen), Abweichungen zurücksetzen und je
- * Zyklus/Termin plus Ziel-Planung (wirken sofort).
+ * Termin (wirkt sofort).
  */
 export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
   const {
@@ -69,9 +69,9 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
         )}
       </Section>
 
-      <Section title="Ziel je Termin und Planung">
+      <Section title="Ziel je Termin">
         <p className="text-xs text-subtle mb-2">Änderungen in diesem Abschnitt gelten sofort, ohne „Speichern“.</p>
-        <SeriesCycleGoals seriesId={series.id} fixedFormat={fixedFormat || null}
+        <SeriesCycleGoals
           events={series.events as CycleEvent[]} tournamentTemplateJson={series.tournamentTemplateJson ?? null}
           statFields={eventStatFields} disabled={isArchived} goalLimits={goalLimits} />
       </Section>

@@ -18,6 +18,7 @@ import {
   type SubmissionValues,
 } from "@/lib/tournaments/matchSubmissions";
 import { notifyManagersOfSubmission } from "@/lib/tournaments/submissionNotifications";
+import { isChallengeSeriesEvent } from "@/lib/series-schedule-server";
 
 function fail(err: unknown) {
   if (err instanceof ApplyMatchResultError) {
@@ -144,8 +145,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Direkt für alle sichtbar — außer ein Admin hat das Ergebnis dieses Matches bereits bestätigt;
     // dann bleibt die Korrektur offen, bis ein Admin sie prüft.
+    // Challenge-Reihe (ein Match je Runde): die neue Meldung ersetzt die vorige immer sofort — auch nach
+    // einer Admin-Bestätigung; das Match gilt dann wieder als unbestätigt und wartet auf die Prüfung.
     const fresh = await prisma.match.findUnique({ where: { id: match.id }, select: { resultConfirmed: true, playedAt: true } });
-    const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed;
+    const adminConfirmed = !!fresh?.playedAt && fresh.resultConfirmed && !(await isChallengeSeriesEvent(eventId));
     // Kann das Ergebnis gerade nicht eingetragen werden (z.B. Folgespiel schon gespielt), bleibt die Meldung
     // gespeichert und wartet auf die Prüfung — statt dem Spieler einen Fehler zu zeigen, obwohl sie gespeichert ist
     let heldBack: string | null = null;

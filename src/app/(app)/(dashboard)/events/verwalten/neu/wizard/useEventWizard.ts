@@ -5,10 +5,16 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { EventCategory, EventGenre } from "@prisma/client";
-import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
-import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
+import { TERM_LABEL, defaultSchedule, sanitizeSchedule, scheduleProblem, type SeriesSchedule } from "@/lib/series-schedule";
 import { BLOCKS_GAME, DEFAULT_BLOCKS_EVENT, type BlocksEventConfig } from "@/lib/blocks/event-config";
-import { fromDatetimeLocalBerlin } from "@/lib/time";
+import { fromDatetimeLocalBerlin, getBerlinDateParts } from "@/lib/time";
+
+/** Vorschlag für den ersten Termin einer neuen Reihe: in einer Woche, 20:00 Uhr (Berlin). */
+function defaultFirstTerm(): Date {
+  const p = getBerlinDateParts(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return fromDatetimeLocalBerlin(`${p.year}-${pad(p.month)}-${pad(p.day)}T20:00`);
+}
 import type { AvgDirection } from "@/lib/avg-stats";
 import { EMPTY_COMMUNITY_GOAL_FORM, formToGoal, type CommunityGoalForm } from "@/components/CommunityGoalEditor";
 import { RESULT_SCORE_FIELD, isResultGoalFormat, supportsCommunityGoal } from "@/lib/community-goal";
@@ -126,16 +132,11 @@ export function useEventWizard({
   const [fixedPlatforms, setFixedPlatforms] = useState<string[]>(seasonPrefill?.platforms ?? []);
   const [seriesDiscordId, setSeriesDiscordId] = useState(seasonPrefill?.seriesDiscordId ?? "");
   const [seriesFormat, setSeriesFormat] = useState(seasonPrefill?.seriesFormat ?? "single_elimination");
-  // Start-/Enddatum werden nie vorausgefüllt — die alte Saison speichert kein eigenes Datum, das
-  // muss der Admin für die neue Saison bewusst neu festlegen.
-  const [seriesStartDate, setSeriesStartDate] = useState("");
-  const [seriesEndDate, setSeriesEndDate]     = useState("");
-  // Ende (Datum/Uhrzeit) des ERSTEN Termins — optional, ergibt die Dauer, die pro Serientermin
-  // beibehalten wird (siehe calcNextDate durationMs in recurrence.ts). Nicht zu verwechseln mit
-  // seriesEndDate (Kalendertag, bis zu dem die Serie überhaupt neue Termine generiert).
-  const [seriesFirstEventEndAt, setSeriesFirstEventEndAt] = useState("");
-  const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>(seasonPrefill?.recurrenceType ?? "none");
-  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>(seasonPrefill?.recurrenceMonthlyMode ?? "dayOfMonth");
+  // Terminplanung (lib/series-schedule.ts): Ablaufart, Regel, erster Termin, Vorlauf und Ende. Neue
+  // Saison: Regel der Vorsaison, erster Termin = nächster regulärer Platz (new-season/page.tsx).
+  const [schedule, setSchedule] = useState<SeriesSchedule>(() => seasonPrefill?.schedule ?? defaultSchedule("termine", defaultFirstTerm()));
+  // Ohne feste Regel: den ersten Termin gleich mit anlegen? (mit Regel immer)
+  const [createFirstEvent, setCreateFirstEvent] = useState(true);
   const [statParticipationPts, setStatParticipationPts] = useState(seasonPrefill?.statParticipationPts ?? 5);
   const [statSpectatorParticipationPts, setStatSpectatorParticipationPts] = useState(seasonPrefill?.statSpectatorParticipationPts ?? 3);
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(seasonPrefill?.statPtsToGlobalRanking ?? false);
@@ -191,39 +192,8 @@ export function useEventWizard({
   const hasStat    = formatObj?.hasStat ?? false;
   const isRoundRobinFamily = (seriesFixedFormat ?? format) === "round_robin" || (seriesFixedFormat ?? format) === "liga";
 
-  const monthlyDescriptions = useMemo(() => {
-    if (!seriesStartDate || recurrenceType !== "monthly") return null;
-    try { return describeMonthlyModes(fromDatetimeLocalBerlin(seriesStartDate)); } catch { return null; }
-  }, [seriesStartDate, recurrenceType]);
-
-  const previewDates = useMemo(() => {
-    if (!seriesStartDate) return [];
-    let start: Date;
-    try { start = fromDatetimeLocalBerlin(seriesStartDate); } catch { return []; }
-    if (isNaN(start.getTime())) return [];
-    if (recurrenceType === "none") return [start];
-    let endLimit: Date | null = null;
-    if (seriesEndDate) {
-      try { endLimit = fromDatetimeLocalBerlin(seriesEndDate + "T23:59:59"); } catch { endLimit = null; }
-    }
-    const dates: Date[] = [start];
-    // With endDate: generate ALL dates (no cap) to show exact count
-    // Without endDate: preview only next 5
-    const maxIter = endLimit ? 500 : 5;
-    for (let i = 0; i < maxIter; i++) {
-      const last = dates[dates.length - 1];
-      const next = calcNextDate(
-        last,
-        recurrenceType as RecurrenceType,
-        recurrenceMonthlyMode,
-        start,
-      );
-      if (endLimit && next > endLimit) break;
-      if (!endLimit && dates.length >= 5) break;
-      dates.push(next);
-    }
-    return dates;
-  }, [seriesStartDate, seriesEndDate, recurrenceType, recurrenceMonthlyMode]);
+  // Warum die Terminplanung so nicht gespeichert werden kann (null = ok)
+  const scheduleError = scheduleProblem(schedule);
 
   // ── Step lists ───────────────────────────────────────────────────────────────
   // Event mode: skip tournament step bei OMA Blocks (Format/Bracket sind dort irrelevant).
@@ -284,11 +254,8 @@ export function useEventWizard({
     fixedPlatforms,
     seriesDiscordId,
     seriesFormat,
-    seriesStartDate,
-    seriesEndDate,
-    seriesFirstEventEndAt,
-    recurrenceType,
-    recurrenceMonthlyMode,
+    schedule,
+    createFirstEvent,
     statParticipationPts,
     statSpectatorParticipationPts,
     statPtsToGlobalRanking,
@@ -354,11 +321,9 @@ export function useEventWizard({
     fixedPlatforms: setFixedPlatforms,
     seriesDiscordId: setSeriesDiscordId,
     seriesFormat: setSeriesFormat,
-    seriesStartDate: setSeriesStartDate,
-    seriesEndDate: setSeriesEndDate,
-    seriesFirstEventEndAt: setSeriesFirstEventEndAt,
-    recurrenceType: setRecurrenceType,
-    recurrenceMonthlyMode: setRecurrenceMonthlyMode,
+    // Entwurf aus dem Speicher: nur eine gültige Planung übernehmen (ältere Entwürfe kennen sie nicht)
+    schedule: (v: unknown) => { const sc = sanitizeSchedule(v); if (sc) setSchedule(sc); },
+    createFirstEvent: setCreateFirstEvent,
     statParticipationPts: setStatParticipationPts,
     statSpectatorParticipationPts: setStatSpectatorParticipationPts,
     statPtsToGlobalRanking: setStatPtsToGlobalRanking,
@@ -440,6 +405,7 @@ export function useEventWizard({
     }
     if (step === 0) return true;
     if (step === 1) return seriesName.trim().length > 0;
+    if (step === 2) return scheduleError === null;
     return true;
   }
 
@@ -626,14 +592,11 @@ export function useEventWizard({
         fixedFormat: (eventType === "tournament" && !variousGames) ? seriesFormat
           : (eventType === "community" && tournamentTemplate.communityGoal) ? "coop_stats" : null,
         discordChannelId: seriesDiscordId || null,
-        recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
-        recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
         placementRewardsJson: { placements: eventType === "community" ? [] : placements },
         pollsConfigJson: polls.length > 0 ? polls : null,
         seriesStatConfig,
-        startDate: seriesStartDate ? fromDatetimeLocalBerlin(seriesStartDate).toISOString() : null,
-        endDate: seriesEndDate ? fromDatetimeLocalBerlin(seriesEndDate + "T23:59:59").toISOString() : null,
-        firstEventEndAt: (seriesStartDate && seriesFirstEventEndAt) ? fromDatetimeLocalBerlin(seriesFirstEventEndAt).toISOString() : null,
+        schedule,
+        createFirstEvent: schedule.rhythm ? true : createFirstEvent,
         eventType,
         hidden: seriesHidden,
         registrationLocked: seriesRegistrationLocked,
@@ -658,7 +621,7 @@ export function useEventWizard({
     clearDraft();
     toast.success(
       (seasonPrefill ? `Saison „${seriesName}" gestartet` : `Eventreihe „${seriesName}" erstellt`) +
-      (created.eventsCreated > 0 ? ` – ${created.eventsCreated} Termine angelegt` : "") +
+      (created.eventsCreated > 0 ? ` – ${created.eventsCreated} ${created.eventsCreated === 1 ? TERM_LABEL[schedule.mode].one : TERM_LABEL[schedule.mode].many} angelegt` : "") +
       (created.movedEvents > 0 ? ` – ${created.movedEvents} offene Termine aus der Vorsaison übernommen` : "") + "!"
     );
     router.push(`/events/verwalten/reihen/${created.id}`);
@@ -757,16 +720,11 @@ export function useEventWizard({
     setSeriesDiscordId,
     seriesFormat,
     setSeriesFormat,
-    seriesStartDate,
-    setSeriesStartDate,
-    seriesEndDate,
-    setSeriesEndDate,
-    seriesFirstEventEndAt,
-    setSeriesFirstEventEndAt,
-    recurrenceType,
-    setRecurrenceType,
-    recurrenceMonthlyMode,
-    setRecurrenceMonthlyMode,
+    schedule,
+    setSchedule,
+    createFirstEvent,
+    setCreateFirstEvent,
+    scheduleError,
     statParticipationPts,
     setStatParticipationPts,
     statSpectatorParticipationPts,
@@ -815,8 +773,6 @@ export function useEventWizard({
     seriesFixedFormat,
     formatObj,
     hasStat,
-    monthlyDescriptions,
-    previewDates,
     showsTournamentStep,
     eventDataProblem,
     canProceed,

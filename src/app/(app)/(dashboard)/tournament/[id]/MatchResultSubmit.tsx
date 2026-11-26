@@ -568,7 +568,7 @@ export default function MatchResultSubmit({
 
           <div className={`grid gap-2 ${match.isDuel ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
             <label className="text-xs text-muted space-y-1">
-              Match / Runde
+              Match
               <select
                 value={match.id}
                 onChange={(e) => {

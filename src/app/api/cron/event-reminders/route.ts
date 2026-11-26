@@ -8,7 +8,7 @@ import { notAwaitingApprovalWhere } from "@/lib/community-events";
 import { endsSoonLabel, isPeriodEvent } from "@/lib/event-period";
 import { autoStartPeriodRounds } from "@/lib/tournaments/period-rounds";
 import { settleEndedGoals } from "@/lib/community-goal-milestones";
-import { ensureAllSeriesCycles } from "@/lib/series-cycles";
+import { ensureAllSeriesSchedules } from "@/lib/series-schedule-server";
 
 const ENDING_SOON_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
   // Fallback für geplante Veröffentlichungen an Tagen ohne Seitenaufrufe (sonst lazy, siehe
   // syncDueEventActivations) — läuft unabhängig davon, ob eine Erinnerungs-Regel existiert.
   await publishDueScheduledEvents();
-  // Zyklus-Automatik: kommende Zyklen von Dauer-Reihen anlegen und vorab veröffentlichen
-  await ensureAllSeriesCycles().catch(err => console.error("[cron] Zyklen anlegen fehlgeschlagen", err));
+  // Terminplanung: kommende Termine/Runden aller Reihen anlegen und vorab ankündigen
+  await ensureAllSeriesSchedules().catch(err => console.error("[cron] Termine anlegen fehlgeschlagen", err));
   // Fallback für Tage ohne Seitenaufrufe: Runde 1 bei gestarteten Zeitraum-Events eröffnen
   await autoStartPeriodRounds();
 

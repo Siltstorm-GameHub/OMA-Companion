@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import EventSetupWizard from "../../../neu/EventSetupWizard";
 import type { EventCategory, EventGenre } from "@prisma/client";
 import { parseTournamentTemplate } from "@/lib/series-seasons";
+import { nextSeasonSchedule, parseSchedule, suggestSchedule } from "@/lib/series-schedule";
 
 type StatRow = { field: string; pointsPer: number; eventPointsPer?: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -77,6 +78,13 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
   if (activeSeason) redirect(`/events/verwalten/reihen/${activeSeason.id}`);
   const nextSeasonNumber = Math.max(series.seasonNumber ?? 1, ...groupSeasons.map(s => s.seasonNumber ?? 1)) + 1;
 
+  // Terminplanung der neuen Saison: Regel der Vorsaison (alte Reihen: Vorschlag aus der alten Planung),
+  // erster Termin = nächster regulärer Platz nach dem letzten Termin. Ablaufart ist hier änderbar.
+  const seasonEvents = await prisma.event.findMany({ where: { seriesId: id }, select: { startAt: true, endAt: true } });
+  const baseSchedule = parseSchedule(series.scheduleJson)
+    ?? (seasonEvents.length > 0 ? suggestSchedule(series, seasonEvents) : null);
+  const schedule = baseSchedule ? nextSeasonSchedule(baseSchedule, seasonEvents) : null;
+
   // Repräsentatives Event der alten Saison, um Zuschauer-Modus & Event-Typ (Community/Turnier) abzuleiten —
   // diese Werte werden nicht direkt auf der EventSeries gespeichert.
   const sampleEvent = await prisma.event.findFirst({
@@ -123,8 +131,7 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     fixedGame: series.fixedGame ?? "",
     seriesFormat: series.fixedFormat ?? "single_elimination",
     seriesDiscordId: series.discordChannelId ?? "",
-    recurrenceType: (series.recurrenceType ?? "none") as "none" | "weekly" | "biweekly" | "monthly",
-    recurrenceMonthlyMode: (series.recurrenceMonthlyMode ?? "dayOfMonth") as "dayOfMonth" | "weekdayOfMonth",
+    schedule,
     seriesHidden: series.hidden,
     seriesRegistrationLocked: series.registrationLocked,
     seriesOmaOriginal: series.omaOriginal,

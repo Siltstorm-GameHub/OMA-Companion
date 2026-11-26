@@ -21,10 +21,10 @@ export function statRoundNote(m: RoundLike): string | null {
   return redundant.test(t) ? null : t;
 }
 
-/** "Runde 3 · Server A" */
+/** "Match 3 · Server A" — "Runde" heißt seit den Challenge-Reihen der Zeitraum eines Termins (lib/series-schedule.ts) */
 export function statRoundLabel(m: RoundLike): string {
   const note = statRoundNote(m);
-  return note ? `Runde ${m.position} · ${note}` : `Runde ${m.position}`;
+  return note ? `Match ${m.position} · ${note}` : `Match ${m.position}`;
 }
 
 /** Nach Rundennummer sortiert; gleiche Nummer behält die bisherige Reihenfolge. */

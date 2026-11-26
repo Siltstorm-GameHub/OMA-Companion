@@ -77,6 +77,8 @@ interface Props {
   allUsers: User[];
   loading: boolean;
   isFfa: boolean;
+  /** Challenge-Reihe: es gibt schon das eine Match — kein weiteres anlegen */
+  addBlocked?: boolean;
   isCoop: boolean;
   trackMatchWin: boolean;
   trackPlacement: boolean;
@@ -142,7 +144,7 @@ interface Props {
 
 export default function TournamentManagerMobile({
   tournament, allUsers, loading,
-  isFfa, isCoop, trackMatchWin, trackPlacement, isLiga, is1v1, isRoundRobin, formatLabel,
+  isFfa, addBlocked = false, isCoop, trackMatchWin, trackPlacement, isLiga, is1v1, isRoundRobin, formatLabel,
   visibleStatFields, placementPoints, supportsDraw, rounds,
   scores1v1, setScores1v1, ffaEdits, setFfaField,
   teamAssign, setTeamAssign, matchWin, setMatchWin, matchWinAll, setMatchWinAll,
@@ -183,7 +185,7 @@ export default function TournamentManagerMobile({
       if (round === rounds - 2) return "Viertelfinale";
       return `Runde ${round}`;
     }
-    return `Runde ${round}`;
+    return `Match ${round}`;
   }
 
   function goto(delta: number) {
@@ -283,7 +285,7 @@ export default function TournamentManagerMobile({
         ) : (
           <button type="button" onClick={() => setEditingMetaId(focused.id)}
             className="flex items-center gap-1 text-xs text-muted active:text-fg -mt-1">
-            <Pencil className="w-3 h-3" /> Rundennummer/Zusatz ändern
+            <Pencil className="w-3 h-3" /> Match-Nummer/Zusatz ändern
           </button>
         ))}
 
@@ -375,14 +377,14 @@ export default function TournamentManagerMobile({
       )}
 
       {/* ── Match hinzufügen ── */}
-      {groupStage ? null : !showAdd ? (
+      {groupStage || addBlocked ? null : !showAdd ? (
         <button onClick={() => {
           if (isFfa) { openAddStatRound(); return; }
           setMScheduled(nowForDatetimeLocal());
           setShowAdd(true);
         }}
           className="flex items-center gap-2 text-sm text-fg/90 border border-line-strong rounded-control px-4 py-3 w-full justify-center">
-          <PlusIcon className="w-4 h-4" /> {isFfa ? "Runde hinzufügen" : "Match hinzufügen"}
+          <PlusIcon className="w-4 h-4" /> Match hinzufügen
         </button>
       ) : (
         <AddMatchForm
@@ -448,7 +450,7 @@ function AddMatchForm({
   return (
     <div className="rounded-card border border-primary/40 bg-primary-soft/60 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-fg">{isFfa ? "Neue Runde" : "Neues Match"}</p>
+        <p className="text-sm font-semibold text-fg">Neues Match</p>
         <button onClick={onCancel} className="p-1.5 -m-1 text-subtle active:text-fg">
           <X className="w-4 h-4" />
         </button>
@@ -544,7 +546,7 @@ function AddMatchForm({
 
       <button onClick={onSubmit} disabled={loading || (isFfa && (mFfaIds.length === 0 || mRound < 1))}
         className="w-full flex items-center justify-center gap-2 text-sm font-semibold bg-primary disabled:opacity-40 text-primary-ink rounded-control py-3">
-        <PlusIcon className="w-4 h-4" /> {isFfa ? `Runde ${mRound} erstellen` : "Match erstellen"}
+        <PlusIcon className="w-4 h-4" /> {isFfa ? `Match ${mRound} erstellen` : "Match erstellen"}
       </button>
     </div>
   );

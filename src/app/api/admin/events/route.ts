@@ -16,6 +16,8 @@ import { dispatchNotification } from "@/lib/notify-dispatch";
 import { discardUnusedPolls } from "@/lib/event-polls";
 import { formatBerlinDateTime } from "@/lib/time";
 import { BLOCKS_GAME, sanitizeBlocksEventConfig } from "@/lib/blocks/event-config";
+import { checkRoundChain } from "@/lib/series-schedule-server";
+import { parseSchedule, serializeSchedule } from "@/lib/series-schedule";
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
@@ -197,6 +199,18 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  // Runden einer Reihe bleiben lückenlos: geändertes Ende/Start verschiebt die angrenzende Runde mit
+  // (lib/series-schedule-server.ts). Der Soll-Platz (slotIndex) ändert sich hier nie.
+  delete data.slotIndex;
+  if (data.startAt !== undefined || endAt !== undefined) {
+    const chain = await checkRoundChain(eventId, {
+      ...(data.startAt && { startAt: new Date(data.startAt) }),
+      ...(endAt !== undefined && { endAt: data.endAt }),
+    });
+    if (chain.error) return NextResponse.json({ error: chain.error }, { status: 400 });
+    await chain.apply();
+  }
+
   // Wenn seriesScope === "all", Titel + Beschreibung für alle Events der Reihe übernehmen
   if (seriesScope === "all") {
     const current = await prisma.event.findUnique({ where: { id: eventId }, select: { seriesId: true } });
@@ -301,9 +315,22 @@ export async function DELETE(req: NextRequest) {
   // davon nur, wenn das Event plötzlich aus ihrer Liste verschwindet. Der Veranstalter selbst nicht.
   const upcoming = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { title: true, startAt: true, registrations: { select: { userId: true } } },
+    select: {
+      title: true, startAt: true, slotIndex: true, seriesId: true, registrations: { select: { userId: true } },
+      series: { select: { scheduleMode: true, scheduleJson: true } },
+    },
   });
   const now = new Date();
+
+  // Fester Termin einer Reihe fällt aus: Platz als ausgefallen merken, sonst legt die Terminplanung
+  // ihn gleich wieder an (lib/series-schedule.ts). Runden werden dagegen nachgezogen (lückenlose Kette).
+  if (upcoming?.seriesId && upcoming.slotIndex != null && upcoming.series?.scheduleMode === "termine") {
+    const schedule = parseSchedule(upcoming.series.scheduleJson);
+    if (schedule && !schedule.skippedSlots.includes(upcoming.slotIndex)) {
+      schedule.skippedSlots = [...schedule.skippedSlots, upcoming.slotIndex].sort((a, b) => a - b);
+      await prisma.eventSeries.update({ where: { id: upcoming.seriesId }, data: { scheduleJson: serializeSchedule(schedule) } });
+    }
+  }
 
   await deleteEventRecord(eventId);
 

@@ -304,7 +304,7 @@ export default function FfaView({
     if (hasTurnierpunkte) return { label: "Eventpunkte", value: fmtUpTo2(turnierpunkteByUser[r.userId] ?? 0) };
     if (isAvg) { const c = avgTotals.get(r.userId)?.combined; return { label: "Ø Gesamt", value: c != null ? formatFixed(c, 2) : "–" }; }
     const f = statFields[0];
-    return { label: f ?? "Runden", value: f ? (r.stats[f] ? fmtUpTo2(r.stats[f]) : "–") : String(r.matchCount) };
+    return { label: f ?? "Matches", value: f ? (r.stats[f] ? fmtUpTo2(r.stats[f]) : "–") : String(r.matchCount) };
   };
 
   // Nach Rundennummer sortiert — nachgetragene Runden erscheinen an ihrer Stelle, nicht am Ende
@@ -334,9 +334,9 @@ export default function FfaView({
           {info.panel(<>
             <p>
               {isAvg
-                ? <>Es zählt der Durchschnitt über alle eingetragenen Runden ({avgWinnerDirection === "low" ? "niedriger ist besser" : "höher ist besser"}). Nicht eingetragene Werte zählen nicht als 0.</>
+                ? <>Es zählt der Durchschnitt über alle eingetragenen Matches ({avgWinnerDirection === "low" ? "niedriger ist besser" : "höher ist besser"}). Nicht eingetragene Werte zählen nicht als 0.</>
                 : hasTurnierpunkte
-                  ? <>Jeder Wert bringt Eventpunkte (Wert × Punkte pro Wert{placementPoints ? ", dazu Punkte für die Rundenplatzierung" : ""}). Die meisten Eventpunkte gewinnen.</>
+                  ? <>Jeder Wert bringt Eventpunkte (Wert × Punkte pro Wert{placementPoints ? ", dazu Punkte für die Platzierung im Match" : ""}). Die meisten Eventpunkte gewinnen.</>
                   : <>Sortiert nach <b>{sortFields[0]}</b>{sortFields.length > 1 && <>, bei Gleichstand nach {sortFields.slice(1).join(", ")}</>}.</>}
             </p>
             {POINTS_GLOSSARY}
@@ -360,7 +360,7 @@ export default function FfaView({
                       <RankedAvatar userId={r.user.id} src={r.user.image} alt={uname(r.user)} size={28} className="w-7 h-7" />
                       <span className="min-w-0 flex-1">
                         <span className={`block truncate text-sm font-bold ${isMe ? "text-primary-fg" : "text-fg"}`}>{uname(r.user)}{isMe && " (du)"}</span>
-                        <span className="block text-xs text-subtle">{r.matchCount} {r.matchCount === 1 ? "Runde" : "Runden"}{table > 0 && <> · <span className="text-primary-fg font-semibold">{isLigaPunkteLive ? "~" : ""}+{fmtUpTo2(table)} Tabellenpkt.</span></>}</span>
+                        <span className="block text-xs text-subtle">{r.matchCount} {r.matchCount === 1 ? "Match" : "Matches"}{table > 0 && <> · <span className="text-primary-fg font-semibold">{isLigaPunkteLive ? "~" : ""}+{fmtUpTo2(table)} Tabellenpkt.</span></>}</span>
                       </span>
                       <span className="shrink-0 text-right">
                         <span className="block text-base font-extrabold tabular-nums text-fg">{main.value}</span>
@@ -377,7 +377,7 @@ export default function FfaView({
                       ))}
                       {trackMatchWin && <div className="flex justify-between gap-2"><dt className="text-subtle">Match Wins</dt><dd className="font-semibold tabular-nums text-success">{r.stats["Match Win"] ?? 0}</dd></div>}
                       {hasTurnierpunkte && <div className="flex justify-between gap-2"><dt className="text-subtle">Eventpunkte</dt><dd className="font-bold tabular-nums text-coin">{fmtUpTo2(turnierpunkteByUser[r.userId] ?? 0)}</dd></div>}
-                      <div className="flex justify-between gap-2"><dt className="text-subtle">Runden</dt><dd className="font-semibold tabular-nums text-fg">{r.matchCount}</dd></div>
+                      <div className="flex justify-between gap-2"><dt className="text-subtle">Matches</dt><dd className="font-semibold tabular-nums text-fg">{r.matchCount}</dd></div>
                     </dl>
                   </details>
                 </li>
@@ -406,7 +406,7 @@ export default function FfaView({
                     {trackMatchWin && sortTh("__mw", "Match Wins", "text-success")}
                     {hasTurnierpunkte && sortTh("__event", "Eventpunkte", "text-coin")}
                     {sortTh("__table", "Tabellenpunkte", "text-primary-fg")}
-                    {sortTh("__rounds", "Runden")}
+                    {sortTh("__rounds", "Matches")}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -596,7 +596,7 @@ export default function FfaView({
       {upcomingMatches.length > 0 && (
         <div>
           <h2 className="text-base font-extrabold text-fg mb-3">
-            Ausstehende Runden
+            Ausstehende Matches
           </h2>
           <div className="space-y-2">
             {upcomingMatches.map(match => (
@@ -675,7 +675,7 @@ export default function FfaView({
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-sm font-medium text-fg truncate">
-                        Runde {match.position}
+                        Match {match.position}
                         {statRoundNote(match) && <span className="text-muted font-normal"> · {statRoundNote(match)}</span>}
                       </span>
                       {match.resultConfirmed === false && (
@@ -777,7 +777,7 @@ export default function FfaView({
 
       {matches.length === 0 && (
         <div className="glass rounded-2xl p-10 text-center text-subtle text-sm">
-          Noch keine Runden angelegt.
+          Noch keine Matches angelegt.
         </div>
       )}
     </div>

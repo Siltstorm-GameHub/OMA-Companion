@@ -2,6 +2,7 @@
 // (SeasonPrefill) mit dem aktuellen Stand im Saison-Assistenten. Reine Funktion, siehe seasonDiff.test.ts.
 import type { TournamentTemplate } from "@/lib/series-seasons";
 import { CHECK_IN_MINUTES } from "@/lib/checkin";
+import { MODE_LABEL, describeSchedule, type SeriesSchedule } from "@/lib/series-schedule";
 import type { PlacementReward, PollConfig, SeasonPrefill, StatRow } from "./shared";
 
 export type SeasonState = {
@@ -11,7 +12,7 @@ export type SeasonState = {
   variousGames: boolean;
   fixedGame: string;
   seriesFormat: string;
-  recurrenceType: string;
+  schedule: SeriesSchedule | null;
   spectatorMode: boolean;
   statParticipationPts: number;
   statSpectatorParticipationPts: number;
@@ -29,6 +30,8 @@ export type SeasonState = {
 };
 
 const yesNo = (b: boolean) => (b ? "an" : "aus");
+/** Regel ohne Datum ("Eventreihe · Jeden Donnerstag, 20:00–23:00") — der erste Termin einer neuen Saison ist immer ein anderer */
+const scheduleLabel = (s: SeriesSchedule | null) => (s ? `${MODE_LABEL[s.mode]} · ${describeSchedule(s)}` : "keine");
 
 function templateLabel(t: TournamentTemplate): string[] {
   const out: string[] = [];
@@ -55,7 +58,7 @@ export function seasonChanges(prev: SeasonPrefill, cur: SeasonState): string[] {
   if (prev.eventType !== cur.eventType) out.push(`Reihentyp: ${prev.eventType === "tournament" ? "Turnier" : "Freies Spiel"} → ${cur.eventType === "tournament" ? "Turnier" : "Freies Spiel"}`);
   changed("Spiel", prev.variousGames ? "verschiedene" : prev.fixedGame, cur.variousGames ? "verschiedene" : cur.fixedGame);
   if (cur.eventType === "tournament") changed("Format", prev.seriesFormat, cur.seriesFormat);
-  changed("Wiederholung", prev.recurrenceType, cur.recurrenceType);
+  changed("Termine", scheduleLabel(prev.schedule), scheduleLabel(cur.schedule));
   if (prev.spectatorMode !== cur.spectatorMode) out.push(`Zuschauer-Modus: ${yesNo(prev.spectatorMode)} → ${yesNo(cur.spectatorMode)}`);
 
   // Punkte der Reihentabelle

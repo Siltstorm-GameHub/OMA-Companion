@@ -1,14 +1,15 @@
 import { eventGenreForGameName } from "@/lib/games/event-genre-server";
 import { normalizeCategory } from "@/lib/event-category";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getSessionUser, requireModeratorOrSquadCaptain, hasMinRole } from "@/lib/roles";
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { assertCreatorQuota, CreatorLimitError, initialApprovalStatus } from "@/lib/community-events";
 import { capCaptainRewardFields, capMatchResultPoints, capPlacementRewardsJson } from "@/lib/captain-reward-limits";
 import { isOpenSeasonEvent, parseSeriesCompletion, parseTournamentTemplate, serializeTournamentTemplate, templateEventFields } from "@/lib/series-seasons";
 import { prisma } from "@/lib/prisma";
-import { calcNextDate } from "@/lib/recurrence";
-import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
+import { assignSlots, previewTerms, sanitizeSchedule, scheduleProblem, serializeSchedule } from "@/lib/series-schedule";
+import { ensureSeriesSchedule } from "@/lib/series-schedule-server";
+import { publishEvent } from "@/lib/event-publish";
 import { allowedCoverUrl } from "@/lib/event-cover-presets";
 import { seriesEventStatFieldsFromConfig } from "@/lib/series-stat-fields";
 
@@ -49,9 +50,8 @@ export async function POST(req: NextRequest) {
   const {
     name, description,
     category, genre, fixedGame, fixedFormat, discordChannelId,
-    recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
-    startDate, endDate, firstEventEndAt, hidden, registrationLocked, squadId,
+    hidden, registrationLocked, squadId,
     spectatorMode, spectatorRewardJson,
     groupId, tournamentTemplateJson,
   } = body;
@@ -61,9 +61,14 @@ export async function POST(req: NextRequest) {
   const seriesGenre = genre || (await eventGenreForGameName(fixedGame)) || null;
   const seriesCategory = normalizeCategory(category) ?? "fun";
   const coverUrl = allowedCoverUrl(rawBody.coverImageUrl, isModerator);
-  if (startDate && firstEventEndAt && new Date(firstEventEndAt) <= new Date(startDate)) {
-    return NextResponse.json({ error: "Ende muss nach dem Start liegen" }, { status: 400 });
-  }
+  // Terminplanung (lib/series-schedule.ts): Ablaufart, Regel und erster Termin. Ohne Planung entsteht
+  // nur die Reihe (z.B. "Keine feste Regel" ohne ersten Termin).
+  const schedule = rawBody.schedule ? sanitizeSchedule(rawBody.schedule) : null;
+  if (rawBody.schedule && !schedule) return NextResponse.json({ error: "Ablaufart oder erster Termin fehlt" }, { status: 400 });
+  const scheduleError = schedule ? scheduleProblem(schedule) : null;
+  if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 });
+  // Ohne Regel ist der erste Termin optional — dann legt die Reihe noch keinen Termin an
+  const createFirst = !!schedule && (schedule.rhythm !== null || rawBody.createFirstEvent !== false);
 
   const placementJson     = placementRewardsJson != null ? JSON.stringify(placementRewardsJson) : null;
   const pollsJson         = pollsConfigJson      != null ? JSON.stringify(pollsConfigJson)      : null;
@@ -128,8 +133,8 @@ export async function POST(req: NextRequest) {
           fixedGame: fixedGame?.trim() || null,
           fixedFormat: fixedFormat || null,
           discordChannelId: discordChannelId?.trim() || null,
-          recurrenceType: recurrenceType ?? null,
-          recurrenceMonthlyMode: recurrenceMonthlyMode ?? null,
+          scheduleMode: schedule?.mode ?? null,
+          scheduleJson: schedule ? serializeSchedule(schedule) : null,
           placementRewardsJson: placementJson,
           pollsConfigJson: pollsJson,
           seriesStatConfig: seriesStatConfig ?? null,
@@ -157,7 +162,8 @@ export async function POST(req: NextRequest) {
         });
         const movable = candidates.filter(isOpenSeasonEvent).map(e => e.id);
         if (movable.length > 0) {
-          await tx.event.updateMany({ where: { id: { in: movable } }, data: { seriesId: created.id } });
+          // Soll-Plätze der Vorsaison gelten nicht mehr — unten nach der neuen Regel zugeordnet
+          await tx.event.updateMany({ where: { id: { in: movable } }, data: { seriesId: created.id, slotIndex: null } });
           movedEvents += movable.length;
         }
         const completion = parseSeriesCompletion(m.completion);
@@ -169,66 +175,31 @@ export async function POST(req: NextRequest) {
       return created;
     });
 
-    // Bulk-Event-Erstellung wenn startDate vorhanden
+    // Termine: der erste Termin entsteht mit allen Einstellungen aus dem Assistenten, die weiteren legt
+    // die Terminplanung im Vorlauf an (lib/series-schedule-server.ts) — sie übernehmen die Einstellungen
+    // des ersten. Wurden offene Termine aus der Vorsaison übernommen, werden diese den Plätzen der neuen
+    // Regel zugeordnet statt eines neuen ersten Termins.
     let eventsCreated = 0;
-    if (startDate) {
-      const start = new Date(startDate);
-      const end   = endDate ? new Date(endDate) : null;
-      // Dauer des ersten Termins (falls Ende mitgegeben) — wird von calcNextDate auf jeden
-      // weiteren generierten Termin übertragen, damit die Serie ihre Spannweite behält.
-      const firstEnd = firstEventEndAt ? new Date(firstEventEndAt) : null;
-      const durationMs = firstEnd ? firstEnd.getTime() - start.getTime() : undefined;
-
-      if (recurrenceType && recurrenceType !== "none" && end) {
-        const dates: (Date & { endAt?: Date })[] = [Object.assign(new Date(start), firstEnd ? { endAt: firstEnd } : {})];
-        let current: Date = start;
-        while (true) {
-          const next = calcNextDate(
-            current,
-            recurrenceType as RecurrenceType,
-            (recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
-            start,
-            durationMs,
-          );
-          if (next > end) break;
-          dates.push(next);
-          current = next;
+    if (schedule) {
+      const moved = movedEvents > 0
+        ? await prisma.event.findMany({ where: { seriesId: series.id }, select: { id: true, startAt: true, endAt: true, status: true } })
+        : [];
+      if (moved.length > 0) {
+        for (const a of assignSlots(schedule, moved)) {
+          if (a.slotIndex != null) await prisma.event.update({ where: { id: a.eventId }, data: { slotIndex: a.slotIndex } });
         }
-
-        for (let i = 0; i < dates.length; i++) {
-          const createdEvent = await prisma.event.create({
-            data: {
-              title: `${name.trim()} #${i + 1}`,
-              startAt: dates[i],
-              endAt: dates[i].endAt ?? null,
-              seriesId: series.id,
-              createdById: series.createdById,
-              approvalStatus: series.approvalStatus,
-              category: seriesCategory,
-              genre: seriesGenre,
-              game: fixedGame?.trim() || null,
-              format: fixedFormat || null,
-              discordChannelId: discordChannelId?.trim() || null,
-              type: body.eventType ?? "community",
-              pointReward: 0,
-              placementRewardsJson: eventPlacementJson(placementJson),
-              pollsConfigJson: pollsJson,
-              spectatorMode: spectatorEnabled,
-              spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
-              ...templateFields,
-            },
-          });
-          eventsCreated++;
-        }
-      } else if (!recurrenceType || recurrenceType === "none") {
-        const createdEvent = await prisma.event.create({
+      } else if (createFirst) {
+        const first = previewTerms(schedule, 1)[0];
+        const firstEvent = await prisma.event.create({
           data: {
             title: `${name.trim()} #1`,
-            startAt: start,
-            endAt: firstEnd,
+            startAt: first.startAt,
+            endAt: first.endAt,
+            slotIndex: schedule.rhythm ? first.slotIndex : null,
             seriesId: series.id,
             createdById: series.createdById,
             approvalStatus: series.approvalStatus,
+            hidden: series.hidden,
             category: seriesCategory,
             genre: seriesGenre,
             game: fixedGame?.trim() || null,
@@ -244,7 +215,10 @@ export async function POST(req: NextRequest) {
           },
         });
         eventsCreated = 1;
+        // Ankündigung (Discord, Push) — publishEvent überspringt ausgeblendete und wartende Termine
+        after(() => publishEvent(firstEvent.id));
       }
+      eventsCreated += await ensureSeriesSchedule(series.id);
     }
 
     return NextResponse.json({ ...series, eventsCreated, movedEvents });

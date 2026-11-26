@@ -12,6 +12,7 @@ import { inputCls, SETTINGS_TABS, needsAttention, eventDot, STATUS_CONFIG, Event
 import { Podium } from "@/components/ui/Podium";
 import { useSeriesDetail } from "./useSeriesDetail";
 import SeriesTabGeneral from "./SeriesTabGeneral";
+import SeriesTabSchedule from "./SeriesTabSchedule";
 import SeriesTabGoal from "./SeriesTabGoal";
 import SeriesTabRewards from "./SeriesTabRewards";
 import SeriesTabPolls from "./SeriesTabPolls";
@@ -22,7 +23,7 @@ import SeriesTabLegacy from "./SeriesTabLegacy";
  *  ./useSeriesDetail.tsx, die Reiter in ./SeriesTab*.tsx, gemeinsame Bausteine in ./series-shared.tsx. */
 export default function SeriesDetailClient(props: SeriesDetailProps) {
   const ctx = useSeriesDetail(props);
-  const { series, hasActiveSibling, isModerator, canUndoCompletion, isArchived, undoConfirm, setUndoConfirm, undoing, saving, activeSettingsTab, setActiveSettingsTab, generatingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, deleteConfirm, setDeleteConfirm, deleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, description, icon, seriesColor, recurrenceType, hidden, registrationLocked, sortedSeriesEvents, saveSettings, openGenerateModal, generateNextEvent, undoCompletion, deleteSeries, ConfirmDialogElement, settingsDirty, discardSettings, confirm } = ctx;
+  const { series, hasActiveSibling, isModerator, canUndoCompletion, isArchived, undoConfirm, setUndoConfirm, undoing, saving, activeSettingsTab, setActiveSettingsTab, generatingNext, showGenerateModal, setShowGenerateModal, generateDateStr, setGenerateDateStr, generateEndStr, setGenerateEndStr, deleteConfirm, setDeleteConfirm, deleting, deleteRevertCoins, setDeleteRevertCoins, deleteRevertRankPoints, setDeleteRevertRankPoints, name, description, icon, seriesColor, scheduleMode, schedule, hidden, registrationLocked, sortedSeriesEvents, saveSettings, openGenerateModal, generateNextEvent, undoCompletion, deleteSeries, ConfirmDialogElement, settingsDirty, discardSettings, confirm } = ctx;
   // Mitglieder dürfen ihre Reihe löschen, solange kein Termin abgeschlossen ist (api/admin/series/[id])
   // (12) Übersicht: Fortschritt, nächster Termin, offene Abschlüsse, Top 3
   const evs = series.events as (SeriesEvent & { startAt: string | Date; status: string })[];
@@ -62,6 +63,21 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               Neue Saison einrichten <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           )}
+        </div>
+      )}
+
+      {/* Alte Planung: Ablaufart noch nicht festgelegt — bis dahin keine automatischen Termine */}
+      {series.status === "active" && !scheduleMode && (
+        <div className="flex items-center gap-3 rounded-control px-4 py-3 border border-warning/40 bg-warning-soft">
+          <Clock className="w-4 h-4 text-warning shrink-0" />
+          <p className="flex-1 text-sm text-fg/90">
+            Lege fest, ob diese Reihe eine Eventreihe (feste Termine) oder eine Challenge-Reihe (lückenlose Runden) ist.
+            Bis dahin entstehen keine neuen Termine automatisch.
+          </p>
+          <button type="button" onClick={() => setActiveSettingsTab("schedule")}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink max-lg:min-h-10">
+            Ablaufart festlegen
+          </button>
         </div>
       )}
 
@@ -167,6 +183,7 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
 
           {/* ── Tab: Allgemein ── */}
           {activeSettingsTab === "general" && <SeriesTabGeneral ctx={ctx} />}
+          {activeSettingsTab === "schedule" && <SeriesTabSchedule ctx={ctx} />}
           {activeSettingsTab === "goal" && <SeriesTabGoal ctx={ctx} />}
 
           {/* ── Tab: Belohnungen ── */}
@@ -192,13 +209,15 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
               <span className="flex items-center gap-1.5 text-xs text-subtle">
                 <Lock className="w-3 h-3" /> Saison abgeschlossen — keine neuen Termine
               </span>
+            ) : scheduleMode === "runden" ? (
+              <span className="text-xs text-subtle">Runden entstehen automatisch</span>
             ) : (
             <button
               onClick={openGenerateModal} disabled={generatingNext}
               className="flex items-center gap-1.5 text-xs text-primary-fg hover:text-fg border border-primary/40 hover:bg-primary-hover rounded-control px-3 py-1.5 transition-all disabled:opacity-50 max-lg:min-h-10"
             >
               <CalendarPlus className="w-3.5 h-3.5" />
-              {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin anlegen" : "Termin hinzufügen"}
+              {generatingNext ? "Erstellt…" : schedule?.rhythm ? "Sondertermin" : "Termin hinzufügen"}
             </button>
             )}
           </div>
@@ -230,6 +249,9 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
                     <span className={`size-2.5 shrink-0 rounded-full ${dot.cls}`} title={dot.label} aria-label={dot.label} />
                     <Link href={`/events/verwalten/${ev.id}`} className="flex-1 min-w-0 group">
                       <p className="text-sm text-fg truncate flex items-center gap-2 flex-wrap group-hover:text-primary-fg">
+                        {ev.slotIndex != null && scheduleMode && (
+                          <span className="text-xs font-semibold text-primary-fg shrink-0">{scheduleMode === "runden" ? "Runde" : "Termin"} {ev.slotIndex + 1}</span>
+                        )}
                         {ev.title}
                         <span className="text-subtle font-normal"> · {formatBerlinDate(ev.startAt, { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (
@@ -386,19 +408,23 @@ export default function SeriesDetailClient(props: SeriesDetailProps) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-sm rounded-control border border-line bg-surface-2 p-4 space-y-3">
             <p className="text-sm font-semibold text-fg flex items-center gap-1.5">
-              <CalendarPlus className="w-4 h-4 text-primary-fg" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
+              <CalendarPlus className="w-4 h-4 text-primary-fg" /> {schedule?.rhythm ? "Sondertermin hinzufügen" : "Termin hinzufügen"}
             </p>
             <p className="text-xs text-subtle">
-              {recurrenceType
-                ? "Vorgeschlagen anhand der Wiederholungsregel — du kannst das Datum bei Bedarf anpassen, ohne die feste Wiederholung der Reihe zu verändern."
-                : "Diese Reihe hat keine automatische Wiederholung — wähle das Datum für den neuen Termin manuell."}
+              {schedule?.rhythm
+                ? "Ein zusätzlicher Termin außerhalb der Regel. Die regulären Termine legt die Terminplanung selbst an — ein verschobener Termin wird dagegen im Termin selbst umgestellt."
+                : "Wähle Start und optional Ende für den neuen Termin."}
             </p>
             <input
               type="datetime-local"
               value={generateDateStr}
               onChange={(e) => setGenerateDateStr(e.target.value)}
               className={inputCls}
+              aria-label="Start"
             />
+            <label className="block text-xs text-subtle">Ende (optional)
+              <input type="datetime-local" value={generateEndStr} onChange={(e) => setGenerateEndStr(e.target.value)} className={`${inputCls} mt-1`} />
+            </label>
             <div className="flex items-center justify-end gap-2 pt-1">
               <button
                 onClick={() => setShowGenerateModal(false)}

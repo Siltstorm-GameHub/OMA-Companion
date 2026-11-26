@@ -7,7 +7,6 @@ import {
 import { formToGoal, goalToForm } from "./community-goal-form";
 import { goalStreakAfter, parseGoalState, streakBonusDue } from "./goal-state";
 import { resultText } from "./community-goal-milestones";
-import { takePlannedGoal } from "./goal-plan";
 import { parseTournamentTemplate, serializeTournamentTemplate } from "./series-seasons";
 import { computeEventPoints, GOAL_BONUS_POINTS_FIELD } from "./series-event-points";
 
@@ -104,39 +103,11 @@ describe("Zusatzoptionen", () => {
   });
 });
 
-describe("Ziel-Planung", () => {
-  const plan: CommunityGoal[] = [
-    { fields: ["Kills"], target: 2, scope: "community", mode: "avg" },
-    { fields: ["Tore"], target: 500, scope: "community" },
-  ];
-
-  test("Vorlage speichert den Plan", () => {
-    const t = parseTournamentTemplate(serializeTournamentTemplate({ goalPlan: plan }));
-    assert.deepEqual(t.goalPlan, plan);
-    assert.equal(parseTournamentTemplate(serializeTournamentTemplate({ goalPlan: [] })).goalPlan, undefined);
-  });
-
-  test("der nächste Zyklus nimmt das erste Ziel, der Rest bleibt", () => {
-    const r = takePlannedGoal(plan, "coop_stats", ["Kills", "Tore"]);
-    assert.deepEqual(r.goal, plan[0]);
-    assert.deepEqual(r.rest, [plan[1]]);
-  });
-
-  test("passt das erste Ziel nicht, nimmt der Termin das nächste passende — das andere bleibt stehen", () => {
-    const r = takePlannedGoal(plan, "coop_stats", ["Tore"]);
-    assert.deepEqual(r.goal, plan[1]);
-    assert.deepEqual(r.rest, [plan[0]]);
-  });
-
-  test("passt keins, bleibt der Plan unverändert", () => {
-    const r = takePlannedGoal(plan, "coop_stats", ["Assists"]);
-    assert.equal(r.goal, null);
-    assert.deepEqual(r.rest, plan);
-  });
-
-  test("Formate ohne Ziel verbrauchen nichts", () => {
-    const r = takePlannedGoal(plan, null, []);
-    assert.equal(r.goal, null);
-    assert.equal(r.rest.length, 2);
+describe("Turniervorlage", () => {
+  test("ein alter Zielplan (entfernt) fällt beim Lesen still weg", () => {
+    const goal: CommunityGoal = { fields: ["Tore"], target: 500, scope: "community" };
+    const t = parseTournamentTemplate(JSON.stringify({ communityGoal: goal, goalPlan: [goal] }));
+    assert.deepEqual(Object.keys(t), ["communityGoal"]);
+    assert.equal(serializeTournamentTemplate({}), null);
   });
 });

@@ -22,7 +22,7 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
         events: {
           orderBy: { startAt: "desc" },
           select: {
-            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true, type: true,
+            id: true, title: true, startAt: true, endAt: true, status: true, maxPlayers: true, hidden: true, tournamentStatus: true, type: true, slotIndex: true,
             format: true, statConfigJson: true, goalStateJson: true,
             _count: { select: { registrations: true } },
           },

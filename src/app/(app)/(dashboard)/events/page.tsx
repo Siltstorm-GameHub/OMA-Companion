@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { eventHasPlacement } from "@/lib/event-placement";
 import { prisma } from "@/lib/prisma";
-import { parseCycleConfig } from "@/lib/series-cycles-config";
+import { showsOnlyNextTerm } from "@/lib/series-schedule";
 import { isOmaOriginal } from "@/lib/oma-original";
 import { OmaTitlePrefix } from "@/components/OmaOriginalMark";
 import { getSessionUser } from "@/lib/roles";
@@ -93,17 +93,17 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   // Kürzlich (≤3 Tage) beendete Events bleiben ganz oben sichtbar, damit Nutzer die Ergebnisse
   // nicht verpassen — erst danach wandern sie in den eingeklappten "Abgeschlossen"-Bereich.
   const recentFinishedItems = allItems.filter(isRecentlyFinished).sort((a, b) => b.endedAt - a.endedAt);
-  // Dauer-Reihen (Zyklus-Automatik): Kommende Zyklen sind vorab veröffentlicht, damit man sich früh
-  // anmelden kann — in der Übersicht steht aber nur der nächste (bzw. laufende) Zyklus je Reihe, damit
-  // einzelne Events nicht untergehen. Die weiteren Zyklen erreicht man über die Reihe.
+  // Reihen mit Terminplanung: Kommende Termine/Runden sind vorab veröffentlicht, damit man sich früh
+  // anmelden kann — in der Übersicht steht aber nur der nächste (bzw. laufende) Termin je Reihe, damit
+  // einzelne Events nicht untergehen. Die weiteren erreicht man über die Reihe.
   const upcomingAll = allItems.filter(i => !i.finished).sort((a, b) => a.ev.startAt.getTime() - b.ev.startAt.getTime());
   const moreCyclesBySeries = new Map<string, number>();
   const upcomingItems = upcomingAll.filter(i => {
-    const sid = i.ev.series && parseCycleConfig(i.ev.series.cycleConfigJson).enabled ? i.ev.series.id : null;
+    const sid = i.ev.series && showsOnlyNextTerm(i.ev.series) ? i.ev.series.id : null;
     if (!sid) return true;
     const seen = moreCyclesBySeries.get(sid);
     if (seen === undefined) { moreCyclesBySeries.set(sid, 0); return true; }
-    // Weitere Zyklen, für die der User schon angemeldet ist, bleiben trotzdem ausgeblendet — sie stehen
+    // Weitere Termine, für die der User schon angemeldet ist, bleiben trotzdem ausgeblendet — sie stehen
     // unter "Meine Events" und in der Reihe
     moreCyclesBySeries.set(sid, seen + 1);
     return false;

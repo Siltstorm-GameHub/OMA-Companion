@@ -262,6 +262,7 @@ export default function TabSchedule({ ctx }: { ctx: EventEdit }) {
                 winnerStatKeys={bracketWinnerStatKeys}
                 matchWinStatKeys={bracketMatchWinStatKeys}
                 standaloneEvent={!event.series}
+                singleMatch={event.series?.scheduleMode === "runden"}
                 placementPoints={bracketPlacementPoints}
                 pointsCfg={tmPointsCfg}
                 goal={resolvedGoal.goal}

@@ -259,11 +259,17 @@ model EventSeries {
   category               EventCategory @default(fun)
   genre                  EventGenre?
   platform               String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
+  // Terminplanung (lib/series-schedule.ts): "termine" (feste Termine) | "runden" (lückenlose Zeiträume).
+  // null = alte Planung, noch nicht umgestellt — dann legt das System keine Termine automatisch an,
+  // bis die Ablaufart in den Reihen-Einstellungen festgelegt ist. Wechsel nur mit einer neuen Saison.
+  scheduleMode           String?
+  // JSON: SeriesSchedule { mode, rhythm, monthlyMode, intervalDays, anchorAt, durationMinutes,
+  // aheadCount, carryParticipants, end, skippedSlots } — siehe lib/series-schedule.ts
+  scheduleJson           String?
+  // Alte Planung (vor scheduleMode) — nur noch gelesen, um alte Reihen umzustellen
   recurrenceType         String? // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode  String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
-  // Zyklus-Automatik (lib/series-cycles.ts), JSON: { enabled, aheadCount, carryParticipants, endsAt? } —
-  // legt laufend die nächsten Termine nach der Wiederholungsregel an und veröffentlicht sie vorab
-  cycleConfigJson        String?
+  cycleConfigJson        String? // JSON: { enabled, aheadCount, carryParticipants, endsAt? }
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2, isWinnerStat?, isMatchWinStat? }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege", winnerStatKeys?: string[], matchWinStatKeys?: string[] }
   seriesStatConfig       String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
@@ -372,6 +378,9 @@ model Event {
   discordMessageId    String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
   discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
   seriesId            String?
+  // Soll-Platz in der Regel der Reihe (lib/series-schedule.ts): bleibt beim Verschieben erhalten.
+  // null = Sondertermin bzw. Reihe ohne feste Regel. Je Reihe eindeutig (verhindert doppelte Termine).
+  slotIndex           Int?
   reminderSentAt      DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
   // Zeitraum-Events (> 24 h): "Endet bald"-Erinnerung schon verschickt (lib/event-period.ts)
   endingSoonSentAt    DateTime?
@@ -449,6 +458,7 @@ model Event {
   comments           EventComment[]
   commentReads       EventCommentRead[]
 
+  @@unique([seriesId, slotIndex])
   @@index([createdById])
 }
 

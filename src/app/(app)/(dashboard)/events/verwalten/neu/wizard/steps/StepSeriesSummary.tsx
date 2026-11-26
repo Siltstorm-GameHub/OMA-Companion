@@ -2,20 +2,22 @@
 import { isBlocksGame } from "@/lib/oma-original";
 import { GENRES } from "@/lib/app-icons";
 import AppIcon from "@/components/AppIcon";
-import { fromDatetimeLocalBerlin, formatBerlinDateTime, formatBerlinDate } from "@/lib/time";
-import { CATEGORIES, FORMATS, RECURRENCE_OPTS } from "../shared";
+import { formatBerlinDateTime } from "@/lib/time";
+import { MODE_LABEL, TERM_LABEL, describeSchedule } from "@/lib/series-schedule";
+import { CATEGORIES, FORMATS } from "../shared";
 import type { EventWizard } from "../useEventWizard";
 import { seasonChanges } from "../seasonDiff";
 
 // ── Step 4 (Series): Zusammenfassung ──────────────────────────────────────────
 export default function StepSeriesSummary({ w }: { w: EventWizard }) {
-  const { seasonPrefill, variousGames, statParticipationPts, statSpectatorParticipationPts, dominionEnabled, dominionTriggerStats, dominionThreshold, dominionCoins, dominionSeriesPoints, tournamentTemplate, squads, category, eventType, spectatorMode, seriesName, fixedGame, fixedGenre, seriesDiscordId, seriesFormat, seriesStartDate, seriesEndDate, recurrenceType, statRows, seriesHidden, seriesRegistrationLocked, seriesSquadId, eventStatFields, winnerStatField, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, isSeriesMode, previewDates } = w;
+  const { seasonPrefill, variousGames, statParticipationPts, statSpectatorParticipationPts, dominionEnabled, dominionTriggerStats, dominionThreshold, dominionCoins, dominionSeriesPoints, tournamentTemplate, squads, category, eventType, spectatorMode, seriesName, fixedGame, fixedGenre, seriesDiscordId, seriesFormat, schedule, createFirstEvent, statRows, seriesHidden, seriesRegistrationLocked, seriesSquadId, eventStatFields, winnerStatField, participationCoins, participationRankPts, placements, spectatorCoins, spectatorRankPts, polls, isSeriesMode } = w;
   const catCfg   = CATEGORIES.find(c => c.value === category);
   const genreCfg = fixedGenre ? GENRES.find(g => g.value === fixedGenre) : null;
-  const recLabel = RECURRENCE_OPTS.find(r => r.value === recurrenceType)?.label ?? "Keine";
+  const term = TERM_LABEL[schedule.mode];
+  const firstCreated = !!schedule.rhythm || createFirstEvent;
   // Neue Saison: was ist anders als in der Vorsaison?
   const changes = seasonPrefill ? seasonChanges(seasonPrefill, {
-    name: seriesName, category, eventType, variousGames, fixedGame, seriesFormat, recurrenceType, spectatorMode,
+    name: seriesName, category, eventType, variousGames, fixedGame, seriesFormat, schedule, spectatorMode,
     statParticipationPts, statSpectatorParticipationPts, statRows, eventStatFields, winnerStatField,
     participationCoins, placements, polls,
     dominion: { enabled: dominionEnabled, triggerStats: dominionTriggerStats, threshold: dominionThreshold, coins: dominionCoins, seriesPoints: dominionSeriesPoints },
@@ -43,18 +45,17 @@ export default function StepSeriesSummary({ w }: { w: EventWizard }) {
           {catCfg && <AppIcon kind="category" name={catCfg.value} size={40} className="text-3xl" />}
           <div>
             <p className={`text-lg font-bold ${catCfg?.color}`}>{seriesName || "Eventreihe"}</p>
-            <p className="text-xs text-subtle">{catCfg?.label} · {eventType === "tournament" ? "Turnier-Reihe" : "Community-Reihe"}</p>
+            <p className="text-xs text-subtle">{MODE_LABEL[schedule.mode]} · {catCfg?.label} · {eventType === "tournament" ? "Turnier" : "Community"}</p>
           </div>
         </div>
         <div className="space-y-1 text-sm text-fg/90">
           {fixedGame && <p>🎮 {fixedGame}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
           {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === seriesFormat)?.label}</p>}
-          <p>🔄 Wiederholung: {recLabel}</p>
-          {seriesStartDate && <p>📅 Start: {formatBerlinDateTime(fromDatetimeLocalBerlin(seriesStartDate), { dateStyle: "medium", timeStyle: "short" })}</p>}
-          {seriesEndDate && <p>⏹️ Ende: {formatBerlinDate(fromDatetimeLocalBerlin(seriesEndDate + "T00:00"), { dateStyle: "medium" })}</p>}
-          {previewDates.length > 0 && seriesEndDate && (
-            <p>📋 {previewDates.length} Termine werden direkt angelegt</p>
-          )}
+          <p>🔄 {describeSchedule(schedule)}</p>
+          {firstCreated && <p>📅 {schedule.mode === "runden" ? "Erste Runde" : "Erster Termin"}: {formatBerlinDateTime(schedule.anchorAt, { dateStyle: "medium", timeStyle: "short" })}</p>}
+          {schedule.rhythm && <p>📋 Immer {schedule.aheadCount === 1 ? (schedule.mode === "runden" ? "die nächste Runde" : "der nächste Termin") : `die nächsten ${schedule.aheadCount} ${term.many}`} im Voraus angelegt{schedule.carryParticipants ? " · Teilnehmer werden übernommen" : ""}</p>}
+          {schedule.rhythm && schedule.end.type !== "none" && <p>⏹️ Ende: {schedule.end.type === "date" ? formatBerlinDateTime(schedule.end.at, { dateStyle: "medium" }) : `nach ${schedule.end.count} ${term.many}`}</p>}
+          {!firstCreated && <p>📋 Noch kein Termin — Termine legst du in der Reihe einzeln an</p>}
           {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
           {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
           {((w.seriesOmaOriginal && !w.isCommunity) || (!w.variousGames && isBlocksGame(w.fixedGame))) && <p className="text-primary-fg font-semibold">OMA Original · Logo auf allen Termin-Covern</p>}

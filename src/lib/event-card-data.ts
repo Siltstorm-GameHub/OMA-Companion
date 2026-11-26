@@ -20,8 +20,8 @@ export const EVENT_CARD_INCLUDE = {
       coverImageUrl: true, omaOriginal: true, fixedGame: true,
       // Für eventPayout(): Reihen-Termine zahlen Teilnahme + Bonus je Event aus der Reihentabelle
       seriesStatConfig: true, placementRewardsJson: true,
-      // Dauer-Reihen mit Zyklus-Automatik: in Übersichten nur der nächste Zyklus (lib/series-cycles-config.ts)
-      cycleConfigJson: true,
+      // Reihen mit Terminplanung: in Übersichten nur der nächste Termin (lib/series-schedule.ts → showsOnlyNextTerm)
+      scheduleMode: true, cycleConfigJson: true,
     },
   },
   createdBy: { select: { username: true, name: true } },

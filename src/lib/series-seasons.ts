@@ -198,13 +198,7 @@ export type TournamentTemplate = {
   /** Community-Ziel (nur Format "coop_stats"/Punktewertung) — jeder neue Termin übernimmt es als
    *  Vorbelegung in seine statConfigJson und kann es dort anpassen, siehe lib/community-goal.ts */
   communityGoal?: CommunityGoal | null;
-  /** Geplante Ziele für die nächsten Zyklen — der nächste neu angelegte Termin übernimmt das erste
-   *  als eigenes Ziel und es fällt aus der Liste (lib/goal-plan.ts). Nur über die Ziel-Planung änderbar. */
-  goalPlan?: CommunityGoal[];
 };
-
-/** Höchstens so viele geplante Ziele je Reihe */
-export const MAX_GOAL_PLAN = 52;
 
 export function parseTournamentTemplate(json: string | null | undefined): TournamentTemplate {
   if (!json) return {};
@@ -227,10 +221,6 @@ export function parseTournamentTemplate(json: string | null | undefined): Tourna
     }
     const goal = sanitizeCommunityGoal(raw.communityGoal);
     if (goal) out.communityGoal = goal;
-    if (Array.isArray(raw.goalPlan)) {
-      const plan = raw.goalPlan.map(g => sanitizeCommunityGoal(g)).filter((g): g is CommunityGoal => !!g).slice(0, MAX_GOAL_PLAN);
-      if (plan.length > 0) out.goalPlan = plan;
-    }
     return out;
   } catch { return {}; }
 }

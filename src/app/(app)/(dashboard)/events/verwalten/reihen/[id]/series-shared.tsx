@@ -15,15 +15,16 @@ export const PLATFORMS: { value: string; label: string; icon: string }[] = [
   { value: "Mobile", label: "Mobile", icon: "📱" },
 ];
 export type SeriesEvent = {
-  id: string; title: string; startAt: Date | string; endAt?: Date | string | null; status: string;
+  id: string; title: string; startAt: Date | string; endAt?: Date | string | null; status: string; slotIndex?: number | null;
   maxPlayers: number | null; hidden: boolean; tournamentStatus: string | null;
   _count: { registrations: number };
 };
 // "closed" heißt nur "voll" und braucht nach dem Termin trotzdem einen Abschluss
 export const NOT_ACTIVE_STATUSES = ["finished", "archived"];
-export type SettingsTabKey = "general" | "goal" | "rewards" | "polls" | "stats" | "legacy";
+export type SettingsTabKey = "general" | "schedule" | "goal" | "rewards" | "polls" | "stats" | "legacy";
 export const SETTINGS_TABS: { key: SettingsTabKey; label: string }[] = [
   { key: "general", label: "Allgemein" },
+  { key: "schedule", label: "📅 Termine" },
   { key: "goal",    label: "🎯 Ziel" },
   { key: "rewards", label: "Belohnungen" },
   { key: "polls",   label: "Umfragen" },

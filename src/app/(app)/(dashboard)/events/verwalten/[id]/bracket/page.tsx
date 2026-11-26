@@ -19,7 +19,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true, icon: true, seriesStatConfig: true, tournamentTemplateJson: true } },
+        series: { select: { id: true, name: true, icon: true, seriesStatConfig: true, tournamentTemplateJson: true, scheduleMode: true } },
         registrations: { select: { userId: true, role: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
@@ -130,6 +130,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         winnerStatKeys={winnerStatKeys}
         matchWinStatKeys={matchWinStatKeys}
         standaloneEvent={!event.series}
+        singleMatch={event.series?.scheduleMode === "runden"}
         placementPoints={placementPoints}
         pendingSubmissions={pendingSubmissions}
         pendingCount={pendingCount}

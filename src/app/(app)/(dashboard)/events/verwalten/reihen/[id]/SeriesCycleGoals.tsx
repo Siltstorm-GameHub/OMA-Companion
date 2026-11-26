@@ -3,8 +3,6 @@ import { useState } from "react";
 import Link from "next/link";
 import EventGoalPanel, { goalSummary } from "../../[id]/EventGoalPanel";
 import { goalFieldsFor, supportsCommunityGoal } from "@/lib/community-goal";
-import { parseTournamentTemplate } from "@/lib/series-seasons";
-import GoalPlanEditor from "./GoalPlanEditor";
 import { resolveEventGoal } from "@/lib/event-goal";
 import { parseGoalState } from "@/lib/goal-state";
 import { formatBerlinDate } from "@/lib/time";
@@ -24,15 +22,11 @@ export type CycleEvent = {
 const SOURCE_LABEL = { event: "eigenes Ziel", series: "Ziel der Reihe", off: "kein Ziel", none: "kein Ziel" } as const;
 
 /**
- * Community-Ziel je Zyklus (Termin) einer Eventreihe auf einen Blick: welches Ziel gilt (geerbt,
- * eigenes oder keins) und wie es ausgegangen ist. Jeder Zyklus lässt sich direkt hier anpassen —
- * gespeichert wird wie im Termin selbst über EventGoalPanel (PATCH /api/events/[id]/goal). Darunter die
- * Ziel-Planung für noch nicht angelegte Zyklen (GoalPlanEditor, lib/goal-plan.ts).
+ * Community-Ziel je Termin einer Reihe auf einen Blick: welches Ziel gilt (geerbt, eigenes oder keins)
+ * und wie es ausgegangen ist. Jeder Termin lässt sich direkt hier anpassen — auch die vorab angelegten
+ * (lib/series-schedule.ts) — gespeichert wie im Termin selbst über EventGoalPanel (PATCH /api/events/[id]/goal).
  */
-export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tournamentTemplateJson, statFields, disabled, goalLimits = null }: {
-  seriesId: string;
-  /** Festes Format der Reihe — bestimmt, was geplante Ziele auswerten (Stat-Felder oder Spielergebnis) */
-  fixedFormat: string | null;
+export default function SeriesCycleGoals({ events, tournamentTemplateJson, statFields, disabled, goalLimits = null }: {
   events: CycleEvent[];
   /** Turniervorlage der Reihe (enthält das Reihen-Ziel) — gespeicherter Stand, nicht der ungespeicherte Formularstand */
   tournamentTemplateJson: string | null;
@@ -49,8 +43,6 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
   const cycles = events
     .filter(e => supportsCommunityGoal(e.format))
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  const goalPlan = parseTournamentTemplate(tournamentTemplateJson).goalPlan ?? [];
-  const planFields = fixedFormat ? goalFieldsFor(fixedFormat, statFields) : statFields;
 
   const isPast = (e: CycleEvent) =>
     e.status === "finished" || (!!e.endAt && new Date(e.endAt).getTime() <= now);
@@ -62,11 +54,11 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
     <div className="space-y-5">
     <div className="space-y-2">
       <p className="text-xs text-subtle">
-        Jeder Zyklus übernimmt das Ziel der Reihe. Für einzelne Zyklen kannst du hier ein eigenes Ziel setzen
-        (z. B. diese Woche „Ø mind. 2 Kills“, nächste Woche „5.000 Tore zusammen“) oder es abschalten.
+        Jeder Termin übernimmt das Ziel der Reihe. Für einzelne Termine — auch schon für die vorab angelegten — kannst du
+        hier ein eigenes Ziel setzen (z. B. diese Woche „Ø mind. 2 Kills“, nächste Woche „5.000 Tore zusammen“) oder es abschalten.
       </p>
       {shown.length === 0 && (
-        <p className="text-xs text-subtle">Keine laufenden oder kommenden Zyklen — lege unten den nächsten Termin an.</p>
+        <p className="text-xs text-subtle">Keine laufenden oder kommenden Termine. Kommende Termine legt die Terminplanung im Reiter „Termine“ an.</p>
       )}
       <div className="rounded-control overflow-hidden border border-line divide-y divide-line">
         {shown.map(ev => {
@@ -123,14 +115,9 @@ export default function SeriesCycleGoals({ seriesId, fixedFormat, events, tourna
       </div>
       {past.length > 0 && (
         <button type="button" onClick={() => setShowPast(v => !v)} className="text-xs text-subtle hover:text-fg/90">
-          {showPast ? "Vergangene Zyklen ausblenden" : `${past.length} vergangene Zyklen anzeigen`}
+          {showPast ? "Vergangene Termine ausblenden" : `${past.length} vergangene Termine anzeigen`}
         </button>
       )}
-    </div>
-
-    <div className="space-y-2 pt-4 border-t border-line">
-      <p className="text-sm font-semibold text-fg">🗓️ Ziele im Voraus planen</p>
-      <GoalPlanEditor goalLimits={goalLimits} key={JSON.stringify(goalPlan)} seriesId={seriesId} initialPlan={goalPlan} goalFields={planFields} disabled={disabled} />
     </div>
     </div>
   );
