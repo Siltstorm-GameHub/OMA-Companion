@@ -2,7 +2,7 @@ import { eventGenreForGameName } from "@/lib/games/event-genre-server";
 import { normalizeCategory } from "@/lib/event-category";
 import { getCommunityLimits, seriesConfigLimits } from "@/lib/community-event-limits";
 import { isPresetCover } from "@/lib/event-cover-presets";
-import { parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
+import { freezeGoalForStartedEvent, parseOwnGoalConfig, withGoalMode } from "@/lib/event-goal";
 import { GOAL_FORMATS } from "@/lib/community-goal";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
@@ -193,27 +193,25 @@ export async function PATCH(req: NextRequest) {
   }
 
   // 1c) Community-Ziel der Reihe — Termine erben es live (lib/event-goal.ts).
-  //   - Wird ein bestehendes Reihen-Ziel geändert oder entfernt, behalten bereits GESTARTETE Termine,
-  //     die bisher geerbt haben, ihr bisheriges Ziel (wird dort als eigenes Ziel eingefroren) — nur
-  //     kommende Termine übernehmen das neue. Kommt ein Ziel neu hinzu (vorher keins), gilt es sofort
-  //     für alle Termine, auch für laufende.
-  //   - applyGoalToOpenEvents (Knopf in den Reihen-Einstellungen): Abweichungen bei allen noch nicht
-  //     gestarteten Terminen entfernen → sie folgen wieder dem Ziel der Reihe.
+  //   - Ändert sich das Reihen-Ziel (geändert, neu hinzugekommen oder entfernt), behalten bereits
+  //     GESTARTETE Termine (laufend oder beendet), die bisher geerbt haben, was für sie galt: das alte
+  //     Ziel bzw. "kein Ziel" wird dort eingefroren (freezeGoalForStartedEvent). Kommende Termine, die
+  //     erben, übernehmen das neue automatisch.
+  //   - Kommende Termine mit eigenem Ziel (oder "kein Ziel") bleiben, wie sie sind — außer mit
+  //     applyGoalToOpenEvents (Rückfrage beim Speichern bzw. Knopf "Abweichungen zurücksetzen"):
+  //     dann folgen auch sie wieder dem Ziel der Reihe.
   const oldTemplateGoal = parseTournamentTemplate(current.tournamentTemplateJson).communityGoal ?? null;
   const newTemplateGoal = parseTournamentTemplate(series.tournamentTemplateJson).communityGoal ?? null;
   const goalNow = new Date();
-  if (oldTemplateGoal && JSON.stringify(oldTemplateGoal) !== JSON.stringify(newTemplateGoal)) {
+  if (JSON.stringify(oldTemplateGoal) !== JSON.stringify(newTemplateGoal)) {
     const started = await prisma.event.findMany({
       where: { seriesId, format: { in: [...GOAL_FORMATS] }, startAt: { lte: goalNow } },
       select: { id: true, statConfigJson: true },
     });
     for (const ev of started) {
-      const own = parseOwnGoalConfig(ev.statConfigJson);
-      if (own.goal || own.off) continue; // hat schon eine eigene Einstellung
-      await prisma.event.update({
-        where: { id: ev.id },
-        data: { statConfigJson: withGoalMode(ev.statConfigJson, "override", oldTemplateGoal) },
-      });
+      const next = freezeGoalForStartedEvent(ev.statConfigJson, oldTemplateGoal);
+      if (next === undefined) continue; // hat schon eine eigene Einstellung
+      await prisma.event.update({ where: { id: ev.id }, data: { statConfigJson: next } });
     }
   }
   if (fields.applyGoalToOpenEvents === true) {

@@ -52,8 +52,9 @@ export default function SeriesTabGoal({ ctx }: { ctx: SeriesDetail }) {
           statFields={eventStatFields} disabled={isArchived}
           rewardLimit={goalLimits?.coins ?? null} seriesPointsLimit={goalLimits?.seriesPoints ?? null} />
         <p className="text-xs text-primary-fg/80 mt-2">
-          Änderst du das Ziel, während ein Termin schon läuft, behalten laufende und vergangene Termine ihr bisheriges Ziel.
-          Alle kommenden übernehmen das neue. Gespeichert wird mit „Speichern“ oben.
+          Änderst du das Ziel der Reihe, gilt es für alle kommenden Termine. Laufende und abgeschlossene Termine behalten ihr
+          bisheriges Ziel. Haben kommende Termine ein eigenes Ziel, fragen wir beim Speichern, ob sie das neue übernehmen sollen.
+          Gespeichert wird mit „Speichern“ oben.
         </p>
         {!isArchived && upcomingTermineCount > 0 && (
           <div className="flex items-center justify-between gap-3 flex-wrap pt-3 mt-3 border-t border-line">
