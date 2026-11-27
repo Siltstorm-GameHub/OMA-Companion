@@ -35,7 +35,7 @@ export interface NavChild {
   /** Nur für eingeloggte Mitglieder */
   auth?: boolean;
   /** Zahl offener Aufgaben am Eintrag (wird in der Seitenleiste nachgeladen) */
-  count?: "eventManage";
+  count?: "eventManage" | "boardOffice";
   /** Eigenes OMA-Produkt: OMA-Logo vor dem Namen in Produktfarbe (components/OmaWordmark.tsx) */
   brand?: OmaProduct;
 }
@@ -56,6 +56,13 @@ export const GAMES_SUBNAV: NavChild[] = [
   { href: "/shop", label: "Shop" },
 ];
 
+/** Unterseiten des Community-Boards (Seitenleiste; am Handy: components/community/BoardSectionNav) */
+export const BOARD_SUBNAV: NavChild[] = [
+  { href: "/community-board", label: "Feed", exact: true, alsoActiveOn: ["/community-board/report", "/community-board/idea", "/community-board/album", "/interviews"] },
+  { href: "/community-board/buero", label: "Büro", auth: true, count: "boardOffice" },
+  { href: "/community-board/roadmap", label: "Roadmap" },
+];
+
 export function isChildActive(pathname: string, child: NavChild): boolean {
   const hit = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
   if (child.exact ? pathname === child.href : hit(child.href)) return true;
@@ -73,7 +80,7 @@ export const MAIN_NAV: NavItem[] = [
 ];
 
 export const COMMUNITY_NAV: NavItem[] = [
-  { href: "/community-board", label: "Community-Board", icon: Lightbulb, alsoActiveOn: COMMUNITY_BOARD_PATHS },
+  { href: "/community-board", label: "Community-Board", icon: Lightbulb, alsoActiveOn: COMMUNITY_BOARD_PATHS, children: BOARD_SUBNAV },
   { href: "/squads", label: "Squads", icon: Users },
   { href: "/clip-galerie", label: "Clips", icon: Clapperboard, alsoActiveOn: CLIP_PATHS },
   { href: "/servers", label: "Gameserver", icon: Server },

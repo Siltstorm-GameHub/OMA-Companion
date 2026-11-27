@@ -25,9 +25,9 @@ interface Stats {
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-2.5 py-2">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-gray-600 truncate">{sub}</p>}
+      <p className="text-xs text-subtle">{label}</p>
+      <p className="text-sm font-semibold text-fg tabular-nums">{value}</p>
+      {sub && <p className="text-xs text-subtle truncate">{sub}</p>}
     </div>
   );
 }
@@ -45,12 +45,12 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-300 flex items-center gap-1.5">
+        <p className="text-xs text-fg/85 flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-primary" />
           {stats.published} {stats.published === 1 ? "Beitrag" : "Beiträge"} · {stats.totalVotes} 👍 · diese Woche {stats.votesThisWeek}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
+          className="text-xs text-subtle hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -70,26 +70,26 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
             <Tile label="Meine Ergänzungen" value={String(stats.contributionsWritten)} sub={`${stats.contributionVotes} 👍 darauf`} />
           </div>
           {stats.overDailyLimit > 0 && (
-            <p className="text-xs text-amber-400/90">{stats.overDailyLimit} {stats.overDailyLimit === 1 ? "Beitrag lag" : "Beiträge lagen"} über dem Tageslimit und {stats.overDailyLimit === 1 ? "zählt" : "zählen"} nicht fürs Gehalt.</p>
+            <p className="text-xs text-coin">{stats.overDailyLimit} {stats.overDailyLimit === 1 ? "Beitrag lag" : "Beiträge lagen"} über dem Tageslimit und {stats.overDailyLimit === 1 ? "zählt" : "zählen"} nicht fürs Gehalt.</p>
           )}
 
           {stats.top && (
-            <p className="text-xs text-gray-400">
-              Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-gray-200 hover:text-primary-fg">{stats.top.title}</a> <span className="text-gray-600">({stats.top.votes} 👍)</span>
+            <p className="text-xs text-muted">
+              Beliebtester Beitrag: <a href={`/community-board/report/${stats.top.id}`} className="text-fg/90 hover:text-primary-fg">{stats.top.title}</a> <span className="text-subtle">({stats.top.votes} 👍)</span>
             </p>
           )}
 
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Daumen pro Woche</p>
+            <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Daumen pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-subtle">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.votes}`}>
-                    <span className="text-[9px] text-gray-500">{w.votes}</span>
+                    <span className="text-[9px] text-subtle">{w.votes}</span>
                     <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(4, (w.votes / maxWeek) * 36)}px` }} />
-                    <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
+                    <span className="text-[9px] text-subtle truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
                 ))}
               </div>
@@ -99,7 +99,7 @@ export function JournalistStatsBlock({ refreshKey }: { refreshKey?: number }) {
           {stats.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {stats.categories.map(c => (
-                <span key={c.category} className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">
+                <span key={c.category} className="text-xs text-muted bg-line rounded-full px-2 py-0.5">
                   {c.category === "ohne" ? "Ohne Kategorie" : reportCategoryLabel(c.category) ?? c.category}: {c.count}
                 </span>
               ))}
@@ -131,7 +131,7 @@ function Section({ title, count, defaultOpen = false, children }: { title: strin
     <div className="space-y-1.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
         <span className={LABEL}>{title}{count !== undefined && count > 0 ? ` (${count})` : ""}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3 h-3 text-subtle transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && children}
     </div>
@@ -160,7 +160,7 @@ export function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
   const open = items.filter(i => i.status === "OPEN").length;
   return (
     <Section title="Meine Bildwünsche" count={open}>
-      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine. Bildwünsche stellst du im Editor (Titelbild) bzw. bei Bildern in Werbe-Posts, Anleitungen und Ideen.</p>}
+      {items.length === 0 && <p className="text-xs text-subtle">Noch keine. Bildwünsche stellst du im Editor (Titelbild) bzw. bei Bildern in Werbe-Posts, Anleitungen und Ideen.</p>}
       {items.map(i => (
         <div key={i.id} className="flex items-center justify-between gap-2 text-xs">
           <span className="min-w-0 flex items-center gap-2">
@@ -168,13 +168,13 @@ export function PhotoRequestsBlock({ refreshKey }: { refreshKey?: number }) {
               // eslint-disable-next-line @next/next/no-img-element -- Mediathek-Vorschau
               <img src={i.fulfilledAssetUrl} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
             )}
-            <span className="truncate text-gray-300">{i.description}{i.eventTitle && <span className="text-gray-600"> · {i.eventTitle}</span>}</span>
+            <span className="truncate text-fg/85">{i.description}{i.eventTitle && <span className="text-subtle"> · {i.eventTitle}</span>}</span>
           </span>
           <span className="flex items-center gap-2 shrink-0">
-            <span className={i.status === "FULFILLED" ? "text-emerald-400" : i.status === "OPEN" ? "text-amber-400" : "text-gray-600"}>
+            <span className={i.status === "FULFILLED" ? "text-success" : i.status === "OPEN" ? "text-coin" : "text-subtle"}>
               {i.status === "FULFILLED" ? "Erfüllt" : i.status === "OPEN" ? "Offen" : "Zurückgezogen"}
             </span>
-            {i.status === "OPEN" && <button onClick={() => close(i.id)} className="text-gray-600 hover:text-red-400 transition-colors">Zurückziehen</button>}
+            {i.status === "OPEN" && <button onClick={() => close(i.id)} className="text-subtle hover:text-red-400 transition-colors">Zurückziehen</button>}
           </span>
         </div>
       ))}
@@ -226,28 +226,28 @@ function InterviewsBlock() {
     <Section title="Interviews" count={ready}>
       {items.map(i => (
         <div key={i.id} className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-gray-300 truncate">{i.interviewee.username ?? i.interviewee.name} <span className="text-gray-600">· {i.questionCount} {i.questionCount === 1 ? "Frage" : "Fragen"}</span></span>
-          <span className={i.status === "ANSWERED" ? "text-emerald-400" : i.status === "PENDING" ? "text-amber-400" : "text-gray-600"}>
+          <span className="text-fg/85 truncate">{i.interviewee.username ?? i.interviewee.name} <span className="text-subtle">· {i.questionCount} {i.questionCount === 1 ? "Frage" : "Fragen"}</span></span>
+          <span className={i.status === "ANSWERED" ? "text-success" : i.status === "PENDING" ? "text-coin" : "text-subtle"}>
             {i.status === "ANSWERED" ? "Beantwortet — im Editor unter „Bausteine“" : i.status === "PENDING" ? "Wartet auf Antwort" : "Abgelehnt"}
           </span>
         </div>
       ))}
-      {items.length === 0 && !composing && <p className="text-xs text-gray-600">Noch keine Interviews. Frage jemanden aus der Community — die Antworten landen als Q&A in deinem Bericht.</p>}
+      {items.length === 0 && !composing && <p className="text-xs text-subtle">Noch keine Interviews. Frage jemanden aus der Community — die Antworten landen als Q&A in deinem Bericht.</p>}
 
       {!composing ? (
         <Button size="sm" variant="outline" onClick={() => setComposing(true)}>Neues Interview anfragen</Button>
       ) : (
         <div className="rounded-lg bg-surface-2 p-2.5 space-y-2">
           {person ? (
-            <p className="text-xs text-gray-200 flex items-center justify-between">
+            <p className="text-xs text-fg/90 flex items-center justify-between">
               Interview mit {person.username ?? person.name}
-              <button onClick={() => { setPerson(null); setQuery(""); }} className="text-gray-600 hover:text-red-400 text-xs">Ändern</button>
+              <button onClick={() => { setPerson(null); setQuery(""); }} className="text-subtle hover:text-red-400 text-xs">Ändern</button>
             </p>
           ) : (
             <div className="space-y-1">
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Wen möchtest du interviewen?" aria-label="Person suchen" className={`w-full ${FIELD}`} />
               {found.map(u => (
-                <button key={u.id} onClick={() => setPerson(u)} className="w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">{u.username ?? u.name}</button>
+                <button key={u.id} onClick={() => setPerson(u)} className="w-full text-left text-xs text-fg/85 hover:bg-line rounded px-2 py-1">{u.username ?? u.name}</button>
               ))}
             </div>
           )}
@@ -256,10 +256,10 @@ function InterviewsBlock() {
               <div key={i} className="flex items-center gap-1.5">
                 <input value={q} onChange={e => setQuestions(qs => qs.map((x, j) => (j === i ? e.target.value : x)))} maxLength={300}
                   placeholder={`Frage ${i + 1}`} className={`flex-1 ${FIELD}`} />
-                {questions.length > 1 && <button onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))} aria-label="Frage entfernen" className="text-gray-600 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>}
+                {questions.length > 1 && <button onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))} aria-label="Frage entfernen" className="text-subtle hover:text-red-400"><X className="w-3.5 h-3.5" /></button>}
               </div>
             ))}
-            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-xs text-gray-500 hover:text-primary-fg">+ Weitere Frage</button>}
+            {questions.length < 8 && <button onClick={() => setQuestions(qs => [...qs, ""])} className="text-xs text-subtle hover:text-primary-fg">+ Weitere Frage</button>}
           </div>
           <div className="flex justify-end gap-1.5">
             <Button size="sm" variant="ghost" onClick={() => setComposing(false)}>Abbrechen</Button>

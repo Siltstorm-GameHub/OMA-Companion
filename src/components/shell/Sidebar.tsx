@@ -1,5 +1,6 @@
 "use client";
 
+import { useOfficeCount } from "@/components/community/OfficeCountBadge";
 import OmaWordmark from "@/components/OmaWordmark";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -66,6 +67,9 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
   // Zahl am Untermenü "Verwalten" — nur nachladen, wenn der Events-Bereich offen ist
   const eventsOpen = props.items.some(i => i.children?.some(c => c.count === "eventManage") && isActive(props.pathname, i));
   const [manageCount, setManageCount] = useState(0);
+  // Zahl am Untermenü "Büro" des Community-Boards — nur, wenn das Board offen ist
+  const boardOpen = props.items.some(i => i.children?.some(c => c.count === "boardOffice") && isActive(props.pathname, i));
+  const officeCount = useOfficeCount(boardOpen && loggedIn);
   useEffect(() => {
     if (!eventsOpen || !loggedIn) return;
     let cancelled = false;
@@ -100,7 +104,7 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
             <ul className="mb-1 ml-[1.375rem] mt-0.5 space-y-0.5 border-l border-line pl-2.5">
               {children.map((c) => {
                 const on = isChildActive(props.pathname, c);
-                const n = c.count === "eventManage" ? manageCount : 0;
+                const n = c.count === "eventManage" ? manageCount : c.count === "boardOffice" ? officeCount : 0;
                 return (
                   <li key={c.href}>
                     <GateLink href={c.href} aria-current={on ? "page" : undefined}

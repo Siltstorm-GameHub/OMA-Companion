@@ -28,7 +28,7 @@ export interface IdeaPrefill {
 }
 
 const FIELD = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
-const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40";
+const SMALL = "bg-line border border-line-strong rounded px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary/40";
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -191,12 +191,12 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
 
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={IDEA_TITLE_MAX} placeholder="Titel deiner Idee" className={FIELD} />
       {similar.length > 0 && (
-        <div className="rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-2.5 space-y-1">
-          <p className="text-xs text-amber-400">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
+        <div className="rounded-lg bg-amber-500/[0.06] border border-coin/20 p-2.5 space-y-1">
+          <p className="text-xs text-coin">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
           {similar.map(s => (
-            <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-gray-200 hover:text-primary-fg transition-colors">
+            <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-fg/90 hover:text-primary-fg transition-colors">
               <span className="truncate">{s.title}</span>
-              <span className="shrink-0 text-xs text-gray-500">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
+              <span className="shrink-0 text-xs text-subtle">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
             </Link>
           ))}
         </div>
@@ -212,31 +212,31 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         </div>
         <div className="flex items-center gap-0.5">
           <button onClick={() => togglePanel("emoji")} disabled={preview} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={panel === "emoji"}
-            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors"><Smile className="w-3.5 h-3.5" /></button>
+            className="p-1.5 rounded text-muted hover:text-fg hover:bg-line disabled:opacity-30 transition-colors"><Smile className="w-3.5 h-3.5" /></button>
           <button onClick={() => togglePanel("mention")} disabled={preview} title="Spieler erwähnen" aria-label="Spieler erwähnen" aria-expanded={panel === "mention"}
-            className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors"><AtSign className="w-3.5 h-3.5" /></button>
+            className="p-1.5 rounded text-muted hover:text-fg hover:bg-line disabled:opacity-30 transition-colors"><AtSign className="w-3.5 h-3.5" /></button>
           <Button size="sm" variant="ghost" onClick={() => setPreview(v => !v)}>{preview ? "Bearbeiten" : "Vorschau"}</Button>
         </div>
       </div>
 
       {panel === "emoji" && !preview && <EmojiPanel onPick={insertText} onClose={() => setPanel(null)} />}
       {panel === "mention" && !preview && (
-        <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
+        <div className="rounded-lg border border-line-strong bg-surface/95 p-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <input value={mentionQuery} onChange={e => setMentionQuery(e.target.value)} autoFocus placeholder="Spieler suchen (mind. 2 Zeichen)…" aria-label="Spieler suchen" className={`flex-1 ${SMALL}`} />
-            <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-subtle hover:text-fg"><X className="w-3.5 h-3.5" /></button>
           </div>
           {mentionResults.map(u => (
             <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
-              className="block w-full text-left text-xs text-gray-200 hover:text-primary-fg px-1.5 py-0.5 rounded hover:bg-line transition-colors">{u.username ?? u.name}</button>
+              className="block w-full text-left text-xs text-fg/90 hover:text-primary-fg px-1.5 py-0.5 rounded hover:bg-line transition-colors">{u.username ?? u.name}</button>
           ))}
         </div>
       )}
 
       {preview ? (
         <div className="rounded-lg border border-line-strong bg-surface-2 p-3 space-y-1.5">
-          <p className="text-sm font-semibold text-white flex items-center gap-1.5"><Lightbulb className="w-3.5 h-3.5 text-amber-400" />{title || "—"}</p>
-          <MarkdownLite text={description || "—"} className="text-xs text-gray-300" />
+          <p className="text-sm font-semibold text-fg flex items-center gap-1.5"><Lightbulb className="w-3.5 h-3.5 text-coin" />{title || "—"}</p>
+          <MarkdownLite text={description || "—"} className="text-xs text-fg/85" />
         </div>
       ) : mode === "guided" ? (
         <div className="space-y-2">
@@ -247,24 +247,24 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
       ) : (
         <>
           {area("body", 6, "Beschreibung — Formatierung: **fett**, _kursiv_, - Listen", { maxLength: IDEA_BODY_MAX, resize: "resize-y" })}
-          {prefill?.link && <p className="text-xs text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
+          {prefill?.link && <p className="text-xs text-subtle">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
         </>
       )}
 
       {/* Bilder / Mockups */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Bilder &amp; Mockups (optional, bis zu {IDEA_MAX_IMAGES})</p>
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Bilder &amp; Mockups (optional, bis zu {IDEA_MAX_IMAGES})</p>
         <div className="flex flex-wrap items-center gap-2">
           {images.map(u => (
             <span key={u} className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau, Blob-Host */}
               <img src={u} alt="" className="w-16 h-16 rounded-lg object-cover" />
-              <button onClick={() => setImages(cur => cur.filter(x => x !== u))} aria-label="Bild entfernen" className="absolute -top-1.5 -right-1.5 rounded-full bg-gray-900 border border-line-strong p-0.5 text-gray-300 hover:text-red-400"><X className="w-3 h-3" /></button>
+              <button onClick={() => setImages(cur => cur.filter(x => x !== u))} aria-label="Bild entfernen" className="absolute -top-1.5 -right-1.5 rounded-full bg-surface border border-line-strong p-0.5 text-fg/85 hover:text-red-400"><X className="w-3 h-3" /></button>
             </span>
           ))}
           {images.length < IDEA_MAX_IMAGES && (
             <>
-              <label className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-line-strong rounded-lg px-2.5 py-2 cursor-pointer hover:border-primary/30 transition-colors">
+              <label className="flex items-center gap-1.5 text-xs text-muted border border-dashed border-line-strong rounded-lg px-2.5 py-2 cursor-pointer hover:border-primary/30 transition-colors">
                 {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} Hochladen
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ""; }} />
@@ -276,7 +276,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         </div>
         <PhotoRequestButton requesterJob="visionaer" eventId={prefill?.eventId} defaultText={title ? `Bild/Mockup zu meiner Idee: ${title}` : ""} />
         {panel === "cover" && (
-          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2">
+          <div className="rounded-lg border border-line-strong bg-surface/95 p-2 space-y-2">
             <GameCoverPicker value={pickedCover} onChange={setPickedCover} />
             <div className="flex justify-end gap-1.5">
               <Button size="sm" variant="ghost" onClick={() => setPanel(null)}>Abbrechen</Button>
@@ -288,10 +288,10 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           </div>
         )}
         {panel === "library" && (
-          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
+          <div className="rounded-lg border border-line-strong bg-surface/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <input value={libraryQuery} onChange={e => setLibraryQuery(e.target.value)} placeholder="Mediathek durchsuchen…" aria-label="Mediathek durchsuchen" className={`flex-1 ${SMALL}`} />
-              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-subtle hover:text-fg"><X className="w-3.5 h-3.5" /></button>
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-40 overflow-y-auto">
               {library.map(a => (
@@ -302,7 +302,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
                   <img src={a.url} alt="" className="w-full h-14 object-cover" />
                 </button>
               ))}
-              {library.length === 0 && <p className="col-span-full text-xs text-gray-600">Nichts gefunden.</p>}
+              {library.length === 0 && <p className="col-span-full text-xs text-subtle">Nichts gefunden.</p>}
             </div>
           </div>
         )}
@@ -310,9 +310,9 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
 
       {/* Steam-Spiel */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Spiel auf Steam (optional)</p>
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Spiel auf Steam (optional)</p>
         <input value={steamInput} onChange={e => setSteamInput(e.target.value)} placeholder="Steam-Store-Link, z.B. https://store.steampowered.com/app/252950" className={FIELD} />
-        {gameError && <p className="text-xs text-amber-400">{gameError}</p>}
+        {gameError && <p className="text-xs text-coin">{gameError}</p>}
         {game && (
           <div className="flex items-center gap-3 rounded-lg bg-surface-2 border border-line-strong p-2">
             {game.image && (
@@ -320,8 +320,8 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
               <img src={game.image} alt="" className="w-24 h-11 rounded object-cover shrink-0" />
             )}
             <span className="min-w-0 text-xs">
-              <span className="block font-semibold text-gray-100 truncate">{game.name}</span>
-              <span className="block text-xs text-gray-500">
+              <span className="block font-semibold text-fg truncate">{game.name}</span>
+              <span className="block text-xs text-subtle">
                 {[game.price, game.players != null ? `${game.players.toLocaleString("de-DE")} spielen gerade` : null, game.communityEvents > 0 ? `in der Community gespielt (${game.communityEvents} Events)` : null].filter(Boolean).join(" · ")}
               </span>
             </span>
@@ -329,7 +329,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         )}
       </div>
 
-      {(prefill?.eventId || prefill?.reportId) && <p className="text-xs text-gray-500">Die Idee wird mit {prefill.eventId ? "dem Event" : "dem Bericht"} verknüpft.</p>}
+      {(prefill?.eventId || prefill?.reportId) && <p className="text-xs text-subtle">Die Idee wird mit {prefill.eventId ? "dem Event" : "dem Bericht"} verknüpft.</p>}
 
       <div className="flex justify-end">
         <Button loading={busy} disabled={!canSubmit || uploading} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>

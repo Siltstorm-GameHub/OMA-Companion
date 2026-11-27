@@ -80,7 +80,7 @@ export async function runContentDigest(now: Date = new Date()): Promise<{ sent: 
       placeholders: {
         "{summary}": parts.join(", "),
         "{votes}": String(t.votes), "{contributions}": String(t.contributions),
-        "{url}": top ? `/community-board/report/${top}` : "/profile?tab=community_jobs",
+        "{url}": top ? `/community-board/report/${top}` : "/community-board/buero",
       },
     }).catch(() => {});
     await prisma.user.update({ where: { id: userId }, data: { contentDigestSentAt: now } });

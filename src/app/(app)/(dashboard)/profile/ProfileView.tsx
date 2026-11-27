@@ -21,7 +21,6 @@ import SquadsSection from "./SquadsSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import ProfileQuestsAndTournaments from "./ProfileQuestsAndTournaments";
 import ProfileRecentEvents from "./ProfileRecentEvents";
-import CommunityJobsPanel from "./CommunityJobsPanel";
 import ProfileTabs, { type ProfileTabKey } from "./ProfileTabs";
 import ProfileEditButton from "./ProfileEditButton";
 import ReputationCard from "./ReputationCard";
@@ -302,7 +301,7 @@ export default function ProfileView({ data, isOwn, viewerId, initialTab = "overv
         overview,
         achievements,
         activity,
-        ...(isOwn ? { community_jobs: <CommunityJobsPanel />, settings } : {}),
+        ...(isOwn ? { settings } : {}),
       }} />
     </div>
   );

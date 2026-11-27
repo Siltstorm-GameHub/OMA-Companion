@@ -65,9 +65,9 @@ export function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => v
   }
 
   return (
-    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-xl py-6 cursor-pointer hover:border-primary/30 transition-colors">
-      {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
-      <span className="text-xs text-gray-500">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
+    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-line-strong rounded-control py-6 cursor-pointer hover:border-primary/30 transition-colors">
+      {uploading ? <Loader2 className="w-5 h-5 text-subtle animate-spin" /> : <Upload className="w-5 h-5 text-subtle" />}
+      <span className="text-xs text-subtle">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
       {uploading && (
         <div className="w-40 h-1 rounded-full bg-line overflow-hidden">
           <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
@@ -137,7 +137,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-xs text-gray-500 flex items-center gap-1.5"><Images className="w-3.5 h-3.5" /> Bilder &amp; Clips (optional, bis {POST_MEDIA_MAX})</p>
+        <p className="text-xs text-subtle flex items-center gap-1.5"><Images className="w-3.5 h-3.5" /> Bilder &amp; Clips (optional, bis {POST_MEDIA_MAX})</p>
         {media.length > 0 && <AlbumSelect albums={albums} value={albumId} onChange={onAlbumChange} />}
       </div>
 
@@ -151,21 +151,21 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
                   // eslint-disable-next-line @next/next/no-img-element -- Upload-Vorschau, Blob-Host
                   : <img src={m.url} alt="" className="w-full aspect-video object-cover rounded" />}
                 <button type="button" onClick={() => onChange(media.filter((_, j) => j !== i))} aria-label="Entfernen"
-                  className="absolute top-1 right-1 rounded bg-black/70 p-0.5 text-gray-300 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
+                  className="absolute top-1 right-1 rounded bg-black/70 p-0.5 text-fg/85 hover:text-red-400"><X className="w-3.5 h-3.5" /></button>
               </div>
               <input value={m.caption} maxLength={300} placeholder="Bildunterschrift" aria-label="Bildunterschrift"
                 onChange={e => onChange(media.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
                 className={`w-full ${SMALL_INPUT}`} />
               {isVideoUrl(m.url) && (
                 <button type="button" onClick={() => setTrimming(trimming === m.url ? null : m.url)}
-                  className="w-full text-xs text-gray-400 hover:text-primary-fg text-left">
+                  className="w-full text-xs text-muted hover:text-primary-fg text-left">
                   ✂ {m.clipStart != null || m.clipEnd != null || m.posterUrl ? "Schnitt/Vorschaubild ändern" : "Schneiden & Vorschaubild"}
                 </button>
               )}
               {media.length > 1 && (
                 <div className="flex justify-between">
-                  <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Nach vorne" className="text-gray-500 hover:text-white disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                  <button type="button" disabled={i === media.length - 1} onClick={() => move(i, 1)} aria-label="Nach hinten" className="text-gray-500 hover:text-white disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button>
+                  <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Nach vorne" className="text-subtle hover:text-fg disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                  <button type="button" disabled={i === media.length - 1} onClick={() => move(i, 1)} aria-label="Nach hinten" className="text-subtle hover:text-fg disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button>
                 </div>
               )}
             </div>
@@ -182,7 +182,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
 
       {free > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-primary/30 ${progress ? "opacity-50 pointer-events-none" : "text-gray-300"}`}>
+          <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-primary/30 ${progress ? "opacity-50 pointer-events-none" : "text-fg/85"}`}>
             {progress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {progress ? `Lädt ${progress.done}/${progress.total}…` : "Bilder hochladen"}
             <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden"
@@ -191,7 +191,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
           <Button size="sm" variant={mode === "clip" ? "primary" : "outline"} onClick={() => setMode(mode === "clip" ? null : "clip")}>Clip</Button>
           <Button size="sm" variant={mode === "studio" ? "primary" : "outline"} icon={<Wand2 className="w-3.5 h-3.5" />} onClick={() => setMode(mode === "studio" ? null : "studio")}>Im Studio gestalten</Button>
           <Button size="sm" variant={mode === "collage" ? "primary" : "outline"} onClick={() => setMode(mode === "collage" ? null : "collage")}>Monats-Collage</Button>
-          <label className="flex items-center gap-1.5 text-xs text-gray-500" title="Blendet „© Name · OMA“ unten rechts in hochgeladene Bilder ein">
+          <label className="flex items-center gap-1.5 text-xs text-subtle" title="Blendet „© Name · OMA“ unten rechts in hochgeladene Bilder ein">
             <input type="checkbox" checked={watermark} onChange={e => setWatermark(e.target.checked)} /> Wasserzeichen
           </label>
         </div>

@@ -11,7 +11,7 @@ import { formatBerlinDate, formatBerlinDateTime } from "@/lib/time";
 /**
  * Werkzeuge des Coach-Büros: Verfügbarkeit ("Ich helfe gerade"), Wochenziel +
  * Auswertung, Anwesenheit vergangener Termine und Mentees. Die Terminliste selbst
- * (anlegen/ändern/anmelden) liegt in CommunityJobsPanel.tsx.
+ * (anlegen/ändern/anmelden) liegt in app/(app)/(dashboard)/community-board/buero/BueroPanel.tsx.
  */
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -23,10 +23,10 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const PRESENT_ON = "bg-emerald-500/20 text-emerald-300";
-const PRESENT_OFF = "text-gray-600 hover:text-emerald-300";
+const PRESENT_ON = "bg-emerald-500/20 text-success";
+const PRESENT_OFF = "text-subtle hover:text-success";
 const ABSENT_ON = "bg-red-500/20 text-red-300";
-const ABSENT_OFF = "text-gray-600 hover:text-red-300";
+const ABSENT_OFF = "text-subtle hover:text-red-300";
 const LABEL = "text-xs font-bold text-subtle uppercase tracking-[0.06em]";
 const INPUT = "bg-surface-2 border border-line rounded-control px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
 
@@ -67,9 +67,9 @@ export function CoachAvailability({ initialUntil }: { initialUntil?: string | nu
   }
 
   return (
-    <div className={`rounded-lg p-2.5 space-y-2 border ${active ? "bg-emerald-500/[0.06] border-emerald-500/25" : "bg-surface-2 border-line"}`}>
+    <div className={`rounded-lg p-2.5 space-y-2 border ${active ? "bg-emerald-500/[0.06] border-success/25" : "bg-surface-2 border-line"}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-300 flex items-center gap-1.5">
+        <p className="text-xs text-fg/85 flex items-center gap-1.5">
           <span className={`w-2 h-2 rounded-full ${active ? "bg-emerald-400 motion-safe:animate-pulse" : "bg-gray-600"}`} />
           {active ? `Verfügbar bis ${formatBerlinDateTime(until!, { timeStyle: "short" })}` : "Ad-hoc-Hilfe: gerade nicht verfügbar"}
         </p>
@@ -92,7 +92,7 @@ export function CoachAvailability({ initialUntil }: { initialUntil?: string | nu
           <Button size="sm" loading={busy} onClick={() => set(minutes)}>Jetzt verfügbar</Button>
         </div>
       )}
-      {!active && <p className="text-xs text-gray-600">Andere sehen dich im Community-Board als „verfügbar“ und können dich direkt ansprechen.</p>}
+      {!active && <p className="text-xs text-subtle">Andere sehen dich im Community-Board als „verfügbar“ und können dich direkt ansprechen.</p>}
     </div>
   );
 }
@@ -118,13 +118,13 @@ export function CoachStatsBlock() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className={`text-xs flex items-center gap-1.5 ${goalReached ? "text-emerald-400" : "text-gray-300"}`}>
+        <p className={`text-xs flex items-center gap-1.5 ${goalReached ? "text-success" : "text-fg/85"}`}>
           <Target className="w-3.5 h-3.5" />
           Wochenziel: {Math.min(stats.sessionsThisWeek, stats.weeklyGoal)}/{stats.weeklyGoal} {stats.weeklyGoal === 1 ? "Termin" : "Termine"} diese Woche
           {goalReached && <Check className="w-3.5 h-3.5" />}
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
+          className="text-xs text-subtle hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -134,15 +134,15 @@ export function CoachStatsBlock() {
           <div className="space-y-1.5">
             <p className={LABEL}>Ø Bewertung pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-subtle">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0"
                     title={`${formatBerlinDate(w.weekStart)}: Ø ${formatFixed(w.average, 1)} (${w.count})`}>
-                    <span className="text-[9px] text-gray-500">{formatFixed(w.average, 1)}</span>
+                    <span className="text-[9px] text-subtle">{formatFixed(w.average, 1)}</span>
                     <div className="w-full rounded-t bg-amber-400/70" style={{ height: `${Math.max(6, (w.average / 5) * 40)}px` }} />
-                    <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
+                    <span className="text-[9px] text-subtle truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
                 ))}
               </div>
@@ -151,12 +151,12 @@ export function CoachStatsBlock() {
 
           <div className="space-y-1">
             <p className={LABEL}>Letzte Termine</p>
-            {stats.sessions.length === 0 && <p className="text-xs text-gray-600">Noch keine vergangenen Termine.</p>}
+            {stats.sessions.length === 0 && <p className="text-xs text-subtle">Noch keine vergangenen Termine.</p>}
             {stats.sessions.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-gray-300 truncate">{s.title} <span className="text-gray-600">· {formatBerlinDate(s.startAt)}</span></span>
-                <span className="text-gray-500 shrink-0">
-                  {s.unmarked > 0 ? <span className="text-amber-400">{s.unmarked} offen · </span> : null}
+                <span className="text-fg/85 truncate">{s.title} <span className="text-subtle">· {formatBerlinDate(s.startAt)}</span></span>
+                <span className="text-subtle shrink-0">
+                  {s.unmarked > 0 ? <span className="text-coin">{s.unmarked} offen · </span> : null}
                   {s.attended}/{s.signups} da
                   {s.ratingAverage !== null && <> · ★ {formatFixed(s.ratingAverage, 1)} ({s.ratingCount})</>}
                 </span>
@@ -230,17 +230,17 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
           <div key={s.id} className="rounded-lg bg-surface-2">
             <button onClick={() => setOpenId(openId === s.id ? null : s.id)} aria-expanded={openId === s.id}
               className="w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs text-left">
-              <span className="text-gray-300 truncate">{s.title} <span className="text-gray-600">· {formatBerlinDateTime(s.startAt)}</span></span>
+              <span className="text-fg/85 truncate">{s.title} <span className="text-subtle">· {formatBerlinDateTime(s.startAt)}</span></span>
               <span className="flex items-center gap-2 shrink-0">
-                {unmarked > 0 ? <span className="text-amber-400">{unmarked} offen</span> : <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${openId === s.id ? "rotate-180" : ""}`} />
+                {unmarked > 0 ? <span className="text-coin">{unmarked} offen</span> : <Check className="w-3.5 h-3.5 text-success" />}
+                <ChevronDown className={`w-3 h-3 text-subtle transition-transform ${openId === s.id ? "rotate-180" : ""}`} />
               </span>
             </button>
             {openId === s.id && (
               <div className="px-2.5 pb-2.5 space-y-1">
                 {s.participants.map(p => (
                   <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-gray-300 truncate">{nameOf(p)}</span>
+                    <span className="text-fg/85 truncate">{nameOf(p)}</span>
                     <span className="flex items-center gap-1 shrink-0">
                       <button onClick={() => mark(s.id, p.id, p.attended === true ? null : true)} aria-pressed={p.attended === true} title="Anwesend"
                         className={`p-1 rounded ${p.attended === true ? PRESENT_ON : PRESENT_OFF}`}>
@@ -250,7 +250,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
                         className={`p-1 rounded ${p.attended === false ? ABSENT_ON : ABSENT_OFF}`}>
                         <X className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => addMentee(p.id)} title="Als Mentee hinzufügen" className="p-1 rounded text-gray-600 hover:text-primary-fg">
+                      <button onClick={() => addMentee(p.id)} title="Als Mentee hinzufügen" className="p-1 rounded text-subtle hover:text-primary-fg">
                         <UserPlus className="w-3.5 h-3.5" />
                       </button>
                     </span>
@@ -261,7 +261,7 @@ export function CoachAttendance({ onMenteeAdded }: { onMenteeAdded?: () => void 
                     rows={3} maxLength={1500} placeholder="Zusammenfassung/Tipps für die Teilnehmer (wird als Benachrichtigung gesendet)"
                     className={`w-full resize-none ${INPUT}`} />
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-600">{s.summary ? "Bereits gesendet — erneutes Senden benachrichtigt nochmal." : "Noch nicht gesendet."}</span>
+                    <span className="text-xs text-subtle">{s.summary ? "Bereits gesendet — erneutes Senden benachrichtigt nochmal." : "Noch nicht gesendet."}</span>
                     <Button size="sm" variant="outline" loading={sending === s.id} disabled={!(summaries[s.id] ?? s.summary ?? "").trim()} onClick={() => sendSummary(s.id)}>Senden</Button>
                   </div>
                 </div>
@@ -342,14 +342,14 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
   return (
     <div className="space-y-1.5">
       <p className={LABEL}>Meine Mentees ({items.length})</p>
-      {items.length === 0 && <p className="text-xs text-gray-600">Noch niemand — füge Spieler hinzu, die du persönlich begleitest. Die Liste ist nur für dich sichtbar.</p>}
+      {items.length === 0 && <p className="text-xs text-subtle">Noch niemand — füge Spieler hinzu, die du persönlich begleitest. Die Liste ist nur für dich sichtbar.</p>}
       {items.map(m => (
         <div key={m.id} className="rounded-lg bg-surface-2 px-2.5 py-2 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-gray-200 truncate">{nameOf(m.mentee)}</span>
-            <span className="flex items-center gap-2 shrink-0 text-gray-500">
+            <span className="text-fg/90 truncate">{nameOf(m.mentee)}</span>
+            <span className="flex items-center gap-2 shrink-0 text-subtle">
               {m.trainingsAttended} {m.trainingsAttended === 1 ? "Training" : "Trainings"}
-              <button onClick={() => remove(m)} title="Entfernen" aria-label="Mentee entfernen" className="text-gray-600 hover:text-red-400 transition-colors">
+              <button onClick={() => remove(m)} title="Entfernen" aria-label="Mentee entfernen" className="text-subtle hover:text-red-400 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </span>
@@ -360,15 +360,15 @@ export function CoachMentees({ refreshKey }: { refreshKey?: number }) {
       ))}
 
       <div className="relative">
-        <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
+        <Search className="w-3.5 h-3.5 text-subtle absolute left-2 top-1/2 -translate-y-1/2" />
         <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Spieler suchen und als Mentee hinzufügen…"
           className={`w-full pl-7 ${INPUT}`} />
-        {searching && <Loader2 className="w-3.5 h-3.5 text-gray-500 animate-spin absolute right-2 top-1/2 -translate-y-1/2" />}
+        {searching && <Loader2 className="w-3.5 h-3.5 text-subtle animate-spin absolute right-2 top-1/2 -translate-y-1/2" />}
       </div>
       {found.filter(u => !known.has(u.id)).length > 0 && (
         <div className="rounded-lg bg-line divide-y divide-line">
           {found.filter(u => !known.has(u.id)).map(u => (
-            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-gray-300 hover:bg-line text-left max-lg:min-h-10">
+            <button key={u.id} onClick={() => add(u.id)} className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs text-fg/85 hover:bg-line text-left max-lg:min-h-10">
               <span className="truncate">{nameOf(u)}</span> <UserPlus className="w-3.5 h-3.5 text-primary" />
             </button>
           ))}
@@ -417,20 +417,20 @@ export function CoachHelpInbox() {
     return (
       <div className="space-y-1">
         <p className={LABEL}>Hilfe-Anfragen</p>
-        <p className="text-xs text-gray-600">Noch keine Anfragen. Spieler können dich im Community-Board jederzeit um Hilfe bitten — auch wenn du nicht als „verfügbar“ markiert bist.</p>
+        <p className="text-xs text-subtle">Noch keine Anfragen. Spieler können dich im Community-Board jederzeit um Hilfe bitten — auch wenn du nicht als „verfügbar“ markiert bist.</p>
       </div>
     );
   }
   return (
     <div className="space-y-1.5">
-      <p className={LABEL}>Hilfe-Anfragen {open.length > 0 && <span className="ml-1 text-amber-400 normal-case tracking-normal">({open.length} offen)</span>}</p>
+      <p className={LABEL}>Hilfe-Anfragen {open.length > 0 && <span className="ml-1 text-coin normal-case tracking-normal">({open.length} offen)</span>}</p>
       {open.map(r => (
-        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 space-y-1.5">
+        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-coin/20 p-2.5 space-y-1.5">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <span className="text-gray-200 font-medium">{nameOf(r.requester)}</span>
-            <span className="text-gray-600">{formatBerlinDateTime(r.createdAt, { dateStyle: "short", timeStyle: "short" })}</span>
+            <span className="text-fg/90 font-medium">{nameOf(r.requester)}</span>
+            <span className="text-subtle">{formatBerlinDateTime(r.createdAt, { dateStyle: "short", timeStyle: "short" })}</span>
           </div>
-          <p className="text-xs text-gray-300 whitespace-pre-line">{r.message}</p>
+          <p className="text-xs text-fg/85 whitespace-pre-line">{r.message}</p>
           <textarea value={replies[r.id] ?? ""} onChange={e => setReplies(v => ({ ...v, [r.id]: e.target.value }))} rows={2} maxLength={500}
             placeholder="Antwort (optional) — die Person bekommt sie als Benachrichtigung" className={`w-full resize-none ${INPUT}`} />
           <div className="flex justify-end gap-1.5">
@@ -440,7 +440,7 @@ export function CoachHelpInbox() {
         </div>
       ))}
       {answered.length > 0 && (
-        <p className="text-xs text-gray-600">Zuletzt beantwortet: {answered.map(r => nameOf(r.requester)).join(", ")}</p>
+        <p className="text-xs text-subtle">Zuletzt beantwortet: {answered.map(r => nameOf(r.requester)).join(", ")}</p>
       )}
     </div>
   );
@@ -473,7 +473,7 @@ export function CoachSpecialties({ initial }: { initial?: string[] }) {
       <p className={LABEL}>Meine Spezialgebiete</p>
       <div className="flex flex-wrap items-center gap-1.5">
         {tags.map(t => (
-          <span key={t} className="inline-flex items-center gap-1 text-xs text-teal-200 bg-primary/10 border border-primary/25 rounded-full pl-2.5 pr-1.5 py-0.5">
+          <span key={t} className="inline-flex items-center gap-1 text-xs text-primary-fg bg-primary/10 border border-primary/25 rounded-full pl-2.5 pr-1.5 py-0.5">
             {t}
             <button onClick={() => save(tags.filter(x => x !== t))} disabled={busy} aria-label={`${t} entfernen`} className="text-primary/70 hover:text-red-300">
               <X className="w-3 h-3" />
@@ -486,7 +486,7 @@ export function CoachSpecialties({ initial }: { initial?: string[] }) {
             placeholder="Spiel/Sprache + Enter" className={`w-44 ${INPUT}`} />
         )}
       </div>
-      <p className="text-xs text-gray-600">Bis zu 6 Tags (z.B. „R6 Siege“, „Deutsch“). Neulinge finden dich damit im Community-Board über die Coach-Suche.</p>
+      <p className="text-xs text-subtle">Bis zu 6 Tags (z.B. „R6 Siege“, „Deutsch“). Neulinge finden dich damit im Community-Board über die Coach-Suche.</p>
     </div>
   );
 }
@@ -540,8 +540,8 @@ export function CoachNewcomers({ onMenteeAdded }: { onMenteeAdded?: () => void }
       {data.newcomers.map(n => (
         <div key={n.id} className="rounded-lg bg-surface-2 px-2.5 py-2 flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs text-gray-200 truncate">{nameOf(n)}</p>
-            <p className="text-xs text-gray-600">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
+            <p className="text-xs text-fg/90 truncate">{nameOf(n)}</p>
+            <p className="text-xs text-subtle">dabei seit {formatBerlinDate(n.createdAt)} · {n.eventsJoined} {n.eventsJoined === 1 ? "Event" : "Events"}</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Button size="sm" variant="outline" disabled={n.welcomed || busy !== null} loading={busy === `${n.id}:welcome`} onClick={() => act(n.id, "welcome")}>
@@ -602,7 +602,7 @@ export function CoachGuideList() {
   return (
     <div className="space-y-1.5">
       <p className={LABEL}>Meine Anleitungen ({items.length})</p>
-      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
+      {items.length === 0 && <p className="text-xs text-subtle">Noch keine Anleitung. Über „Neuer Beitrag → Anleitung“ veröffentlichst du Einsteiger-Tipps im Community-Board — Daumen-hoch zählt für dein Gehalt.</p>}
       {items.map(g => editing === g.id ? (
         <div key={g.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" maxLength={120} className={`w-full ${INPUT}`} />
@@ -615,8 +615,8 @@ export function CoachGuideList() {
         </div>
       ) : (
         <div key={g.id} className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-gray-300 truncate">{g.title}{g.game && <span className="text-gray-600"> · {g.game}</span>}</span>
-          <span className="flex items-center gap-2 shrink-0 text-gray-500">
+          <span className="text-fg/85 truncate">{g.title}{g.game && <span className="text-subtle"> · {g.game}</span>}</span>
+          <span className="flex items-center gap-2 shrink-0 text-subtle">
             👍 {g._count.votes}
             <button onClick={() => { setEditing(g.id); setForm({ title: g.title, game: g.game ?? "", body: g.bodyMarkdown }); }} className="hover:text-primary transition-colors">Bearbeiten</button>
             <button onClick={() => remove(g)} aria-label="Löschen" className="hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>

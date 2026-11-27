@@ -36,7 +36,7 @@ function StarRow({ value }: { value: number }) {
   return (
     <span className="inline-flex" aria-label={`${formatFixed(value, 1)} von 5 Sternen`}>
       {[1, 2, 3, 4, 5].map(n => (
-        <Star key={n} className={`w-3.5 h-3.5 ${n <= Math.round(value) ? "text-amber-400 fill-amber-400" : "text-gray-700"}`} />
+        <Star key={n} className={`w-3.5 h-3.5 ${n <= Math.round(value) ? "text-coin fill-amber-400" : "text-gray-700"}`} />
       ))}
     </span>
   );
@@ -44,19 +44,19 @@ function StarRow({ value }: { value: number }) {
 
 function Result({ entry }: { entry: IdeaEntry }) {
   const count = entry.voteCount ?? 0;
-  if (count === 0) return <p className="text-xs text-gray-600">Noch keine Bewertungen.</p>;
+  if (count === 0) return <p className="text-xs text-subtle">Noch keine Bewertungen.</p>;
   const dist = entry.distribution ?? [0, 0, 0, 0, 0];
   const max = Math.max(1, ...dist);
   return (
     <div className="flex items-center gap-3">
       <div className="text-center shrink-0">
-        <p className="text-lg font-bold text-white tabular-nums leading-none">{formatFixed((entry.avgStars ?? 0), 1)}</p>
+        <p className="text-lg font-bold text-fg tabular-nums leading-none">{formatFixed((entry.avgStars ?? 0), 1)}</p>
         <StarRow value={entry.avgStars ?? 0} />
-        <p className="text-xs text-gray-500 mt-0.5">{count} {count === 1 ? "Stimme" : "Stimmen"}</p>
+        <p className="text-xs text-subtle mt-0.5">{count} {count === 1 ? "Stimme" : "Stimmen"}</p>
       </div>
       <div className="flex-1 space-y-0.5 min-w-0">
         {dist.map((n, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div key={i} className="flex items-center gap-1.5 text-xs text-subtle">
             <span className="w-2 tabular-nums">{5 - i}</span>
             <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden">
               <div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / max) * 100}%` }} />
@@ -83,15 +83,15 @@ function Reasons({ ideaId }: { ideaId: string }) {
 
   return (
     <div className="space-y-1.5">
-      <button onClick={toggle} aria-expanded={open} className="text-xs text-gray-500 hover:text-primary transition-colors">
+      <button onClick={toggle} aria-expanded={open} className="text-xs text-subtle hover:text-primary transition-colors">
         {open ? "Begründungen ausblenden" : "Begründungen ansehen (nur für dich sichtbar)"}
       </button>
-      {open && (items === null ? <p className="text-xs text-gray-600">Lädt…</p> : items.length === 0 ? <p className="text-xs text-gray-600">Noch keine Begründungen.</p> : (
+      {open && (items === null ? <p className="text-xs text-subtle">Lädt…</p> : items.length === 0 ? <p className="text-xs text-subtle">Noch keine Begründungen.</p> : (
         <ul className="space-y-1.5">
           {items.map(v => (
             <li key={v.id} className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
-              <p className="flex items-center gap-1.5 text-gray-400"><StarRow value={v.stars} /> <span>{v.voter.username ?? v.voter.name ?? "?"}</span></p>
-              <p className="text-gray-300 whitespace-pre-line break-words">{v.reason}</p>
+              <p className="flex items-center gap-1.5 text-muted"><StarRow value={v.stars} /> <span>{v.voter.username ?? v.voter.name ?? "?"}</span></p>
+              <p className="text-fg/85 whitespace-pre-line break-words">{v.reason}</p>
             </li>
           ))}
         </ul>
@@ -130,8 +130,8 @@ function GameCard({ appId, fallbackName }: { appId: number; fallbackName?: strin
         <img src={info.image} alt="" className="w-24 h-11 rounded object-cover shrink-0" />
       )}
       <span className="min-w-0 text-xs">
-        <span className="block font-semibold text-gray-100 truncate">{info?.name ?? fallbackName ?? "Steam-Spiel"}</span>
-        <span className="block text-xs text-gray-500">
+        <span className="block font-semibold text-fg truncate">{info?.name ?? fallbackName ?? "Steam-Spiel"}</span>
+        <span className="block text-xs text-subtle">
           {info === undefined ? "Lädt…" : [
             info?.price ? `${info.price}${info.discountPercent > 0 ? ` (-${info.discountPercent}%)` : ""}` : null,
             info?.players != null ? `${info.players.toLocaleString("de-DE")} spielen gerade` : null,
@@ -139,7 +139,7 @@ function GameCard({ appId, fallbackName }: { appId: number; fallbackName?: strin
           ].filter(Boolean).join(" · ") || "Steam-Store"}
         </span>
       </span>
-      <ExternalLink className="w-3 h-3 text-gray-600 shrink-0 ml-auto" />
+      <ExternalLink className="w-3 h-3 text-subtle shrink-0 ml-auto" />
     </a>
   );
 }
@@ -187,17 +187,17 @@ function Versions({ entry }: { entry: IdeaEntry }) {
 
   return (
     <div className="space-y-1.5">
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-subtle">
         Version {entry.version}{entry.editedAt ? ` · überarbeitet am ${formatBerlinDate(entry.editedAt)}` : ""}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}
         {" "}<button onClick={toggle} aria-expanded={open} className="text-primary hover:text-primary-fg transition-colors">{open ? "Frühere Fassungen ausblenden" : "Frühere Fassungen"}</button>
       </p>
-      {open && (items === null ? <p className="text-xs text-gray-600">Lädt…</p> : (
+      {open && (items === null ? <p className="text-xs text-subtle">Lädt…</p> : (
         <ul className="space-y-1.5">
           {items.map(r => (
             <li key={r.id} className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
-              <p className="text-gray-400">Version {r.version} · {formatBerlinDate(r.savedAt)}{r.note ? ` · ${r.note}` : ""}</p>
-              <p className="text-gray-300 font-medium">{r.title}</p>
-              <MarkdownLite text={r.description} className="text-xs text-gray-400" />
+              <p className="text-muted">Version {r.version} · {formatBerlinDate(r.savedAt)}{r.note ? ` · ${r.note}` : ""}</p>
+              <p className="text-fg/85 font-medium">{r.title}</p>
+              <MarkdownLite text={r.description} className="text-xs text-muted" />
             </li>
           ))}
         </ul>
@@ -234,7 +234,7 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
 
   return (
     <div className="rounded-lg bg-surface-2 border border-line-strong p-2.5 space-y-1.5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Team: Status setzen</p>
+      <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Team: Status setzen</p>
       <div className="flex flex-wrap items-center gap-1.5">
         <Select size="sm" value={lifecycle} onChange={e => setLifecycle(e.target.value)} aria-label="Status">
           {IDEA_LIFECYCLES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
@@ -252,8 +252,16 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
   );
 }
 
-export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage = false, actions }: {
+/** "3 Tage", "1 Tag", "heute" — Restzeit der Abstimmung */
+function daysLeftLabel(ends: Date): string {
+  const days = Math.ceil((ends.getTime() - Date.now()) / 86_400_000);
+  return days <= 0 ? "heute" : days === 1 ? "1 Tag" : `${days} Tage`;
+}
+
+export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage = false, actions, bare = false }: {
   entry: IdeaEntry; currentUserId: string | undefined; onChanged: () => void; onIdeaPage?: boolean; actions: React.ReactNode;
+  /** Im Board: Bewerten/Teilen stehen in der Aktionsleiste der Karte, hier nicht noch einmal */
+  bare?: boolean;
 }) {
   const { data: session } = useSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
@@ -273,25 +281,27 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
     <>
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          {entry.lifecycle && entry.lifecycle !== "OPEN" && <Badge tone={meta.tone as BadgeTone}>{meta.label}</Badge>}
+          {entry.lifecycle && entry.lifecycle !== "OPEN" && (entry.lifecycle === "PLANNED" || entry.lifecycle === "DONE"
+            ? <Link href="/community-board/roadmap" title="Zur Roadmap"><Badge tone={meta.tone as BadgeTone}>{meta.label} →</Badge></Link>
+            : <Badge tone={meta.tone as BadgeTone}>{meta.label}</Badge>)}
           {category && <Badge tone="info">{category}</Badge>}
           {ends && (endsInFuture
-            ? <span className="text-xs text-gray-500">Abstimmung bis {formatBerlinDate(ends, { day: "2-digit", month: "2-digit" })}</span>
-            : <span className="text-xs text-gray-600">Abstimmung beendet</span>)}
+            ? <Badge tone="warning">Abstimmung noch {daysLeftLabel(ends)}</Badge>
+            : <span className="text-xs text-subtle">Abstimmung beendet</span>)}
         </div>
-        <p className="text-sm font-semibold text-white">
+        <p className="text-sm font-semibold text-fg">
           {onIdeaPage ? entry.title : <Link href={`/community-board/idea/${entry.id}`} className="hover:text-primary-fg transition-colors">{entry.title}</Link>}
         </p>
-        {entry.lifecycleNote && entry.lifecycle !== "OPEN" && <p className="text-xs text-gray-400">Team: {entry.lifecycleNote}</p>}
+        {entry.lifecycleNote && entry.lifecycle !== "OPEN" && <p className="text-xs text-muted">Team: {entry.lifecycleNote}</p>}
       </div>
 
-      <MarkdownLite text={entry.description ?? ""} className="text-xs text-gray-400" />
+      <MarkdownLite text={entry.description ?? ""} className="text-xs text-muted" />
       <ImageGrid urls={entry.imageUrls ?? []} />
       {entry.gameAppId && <GameCard appId={entry.gameAppId} fallbackName={entry.gameName} />}
       <Versions entry={entry} />
 
       {(entry.sourceEventId || entry.sourceReportId) && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           Entstanden zu{" "}
           {entry.sourceEventId && <Link href={`/tournament/${entry.sourceEventId}`} className="text-primary hover:text-primary-fg">einem Event</Link>}
           {entry.sourceEventId && entry.sourceReportId && " und "}
@@ -303,10 +313,10 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
 
       <InterestBar entry={entry} onChanged={onChanged} />
 
-      <div className="flex flex-wrap items-center gap-2">
+      {!bare && <div className="flex flex-wrap items-center gap-2">
         {actions}
-        <button onClick={copyLink} title="Link zur Idee kopieren" aria-label="Link kopieren" className="p-1 text-gray-600 hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
-      </div>
+        <button onClick={copyLink} title="Link zur Idee kopieren" aria-label="Link kopieren" className="p-1 text-subtle hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
+      </div>}
 
       {isAuthor && (entry.voteCount ?? 0) > 0 && <Reasons ideaId={entry.id} />}
       {isMod && <StatusControl entry={entry} onChanged={onChanged} />}

@@ -22,7 +22,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40 resize-none";
+const TEXTAREA = "w-full bg-line border border-line-strong rounded-lg px-3 py-2 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary/40 resize-none";
 
 export default function CoachRatingSection() {
   const [coaches, setCoaches] = useState<Coach[] | null>(null);
@@ -48,14 +48,14 @@ export default function CoachRatingSection() {
     .sort((a, b) => Number(!!b.availableUntil) - Number(!!a.availableUntil));
 
   return (
-    <div className="glass card-shine rounded-2xl p-4 space-y-3">
+    <div className="glass card-shine rounded-card p-4 space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-xs font-semibold text-white flex items-center gap-1.5">
+        <h2 className="text-xs font-semibold text-fg flex items-center gap-1.5">
           <GraduationCap className="w-3.5 h-3.5 text-primary" /> Coaches
         </h2>
         {coaches.length > 1 && (
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-gray-600 absolute left-2 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-subtle absolute left-2 top-1/2 -translate-y-1/2" />
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Coach für Spiel/Sprache suchen…" aria-label="Coach suchen"
               className="w-56 bg-surface-2 border border-line rounded-control pl-7 pr-2 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
           </div>
@@ -64,7 +64,7 @@ export default function CoachRatingSection() {
 
       {rateable.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-500">Du warst bei diesen Trainings dabei — wie war es?</p>
+          <p className="text-xs text-subtle">Du warst bei diesen Trainings dabei — wie war es?</p>
           <div className="flex flex-wrap gap-2">
             {rateable.map(t => (
               <TrainingRatingChip key={t.id} coachId={t.coach.id} trainingSessionId={t.id}
@@ -77,7 +77,7 @@ export default function CoachRatingSection() {
 
       {coaches.length > 0 && (
         <div className="space-y-2">
-          {visible.length === 0 && <p className="text-xs text-gray-600">Kein Coach passt zu „{query}“.</p>}
+          {visible.length === 0 && <p className="text-xs text-subtle">Kein Coach passt zu „{query}“.</p>}
           {visible.map(c => <CoachCard key={c.userId} coach={c} />)}
         </div>
       )}
@@ -110,7 +110,7 @@ export function RatingForm({ coachId, trainingSessionId, onDone, onCancel }: {
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map(n => (
           <button key={n} onClick={() => setStars(n)} aria-label={`${n} Sterne`}>
-            <Star className={`w-4 h-4 ${n <= stars ? "text-amber-400 fill-amber-400" : "text-gray-700"}`} />
+            <Star className={`w-4 h-4 ${n <= stars ? "text-coin fill-amber-400" : "text-gray-700"}`} />
           </button>
         ))}
       </div>
@@ -131,14 +131,14 @@ function TrainingRatingChip({ coachId, trainingSessionId, label, onRated }: {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs bg-surface-2 border border-line-strong rounded-full px-3 py-1.5 text-gray-300 hover:text-white hover:border-primary/30 transition-colors max-lg:min-h-10">
-        {label} <Star className="w-3 h-3 text-amber-400" />
+        className="inline-flex items-center gap-1.5 text-xs bg-surface-2 border border-line-strong rounded-full px-3 py-1.5 text-fg/85 hover:text-fg hover:border-primary/30 transition-colors max-lg:min-h-10">
+        {label} <Star className="w-3 h-3 text-coin" />
       </button>
     );
   }
   return (
     <div className="w-full bg-surface-2 rounded-lg p-3 space-y-2">
-      <p className="text-xs text-white">{label} bewerten</p>
+      <p className="text-xs text-fg">{label} bewerten</p>
       <RatingForm coachId={coachId} trainingSessionId={trainingSessionId} onDone={onRated} onCancel={() => setOpen(false)} />
     </div>
   );
@@ -165,19 +165,19 @@ function CoachCard({ coach }: { coach: Coach }) {
   }
 
   return (
-    <div className="rounded-xl bg-surface-2 border border-line p-3 space-y-2">
+    <div className="rounded-control bg-surface-2 border border-line p-3 space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="min-w-0 space-y-1">
-          <p className="text-sm text-white flex items-center gap-1.5">
+          <p className="text-sm text-fg flex items-center gap-1.5">
             {coach.availableUntil && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" title="Gerade verfügbar" />}
             {name}
-            {coach.availableUntil && <span className="text-xs text-emerald-400">verfügbar</span>}
+            {coach.availableUntil && <span className="text-xs text-success">verfügbar</span>}
           </p>
           {coach.specialties && coach.specialties.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {coach.specialties.map(t => (
                 <button key={t} onClick={() => undefined} tabIndex={-1}
-                  className="text-xs text-teal-200 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5 cursor-default">{t}</button>
+                  className="text-xs text-primary-fg bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5 cursor-default">{t}</button>
               ))}
             </div>
           )}
@@ -197,7 +197,7 @@ function CoachCard({ coach }: { coach: Coach }) {
           <textarea value={message} onChange={e => setMessage(e.target.value)} maxLength={500} rows={3}
             placeholder={`Wobei brauchst du Hilfe? ${name} bekommt eine Benachrichtigung — auch wenn er/sie gerade nicht als verfügbar markiert ist.`} className={TEXTAREA} />
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-gray-600">{message.length}/500 · höchstens 3 Anfragen pro Tag</span>
+            <span className="text-xs text-subtle">{message.length}/500 · höchstens 3 Anfragen pro Tag</span>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setMode(null)}>Abbrechen</Button>
               <Button size="sm" loading={busy} disabled={!message.trim()} onClick={sendHelp}>Senden</Button>

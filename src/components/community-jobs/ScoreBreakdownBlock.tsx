@@ -20,7 +20,7 @@ interface Week {
 const fmt = (n: number) => (Number.isInteger(n) ? String(n) : formatFixed(n, 1));
 const signed = (n: number) => (n > 0 ? `+${fmt(n)}` : fmt(n));
 const TAB_ON = "border-primary/50 text-primary-fg bg-primary/10";
-const TAB_OFF = "border-line-strong text-gray-400 hover:text-white";
+const TAB_OFF = "border-line-strong text-muted hover:text-fg";
 
 export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   const [weeks, setWeeks] = useState<Week[] | null>(null);
@@ -40,10 +40,10 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
   return (
     <div className="p-4 border-b border-line space-y-2.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
-        <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
+        <span className="flex items-center gap-2 text-xs font-semibold text-fg/85 uppercase tracking-widest">
           <Scale className="w-3.5 h-3.5 text-primary" /> Wie setzt sich dein Score zusammen?
         </span>
-        <span className="flex items-center gap-2 text-xs text-gray-500">
+        <span className="flex items-center gap-2 text-xs text-subtle">
           {weeks[0].breakdown.total > 0 ? `${fmt(weeks[0].breakdown.total)} Punkte diese Woche` : "diese Woche noch 0 Punkte"}
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
         </span>
@@ -63,26 +63,26 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
           <ul className="space-y-1">
             {b.streams.map(s => (
               <li key={s.key} className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-gray-300">
-                  {s.label} <span className="text-gray-600">· {s.count} {s.unit === "stars" ? (s.count === 1 ? "Bewertung" : "Bewertungen") : "Daumen"}</span>
+                <span className="text-fg/85">
+                  {s.label} <span className="text-subtle">· {s.count} {s.unit === "stars" ? (s.count === 1 ? "Bewertung" : "Bewertungen") : "Daumen"}</span>
                 </span>
-                <span className="tabular-nums text-gray-200">{signed(s.countedPoints)}</span>
+                <span className="tabular-nums text-fg/90">{signed(s.countedPoints)}</span>
               </li>
             ))}
             {b.bonuses.map(x => (
               <li key={x.key} className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-gray-300">{x.label}</span>
-                <span className="tabular-nums text-emerald-400">{signed(x.points)}</span>
+                <span className="text-fg/85">{x.label}</span>
+                <span className="tabular-nums text-success">{signed(x.points)}</span>
               </li>
             ))}
             <li className="flex items-center justify-between gap-3 text-xs border-t border-line pt-1.5">
-              <span className="text-white font-semibold">Summe</span>
-              <span className="tabular-nums text-white font-semibold">{fmt(b.total)} Punkte{week.tierLabel ? ` → ${week.tierLabel}` : ""}</span>
+              <span className="text-fg font-semibold">Summe</span>
+              <span className="tabular-nums text-fg font-semibold">{fmt(b.total)} Punkte{week.tierLabel ? ` → ${week.tierLabel}` : ""}</span>
             </li>
           </ul>
 
           {trimmed !== 0 && (
-            <p className="text-xs text-amber-400/90">
+            <p className="text-xs text-coin">
               {fmt(Math.abs(trimmed))} {Math.abs(trimmed) === 1 ? "Punkt zählt" : "Punkte zählen"} nicht:{" "}
               {b.trimmedByVoter !== 0 && `von derselben Person zählen pro Woche höchstens ${b.caps.maxVotesPerVoter} Stimmen`}
               {b.trimmedByVoter !== 0 && b.trimmedByItems !== 0 && ", "}
@@ -90,11 +90,11 @@ export default function ScoreBreakdownBlock({ jobKey }: { jobKey: string }) {
             </p>
           )}
           {week.next
-            ? <p className="text-xs text-gray-500">Noch {fmt(week.next.missing)} {week.next.missing === 1 ? "Punkt" : "Punkte"} bis „{week.next.label}“.</p>
-            : week.tierLabel && <p className="text-xs text-emerald-400">Höchste Stufe erreicht.</p>}
-          {week.paid && <p className="text-xs text-gray-500">Ausgezahlt: {week.paid.coins} Münzen{week.paid.tierLabel ? ` (${week.paid.tierLabel})` : ""}.</p>}
+            ? <p className="text-xs text-subtle">Noch {fmt(week.next.missing)} {week.next.missing === 1 ? "Punkt" : "Punkte"} bis „{week.next.label}“.</p>
+            : week.tierLabel && <p className="text-xs text-success">Höchste Stufe erreicht.</p>}
+          {week.paid && <p className="text-xs text-subtle">Ausgezahlt: {week.paid.coins} Münzen{week.paid.tierLabel ? ` (${week.paid.tierLabel})` : ""}.</p>}
 
-          <p className="text-xs text-gray-600 leading-relaxed">
+          <p className="text-xs text-subtle leading-relaxed">
             Daumen zählen 1 Punkt. Sterne werden umgerechnet: 4–5 Sterne = +1, 3 = 0, 1–2 = −1. Der Wert wird nie kleiner als 0.
             {!week.isCurrent && " Frühere Wochen sind mit dem heutigen Stand neu gerechnet."}
           </p>

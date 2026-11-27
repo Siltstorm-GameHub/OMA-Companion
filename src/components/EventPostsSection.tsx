@@ -22,12 +22,12 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
     },
   });
   if (posts.length === 0 && !canCreate) return null;
-  const composeHref = `/profile?job=content_creator&compose=${encodeURIComponent(eventId)}`;
+  const composeHref = `/community-board?neu=beitrag&event=${encodeURIComponent(eventId)}`;
 
   return (
-    <div className="glass rounded-2xl p-4 mb-5 space-y-3">
+    <div className="glass rounded-card p-4 mb-5 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+        <h2 className="text-xs font-semibold text-muted uppercase tracking-widest flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-primary" /> Beiträge zu diesem Event{posts.length > 0 ? ` (${posts.length})` : ""}
         </h2>
         {canCreate && (
@@ -38,7 +38,7 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
       </div>
 
       {posts.length === 0 ? (
-        <p className="text-xs text-gray-500">Noch keine Beiträge — mach Werbung, teile Fotos und Clips oder schreib einen Bericht.</p>
+        <p className="text-xs text-subtle">Noch keine Beiträge — mach Werbung, teile Fotos und Clips oder schreib einen Bericht.</p>
       ) : (
         <ul className="space-y-2">
           {posts.map(p => {
@@ -57,14 +57,14 @@ export default async function EventPostsSection({ eventId, canCreate }: { eventI
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm text-gray-200 truncate">{postDisplayTitle({ ...p, mediaCount: p.media.length })}</span>
-                    <span className="block text-xs text-gray-500 truncate">
+                    <span className="block text-sm text-fg/90 truncate">{postDisplayTitle({ ...p, mediaCount: p.media.length })}</span>
+                    <span className="block text-xs text-subtle truncate">
                       {p.author.username ?? p.author.name ?? "?"}
                       {images.length > 0 ? ` · ${images.length} ${images.length === 1 ? "Bild" : "Bilder"}` : ""}
                       {clips > 0 ? ` · ${clips} ${clips === 1 ? "Clip" : "Clips"}` : ""}
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-gray-400 tabular-nums">{p._count.votes} 👍</span>
+                  <span className="shrink-0 text-xs text-muted tabular-nums">{p._count.votes} 👍</span>
                 </Link>
               </li>
             );

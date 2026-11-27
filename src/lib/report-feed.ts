@@ -12,7 +12,13 @@ const AUTHOR = { select: { id: true, username: true, name: true, image: true, ra
 
 export function reportFeedInclude(viewerId: string) {
   return {
-    event: { select: { id: true, title: true } },
+    // Event-Bezug als Mini-Karte im Board (Cover, Datum, Plätze, "Anmelden")
+    event: {
+      select: {
+        id: true, title: true, startAt: true, status: true, game: true, coverImageUrl: true, maxPlayers: true,
+        _count: { select: { registrations: true } },
+      },
+    },
     series: { select: { id: true, title: true } },
     author: AUTHOR,
     coverAsset: { include: { author: AUTHOR } },
@@ -62,7 +68,10 @@ export function toReportFeedEntry(r: ReportWithFeedData) {
     template: r.template,
     adminConfirmedPosted: r.adminConfirmedPosted,
     trainingSessionId: r.trainingSessionId,
-    event: r.event,
+    event: r.event && {
+      id: r.event.id, title: r.event.title, startAt: r.event.startAt, status: r.event.status, game: r.event.game,
+      coverImageUrl: r.event.coverImageUrl, maxPlayers: r.event.maxPlayers, registrations: r.event._count.registrations,
+    },
     series: r.series,
     editedAt: r.editedAt,
     lastEditNote: r.lastEditNote,

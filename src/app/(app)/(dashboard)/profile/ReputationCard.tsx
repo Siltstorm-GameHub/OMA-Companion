@@ -77,7 +77,7 @@ export default function ReputationCard({ level, points, isOwn, peakLevel }: { le
         und für Daumen auf deine Kommentare. Gezählt werden die letzten {BADGE_WINDOW_WEEKS} Wochen, die Stufe kann also auch wieder sinken.
         Ab Silber schaltest du den Titel „Community-Job“ frei, den du im <Link href="/shop" className="text-amber-300 hover:text-amber-200">Shop</Link> unter
         „Titel“ anlegen kannst — er bleibt dir, auch wenn die Stufe später sinkt.{" "}
-        <Link href="/profile?tab=community_jobs" className="text-primary hover:text-primary-fg">Zum Büro →</Link>
+        <Link href="/community-board/buero" className="text-primary hover:text-primary-fg">Zum Büro →</Link>
       </p>
     </section>
   );

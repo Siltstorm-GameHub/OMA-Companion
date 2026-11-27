@@ -13,7 +13,7 @@ import { NumberInput } from "@/components/ui/NumberInput";
 export type PollDraft = PollInput & { locked?: boolean };
 
 const INPUT = "w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary";
-const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-primary/40";
+const SMALL = "bg-line border border-line-strong rounded-md px-2 py-1 text-xs text-fg focus:outline-none focus:border-primary/40";
 
 export function emptyPoll(): PollDraft {
   return { question: "", kind: "opinion", options: ["", ""], correctIndex: null, participationReward: 0, correctReward: 0, closesAt: null };
@@ -41,7 +41,7 @@ export default function PostPollEditor({
   return (
     <div className="rounded-lg border border-line-strong bg-surface-2">
       <button type="button" onClick={onToggle} aria-expanded={open}
-        className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-gray-400 hover:text-white">
+        className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-muted hover:text-fg">
         <span className="inline-flex items-center gap-1.5"><Vote className="w-3.5 h-3.5" /> Umfrage{p ? `: ${p.question || "ohne Frage"}` : ""}</span>
         <span>{open ? "−" : "+"}</span>
       </button>
@@ -51,13 +51,13 @@ export default function PostPollEditor({
             <Button size="sm" variant="outline" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => onChange(emptyPoll())}>Umfrage hinzufügen</Button>
           )}
           {p?.locked && (
-            <p className="text-xs text-amber-400/90">Es wurde schon abgestimmt — die Umfrage lässt sich nicht mehr ändern.</p>
+            <p className="text-xs text-coin">Es wurde schon abgestimmt — die Umfrage lässt sich nicht mehr ändern.</p>
           )}
           {p && !p.locked && (
             <>
               <input value={p.question} onChange={e => set({ question: e.target.value })} maxLength={POLL_QUESTION_MAX}
                 placeholder="Frage, z.B. „Wer holt sich den Turniersieg?“" className={INPUT} />
-              <label className="flex items-center gap-2 text-xs text-gray-500">
+              <label className="flex items-center gap-2 text-xs text-subtle">
                 Art
                 <Select size="sm" value={p.kind} onChange={e => {
                   const kind = e.target.value as PollKind;
@@ -70,7 +70,7 @@ export default function PostPollEditor({
               </label>
 
               {p.kind === "event_winner" ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-subtle">
                   {eventId
                     ? "Die Antworten sind die angemeldeten Spieler des Events. Abstimmen geht bis zum Event-Start, aufgelöst wird automatisch nach dem Event."
                     : "Wähle oben ein Event, um nach dem Gewinner zu fragen."}
@@ -86,7 +86,7 @@ export default function PostPollEditor({
                       <input value={opt} maxLength={POLL_OPTION_MAX} placeholder={`Antwort ${i + 1}`} className={INPUT}
                         onChange={e => set({ options: p.options.map((o, j) => (j === i ? e.target.value : o)) })} />
                       {p.options.length > POLL_OPTIONS_MIN && (
-                        <button type="button" aria-label="Antwort entfernen" className="text-gray-500 hover:text-red-400"
+                        <button type="button" aria-label="Antwort entfernen" className="text-subtle hover:text-red-400"
                           onClick={() => set({
                             options: p.options.filter((_, j) => j !== i),
                             correctIndex: p.correctIndex == null || p.correctIndex === i ? null : p.correctIndex > i ? p.correctIndex - 1 : p.correctIndex,
@@ -99,8 +99,8 @@ export default function PostPollEditor({
                   {p.options.length < POLL_OPTIONS_MAX && (
                     <Button size="sm" variant="ghost" icon={<Plus className="w-3.5 h-3.5" />} onClick={() => set({ options: [...p.options, ""] })}>Antwort</Button>
                   )}
-                  {p.kind === "quiz" && <p className="text-xs text-gray-600">Markiere die richtige Antwort — sie wird erst beim Ende der Umfrage verraten.</p>}
-                  <label className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  {p.kind === "quiz" && <p className="text-xs text-subtle">Markiere die richtige Antwort — sie wird erst beim Ende der Umfrage verraten.</p>}
+                  <label className="flex flex-wrap items-center gap-2 text-xs text-subtle">
                     Ende {p.kind === "quiz" ? "(Standard: in 7 Tagen)" : "(optional)"}
                     <input type="datetime-local" className={SMALL}
                       value={p.closesAt ? toDatetimeLocalBerlin(p.closesAt) : ""}
@@ -109,24 +109,24 @@ export default function PostPollEditor({
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                <span className="inline-flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-amber-300" /> Belohnung</span>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-subtle">
+                <span className="inline-flex items-center gap-1"><Coins className="w-3.5 h-3.5 text-coin" /> Belohnung</span>
                 <label className="flex items-center gap-1">
                   Mitmachen
                   <NumberInput min={0} max={POLL_PARTICIPATION_MAX} value={p.participationReward} className={`${SMALL} w-16`}
                     onChange={e => set({ participationReward: clampInt(e.target.value, POLL_PARTICIPATION_MAX) })} />
-                  <span className="text-gray-600">/ {POLL_PARTICIPATION_MAX}</span>
+                  <span className="text-subtle">/ {POLL_PARTICIPATION_MAX}</span>
                 </label>
                 {p.kind !== "opinion" && (
                   <label className="flex items-center gap-1">
                     Richtig getippt
                     <NumberInput min={0} max={POLL_CORRECT_MAX} value={p.correctReward} className={`${SMALL} w-16`}
                       onChange={e => set({ correctReward: clampInt(e.target.value, POLL_CORRECT_MAX) })} />
-                    <span className="text-gray-600">/ {POLL_CORRECT_MAX}</span>
+                    <span className="text-subtle">/ {POLL_CORRECT_MAX}</span>
                   </label>
                 )}
               </div>
-              <p className="text-xs text-gray-600">Münzen zahlt das System. Pro Tag gibt es höchstens 30 Münzen fürs Mitmachen und 300 fürs Richtigliegen je Person; du selbst kannst nicht teilnehmen.</p>
+              <p className="text-xs text-subtle">Münzen zahlt das System. Pro Tag gibt es höchstens 30 Münzen fürs Mitmachen und 300 fürs Richtigliegen je Person; du selbst kannst nicht teilnehmen.</p>
               <Button size="sm" variant="ghost" icon={<Trash2 className="w-3.5 h-3.5" />} onClick={() => onChange(null)}>Umfrage entfernen</Button>
             </>
           )}

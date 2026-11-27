@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Glyph } from "@/components/ui/Glyph";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ThumbsUp, Loader2, Star, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile } from "@/components/icons";
+import { ThumbsUp, Loader2, Star, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile, ChevronLeft, ChevronRight, X, Share, Lightbulb, Plus, Pencil } from "@/components/icons";
+import { useRouter } from "next/navigation";
+import { stashCompose } from "./compose";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
@@ -15,8 +15,7 @@ import { plainExcerpt } from "@/lib/report-text";
 import GameCover from "@/components/GameCover";
 import EmojiPanel from "@/components/community-jobs/EmojiPicker";
 import IdeaBody from "@/components/community-jobs/IdeaCard";
-import IdeaFromButton from "@/components/community-jobs/IdeaFromButton";
-import { REPORT_CATEGORIES, reportCategoryLabel } from "@/lib/report-categories";
+import { reportCategoryLabel } from "@/lib/report-categories";
 import { formatBerlinDate } from "@/lib/time";
 import TrimmedVideo from "@/components/community-jobs/TrimmedVideo";
 import PostPollCard from "@/components/community-jobs/PostPollCard";
@@ -37,7 +36,13 @@ export interface FeedEntry {
   seriesParts?: { id: string; title: string }[];
   editedAt?: string | null;
   lastEditNote?: string | null;
-  event?: { id: string; title: string } | null;
+  event?: {
+    id: string; title: string; startAt?: string | Date; status?: string; game?: string | null;
+    coverImageUrl?: string | null; maxPlayers?: number | null; registrations?: number;
+  } | null;
+  /** Kommentarzahl und die zwei neuesten Kommentare (Vorschau unter der Karte) */
+  commentCount?: number;
+  latestComments?: { id: string; bodyMarkdown: string; createdAt: string | Date; author: Author }[];
   eventId?: string | null;
   excerpt?: string;
   readingMinutes?: number;
@@ -87,95 +92,112 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const CHIP_ON = "bg-primary-soft text-primary-fg border-primary/40";
-const CHIP_OFF = "bg-surface text-gray-300 border-line hover:border-line-strong hover:text-fg";
+/** Art des Eintrags für den Kartenkopf ("Beitrag", "Idee", "Anleitung") */
+function kindLabel(e: FeedEntry): string {
+  if (e.kind === "idea") return "Idee";
+  if (e.kind === "guide") return "Anleitung";
+  return reportCategoryLabel(e.category) ?? "Beitrag";
+}
 
 function authorLabel(a: Author): string {
   return a.username ?? a.name ?? "Unbekannt";
 }
 
-export default function CommunityBoardClient() {
-  const { data: session } = useSession();
-  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
-  const [feed, setFeed] = useState<FeedEntry[] | null>(null);
-  // Offene Community-Jobs: jeder eingeloggte User darf Berichte ergänzen.
-  const { status: sessionStatus } = useSession();
-  const isJournalist = sessionStatus === "authenticated";
-  const [category, setCategory] = useState<string | null>(null);
-
-  async function reload() {
-    try {
-      const data = await api<{ feed: FeedEntry[] }>("/api/community-board?limit=30");
-      setFeed(data.feed);
-    } catch {
-      toast.error("Community-Board konnte nicht geladen werden");
-    }
-  }
-
-  useEffect(() => { reload(); }, []);
-
-  if (feed === null) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
-  }
-  if (feed.length === 0) {
-    return <p className="text-sm text-gray-600 text-center py-12">Noch keine Community-Job-Beiträge.</p>;
-  }
-
-  const usedCategories = REPORT_CATEGORIES.filter(c => feed.some(e => e.kind === "report" && e.category === c.key));
-  const visibleFeed = category ? feed.filter(e => e.kind === "report" && e.category === category) : feed;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <a href="/community-board/roadmap" className="text-sm font-semibold text-primary-fg hover:text-fg transition-colors"><Glyph name="rocket" className="inline size-4 align-[-3px]" /> Roadmap &amp; Top-Ideen</a>
-      </div>
-      {usedCategories.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Berichte nach Kategorie filtern">
-          <button role="tab" aria-selected={category === null} onClick={() => setCategory(null)}
-            className={`inline-flex min-h-9 items-center text-sm font-semibold rounded-full px-3.5 border transition-colors ${category === null ? CHIP_ON : CHIP_OFF}`}>Alle</button>
-          {usedCategories.map(c => (
-            <button key={c.key} role="tab" aria-selected={category === c.key} onClick={() => setCategory(category === c.key ? null : c.key)}
-              className={`inline-flex min-h-9 items-center text-sm font-semibold rounded-full px-3.5 border transition-colors ${category === c.key ? CHIP_ON : CHIP_OFF}`}>{c.label}</button>
-          ))}
-        </div>
-      )}
-      {/* Karten-Raster: zeilenweise von links nach rechts, neu → alt (CSS-Grid statt CSS-Spalten — Spalten würden
-          die Reihenfolge spaltenweise mischen). Am Handy eine Spalte. */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        {visibleFeed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={reload} />)}
-      </div>
-
-    </div>
-  );
-}
-
 /** Bericht im Board: Auszug + "Bericht lesen" (lädt den vollen Text nach), Bewertungen, Ergänzungen (schreiben/bearbeiten/löschen). */
 /** Bilder/Clips eines Beitrags: eins groß, mehrere als Raster (Klick öffnet das Original). */
 function MediaGallery({ media }: { media: NonNullable<FeedEntry["media"]> }) {
+  const [viewer, setViewer] = useState<number | null>(null);
   if (media.length === 0) return null;
+  const images = media.filter(m => !isVideoUrl(m.url));
+  const shown = media.slice(0, 4);
+  const extra = media.length - shown.length;
   const single = media.length === 1;
+  const openAt = (url: string) => setViewer(Math.max(0, images.findIndex(i => i.url === url)));
   return (
-    <div className={single ? "" : "grid grid-cols-2 sm:grid-cols-3 gap-1.5"}>
-      {media.map(m => (
-        <figure key={m.id} className="space-y-1">
-          {isVideoUrl(m.url) ? (
-            <TrimmedVideo url={m.url} clipStart={m.clipStart} clipEnd={m.clipEnd} posterUrl={m.posterUrl}
-              className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
-          ) : (
-            <a href={m.url} target="_blank" rel="noreferrer" className="block">
-              {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
-              <img src={m.url} alt={m.caption ?? ""} loading="lazy" className={`w-full rounded-lg bg-black/30 ${single ? "h-auto" : "aspect-square object-cover"}`} />
-            </a>
-          )}
-          {single && m.caption && <figcaption className="text-xs text-gray-500">{m.caption}</figcaption>}
-        </figure>
-      ))}
+    <>
+      <div className={single ? "" : `grid gap-1 overflow-hidden rounded-control ${shown.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}>
+        {shown.map((m, i) => {
+          const wide = shown.length === 3 && i === 0; // drei Medien: erstes über die volle Breite
+          return (
+            <figure key={m.id} className={`relative ${wide ? "col-span-2" : ""}`}>
+              {isVideoUrl(m.url) ? (
+                <TrimmedVideo url={m.url} clipStart={m.clipStart} clipEnd={m.clipEnd} posterUrl={m.posterUrl}
+                  className={`w-full bg-black/30 ${single ? "h-auto rounded-control" : wide ? "aspect-video object-cover" : "aspect-square object-cover"}`} />
+              ) : (
+                <button type="button" onClick={() => openAt(m.url)} className="block w-full" aria-label={m.caption ? `Bild öffnen: ${m.caption}` : "Bild öffnen"}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
+                  <img src={m.url} alt={m.caption ?? ""} loading="lazy"
+                    className={`w-full bg-black/30 ${single ? "h-auto max-h-[32rem] object-contain rounded-control" : wide ? "aspect-video object-cover" : "aspect-square object-cover"}`} />
+                </button>
+              )}
+              {i === shown.length - 1 && extra > 0 && (
+                <button type="button" onClick={() => openAt(images[Math.min(images.length - 1, 4)]?.url ?? m.url)}
+                  className="absolute inset-0 grid place-items-center bg-canvas/70 text-2xl font-extrabold text-fg">+{extra}</button>
+              )}
+              {single && m.caption && <figcaption className="mt-1 text-xs text-subtle">{m.caption}</figcaption>}
+            </figure>
+          );
+        })}
+      </div>
+      {viewer !== null && images.length > 0 && <Lightbox images={images} start={viewer} onClose={() => setViewer(null)} />}
+    </>
+  );
+}
+
+/** Bildergalerie im Vollbild: Pfeile/Wischen zum Blättern, Esc oder Tippen daneben schließt. */
+function Lightbox({ images, start, onClose }: { images: { id: string; url: string; caption: string | null }[]; start: number; onClose: () => void }) {
+  const [i, setI] = useState(start);
+  const touchX = useRef<number | null>(null);
+  const go = (d: number) => setI(v => (v + d + images.length) % images.length);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") setI(v => (v + 1) % images.length);
+      else if (e.key === "ArrowLeft") setI(v => (v - 1 + images.length) % images.length);
+    }
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [images.length, onClose]);
+  const img = images[i];
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Bilder" className="fixed inset-0 z-[60] flex flex-col bg-canvas/95"
+      onClick={onClose}
+      onTouchStart={e => { touchX.current = e.touches[0].clientX; }}
+      onTouchEnd={e => {
+        if (touchX.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchX.current;
+        touchX.current = null;
+        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      }}>
+      <div className="flex items-center justify-between p-3 text-sm text-muted">
+        <span className="tabular-nums">{i + 1} / {images.length}</span>
+        <button type="button" onClick={onClose} aria-label="Schließen" className="grid size-11 place-items-center rounded-control hover:bg-surface-2 hover:text-fg">
+          <X className="size-5" />
+        </button>
+      </div>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-2" onClick={e => e.stopPropagation()}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
+        <img src={img.url} alt={img.caption ?? ""} className="max-h-full max-w-full rounded-control object-contain" />
+        {images.length > 1 && (
+          <>
+            <button type="button" onClick={() => go(-1)} aria-label="Vorheriges Bild"
+              className="absolute left-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-fg max-sm:hidden"><ChevronLeft className="size-5" /></button>
+            <button type="button" onClick={() => go(1)} aria-label="Nächstes Bild"
+              className="absolute right-2 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-surface/80 text-fg max-sm:hidden"><ChevronRight className="size-5" /></button>
+          </>
+        )}
+      </div>
+      <p className="min-h-10 p-3 text-center text-sm text-muted">{img.caption}</p>
     </div>
   );
 }
 
-function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPage }: {
-  entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void; onReportPage: boolean;
+function ReportBody({ entry, currentUserId, onChanged, onReportPage, contributing, onContributeEnd }: {
+  entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void; onReportPage: boolean;
+  /** "Ergänzen" aus dem Menü der Karte gewählt */
+  contributing: boolean; onContributeEnd: () => void;
 }) {
   const [full, setFull] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -186,11 +208,6 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
     if (onReportPage) toggleRead();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- nur beim Öffnen
 
-  function copyLink() {
-    navigator.clipboard?.writeText(`${window.location.origin}/community-board/report/${entry.id}`)
-      .then(() => toast.success("Link kopiert"))
-      .catch(() => toast.error("Link konnte nicht kopiert werden"));
-  }
 
   async function toggleRead() {
     if (open) { setOpen(false); return; }
@@ -215,11 +232,11 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
       {entry.hasOwnTitle !== false && (onReportPage
         ? <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-fg">{entry.title}</h1>
         : <a href={`/community-board/report/${entry.id}`} className="block text-base font-extrabold leading-snug text-fg hover:text-primary-fg transition-colors">{entry.title}</a>)}
-      {(categoryLabel || entry.series || entry.event || entry.readingMinutes) && (
-        <div className="flex items-center gap-2 flex-wrap text-xs text-gray-500">
+      {(categoryLabel || entry.series || (entry.event && !entry.event.startAt) || entry.readingMinutes) && (
+        <div className="flex items-center gap-2 flex-wrap text-xs text-subtle">
           {categoryLabel && <Badge tone="info">{categoryLabel}</Badge>}
           {entry.series && <Badge tone="neutral"><BookOpen className="w-2.5 h-2.5" /> Reihe: {entry.series.title}</Badge>}
-          {entry.event && (
+          {entry.event && !entry.event.startAt && (
             <a href={`/tournament/${entry.event.id}`} className="inline-flex items-center gap-1 hover:text-primary-fg transition-colors">
               <CalendarDays className="w-3 h-3" /> {entry.event.title}
             </a>
@@ -228,7 +245,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
         </div>
       )}
       {entry.editedAt && (
-        <p className="text-xs text-gray-500">Korrigiert am {formatBerlinDate(entry.editedAt)}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}</p>
+        <p className="text-xs text-subtle">Korrigiert am {formatBerlinDate(entry.editedAt)}{entry.lastEditNote ? ` — ${entry.lastEditNote}` : ""}</p>
       )}
       {entry.coverAsset && (
         // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
@@ -241,9 +258,9 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
 
       {open && full !== null
         ? <MarkdownLite text={full} className="text-xs" />
-        : entry.excerpt ? <p className="text-xs text-gray-400 whitespace-pre-line"><EmojiText text={entry.excerpt} /></p> : null}
+        : entry.excerpt ? <p className="text-xs text-muted whitespace-pre-line"><EmojiText text={entry.excerpt} /></p> : null}
       {entry.media && <MediaGallery media={entry.media} />}
-      {entry.poll && <PostPollCard key={entry.poll.id} poll={entry.poll} isAuthor={entry.author.id === currentUserId} canVote={!!currentUserId && isJournalist} />}
+      {entry.poll && <PostPollCard key={entry.poll.id} poll={entry.poll} isAuthor={entry.author.id === currentUserId} canVote={!!currentUserId} />}
       <div>
         {/* Kurze Texte stehen schon vollständig im Auszug — "weiterlesen" nur bei längeren. */}
         {(onReportPage || (entry.excerpt?.length ?? 0) >= 300) && (
@@ -253,30 +270,20 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
             {open ? "Einklappen" : "Ganzen Beitrag lesen"}
           </button>
         )}
-        <button onClick={copyLink} className="text-xs text-gray-500 hover:text-primary-fg transition-colors">Link kopieren</button>
       </div>
 
       {entry.seriesParts && entry.seriesParts.length > 1 && (
         <div className="rounded-lg bg-surface-2 p-2.5 space-y-1">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Reihe: {entry.series?.title}</p>
+          <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Reihe: {entry.series?.title}</p>
           <ol className="list-decimal pl-5 text-xs space-y-0.5">
             {entry.seriesParts.map(part => (
-              <li key={part.id} className={part.id === entry.id ? "text-white font-medium" : "text-gray-400"}>
+              <li key={part.id} className={part.id === entry.id ? "text-fg font-medium" : "text-muted"}>
                 {part.id === entry.id ? part.title : <a href={`/community-board/report/${part.id}`} className="hover:text-primary-fg transition-colors">{part.title}</a>}
               </li>
             ))}
           </ol>
         </div>
       )}
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-          onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-          onDone={onChanged} label="Beitrag" />
-        {entry.author.id === currentUserId && (
-          <DisputeTrigger kind="jobReportVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/votes`} listKey="votes" />
-        )}
-      </div>
 
       {entry.contributions && entry.contributions.length > 0 && (
         <div className="pl-3 border-l-2 border-line-strong space-y-3">
@@ -285,7 +292,7 @@ function ReportBody({ entry, currentUserId, isJournalist, onChanged, onReportPag
           ))}
         </div>
       )}
-      {isJournalist && <ContributionForm reportId={entry.id} onDone={onChanged} />}
+      {contributing && <ContributionForm reportId={entry.id} onDone={() => { onContributeEnd(); onChanged(); }} onCancel={onContributeEnd} />}
     </>
   );
 }
@@ -322,7 +329,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-500">Ergänzung von {authorLabel(c.author)}</p>
+      <p className="text-xs text-subtle">Ergänzung von {authorLabel(c.author)}</p>
       {editing ? (
         <div className="space-y-1.5">
           <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={5000}
@@ -344,8 +351,8 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
             <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${reportId}/contributions/${c.id}/votes`} listKey="votes" />
             {!editing && (
               <>
-                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-primary transition-colors">Bearbeiten</button>
-                <button onClick={remove} aria-label="Ergänzung löschen" className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
+                <button onClick={() => setEditing(true)} className="text-xs text-subtle hover:text-primary transition-colors">Bearbeiten</button>
+                <button onClick={remove} aria-label="Ergänzung löschen" className="text-subtle hover:text-red-400 transition-colors"><Trash2 className="w-3 h-3" /></button>
               </>
             )}
           </>
@@ -356,8 +363,7 @@ function ContributionItem({ reportId, contribution: c, currentUserId, onChanged 
 }
 
 /** Jeder eingeloggte User darf jeden Bericht ergänzen — ohne Freigabe des Autors. */
-function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
+function ContributionForm({ reportId, onDone, onCancel }: { reportId: string; onDone: () => void; onCancel: () => void }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -376,7 +382,7 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
     try {
       await api(`/api/community-jobs/reports/${reportId}/contributions`, { method: "POST", body: JSON.stringify({ bodyMarkdown: text }) });
       toast.success("Ergänzung veröffentlicht");
-      setText(""); setOpen(false);
+      setText("");
       onDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ergänzung fehlgeschlagen");
@@ -385,26 +391,20 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
     }
   }
 
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} className="text-xs text-gray-500 hover:text-primary transition-colors">
-        + Bericht ergänzen
-      </button>
-    );
-  }
   return (
     <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-muted">Beitrag ergänzen</p>
       <textarea ref={areaRef} value={text} onChange={e => setText(e.target.value)} rows={4} maxLength={5000} autoFocus
         placeholder="Deine Ergänzung (Markdown möglich: **fett**, - Liste, [Link](https://…))"
         className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-y" />
       {emojiOpen && <EmojiPanel onPick={insertEmoji} onClose={() => setEmojiOpen(false)} />}
       <div className="flex items-center justify-between gap-1.5">
         <button onClick={() => setEmojiOpen(v => !v)} title="Emoji einfügen" aria-label="Emoji einfügen" aria-expanded={emojiOpen}
-          className={`p-1.5 rounded hover:text-white hover:bg-line transition-colors ${emojiOpen ? "text-primary-fg" : "text-gray-400"}`}>
+          className={`p-1.5 rounded hover:text-fg hover:bg-line transition-colors ${emojiOpen ? "text-primary-fg" : "text-muted"}`}>
           <Smile className="w-4 h-4" />
         </button>
         <div className="flex gap-1.5">
-          <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setText(""); setEmojiOpen(false); }}>Abbrechen</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setText(""); setEmojiOpen(false); onCancel(); }}>Abbrechen</Button>
           <Button size="sm" loading={busy} disabled={!text.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
         </div>
       </div>
@@ -412,43 +412,180 @@ function ContributionForm({ reportId, onDone }: { reportId: string; onDone: () =
   );
 }
 
-export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expandReport = false }: {
+export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expandReport = false, highlight = false }: {
   entry: FeedEntry; currentUserId: string | undefined; isJournalist: boolean; onChanged: () => void; expandReport?: boolean;
+  /** Gerade selbst veröffentlicht: kurz hervorheben */
+  highlight?: boolean;
 }) {
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(entry.commentCount ?? 0);
+  const [contributing, setContributing] = useState(false);
+  const mine = entry.author.id === currentUserId;
+  const loggedIn = !!currentUserId && isJournalist;
+
   return (
-    <div className="rounded-card border border-line bg-surface p-4 sm:p-5 space-y-3">
-      <div className="flex items-center justify-between">
+    <article id={`${entry.kind}-${entry.id}`}
+      className={`scroll-mt-24 rounded-card border bg-surface p-4 sm:p-5 space-y-3 shadow-card transition-colors duration-700 ${highlight ? "border-primary/60 ring-2 ring-primary/30" : "border-line"}`}>
+      <div className="flex items-center justify-between gap-2">
         <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
-          <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
+          <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={authorLabel(entry.author)} size={32} />
           <div className="min-w-0">
             <span className="flex items-center gap-1.5 min-w-0"><StyledUserName userId={entry.author.id} name={authorLabel(entry.author)} className="text-sm font-bold text-fg truncate" /><StyledUserTitle userId={entry.author.id} className="shrink-0" /></span>
-            <span className="text-xs text-subtle">{formatBerlinDate(entry.publishedAt)}</span>
+            <span className="block truncate text-xs text-subtle">{kindLabel(entry)} · {formatBerlinDate(entry.publishedAt)}{entry.event && !entry.event.startAt ? ` · zu ${entry.event.title}` : ""}</span>
           </div>
         </a>
         {entry.kind === "report" && entry.adminConfirmedPosted && <Badge tone="success">Extern gepostet</Badge>}
-        {entry.kind === "idea" && entry.status === "CLOSED" && <Badge tone="neutral">Abstimmung beendet</Badge>}
         {entry.kind === "guide" && <Badge tone="info"><BookOpen className="w-2.5 h-2.5" /> Anleitung{entry.game ? ` · ${entry.game}` : ""}</Badge>}
       </div>
 
-      {entry.kind === "report" && <ReportBody entry={entry} currentUserId={currentUserId} isJournalist={isJournalist} onChanged={onChanged} onReportPage={expandReport} />}
-      {entry.kind === "report" && <IdeaFromButton prefill={{ title: `Idee zu \u201e${entry.title ?? "Beitrag"}\u201c`, reportId: entry.id }} />}
-
-      {entry.kind === "idea" && (
-        <IdeaBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onIdeaPage={expandReport}
-          actions={(
-            <>
-              <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} canRevote={entry.canRevote} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
-              {entry.author.id === currentUserId && (
-                <DisputeTrigger kind="communityIdeaVote" fetchUrl={`/api/community-jobs/ideas/${entry.id}/votes`} listKey="votes" />
-              )}
-            </>
-          )} />
+      {entry.kind === "report" && (
+        <ReportBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onReportPage={expandReport}
+          contributing={contributing} onContributeEnd={() => setContributing(false)} />
       )}
+      {entry.kind === "idea" && <IdeaBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onIdeaPage={expandReport} actions={null} bare />}
+      {entry.kind === "guide" && <GuideBody entry={entry} />}
 
-      {entry.kind === "guide" && <GuideBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} />}
+      {entry.kind === "report" && entry.event?.startAt && <EventMiniCard event={entry.event} />}
 
-      <CommentSection entityType={entry.kind} entityId={entry.id} currentUserId={currentUserId} />
+      {/* Aktionsleiste: gleich für alle Arten */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+        {entry.kind === "report" && (
+          <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+            onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+            onDone={onChanged} label="Beitrag" />
+        )}
+        {entry.kind === "guide" && (
+          <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+            onVote={added => api(`/api/community-jobs/coach/guides/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+            onDone={onChanged} label="Anleitung" />
+        )}
+        {entry.kind === "idea" && (
+          <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} canRevote={entry.canRevote} voteCount={entry.voteCount ?? 0}
+            avgStars={entry.avgStars} onDone={onChanged} />
+        )}
+        <button type="button" onClick={() => setCommentsOpen(o => !o)} aria-expanded={commentsOpen}
+          className={`${ACTION} ${commentsOpen ? "text-fg bg-surface-2" : ""}`}>
+          <MessageCircle className="size-4" /> <span className="tabular-nums">{commentCount}</span>
+          <span className="max-sm:sr-only">{commentCount === 1 ? "Kommentar" : "Kommentare"}</span>
+        </button>
+        <ShareButton entry={entry} />
+        <CardMenu entry={entry} mine={mine} loggedIn={loggedIn} onContribute={() => setContributing(true)} />
+      </div>
+
+      <CommentSection entityType={entry.kind} entityId={entry.id} currentUserId={currentUserId}
+        open={commentsOpen} onOpen={() => setCommentsOpen(true)} count={commentCount} onCountChange={setCommentCount}
+        preview={entry.latestComments ?? []} />
+    </article>
+  );
+}
+
+const ACTION = "inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-fg";
+const MENU_ITEM = "flex w-full min-h-10 items-center gap-2.5 rounded-control px-3 text-left text-sm text-fg hover:bg-surface-3";
+
+/** Link zum Eintrag: Beitrag und Idee haben eigene Seiten, Anleitungen springen im Board an ihre Karte. */
+function entryUrl(e: FeedEntry): string {
+  if (e.kind === "report") return `/community-board/report/${e.id}`;
+  if (e.kind === "idea") return `/community-board/idea/${e.id}`;
+  return `/community-board#${e.kind}-${e.id}`;
+}
+
+function ShareButton({ entry }: { entry: FeedEntry }) {
+  async function share() {
+    const url = `${window.location.origin}${entryUrl(entry)}`;
+    // Handy: System-Teilen (WhatsApp, Discord …), sonst Link kopieren
+    if (typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches) {
+      try { await navigator.share({ title: entry.title ?? "Community-Board", url }); return; } catch { /* abgebrochen */ return; }
+    }
+    try { await navigator.clipboard.writeText(url); toast.success("Link kopiert"); }
+    catch { toast.error("Link konnte nicht kopiert werden"); }
+  }
+  return (
+    <button type="button" onClick={share} className={ACTION}>
+      <Share className="size-4" /> <span className="max-sm:sr-only">Teilen</span>
+    </button>
+  );
+}
+
+/** "⋯"-Menü: Idee dazu, Ergänzen, Bearbeiten, Bewertungen ansehen */
+function CardMenu({ entry, mine, loggedIn, onContribute }: { entry: FeedEntry; mine: boolean; loggedIn: boolean; onContribute: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  const dispute = entry.kind === "report"
+    ? { kind: "jobReportVote" as const, url: `/api/community-jobs/reports/${entry.id}/votes` }
+    : entry.kind === "guide"
+    ? { kind: "coachGuideVote" as const, url: `/api/community-jobs/coach/guides/${entry.id}/votes` }
+    : { kind: "communityIdeaVote" as const, url: `/api/community-jobs/ideas/${entry.id}/votes` };
+  const items = [
+    entry.kind === "report" && loggedIn,
+    entry.kind === "report" && mine,
+    mine,
+  ].some(Boolean);
+  if (!items) return null;
+
+  function ideaFrom() {
+    setOpen(false);
+    stashCompose({ kind: "idea", prefill: { title: `Idee zu \u201e${entry.title ?? "Beitrag"}\u201c`, reportId: entry.id } });
+    router.push("/community-board?neu=1");
+  }
+
+  return (
+    <div ref={ref} className="relative ml-auto">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open} aria-label="Weitere Aktionen"
+        className="grid size-10 place-items-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-fg">
+        <span aria-hidden className="text-xl leading-none tracking-tighter">⋯</span>
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 bottom-full z-20 mb-1 w-56 rounded-card border border-line-strong bg-surface-2 p-1 shadow-pop">
+          {entry.kind === "report" && loggedIn && (
+            <>
+              <button type="button" role="menuitem" onClick={ideaFrom} className={MENU_ITEM}><Lightbulb className="size-4" /> Idee dazu</button>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); onContribute(); }} className={MENU_ITEM}><Plus className="size-4" /> Ergänzen</button>
+            </>
+          )}
+          {entry.kind === "report" && mine && (
+            <a role="menuitem" href="/community-board/buero#beitraege" className={MENU_ITEM}><Pencil className="size-4" /> Bearbeiten (im Büro)</a>
+          )}
+          {mine && <DisputeTrigger kind={dispute.kind} fetchUrl={dispute.url} listKey="votes" label="Bewertungen ansehen" />}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Event-Bezug eines Beitrags als Mini-Karte: Cover, Datum, Plätze und der Weg zur Anmeldung. */
+function EventMiniCard({ event }: { event: NonNullable<FeedEntry["event"]> }) {
+  const [now] = useState(() => Date.now());
+  const start = event.startAt ? new Date(event.startAt) : null;
+  const upcoming = !!start && start.getTime() > now && event.status !== "completed" && event.status !== "cancelled";
+  const full = event.maxPlayers != null && (event.registrations ?? 0) >= event.maxPlayers;
+  return (
+    <a href={`/tournament/${event.id}`}
+      className="group flex items-center gap-3 rounded-control border border-line bg-surface-2 p-2 transition-colors hover:border-line-strong">
+      {event.coverImageUrl
+        // eslint-disable-next-line @next/next/no-img-element -- Event-Cover (Blob)
+        ? <img src={event.coverImageUrl} alt="" className="h-12 w-20 shrink-0 rounded-[0.5rem] object-cover" />
+        : <GameCover game={event.game ?? null} className="h-12 w-20 shrink-0" rounded="rounded-[0.5rem]" fallbackVariant="plain" />}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-fg">{event.title}</span>
+        <span className="block truncate text-xs text-subtle">
+          {start ? formatBerlinDate(start, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
+          {event.registrations != null ? ` · ${event.registrations}${event.maxPlayers ? `/${event.maxPlayers}` : ""} angemeldet` : ""}
+        </span>
+      </span>
+      <span className={`shrink-0 rounded-control px-3 py-2 text-xs font-bold ${upcoming && !full ? "bg-primary text-primary-ink group-hover:bg-primary-hover" : "border border-line-strong text-muted group-hover:text-fg"}`}>
+        {upcoming ? (full ? "Warteliste" : "Anmelden") : "Ansehen"}
+      </span>
+    </a>
   );
 }
 
@@ -463,9 +600,12 @@ interface CommentEntry {
  * community-board-comment-service.ts).
  */
 function CommentSection({
-  entityType, entityId, currentUserId,
-}: { entityType: FeedEntry["kind"]; entityId: string; currentUserId: string | undefined }) {
-  const [open, setOpen] = useState(false);
+  entityType, entityId, currentUserId, open, onOpen, count, onCountChange, preview,
+}: {
+  entityType: FeedEntry["kind"]; entityId: string; currentUserId: string | undefined;
+  open: boolean; onOpen: () => void; count: number; onCountChange: (n: number) => void;
+  preview: NonNullable<FeedEntry["latestComments"]>;
+}) {
   const [comments, setComments] = useState<CommentEntry[] | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -474,11 +614,13 @@ function CommentSection({
     try {
       const data = await api<{ comments: CommentEntry[] }>(`/api/community-board/comments?entityType=${entityType}&entityId=${entityId}`);
       setComments(data.comments);
+      onCountChange(data.comments.length);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Kommentare konnten nicht geladen werden");
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim ersten Aufklappen laden
   useEffect(() => { if (open && comments === null) load(); }, [open]);
 
   async function submit() {
@@ -500,59 +642,73 @@ function CommentSection({
   async function remove(commentId: string) {
     try {
       await api(`/api/community-board/comments/${commentId}`, { method: "DELETE" });
-      setComments(prev => prev?.filter(c => c.id !== commentId) ?? prev);
+      setComments(prev => {
+        const next = prev?.filter(c => c.id !== commentId) ?? prev;
+        if (next) onCountChange(next.length);
+        return next;
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Löschen fehlgeschlagen");
     }
   }
 
+  // Eingeklappt: die zwei neuesten Kommentare als Vorschau + "Alle anzeigen"
+  if (!open) {
+    if (preview.length === 0) return null;
+    return (
+      <div className="space-y-1.5">
+        {preview.map(c => (
+          <p key={c.id} className="line-clamp-2 text-sm text-fg/90">
+            <a href={`/profile/${c.author.id}`} className="mr-1.5 font-semibold text-fg hover:text-primary-fg">{authorLabel(c.author)}</a>
+            {c.bodyMarkdown}
+          </p>
+        ))}
+        <button type="button" onClick={onOpen} className="text-sm font-medium text-subtle hover:text-fg">
+          {count > preview.length ? `Alle ${count} Kommentare anzeigen` : "Antworten"}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="pt-2 border-t border-line-strong">
-      <button onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors">
-        <MessageCircle className="w-3.5 h-3.5" />
-        {comments ? `${comments.length} Kommentar${comments.length === 1 ? "" : "e"}` : "Kommentare"}
-      </button>
-
-      {open && (
-        <div className="mt-2 space-y-2">
-          {comments === null ? (
-            <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
-          ) : (
-            comments.map(c => (
-              <div key={c.id} className="bg-surface-2 rounded-lg p-2 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
-                    <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={16} />
-                    <StyledUserName userId={c.author.id} name={authorLabel(c.author)} className="text-xs font-medium text-white truncate" />
-                  </a>
-                  <span className="text-xs text-gray-600 shrink-0">{formatBerlinDate(c.createdAt)}</span>
-                </div>
-                <p className="text-xs text-gray-300 whitespace-pre-wrap">{c.bodyMarkdown}</p>
-                <div className="flex items-center gap-2">
-                  <UpvoteButton votedByMe={c.votedByMe} upvotes={c.upvotes}
-                    onVote={added => api(`/api/community-board/comments/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                    onDone={load} label="Kommentar" />
-                  {c.author.id === currentUserId && (
-                    <>
-                      <DisputeTrigger kind="communityBoardCommentVote" fetchUrl={`/api/community-board/comments/${c.id}/votes`} listKey="votes" />
-                      <button onClick={() => remove(c.id)} title="Kommentar löschen"
-                        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-red-400 transition-colors">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-
-          <div className="flex items-center gap-2">
-            <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Kommentar schreiben…"
-              onKeyDown={e => { if (e.key === "Enter") submit(); }}
-              className="flex-1 min-w-0 bg-surface-2 border border-line rounded-control px-3 py-1.5 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
-            <Button size="sm" loading={busy} disabled={!draft.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Senden</Button>
+    <div className="space-y-2">
+      {comments === null ? (
+        <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-primary animate-spin" /></div>
+      ) : (
+        comments.map(c => (
+          <div key={c.id} className="bg-surface-2 rounded-control p-2.5 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
+                <RankedAvatar userId={c.author.id} src={c.author.image} alt={authorLabel(c.author)} size={20} />
+                <StyledUserName userId={c.author.id} name={authorLabel(c.author)} className="text-sm font-semibold text-fg truncate" />
+              </a>
+              <span className="text-xs text-subtle shrink-0">{formatBerlinDate(c.createdAt)}</span>
+            </div>
+            <p className="text-sm text-fg/90 whitespace-pre-wrap">{c.bodyMarkdown}</p>
+            <div className="flex items-center gap-2">
+              <UpvoteButton votedByMe={c.votedByMe} upvotes={c.upvotes}
+                onVote={added => api(`/api/community-board/comments/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
+                onDone={load} label="Kommentar" />
+              {c.author.id === currentUserId && (
+                <>
+                  <DisputeTrigger kind="communityBoardCommentVote" fetchUrl={`/api/community-board/comments/${c.id}/votes`} listKey="votes" />
+                  <button onClick={() => remove(c.id)} title="Kommentar löschen" aria-label="Kommentar löschen"
+                    className="inline-flex items-center gap-1 text-xs text-subtle hover:text-danger transition-colors">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+        ))
+      )}
+
+      {currentUserId && (
+        <div className="flex items-center gap-2">
+          <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Kommentar schreiben…" autoFocus
+            onKeyDown={e => { if (e.key === "Enter") submit(); }}
+            className="flex-1 min-w-0 min-h-10 bg-surface-2 border border-line rounded-control px-3 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
+          <Button size="sm" loading={busy} disabled={!draft.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Senden</Button>
         </div>
       )}
     </div>
@@ -562,42 +718,40 @@ function CommentSection({
 const GUIDE_PREVIEW_CHARS = 420;
 
 /** Coach-Anleitung: Text bei Länge eingeklappt, Daumen-hoch wie bei Berichten, Anfechten für den Autor. */
-function GuideBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
+function GuideBody({ entry }: { entry: FeedEntry }) {
   const [expanded, setExpanded] = useState(false);
   const text = entry.description ?? "";
   const long = text.length > GUIDE_PREVIEW_CHARS;
   return (
     <>
       {entry.game && <GameCover game={entry.game} className="w-full h-32" rounded="rounded-lg" fallbackVariant="plain" />}
-      <p className="text-sm font-semibold text-white">{entry.title}</p>
+      <p className="text-sm font-semibold text-fg">{entry.title}</p>
       {long && !expanded
-        ? <p className="text-xs text-gray-400 whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>
-        : <MarkdownLite text={text} className="text-xs text-gray-400" />}
+        ? <p className="text-xs text-muted whitespace-pre-line">{plainExcerpt(text, GUIDE_PREVIEW_CHARS)}</p>
+        : <MarkdownLite text={text} className="text-xs text-muted" />}
       {long && (
         <button onClick={() => setExpanded(v => !v)} className="text-xs text-primary hover:text-primary-fg transition-colors">
           {expanded ? "Weniger anzeigen" : "Ganze Anleitung lesen"}
         </button>
       )}
-      <div className="flex items-center gap-2">
-        <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-          onVote={added => api(`/api/community-jobs/coach/guides/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-          onDone={onChanged} label="Anleitung" />
-        {entry.author.id === currentUserId && (
-          <DisputeTrigger kind="coachGuideVote" fetchUrl={`/api/community-jobs/coach/guides/${entry.id}/votes`} listKey="votes" />
-        )}
-      </div>
     </>
   );
 }
 
-function DisputeTrigger({ kind, fetchUrl, listKey }: { kind: DisputeKind; fetchUrl: string; listKey: string }) {
+function DisputeTrigger({ kind, fetchUrl, listKey, label }: { kind: DisputeKind; fetchUrl: string; listKey: string; label?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button onClick={() => setOpen(true)} title="Bewertungen ansehen/anfechten"
-        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-amber-400 transition-colors">
-        <Flag className="w-3 h-3" />
-      </button>
+      {label ? (
+        <button type="button" role="menuitem" onClick={() => setOpen(true)} className={MENU_ITEM}>
+          <Flag className="size-4" /> {label}
+        </button>
+      ) : (
+        <button onClick={() => setOpen(true)} title="Bewertungen ansehen/anfechten"
+          className="inline-flex items-center gap-1 text-xs text-subtle hover:text-coin transition-colors">
+          <Flag className="w-3 h-3" />
+        </button>
+      )}
       <DisputeVotesModal open={open} onClose={() => setOpen(false)} kind={kind} fetchUrl={fetchUrl} listKey={listKey} />
     </>
   );
@@ -635,7 +789,8 @@ function UpvoteButton({
   );
 }
 
-function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { ideaId: string; votedByMe: boolean; canRevote?: boolean; voteCount: number; onDone: () => void }) {
+function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, avgStars, onDone }: { ideaId: string; votedByMe: boolean; canRevote?: boolean; voteCount: number; avgStars?: number; onDone: () => void }) {
+  const avg = voteCount > 0 && avgStars ? ` · Ø ${avgStars.toLocaleString("de-DE", { maximumFractionDigits: 1 })}` : "";
   const [open, setOpen] = useState(false);
   const [stars, setStars] = useState(5);
   const [reason, setReason] = useState("");
@@ -656,17 +811,21 @@ function IdeaVoteButton({ ideaId, votedByMe, canRevote, voteCount, onDone }: { i
   }
 
   if (votedByMe && !canRevote) {
-    return <Badge tone="success"><Star className="w-2.5 h-2.5" /> Bewertet ({voteCount} Stimmen)</Badge>;
+    return <span className={`${ACTION} text-success`}><Star className="size-4 fill-current" /> Bewertet · {voteCount}{avg}</span>;
   }
   if (!open) {
-    return <Button size="sm" variant="outline" icon={<Star className="w-3.5 h-3.5" />} onClick={() => setOpen(true)}>{canRevote ? "Neu bewerten (überarbeitet)" : `Bewerten (${voteCount})`}</Button>;
+    return (
+      <button type="button" onClick={() => setOpen(true)} className={`${ACTION} border border-coin/30 text-coin hover:bg-coin-soft`}>
+        <Star className="size-4" /> {canRevote ? "Neu bewerten" : "Bewerten"} <span className="tabular-nums text-subtle">{voteCount}{avg}</span>
+      </button>
+    );
   }
   return (
-    <div className="space-y-2 bg-surface-2 rounded-lg p-3">
+    <div className="basis-full space-y-2 bg-surface-2 rounded-control p-3">
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map(n => (
-          <button key={n} onClick={() => setStars(n)}>
-            <Star className={`w-4 h-4 ${n <= stars ? "text-amber-400 fill-amber-400" : "text-gray-700"}`} />
+          <button key={n} type="button" onClick={() => setStars(n)} aria-label={`${n} Sterne`} className="grid size-10 place-items-center">
+            <Star className={`size-6 ${n <= stars ? "text-coin fill-current" : "text-line-strong"}`} />
           </button>
         ))}
       </div>

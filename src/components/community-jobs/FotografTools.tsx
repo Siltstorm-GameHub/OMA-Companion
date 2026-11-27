@@ -28,7 +28,7 @@ function Section({ title, count, defaultOpen = false, children }: { title: strin
     <div className="space-y-1.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
         <span className={LABEL}>{title}{count !== undefined && count > 0 ? ` (${count})` : ""}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3 h-3 text-subtle transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && children}
     </div>
@@ -53,15 +53,15 @@ export function PhotoRequestList({ onFulfill }: { onFulfill: (request: { id: str
   if (!items) return null;
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+      <p className="text-xs font-semibold text-subtle uppercase tracking-widest flex items-center gap-1.5">
         <Camera className="w-3 h-3" /> Bildwünsche von Journalisten{items.length > 0 ? ` (${items.length})` : ""}
       </p>
-      {items.length === 0 && <p className="text-xs text-gray-600">Aktuell keine offenen Wünsche.</p>}
+      {items.length === 0 && <p className="text-xs text-subtle">Aktuell keine offenen Wünsche.</p>}
       {items.map(r => (
-        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 flex items-start justify-between gap-2">
+        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-coin/20 p-2.5 flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-0.5">
-            <p className="text-xs text-gray-200">{r.description}</p>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-fg/90">{r.description}</p>
+            <p className="text-xs text-subtle">
               von {r.requester.username ?? r.requester.name}{r.eventTitle ? ` · ${r.eventTitle}` : ""} · {formatBerlinDate(r.createdAt)}
             </p>
           </div>
@@ -145,15 +145,15 @@ export function AlbumsBlock({ onChanged }: { onChanged?: () => void }) {
 
   return (
     <Section title="Meine Alben" count={albums.length}>
-      {albums.length === 0 && <p className="text-xs text-gray-600">Noch keine Alben. Ein Album fasst Bilder einer Serie zusammen und lässt sich als Ganzes verlinken.</p>}
+      {albums.length === 0 && <p className="text-xs text-subtle">Noch keine Alben. Ein Album fasst Bilder einer Serie zusammen und lässt sich als Ganzes verlinken.</p>}
       {albums.map(a => (
         <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
-          <a href={`/community-board/album/${a.id}`} className="min-w-0 truncate text-gray-200 hover:text-primary transition-colors">
-            <Images className="inline w-3 h-3 mr-1.5 text-primary" />{a.title} <span className="text-gray-600">({a._count?.assets ?? 0})</span>
+          <a href={`/community-board/album/${a.id}`} className="min-w-0 truncate text-fg/90 hover:text-primary transition-colors">
+            <Images className="inline w-3 h-3 mr-1.5 text-primary" />{a.title} <span className="text-subtle">({a._count?.assets ?? 0})</span>
           </a>
           <span className="flex items-center gap-1 shrink-0">
-            <button onClick={() => copyLink(a.id)} title="Link kopieren" aria-label="Link kopieren" className="p-1 text-gray-500 hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
-            <button onClick={() => remove(a.id)} title="Album löschen" aria-label="Album löschen" className="p-1 text-gray-500 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => copyLink(a.id)} title="Link kopieren" aria-label="Link kopieren" className="p-1 text-subtle hover:text-primary transition-colors"><Copy className="w-3.5 h-3.5" /></button>
+            <button onClick={() => remove(a.id)} title="Album löschen" aria-label="Album löschen" className="p-1 text-subtle hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
           </span>
         </div>
       ))}
@@ -211,7 +211,7 @@ export function MediaLibraryBlock() {
     <Section title="Mediathek durchsuchen">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="relative flex-1 min-w-[10rem]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-subtle" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Suchen: Unterschrift, Event, Fotograf" className={`${FIELD} w-full pl-7`} />
         </span>
         <Select size="sm" value={type} onChange={e => setType(e.target.value)} aria-label="Typ">
@@ -222,8 +222,8 @@ export function MediaLibraryBlock() {
           <option value="votes">Beliebteste</option>
         </Select>
       </div>
-      {items === null && <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />}
-      {items?.length === 0 && <p className="text-xs text-gray-600">Nichts gefunden.</p>}
+      {items === null && <Loader2 className="w-4 h-4 text-subtle animate-spin" />}
+      {items?.length === 0 && <p className="text-xs text-subtle">Nichts gefunden.</p>}
       {items && items.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
           {items.map(a => (
@@ -231,12 +231,12 @@ export function MediaLibraryBlock() {
               <a href={a.url} target="_blank" rel="noreferrer" className="block w-full h-full">
                 <Thumb url={a.url} className="w-full h-full" />
               </a>
-              <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-[9px] text-gray-200 leading-tight">
+              <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1.5 py-1 text-[9px] text-fg/90 leading-tight">
                 <p className="truncate">{a.caption ?? a.event?.title ?? a.type}</p>
-                <p className="truncate text-gray-400">{a.author.username ?? a.author.name} · {a.report?._count.votes ?? 0} 👍</p>
+                <p className="truncate text-muted">{a.author.username ?? a.author.name} · {a.report?._count.votes ?? 0} 👍</p>
               </div>
               <button onClick={() => copy(a.url)} title="Link kopieren" aria-label="Bild-Link kopieren"
-                className="absolute top-1 right-1 p-1 rounded bg-black/60 text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
+                className="absolute top-1 right-1 p-1 rounded bg-black/60 text-fg/85 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                 <Copy className="w-3 h-3" />
               </button>
             </div>
@@ -328,13 +328,13 @@ export function MonthCollageBuilder({ onExported }: { onExported: (url: string, 
     }
   }
 
-  if (sources === null) return <Loader2 className="w-4 h-4 text-gray-600 animate-spin" />;
-  if (sources.length < 2) return <p className="text-xs text-gray-500">In den letzten Wochen gibt es noch nicht genug Bilder für eine Collage (mindestens 2).</p>;
+  if (sources === null) return <Loader2 className="w-4 h-4 text-subtle animate-spin" />;
+  if (sources.length < 2) return <p className="text-xs text-subtle">In den letzten Wochen gibt es noch nicht genug Bilder für eine Collage (mindestens 2).</p>;
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-500">Die beliebtesten Bilder der letzten 30 Tage, automatisch zu einer Collage zusammengestellt.</p>
-      <div className="rounded-xl overflow-hidden border border-line-strong">
+      <p className="text-xs text-subtle">Die beliebtesten Bilder der letzten 30 Tage, automatisch zu einer Collage zusammengestellt.</p>
+      <div className="rounded-control overflow-hidden border border-line-strong">
         <canvas ref={setCanvasEl} width={1280} height={720} className="w-full h-auto block" />
       </div>
       <div className="flex items-center justify-between gap-2">

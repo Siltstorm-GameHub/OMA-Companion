@@ -2,13 +2,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { LayoutGrid, Briefcase, Settings, Award, BarChart2 } from "@/components/icons";
 
-export type ProfileTabKey = "overview" | "achievements" | "activity" | "community_jobs" | "settings";
+export type ProfileTabKey = "overview" | "achievements" | "activity" | "settings";
 
 const TAB_META: Record<ProfileTabKey, { label: string; icon: typeof LayoutGrid }> = {
   overview: { label: "Übersicht", icon: LayoutGrid },
   achievements: { label: "Erfolge", icon: Award },
   activity: { label: "Aktivität", icon: BarChart2 },
-  community_jobs: { label: "Community-Jobs", icon: Briefcase },
   settings: { label: "Einstellungen", icon: Settings },
 };
 
@@ -17,9 +16,9 @@ export const PROFILE_SHOW_TAB_EVENT = "profile-show-tab";
 
 /**
  * Reiter der Profilseite — EIN responsives Layout für Desktop und Handy. Alle Panels kommen
- * als bereits server-gerenderte Bäume rein; Community-Jobs wird erst beim ersten Öffnen
- * gemountet (lädt selbst per fetch und pollt), die übrigen bleiben gemountet und werden nur
- * versteckt, damit Formulare beim Wechseln ihren Zustand behalten.
+ * als bereits server-gerenderte Bäume rein; alle bleiben gemountet und werden nur versteckt,
+ * damit Formulare beim Wechseln ihren Zustand behalten. (Das Büro der Community-Jobs liegt
+ * seit 2026-11 im Community-Board.)
  */
 export default function ProfileTabs({ panels, initialTab }: {
   panels: Partial<Record<ProfileTabKey, ReactNode>>;
@@ -66,7 +65,7 @@ export default function ProfileTabs({ panels, initialTab }: {
 
       {keys.map(key => (
         <div key={key} role="tabpanel" hidden={tab !== key}>
-          {key === "community_jobs" && !visited.has(key) ? null : panels[key]}
+          {panels[key]}
         </div>
       ))}
     </div>

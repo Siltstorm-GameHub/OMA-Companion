@@ -72,7 +72,7 @@ export default async function ProfileTopContributions({ userId, isOwn = false }:
     return (
       <div className="glass rounded-2xl p-4 flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-gray-400">Noch keine Beiträge — teile Fotos oder Clips, mach Werbung für ein Event, schreib einen Bericht oder reiche eine Idee ein.</p>
-        <Link href="/profile?tab=community_jobs" className="text-xs text-primary hover:text-primary-fg transition-colors">Zum Büro →</Link>
+        <Link href="/community-board/buero" className="text-xs text-primary hover:text-primary-fg transition-colors">Zum Büro →</Link>
       </div>
     );
   }

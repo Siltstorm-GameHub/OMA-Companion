@@ -53,6 +53,9 @@ export interface ReportEditorInitial {
 }
 
 /** Vorbelegung beim Start aus Empfehlungen, Anfragen, Kampagnen oder Spiele-Angeboten. */
+/** Werkzeug, mit dem das Verfassen-Feld den Editor öffnet */
+export type ReportEditorTool = "photo" | "clip" | "poll" | "event";
+
 export interface PostEditorPrefill {
   title?: string; body?: string; link?: string; linkLabel?: string; imageUrl?: string;
   /** Mediathek-Bild als Titelbild. */
@@ -127,7 +130,7 @@ function readAutosave(key: string): AutosaveData | null {
 }
 
 export default function ReportEditor({
-  reportId, initial, eventId: presetEventId, presetCoverAssetId, recap, prefill, onDone,
+  reportId, initial, eventId: presetEventId, presetCoverAssetId, recap, prefill, onDone, startTool,
 }: {
   reportId?: string;
   initial?: ReportEditorInitial;
@@ -138,6 +141,8 @@ export default function ReportEditor({
   /** Rückblick-Vorlage (Woche/Monat) automatisch einsetzen. */
   recap?: "week" | "month";
   prefill?: PostEditorPrefill;
+  /** Verfassen-Feld im Board: direkt mit einem Werkzeug starten (Bilder, Clip, Umfrage, Event-Werbung). */
+  startTool?: ReportEditorTool;
   onDone: () => void;
 }) {
   const trainingSessionId = initial?.trainingSessionId ?? prefill?.trainingSessionId;
@@ -169,7 +174,7 @@ export default function ReportEditor({
   });
   const [albumId, setAlbumId] = useState("");
   const [poll, setPoll] = useState<PollDraft | null>(initial?.poll ?? null);
-  const [pollOpen, setPollOpen] = useState(!!initial?.poll);
+  const [pollOpen, setPollOpen] = useState(!!initial?.poll || startTool === "poll");
   const [storyOpen, setStoryOpen] = useState(false);
   // Werbung: Vorlage, Event-/Trainings-Fakten und Anmelde-Link.
   const initialTemplate = initial?.template ?? prefill?.template;
@@ -184,7 +189,7 @@ export default function ReportEditor({
   // Zeitgesteuert veröffentlichen (Berliner Zeit im Eingabefeld)
   const [scheduleOn, setScheduleOn] = useState(!!initial?.scheduledAt);
   const [scheduleAt, setScheduleAt] = useState(initial?.scheduledAt ? toDatetimeLocalBerlin(initial.scheduledAt) : "");
-  const [marketingOpen, setMarketingOpen] = useState(!!trainingSessionId || !!campaignId || isMarketingTemplate(initialTemplate));
+  const [marketingOpen, setMarketingOpen] = useState(!!trainingSessionId || !!campaignId || isMarketingTemplate(initialTemplate) || startTool === "event");
   const [seriesId, setSeriesId] = useState(initial?.seriesId ?? "");
   const [editNote, setEditNote] = useState("");
   const [preview, setPreview] = useState(false);
@@ -203,6 +208,10 @@ export default function ReportEditor({
   const [revisions, setRevisions] = useState<Revision[] | null>(null);
   const [showRevisions, setShowRevisions] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const mediaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (startTool === "photo" || startTool === "clip") mediaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- nur beim Öffnen
   const [photoText, setPhotoText] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -559,8 +568,8 @@ export default function ReportEditor({
   return (
     <div className="space-y-3">
       {restorable && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-amber-200">
+        <div className="rounded-lg border border-coin/30 bg-amber-500/[0.06] px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-coin">
             Nicht gespeicherter Stand vom {formatBerlinDateTime(new Date(restorable.savedAt), { dateStyle: "short", timeStyle: "short" })} gefunden
             {restorable.title ? ` („${restorable.title.slice(0, 40)}“)` : ""}.
           </p>
@@ -571,22 +580,22 @@ export default function ReportEditor({
         </div>
       )}
       {trainingSessionId && (
-        <p className="text-xs text-gray-300 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
+        <p className="text-xs text-fg/85 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">🎓 Werbung für den Trainings-Termin{facts ? `: ${facts.title}` : ""}</p>
       )}
       {photoRequestId && (
-        <p className="text-xs text-gray-300 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">📸 Du erfüllst einen Bildwunsch{prefill?.title ? `: „${prefill.title}“` : ""} — füge mindestens ein Bild hinzu.</p>
+        <p className="text-xs text-fg/85 rounded-lg bg-surface-2 border border-line-strong px-3 py-2">📸 Du erfüllst einen Bildwunsch{prefill?.title ? `: „${prefill.title}“` : ""} — füge mindestens ein Bild hinzu.</p>
       )}
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={REPORT_TITLE_MAX} placeholder="Titel (optional)" className={INPUT} />
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <label className="space-y-1 text-xs text-gray-500">
+        <label className="space-y-1 text-xs text-subtle">
           Kategorie
           <Select value={category} className="w-full" onChange={e => setCategory(e.target.value)}>
             <option value="">Keine Kategorie</option>
             {REPORT_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </Select>
         </label>
-        <label className="space-y-1 text-xs text-gray-500">
+        <label className="space-y-1 text-xs text-subtle">
           Event
           <Select value={eventId} className="w-full" onChange={e => setEventId(e.target.value)}>
             <option value="">Kein Event</option>
@@ -611,7 +620,7 @@ export default function ReportEditor({
 
       {/* Reihe */}
       <div className="space-y-1">
-        <p className="text-xs text-gray-500">Reihe (z.B. „Turnier-Rückblick“, optional)</p>
+        <p className="text-xs text-subtle">Reihe (z.B. „Turnier-Rückblick“, optional)</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <Select value={seriesId} onChange={e => setSeriesId(e.target.value)}>
             <option value="">Keine Reihe</option>
@@ -626,8 +635,8 @@ export default function ReportEditor({
       {/* Titelbild */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-gray-500">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
-          <button onClick={() => setPhotoOpen(v => !v)} className="text-xs text-gray-500 hover:text-primary-fg transition-colors inline-flex items-center gap-1">
+          <p className="text-xs text-subtle">Titelbild aus der Mediathek (optional, auch Bilder anderer)</p>
+          <button onClick={() => setPhotoOpen(v => !v)} className="text-xs text-subtle hover:text-primary-fg transition-colors inline-flex items-center gap-1">
             <Camera className="w-3 h-3" /> Bild bei anderen anfragen
           </button>
         </div>
@@ -643,11 +652,11 @@ export default function ReportEditor({
         )}
         <input value={assetQuery} onChange={e => setAssetQuery(e.target.value)} placeholder="Mediathek durchsuchen (Unterschrift, Event, Fotograf)" className={`w-full ${SMALL_INPUT}`} />
         {assets.length === 0 ? (
-          <p className="text-xs text-gray-600">{assetQuery ? "Nichts gefunden." : "Noch keine Bilder in der Mediathek."}</p>
+          <p className="text-xs text-subtle">{assetQuery ? "Nichts gefunden." : "Noch keine Bilder in der Mediathek."}</p>
         ) : (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <button onClick={() => setCoverAssetId("")} aria-pressed={coverAssetId === ""}
-              className={`shrink-0 w-16 h-12 rounded-lg border text-xs ${coverAssetId === "" ? "border-primary text-primary-fg" : "border-line-strong text-gray-500 hover:text-white"}`}>
+              className={`shrink-0 w-16 h-12 rounded-lg border text-xs ${coverAssetId === "" ? "border-primary text-primary-fg" : "border-line-strong text-subtle hover:text-fg"}`}>
               Keins
             </button>
             {assets.map(a => (
@@ -659,9 +668,9 @@ export default function ReportEditor({
             ))}
           </div>
         )}
-        {coverAssetId && <p className="text-xs text-gray-600">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
+        {coverAssetId && <p className="text-xs text-subtle">Gewählt: {cover ? (cover.caption ?? cover.type) : "Bild aus der Mediathek"}</p>}
         <button type="button" onClick={() => setCoverPickerOpen(v => !v)} aria-expanded={coverPickerOpen}
-          className="text-xs text-gray-500 hover:text-primary transition-colors">
+          className="text-xs text-subtle hover:text-primary transition-colors">
           {coverPickerOpen ? "Spiel-Cover ausblenden" : "Oder ein Spiel-Cover als Titelbild wählen"}
         </button>
         {coverPickerOpen && <GameCoverPicker value={gameCover} onChange={setGameCover} />}
@@ -673,46 +682,46 @@ export default function ReportEditor({
           <div className="flex items-center gap-0.5" role="toolbar" aria-label="Formatierung">
             {toolbar.map(t => (
               <button key={t.label} onClick={t.run} disabled={preview} title={t.label} aria-label={t.label}
-                className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-line disabled:opacity-30 transition-colors">
+                className="p-1.5 rounded text-muted hover:text-fg hover:bg-line disabled:opacity-30 transition-colors">
                 <t.icon className="w-3.5 h-3.5" />
               </button>
             ))}
             {panelButtons.map(b => (
               <button key={b.key} onClick={() => togglePanel(b.key)} disabled={preview} title={b.label} aria-label={b.label} aria-expanded={panel === b.key}
-                className={`p-1.5 rounded hover:text-white hover:bg-line disabled:opacity-30 transition-colors ${panel === b.key ? "text-primary-fg" : "text-gray-400"}`}>
+                className={`p-1.5 rounded hover:text-fg hover:bg-line disabled:opacity-30 transition-colors ${panel === b.key ? "text-primary-fg" : "text-muted"}`}>
                 <b.icon className="w-3.5 h-3.5" />
               </button>
             ))}
           </div>
           <div className="flex rounded-lg border border-line-strong overflow-hidden text-xs font-semibold" role="tablist">
             <button role="tab" aria-selected={!preview} onClick={() => setPreview(false)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"} max-lg:min-h-10`}><Pencil className="w-3 h-3" /> Schreiben</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${!preview ? "bg-line text-fg" : "text-subtle hover:text-fg/85"} max-lg:min-h-10`}><Pencil className="w-3 h-3" /> Schreiben</button>
             <button role="tab" aria-selected={preview} onClick={() => setPreview(true)}
-              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-line text-white" : "text-gray-500 hover:text-gray-300"} max-lg:min-h-10`}><Eye className="w-3 h-3" /> Vorschau</button>
+              className={`px-2.5 py-1 flex items-center gap-1 ${preview ? "bg-line text-fg" : "text-subtle hover:text-fg/85"} max-lg:min-h-10`}><Eye className="w-3 h-3" /> Vorschau</button>
           </div>
         </div>
 
         {panel === "emoji" && !preview && <EmojiPanel onPick={insertText} onClose={() => setPanel(null)} />}
 
         {panel === "mention" && !preview && (
-          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-1.5">
+          <div className="rounded-lg border border-line-strong bg-surface/95 p-2 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <input value={mentionQuery} onChange={e => setMentionQuery(e.target.value)} autoFocus placeholder="Spieler suchen (mind. 2 Zeichen)…" aria-label="Spieler suchen" className={`flex-1 ${SMALL_INPUT}`} />
-              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-subtle hover:text-fg"><X className="w-3.5 h-3.5" /></button>
             </div>
             {mentionResults.map(u => (
               <button key={u.id} onClick={() => { insertText(`${mentionToken(u.username ?? u.name ?? "Spieler", u.id)} `); setPanel(null); setMentionQuery(""); }}
-                className="w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">@{u.username ?? u.name}</button>
+                className="w-full text-left text-xs text-fg/85 hover:bg-line rounded px-2 py-1">@{u.username ?? u.name}</button>
             ))}
-            <p className="text-xs text-gray-600">Genannte Spieler bekommen beim Veröffentlichen eine Benachrichtigung.</p>
+            <p className="text-xs text-subtle">Genannte Spieler bekommen beim Veröffentlichen eine Benachrichtigung.</p>
           </div>
         )}
 
         {panel === "blocks" && !preview && (
-          <div className="rounded-lg border border-line-strong bg-gray-900/95 p-2 space-y-2">
+          <div className="rounded-lg border border-line-strong bg-surface/95 p-2 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-300">Bausteine einfügen</p>
-              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-gray-500 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+              <p className="text-xs font-semibold text-fg/85">Bausteine einfügen</p>
+              <button onClick={() => setPanel(null)} aria-label="Schließen" className="text-subtle hover:text-fg"><X className="w-3.5 h-3.5" /></button>
             </div>
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant="outline" disabled={!eventId} title={eventId ? undefined : "Wähle zuerst ein Event"} onClick={blockResults}>Ergebnis-Tabelle</Button>
@@ -722,12 +731,12 @@ export default function ReportEditor({
               <Button size="sm" variant="outline" onClick={() => { setPanel(null); fillRecap("month"); }}>Monatsrückblick</Button>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-gray-500">Interview einfügen</p>
-              {interviews === null && <p className="text-xs text-gray-600">Lädt…</p>}
-              {interviews !== null && interviews.length === 0 && <p className="text-xs text-gray-600">Keine beantworteten Interviews vorhanden.</p>}
+              <p className="text-xs text-subtle">Interview einfügen</p>
+              {interviews === null && <p className="text-xs text-subtle">Lädt…</p>}
+              {interviews !== null && interviews.length === 0 && <p className="text-xs text-subtle">Keine beantworteten Interviews vorhanden.</p>}
               {interviews?.map(i => (
                 <button key={i.id} onClick={() => { insertBlock(i.markdown!); setPanel(null); }}
-                  className="block w-full text-left text-xs text-gray-300 hover:bg-line rounded px-2 py-1">Interview mit {i.interviewee.username ?? i.interviewee.name}</button>
+                  className="block w-full text-left text-xs text-fg/85 hover:bg-line rounded px-2 py-1">Interview mit {i.interviewee.username ?? i.interviewee.name}</button>
               ))}
             </div>
           </div>
@@ -735,8 +744,8 @@ export default function ReportEditor({
 
         {preview ? (
           <div className="rounded-lg bg-surface-2 border border-line-strong p-3 min-h-[12rem] space-y-3">
-            {title.trim() && <h3 className="text-base font-bold text-white">{title}</h3>}
-            {body.trim() ? <MarkdownLite text={body} /> : <p className="text-xs text-gray-600">Noch kein Text.</p>}
+            {title.trim() && <h3 className="text-base font-bold text-fg">{title}</h3>}
+            {body.trim() ? <MarkdownLite text={body} /> : <p className="text-xs text-subtle">Noch kein Text.</p>}
           </div>
         ) : (
           <textarea ref={areaRef} value={body} onChange={e => setBody(e.target.value)} rows={12}
@@ -744,7 +753,7 @@ export default function ReportEditor({
             className={`${INPUT} resize-y font-mono text-[13px] leading-relaxed`} />
         )}
 
-        <div className="flex items-center justify-between gap-2 text-xs text-gray-600 flex-wrap">
+        <div className="flex items-center justify-between gap-2 text-xs text-subtle flex-wrap">
           <span className={body.length > REPORT_BODY_MAX ? "text-red-400" : ""}>{body.length.toLocaleString("de-DE")}/{REPORT_BODY_MAX.toLocaleString("de-DE")} Zeichen · {words} Wörter · ca. {minutes} Min. Lesezeit</span>
           {assets.length > 0 && !preview && (
             <span className="flex items-center gap-1.5">
@@ -759,7 +768,10 @@ export default function ReportEditor({
       </div>
 
       {/* Bilder & Clips */}
-      <PostMediaEditor media={media} onChange={setMedia} albumId={albumId} onAlbumChange={setAlbumId} startMode={prefill?.collage ? "collage" : undefined} />
+      <div ref={mediaRef} className={startTool === "photo" || startTool === "clip" ? "scroll-mt-24 rounded-control ring-1 ring-primary/40 p-2 -m-2" : ""}>
+        <PostMediaEditor media={media} onChange={setMedia} albumId={albumId} onAlbumChange={setAlbumId}
+          startMode={prefill?.collage ? "collage" : startTool === "clip" ? "clip" : undefined} />
+      </div>
 
       {/* Umfrage */}
       <PostPollEditor value={poll} onChange={setPoll} eventId={eventId} open={pollOpen} onToggle={() => setPollOpen(v => !v)} />
@@ -767,19 +779,19 @@ export default function ReportEditor({
       {/* Werbung */}
       <div className="rounded-lg border border-line-strong bg-surface-2">
         <button type="button" onClick={() => setMarketingOpen(v => !v)} aria-expanded={marketingOpen}
-          className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-gray-400 hover:text-white">
+          className="w-full px-3 py-2 flex items-center justify-between text-left text-xs text-muted hover:text-fg">
           <span className="inline-flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5" /> Werbung für ein Event oder Training</span>
           <span>{marketingOpen ? "−" : "+"}</span>
         </button>
         {marketingOpen && (
           <div className="px-3 pb-3 space-y-2">
-            {!facts && <p className="text-xs text-gray-600">Wähle oben ein Event, dann füllt die Vorlage Datum, Spiel und Anmeldungen automatisch ein.</p>}
+            {!facts && <p className="text-xs text-subtle">Wähle oben ein Event, dann füllt die Vorlage Datum, Spiel und Anmeldungen automatisch ein.</p>}
             <div className="flex flex-wrap items-center gap-1.5">
               <Select size="sm" value={template} onChange={e => setTemplate(e.target.value as MarketingTemplateId)} aria-label="Werbe-Vorlage">
                 {MARKETING_TEMPLATES.filter(t => (t.id === "training") === !!trainingSessionId).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
               </Select>
               <Button size="sm" variant="outline" disabled={!facts} onClick={applyTemplate}>Text aus Vorlage</Button>
-              <label className="flex items-center gap-1.5 text-xs text-gray-400" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">
+              <label className="flex items-center gap-1.5 text-xs text-muted" title="Hängt „Jetzt anmelden“ mit dem Link zur Event-Seite an">
                 <input type="checkbox" checked={includeLink} disabled={!facts} onChange={e => setIncludeLink(e.target.checked)} /> Anmelde-Link
               </label>
               <Button size="sm" variant="ghost" icon={<Copy className="w-3.5 h-3.5" />} disabled={!body.trim()} onClick={copyText}>Text kopieren</Button>
@@ -794,23 +806,23 @@ export default function ReportEditor({
         )}
       </div>
 
-      {prefill?.link && <p className="text-xs text-gray-500">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
+      {prefill?.link && <p className="text-xs text-subtle">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
 
       {/* Korrekturhinweis + Versionsverlauf (nur bei veröffentlichten Berichten) */}
       {isPublishedEdit && (
         <div className="space-y-1.5">
           <input value={editNote} onChange={e => setEditNote(e.target.value)} maxLength={200}
             placeholder="Korrekturhinweis (öffentlich, optional — z.B. „Tippfehler im Ergebnis korrigiert“)" className={INPUT} />
-          <button onClick={toggleRevisions} className="text-xs text-gray-500 hover:text-primary-fg transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
+          <button onClick={toggleRevisions} className="text-xs text-subtle hover:text-primary-fg transition-colors inline-flex items-center gap-1" aria-expanded={showRevisions}>
             <History className="w-3 h-3" /> Frühere Versionen {revisions ? `(${revisions.length})` : ""}
           </button>
           {showRevisions && (
             <div className="rounded-lg bg-surface-2 p-2 space-y-1 max-h-40 overflow-y-auto">
-              {revisions === null && <p className="text-xs text-gray-600">Lädt…</p>}
-              {revisions !== null && revisions.length === 0 && <p className="text-xs text-gray-600">Noch keine früheren Versionen.</p>}
+              {revisions === null && <p className="text-xs text-subtle">Lädt…</p>}
+              {revisions !== null && revisions.length === 0 && <p className="text-xs text-subtle">Noch keine früheren Versionen.</p>}
               {revisions?.map(r => (
                 <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-gray-400 truncate">{formatBerlinDateTime(r.savedAt, { dateStyle: "short", timeStyle: "short" })} · {r.title}{r.note ? ` — ${r.note}` : ""}</span>
+                  <span className="text-muted truncate">{formatBerlinDateTime(r.savedAt, { dateStyle: "short", timeStyle: "short" })} · {r.title}{r.note ? ` — ${r.note}` : ""}</span>
                   <Button size="sm" variant="ghost" onClick={() => {
                     if (body.trim() && !window.confirm("Aktuellen Text durch diese Version ersetzen? (Erst mit „Speichern“ wird es übernommen.)")) return;
                     setTitle(r.title); setBody(r.bodyMarkdown);
@@ -824,7 +836,7 @@ export default function ReportEditor({
 
       {(!reportId || isDraftEdit) && (
         <div className="rounded-lg border border-line-strong bg-surface-2 px-3 py-2 flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-xs text-gray-400">
+          <label className="flex items-center gap-1.5 text-xs text-muted">
             <input type="checkbox" checked={scheduleOn} onChange={e => setScheduleOn(e.target.checked)} />
             <CalendarClock className="w-3.5 h-3.5" /> Zeitgesteuert veröffentlichen
           </label>
@@ -832,7 +844,7 @@ export default function ReportEditor({
             <input type="datetime-local" value={scheduleAt} onChange={e => setScheduleAt(e.target.value)} aria-label="Veröffentlichungszeitpunkt"
               className={SMALL_INPUT} />
           )}
-          {scheduleOn && <span className="text-xs text-gray-600">Bis dahin bleibt der Beitrag ein Entwurf (Berliner Zeit).</span>}
+          {scheduleOn && <span className="text-xs text-subtle">Bis dahin bleibt der Beitrag ein Entwurf (Berliner Zeit).</span>}
         </div>
       )}
 

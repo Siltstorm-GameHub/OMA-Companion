@@ -19,11 +19,11 @@ import { postDisplayTitle } from "@/lib/post-display";
 import { JournalistStatsBlock, JournalistExtras, PhotoRequestsBlock } from "@/components/community-jobs/JournalistTools";
 import { VisionaerStatsBlock } from "@/components/community-jobs/VisionaerTools";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
-import PhotoRequestButton from "@/components/community-jobs/PhotoRequestButton";
+import GuideForm from "@/components/community-jobs/GuideForm";
+import { useRouter } from "next/navigation";
+import { stashCompose } from "../compose";
 import ScoreBreakdownBlock from "@/components/community-jobs/ScoreBreakdownBlock";
-import MediaPickerPanel from "@/components/community-jobs/MediaPickerPanel";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
-import GameNameInput from "@/components/GameNameInput";
 import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { ideaLifecycleMeta, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 import { MarketingCampaignsBlock, PromotionRequestList } from "@/components/community-jobs/MarketingTools";
@@ -39,8 +39,9 @@ import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 import { NumberInput } from "@/components/ui/NumberInput";
 
 /**
- * Community-Jobs-Reiter/-Sektion. Lädt alle Daten selbst per fetch und läuft
- * immer im normalen React-Baum mit vollem Router.
+ * Büro der Community-Jobs (Reiter "Büro" im Community-Board, /community-board/buero): Gehalt, Empfehlungen,
+ * Bildwünsche, Kampagnen, eigene Beiträge und Entwürfe, Coaching. Bis 2026-11 lag das im Profil.
+ * "Erstellen" öffnet das Verfassen-Feld im Feed (compose.ts). Lädt alle Daten selbst per fetch.
  */
 
 const JOB_ICONS: Record<string, typeof Newspaper> = {
@@ -86,7 +87,7 @@ function initialJobKey(): string {
  * Offene Community-Jobs: jeder User kann alle Jobs ausüben. Statt Bewerbung/Vertrag
  * gibt es ein Büro mit einem Reiter pro Job; das Tageslimit gilt über alle Jobs.
  */
-export default function CommunityJobsPanel() {
+export default function BueroPanel() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
@@ -113,7 +114,7 @@ export default function CommunityJobsPanel() {
 
   if (loading) {
     return (
-      <section className="glass card-shine rounded-2xl p-6 flex items-center justify-center">
+      <section className="glass card-shine rounded-card p-6 flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-primary animate-spin" />
       </section>
     );
@@ -125,25 +126,25 @@ export default function CommunityJobsPanel() {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-          <Briefcase className="w-3 h-3" /> Community-Jobs
+        <h2 className="text-xs font-semibold text-subtle uppercase tracking-widest flex items-center gap-1.5">
+          <Briefcase className="w-3 h-3" /> Deine Jobs
         </h2>
-        <span className={`text-xs ${daily.remaining > 0 ? "text-gray-400" : "text-amber-400"}`}
+        <span className={`text-xs ${daily.remaining > 0 ? "text-muted" : "text-coin"}`}
           title="Pro Tag zählen so viele Beiträge über alle Jobs zusammen fürs Gehalt. Weitere Beiträge sind erlaubt, zählen aber nicht.">
           Heute gezählt: {daily.used}/{daily.limit} Beiträge
         </span>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto bg-gray-900 border border-line rounded-xl p-1" role="tablist" aria-label="Job auswählen">
+      <div className="flex gap-1 overflow-x-auto bg-surface border border-line rounded-control p-1" role="tablist" aria-label="Job auswählen">
         {overview.catalog.map(job => {
           const Icon = JOB_ICONS[job.key] ?? Briefcase;
           const active = job.key === jobKey;
           return (
             <button key={job.key} role="tab" aria-selected={active} onClick={() => selectJob(job.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                active ? "bg-primary/20 text-primary-fg shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-gray-500 hover:text-gray-200 hover:bg-line"
+                active ? "bg-primary/20 text-primary-fg shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]" : "text-subtle hover:text-fg/90 hover:bg-line"
               } max-lg:min-h-10`}>
-              <Icon className={`w-3.5 h-3.5 ${active ? "text-primary" : "text-gray-600"}`} />
+              <Icon className={`w-3.5 h-3.5 ${active ? "text-primary" : "text-subtle"}`} />
               {job.label}
             </button>
           );
@@ -219,9 +220,9 @@ function storePrefill(tab: FeedTab, jobKey: string, s: { name: string; discountP
 }
 
 const SWITCH_ON = "bg-primary text-primary-ink shadow-sm";
-const SWITCH_OFF = "text-gray-300 hover:text-white";
+const SWITCH_OFF = "text-fg/85 hover:text-fg";
 const URGENT_CHIP = "text-red-300 bg-red-500/10 border-red-500/25";
-const CALM_CHIP = "text-gray-300 bg-line border-line-strong";
+const CALM_CHIP = "text-fg/85 bg-line border-line-strong";
 
 interface Recommendations {
   events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean; eventScoped?: boolean; noCreate?: boolean; recap?: "week" | "month"; photoRequestId?: string; collage?: boolean; scopeEventId?: string; postTemplate?: string; trainingSessionId?: string }[];
@@ -238,30 +239,34 @@ interface ServerSummary { id: string; name: string; game: string; online: boolea
 function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   jobKey: string; guide?: string; description?: string; coachSelf: CoachSelf; onChanged: () => void;
 }) {
-  const isContentCreator = jobKey === CONTENT_CREATOR_KEY;
   const workKey = jobKey;
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [servers, setServers] = useState<ServerSummary[]>([]);
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
-  // Deep-Link "/profile?job=content_creator&compose=<eventId>" (Turnierseite: "Beitrag dazu erstellen").
-  const [composeEventId] = useState<string | undefined>(() => {
-    if (!isContentCreator || typeof window === "undefined") return undefined;
-    return new URLSearchParams(window.location.search).get("compose") ?? undefined;
-  });
-  const [createOpen, setCreateOpen] = useState(!!composeEventId);
-  const [createEventId, setCreateEventId] = useState<string | undefined>(composeEventId);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
   const [createPrefill, setCreatePrefill] = useState<PostPrefill | undefined>(undefined);
   const [toolsKey, setToolsKey] = useState(0);
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [feedTab, setFeedTab] = useState<FeedTab>("steam-sales");
-  const [tab, setTab] = useState<"work" | "pay">("work");
+  // "?ansicht=gehalt" (Link "Gehalt" in der Board-Seitenspalte) öffnet direkt den Gehalts-Reiter
+  const [tab, setTab] = useState<"work" | "pay">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "gehalt" ? "pay" : "work");
   const [guideOpen, setGuideOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const inViewRef = useRef(true);
 
+  const router = useRouter();
   function openCreateForm(eventId?: string, prefill?: PostPrefill) {
+    // Beiträge und Ideen entstehen im Verfassen-Feld des Feeds (dort sind alle Werkzeuge); nur Trainings-Termine
+    // der Coaches bleiben im Büro-Fenster, sie sind kein Board-Beitrag.
+    if (jobKey === CONTENT_CREATOR_KEY || jobKey === "visionaer") {
+      stashCompose({ kind: jobKey === "visionaer" ? "idea" : "post", eventId: eventId ?? prefill?.eventId, prefill });
+      router.push("/community-board?neu=1");
+      return;
+    }
     setCreateEventId(eventId);
     setCreatePrefill(prefill);
     setCreateOpen(true);
@@ -332,15 +337,15 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
   const canPostAboutSteam = ["content_creator", "visionaer"].includes(workKey);
 
   return (
-    <div ref={rootRef} className="glass card-shine rounded-2xl overflow-hidden">
+    <div ref={rootRef} className="glass card-shine rounded-card overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-line flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-control bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4 text-primary" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-white">Büro · {COMMUNITY_JOBS.find(j => j.key === jobKey)?.label ?? jobKey}</p>
-          {description && <p className="text-xs text-gray-500">{description}</p>}
+          <p className="text-sm font-semibold text-fg">Büro · {COMMUNITY_JOBS.find(j => j.key === jobKey)?.label ?? jobKey}</p>
+          {description && <p className="text-xs text-subtle">{description}</p>}
         </div>
       </div>
 
@@ -357,8 +362,8 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
           value={projected ? `×${formatFixed(projected.voteBonusMultiplier, 1)}` : "…"}
           valueClassName={projected ? (
             projected.voteBonusMultiplier < 1 ? "text-red-400"
-              : projected.voteBonusMultiplier > 1 ? "text-emerald-400"
-              : "text-white"
+              : projected.voteBonusMultiplier > 1 ? "text-success"
+              : "text-fg"
           ) : undefined}
           sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"}` : undefined} />
       </div>
@@ -368,15 +373,15 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         <div className="border-b border-line">
           <button onClick={() => setGuideOpen(v => !v)} aria-expanded={guideOpen}
             className="w-full px-4 py-2.5 flex items-center justify-between gap-2 text-left hover:bg-surface-2 transition-colors">
-            <span className="flex items-center gap-2 text-xs font-semibold text-gray-300 uppercase tracking-widest">
+            <span className="flex items-center gap-2 text-xs font-semibold text-fg/85 uppercase tracking-widest">
               <BookOpen className="w-3.5 h-3.5 text-primary" /> So funktioniert dieser Job
             </span>
-            <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`w-3.5 h-3.5 text-subtle transition-transform ${guideOpen ? "rotate-180" : ""}`} />
           </button>
           {guideOpen && (
-            <div className="px-4 pb-4 space-y-2 text-xs text-gray-400 leading-relaxed">
-              <MarkdownLite text={jobGuide} className="text-xs text-gray-400" />
-              <ul className="list-disc pl-4 space-y-0.5 text-xs text-gray-500">
+            <div className="px-4 pb-4 space-y-2 text-xs text-muted leading-relaxed">
+              <MarkdownLite text={jobGuide} className="text-xs text-muted" />
+              <ul className="list-disc pl-4 space-y-0.5 text-xs text-subtle">
                 <li>Das Gehalt wird jeden Montag für die abgeschlossene Vorwoche gebucht.</li>
                 <li>Bewertest du selbst Beiträge anderer, steigt dein Aktivitäts-Bonus (siehe Reiter „Gehalt“).</li>
                 <li>Du kannst alle Jobs gleichzeitig ausüben, ohne Bewerbung oder Vertrag. Jeder Job zahlt sein eigenes Wochengehalt.</li>
@@ -397,7 +402,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         {([["work", "Arbeit", recCount], ["pay", "Gehalt", 0]] as const).map(([key, label, count]) => (
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
             className={`flex-1 px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-colors border-b-2 ${
-              tab === key ? "text-primary-fg border-primary" : "text-gray-500 border-transparent hover:text-gray-300"
+              tab === key ? "text-primary-fg border-primary" : "text-subtle border-transparent hover:text-fg/85"
             }`}>
             {label}{count > 0 && <span className="ml-1.5 text-xs rounded-full bg-blue-500/20 text-blue-300 px-1.5 py-0.5">{count}</span>}
           </button>
@@ -422,20 +427,20 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             const newcomerPrefill: PostPrefill = { title: "Einsteiger-Training", body: "Für alle, die neu in der Community sind: Wir zeigen euch, wie alles funktioniert, und spielen zusammen." };
             return (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
+                <p className="text-xs font-semibold text-muted flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Events ohne Beitrag</p>
                 <div className="space-y-1.5">
                   {visibleEvents.map(e => (
-                    <div key={e.eventId} className="flex items-center gap-3 rounded-xl bg-surface-2 border border-line px-3 py-2.5">
+                    <div key={e.eventId} className="flex items-center gap-3 rounded-control bg-surface-2 border border-line px-3 py-2.5">
                       {e.urgency && (
                         <span className={`shrink-0 min-w-[3.25rem] text-center text-xs font-semibold rounded-lg px-2 py-1 border ${
                           e.urgent ? URGENT_CHIP : CALM_CHIP
                         }`}>{e.urgency}</span>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-200 truncate">
+                        <p className="text-sm text-fg/90 truncate">
                           {e.url ? <Link href={e.url} className="hover:text-primary-fg transition-colors">{e.title}</Link> : e.title}
                         </p>
-                        <p className="text-xs text-amber-400/90">{e.reason}</p>
+                        <p className="text-xs text-coin">{e.reason}</p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!e.noCreate && (
@@ -455,7 +460,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                           </Button>
                         )}
                         <button onClick={() => dismissRecommendation(e.eventId)} title="Nicht relevant — ausblenden" aria-label="Ausblenden"
-                          className="p-1.5 text-gray-600 hover:text-red-400 transition-colors">
+                          className="p-1.5 text-subtle hover:text-red-400 transition-colors">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -463,7 +468,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                   ))}
                 </div>
                 {hiddenCount > 0 && (
-                  <button onClick={() => setShowAllEvents(true)} className="text-xs text-gray-500 hover:text-primary transition-colors">
+                  <button onClick={() => setShowAllEvents(true)} className="text-xs text-subtle hover:text-primary transition-colors">
                     +{hiddenCount} weitere anzeigen
                   </button>
                 )}
@@ -484,13 +489,13 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
             return (
               <div className="space-y-2">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
                     {activeTab === "steam-sales" || activeTab === "xbox-deals"
-                      ? <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                      ? <Tag className="w-3.5 h-3.5 text-success" />
                       : <Rocket className="w-3.5 h-3.5 text-blue-400" />} {activeDef.title}
                   </p>
                   {available.length > 1 && (
-                    <div className="flex flex-wrap rounded-2xl bg-line border border-line-strong p-0.5 text-xs font-semibold gap-0.5" role="tablist">
+                    <div className="flex flex-wrap rounded-card bg-line border border-line-strong p-0.5 text-xs font-semibold gap-0.5" role="tablist">
                       {available.map(t => (
                         <button key={t.key} role="tab" aria-selected={activeTab === t.key} onClick={() => setFeedTab(t.key)}
                           className={`px-3.5 py-1.5 rounded-full transition-colors ${activeTab === t.key ? SWITCH_ON : SWITCH_OFF}`}>
@@ -503,7 +508,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 snap-x">
                   {items.map(s => (
                     <div key={`${activeTab}-${s.id}`}
-                      className="group snap-start shrink-0 w-44 rounded-xl overflow-hidden bg-surface-2 border border-line hover:border-primary/30 transition-colors flex flex-col">
+                      className="group snap-start shrink-0 w-44 rounded-control overflow-hidden bg-surface-2 border border-line hover:border-primary/30 transition-colors flex flex-col">
                       <a href={s.url} target="_blank" rel="noopener noreferrer" className="block">
                         <div className="relative aspect-[460/215] bg-gradient-to-br from-white/[0.06] to-white/[0.02]">
                           {s.headerImage && (
@@ -516,8 +521,8 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                             </span>
                           ) : null}
                         </div>
-                        <p className="px-2.5 pt-2 text-xs text-gray-300 truncate group-hover:text-primary-fg transition-colors">{s.name}</p>
-                        {s.price && <p className="px-2.5 text-xs text-gray-500">{s.price}</p>}
+                        <p className="px-2.5 pt-2 text-xs text-fg/85 truncate group-hover:text-primary-fg transition-colors">{s.name}</p>
+                        {s.price && <p className="px-2.5 text-xs text-subtle">{s.price}</p>}
                       </a>
                       {canPostAboutSteam && (
                         <div className="px-2.5 pb-2.5 pt-1.5 mt-auto">
@@ -546,8 +551,8 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-surface-2 hover:bg-line transition-colors max-lg:min-h-10">
                 <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-300 truncate">{s.name}</p>
-                  <p className="text-xs text-gray-600 truncate">{s.game}</p>
+                  <p className="text-xs text-fg/85 truncate">{s.name}</p>
+                  <p className="text-xs text-subtle truncate">{s.game}</p>
                 </div>
                 <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-primary bg-primary/10 border-primary/20">
                   <span className="w-1 h-1 rounded-full bg-primary motion-safe:animate-pulse" />
@@ -585,7 +590,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
         return (
           <div className="p-4 border-b border-line bg-amber-500/[0.025] space-y-2.5">
             <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <p className="text-xs text-subtle leading-relaxed">
               Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
               Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
             </p>
@@ -612,9 +617,9 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                           <div className={
                             isCurrent
                               ? "w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full bg-white border-2 border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.3)]"
-                              : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-gray-900 border-2 border-gray-400"
+                              : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-surface border-2 border-gray-400"
                           } />
-                          <span className={`absolute top-3 whitespace-nowrap text-xs ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
+                          <span className={`absolute top-3 whitespace-nowrap text-xs ${isCurrent ? "text-coin font-bold" : "text-muted font-medium"}`}
                             style={{ transform: `translateX(${labelAnchor})` }}>
                             ×{formatFixed(t.multiplier, 1)}
                           </span>
@@ -623,10 +628,10 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
                     })}
                   </div>
                 )}
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-subtle">
                   {nextTier
-                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{formatFixed(nextTier.multiplier, 1)})</>
-                    : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
+                    ? <>Noch <span className="text-coin font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{formatFixed(nextTier.multiplier, 1)})</>
+                    : <span className="text-success">Höchste Stufe erreicht 🎉</span>}
                 </p>
               </div>
             )}
@@ -638,7 +643,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
       <div className="p-4 space-y-2">
         <SectionHeader tone="emerald" icon={<Wallet className="w-3.5 h-3.5" />} title="Gehaltshistorie" />
         {payouts.length === 0 ? (
-          <p className="text-xs text-gray-600">Noch keine Auszahlung. Das Gehalt wird jeweils montags für die abgeschlossene Vorwoche gebucht.</p>
+          <p className="text-xs text-subtle">Noch keine Auszahlung. Das Gehalt wird jeweils montags für die abgeschlossene Vorwoche gebucht.</p>
         ) : (
           <div className="space-y-1">
             {payouts.map((p, i) => {
@@ -646,10 +651,10 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
               return (
                 <div key={p.id} className={`text-xs rounded-lg px-2.5 py-1.5 space-y-0.5 ${i === 0 ? "bg-line" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-gray-500">{weekLabel}</span>
-                    <span className={`font-medium ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
+                    <span className="text-subtle">{weekLabel}</span>
+                    <span className={`font-medium ${p.coinsAwarded > 0 ? "text-coin" : "text-subtle"}`}>{p.coinsAwarded} Münzen</span>
                   </div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-subtle">
                     {p.tierLabel ?? "Keine Bewertung"} · Score {p.rawScore}
                     {p.baseCoins > 0 && <> · Basis {p.baseCoins}</>}
                     {" · "}Bonus ×{formatFixed(p.voteBonusMultiplier, 1)}
@@ -672,7 +677,7 @@ function OfficeView({ jobKey, guide, description, coachSelf, onChanged }: {
 }
 
 const DASH_TILE_TONE_CLASSES: Record<"blue" | "amber" | "emerald" | "red" | "gray", string> = {
-  blue: "text-blue-400", amber: "text-amber-400", emerald: "text-emerald-400", red: "text-red-400", gray: "text-gray-500",
+  blue: "text-blue-400", amber: "text-coin", emerald: "text-success", red: "text-red-400", gray: "text-subtle",
 };
 
 function DashTile({
@@ -684,9 +689,9 @@ function DashTile({
   return (
     <div className="p-2 sm:p-3 text-center min-w-0">
       <div className={`flex items-center justify-center gap-1 mb-1 ${DASH_TILE_TONE_CLASSES[tone]}`}>{icon}</div>
-      <p className={`text-xs sm:text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
-      <p className="text-[9px] text-gray-600 truncate">{label}</p>
-      {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
+      <p className={`text-xs sm:text-xs font-semibold truncate ${valueClassName ?? "text-fg"}`}>{value}</p>
+      <p className="text-[9px] text-subtle truncate">{label}</p>
+      {sub && <p className="text-[9px] text-subtle mt-1 truncate">{sub}</p>}
     </div>
   );
 }
@@ -694,11 +699,11 @@ function DashTile({
 /** Konsistenter Section-Header (Icon-Badge + Titel) für die Büro-Karten-Abschnitte — löst die
  * bisherigen reinen Emoji-Prefixe ab, damit Abschnitte auf einen Blick unterscheidbar sind. */
 const SECTION_TONE_CLASSES: Record<"amber" | "blue" | "teal" | "orange" | "emerald", string> = {
-  amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+  amber: "bg-coin-soft border-coin/20 text-coin",
   blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
   teal: "bg-primary/10 border-primary/20 text-primary",
   orange: "bg-orange-500/10 border-orange-500/20 text-orange-400",
-  emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+  emerald: "bg-success-soft border-success/20 text-success",
 };
 
 function SectionHeader({
@@ -708,7 +713,7 @@ function SectionHeader({
     <div className="flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
         <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${SECTION_TONE_CLASSES[tone]}`}>{icon}</div>
-        <p className="text-xs font-semibold text-gray-300 uppercase tracking-widest">{title}</p>
+        <p className="text-xs font-semibold text-fg/85 uppercase tracking-widest">{title}</p>
       </div>
       {action}
     </div>
@@ -768,7 +773,7 @@ function JobToolContent({ jobKey, coachSelf, onDuplicate, onCompose }: {
 
 function VoteRow({ upvotes, votedByMe }: { upvotes: number; votedByMe: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-xs ${votedByMe ? "text-primary" : "text-gray-500"}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${votedByMe ? "text-primary" : "text-subtle"}`}>
       <ThumbsUp className="w-3 h-3" /> {upvotes}
     </span>
   );
@@ -780,8 +785,8 @@ function EditDeleteBar({
 }: { onEdit: () => void; onDelete: () => void }) {
   return (
     <span className="flex items-center gap-1.5 shrink-0">
-      <button onClick={onEdit} className="text-xs text-gray-600 hover:text-primary transition-colors">Bearbeiten</button>
-      <button onClick={onDelete} className="text-xs text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
+      <button onClick={onEdit} className="text-xs text-subtle hover:text-primary transition-colors">Bearbeiten</button>
+      <button onClick={onDelete} className="text-xs text-subtle hover:text-red-400 transition-colors">Löschen</button>
     </span>
   );
 }
@@ -859,11 +864,11 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
 
   if (!items) return null;
   return (
-    <div className="space-y-3">
+    <div id="beitraege" className="space-y-3 scroll-mt-24">
       <JournalistStatsBlock refreshKey={statsKey} />
       <JournalistExtras onCompose={recap => onCompose(undefined, { recap })} />
       {items.length === 0 ? (
-        <p className="text-xs text-gray-600">Noch keine Beiträge. Über „Neuer Beitrag“ teilst du Fotos oder Clips, machst Werbung für ein Event oder schreibst einen Bericht — alles in einem Beitrag.</p>
+        <p className="text-xs text-subtle">Noch keine Beiträge. Über „Neuer Beitrag“ teilst du Fotos oder Clips, machst Werbung für ein Event oder schreibst einen Bericht — alles in einem Beitrag.</p>
       ) : (
         <div className="space-y-1.5">
           {items.map(r => {
@@ -877,13 +882,13 @@ function ReportList({ onCompose }: { onCompose: (eventId?: string, prefill?: Pos
                   {r.isDraft && !r.scheduledAt && <Badge tone="warning">Entwurf</Badge>}
                   {r.template && <Badge tone="info">Werbung</Badge>}
                   {reportCategoryLabel(r.category) && <Badge tone="neutral">{reportCategoryLabel(r.category)}</Badge>}
-                  <span className="text-gray-300 truncate">{postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount })}</span>
-                  {mediaCount > 0 && <span className="text-gray-600 shrink-0">· {mediaCount} 📷</span>}
+                  <span className="text-fg/85 truncate">{postDisplayTitle({ title: r.title, bodyMarkdown: r.bodyMarkdown, mediaCount })}</span>
+                  {mediaCount > 0 && <span className="text-subtle shrink-0">· {mediaCount} 📷</span>}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   {!r.isDraft && <VoteRow upvotes={r._count.votes} votedByMe={false} />}
-                  {!r.isDraft && r._count.contributions > 0 && <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>}
-                  {r.adminConfirmedPosted && <span className="text-emerald-400">✓ extern</span>}
+                  {!r.isDraft && r._count.contributions > 0 && <span className="text-subtle">{r._count.contributions} Ergänzungen</span>}
+                  {r.adminConfirmedPosted && <span className="text-success">✓ extern</span>}
                   {r.isDraft && <Button size="sm" variant="outline" loading={busy === r.id} onClick={() => publish(r)}>Veröffentlichen</Button>}
                   <EditDeleteBar onEdit={() => edit(r)} onDelete={() => remove(r)} />
                 </span>
@@ -928,7 +933,7 @@ const INPUT_CLS = "bg-surface-2 border border-line rounded-control px-2 py-1 tex
 function MeetingLink({ url }: { url?: string | null }) {
   if (!url) return null;
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary-fg hover:text-teal-200 underline underline-offset-2" onClick={e => e.stopPropagation()}>
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary-fg hover:text-primary-fg underline underline-offset-2" onClick={e => e.stopPropagation()}>
       Treffpunkt
     </a>
   );
@@ -1016,19 +1021,19 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
   if (!items) return null;
   const mine = items.filter(s => s.isMine);
   const others = items.filter(s => !s.isMine);
-  if (items.length === 0) return <p className="text-xs text-gray-600">Keine anstehenden Trainings-Termine.</p>;
+  if (items.length === 0) return <p className="text-xs text-subtle">Keine anstehenden Trainings-Termine.</p>;
 
   return (
     <div className="space-y-3">
       {mine.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Meine Termine</p>
+          <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Meine Termine</p>
           {mine.map(s => editing === s.id ? (
             <div key={s.id} className="space-y-1.5 bg-surface-2 rounded-lg p-2">
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titel" className={`w-full ${INPUT_CLS}`} />
               <div className="flex flex-wrap items-center gap-2">
                 <input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} className={INPUT_CLS} />
-                <label className="flex items-center gap-1 text-xs text-gray-500">
+                <label className="flex items-center gap-1 text-xs text-subtle">
                   Plätze
                   <NumberInput min={1} value={form.capacity} placeholder="∞" onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} className={`w-16 ${INPUT_CLS}`} />
                 </label>
@@ -1036,7 +1041,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
               <input value={form.meetingUrl} onChange={e => setForm(f => ({ ...f, meetingUrl: e.target.value }))} placeholder="Treffpunkt-Link (z.B. Discord-Voice-Kanal)" className={`w-full ${INPUT_CLS}`} />
               <input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} maxLength={200} placeholder="Hinweis an die Teilnehmer (optional)" className={`w-full ${INPUT_CLS}`} />
               {s.seriesId && (
-                <label className="flex items-center gap-1.5 text-xs text-gray-400">
+                <label className="flex items-center gap-1.5 text-xs text-muted">
                   <input type="checkbox" checked={form.wholeSeries} onChange={e => setForm(f => ({ ...f, wholeSeries: e.target.checked }))} />
                   Für diesen und alle folgenden Termine der Serie übernehmen (Zeit wird um dieselbe Differenz verschoben)
                 </label>
@@ -1048,7 +1053,7 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
             </div>
           ) : deleting?.id === s.id ? (
             <div key={s.id} className="space-y-1.5 bg-red-500/[0.06] border border-red-500/20 rounded-lg p-2">
-              <p className="text-xs text-gray-200">„{s.title}“ gehört zu einer Serie. Was absagen?</p>
+              <p className="text-xs text-fg/90">„{s.title}“ gehört zu einer Serie. Was absagen?</p>
               <input value={deleting.message} onChange={e => setDeleting({ id: s.id, message: e.target.value })} maxLength={200}
                 placeholder="Hinweis an die Teilnehmer (optional)" className={`w-full ${INPUT_CLS}`} />
               <div className="flex flex-wrap justify-end gap-1.5">
@@ -1060,14 +1065,14 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
           ) : (
             <div key={s.id} className="space-y-1">
               <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="text-gray-300 truncate">
+                <span className="text-fg/85 truncate">
                   {s.title} — {formatBerlinDateTime(s.startAt)}
-                  {s.seriesId && <span className="text-gray-600"> · Serie</span>}
+                  {s.seriesId && <span className="text-subtle"> · Serie</span>}
                   {s.meetingUrl && <> · <MeetingLink url={s.meetingUrl} /></>}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   <button onClick={() => setOpenParticipants(openParticipants === s.id ? null : s.id)}
-                    className="text-gray-500 hover:text-primary transition-colors" aria-expanded={openParticipants === s.id}>
+                    className="text-subtle hover:text-primary transition-colors" aria-expanded={openParticipants === s.id}>
                     {s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet{(s.waitlistCount ?? 0) > 0 ? ` · ${s.waitlistCount} wartend` : ""}
                   </button>
                   {onDuplicate && (
@@ -1078,20 +1083,20 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
                         capacity: s.capacity != null ? String(s.capacity) : undefined, eventId: s.eventId ?? undefined,
                         meetingUrl: s.meetingUrl ?? undefined,
                       })}
-                      className="p-1 text-gray-600 hover:text-primary transition-colors">
+                      className="p-1 text-subtle hover:text-primary transition-colors">
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                   )}
                   {promo.promoted.includes(s.id)
-                    ? <span className="text-xs text-emerald-400">✓ beworben</span>
+                    ? <span className="text-xs text-success">✓ beworben</span>
                     : promo.requested.includes(s.id)
-                      ? <span className="text-xs text-amber-400">Werbung angefragt</span>
-                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-xs text-gray-600 hover:text-primary transition-colors">Werbung anfragen</button>}
+                      ? <span className="text-xs text-coin">Werbung angefragt</span>
+                      : <button onClick={() => requestPromo(s.id)} title="Die Marketing Manager bitten, diesen Termin zu bewerben" className="text-xs text-subtle hover:text-primary transition-colors">Werbung anfragen</button>}
                   <EditDeleteBar onEdit={() => startEdit(s)} onDelete={() => remove(s)} />
                 </span>
               </div>
               {openParticipants === s.id && (
-                <p className="pl-3 text-xs text-gray-500">
+                <p className="pl-3 text-xs text-subtle">
                   {s.participants && s.participants.length > 0
                     ? s.participants.map(p => p.username ?? p.name ?? "?").join(", ")
                     : "Noch keine Anmeldungen."}
@@ -1104,17 +1109,17 @@ function TrainingSessionList({ onDuplicate }: { onDuplicate?: (prefill: PostPref
 
       {others.length > 0 && (
         <div className="space-y-1.5">
-          {mine.length > 0 && <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Weitere Termine</p>}
+          {mine.length > 0 && <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Weitere Termine</p>}
           {others.map(s => {
             const full = s.capacity != null && s._count.signups >= s.capacity;
             return (
               <div key={s.id} className="flex items-center justify-between text-xs gap-2">
-                <span className="text-gray-300 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}
-                  <span className="text-gray-600"> · {s.coach.username ?? s.coach.name}</span>
+                <span className="text-fg/85 truncate">{s.title} — {formatBerlinDateTime(s.startAt)}
+                  <span className="text-subtle"> · {s.coach.username ?? s.coach.name}</span>
                   {s.signedUp && s.meetingUrl && <> · <MeetingLink url={s.meetingUrl} /></>}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
-                  <span className="text-gray-600">{s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet</span>
+                  <span className="text-subtle">{s._count.signups}{s.capacity != null ? `/${s.capacity}` : ""} angemeldet</span>
                   {s.signedUp ? (
                     <Button size="sm" variant="ghost" disabled={busy === s.id}
                       onClick={() => run(s.id, () => api(`/api/community-jobs/coach/training-sessions/${s.id}/signup`, { method: "DELETE" }), "Abgemeldet")}>Abmelden</Button>
@@ -1158,28 +1163,28 @@ function CoachRatingsReceived() {
   return (
     <div className="pt-3 mt-3 border-t border-line space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Meine Bewertungen</p>
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Meine Bewertungen</p>
         {items.length > 0 && <Button size="sm" variant="ghost" onClick={() => setDisputeOpen(true)}>Ansehen/Anfechten</Button>}
       </div>
-      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Bewertungen erhalten.</p>}
+      {items.length === 0 && <p className="text-xs text-subtle">Noch keine Bewertungen erhalten.</p>}
       {items.length > 0 && (
         <>
-          <p className="text-xs text-gray-300 flex items-center gap-1">
-            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+          <p className="text-xs text-fg/85 flex items-center gap-1">
+            <Star className="w-3.5 h-3.5 text-coin fill-amber-400" />
             <span className="font-semibold">{formatFixed(average, 1)}</span>
-            <span className="text-gray-600">· {items.length} {items.length === 1 ? "Bewertung" : "Bewertungen"}</span>
+            <span className="text-subtle">· {items.length} {items.length === 1 ? "Bewertung" : "Bewertungen"}</span>
           </p>
           <div className="space-y-1">
             {items.slice(0, 5).map(r => (
-              <div key={r.id} className="text-xs text-gray-500 flex items-start gap-2">
-                <span className="text-amber-400 shrink-0">{"★".repeat(r.stars)}<span className="text-gray-700">{"★".repeat(5 - r.stars)}</span></span>
+              <div key={r.id} className="text-xs text-subtle flex items-start gap-2">
+                <span className="text-coin shrink-0">{"★".repeat(r.stars)}<span className="text-gray-700">{"★".repeat(5 - r.stars)}</span></span>
                 <span className="min-w-0">
-                  <span className="text-gray-400">{r.rater.username ?? r.rater.name ?? "?"}:</span> {r.reason}
+                  <span className="text-muted">{r.rater.username ?? r.rater.name ?? "?"}:</span> {r.reason}
                   {r.disputed && <span className="text-amber-500"> · angefochten</span>}
                 </span>
               </div>
             ))}
-            {items.length > 5 && <p className="text-xs text-gray-600">+{items.length - 5} weitere unter „Ansehen/Anfechten“</p>}
+            {items.length > 5 && <p className="text-xs text-subtle">+{items.length - 5} weitere unter „Ansehen/Anfechten“</p>}
           </div>
         </>
       )}
@@ -1221,7 +1226,7 @@ function IdeaList() {
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
 
-  if (!items.length) return <p className="text-xs text-gray-600">Noch keine Ideen eingereicht.</p>;
+  if (!items.length) return <p className="text-xs text-subtle">Noch keine Ideen eingereicht.</p>;
   return (
     <div className="space-y-1.5">
       {items.map(i => editing === i.id ? (
@@ -1242,18 +1247,18 @@ function IdeaList() {
       ) : (
         <div key={i.id} className="flex items-center justify-between text-xs">
           <span className="min-w-0">
-            <Link href={`/community-board/idea/${i.id}`} className="block text-gray-300 truncate hover:text-primary-fg transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-xs text-gray-600">v{i.version}</span>}</Link>
+            <Link href={`/community-board/idea/${i.id}`} className="block text-fg/85 truncate hover:text-primary-fg transition-colors">{i.title}{(i.version ?? 1) > 1 && <span className="ml-1.5 text-xs text-subtle">v{i.version}</span>}</Link>
             {(i.category || (i.lifecycle && i.lifecycle !== "OPEN")) && (
-              <span className="block text-xs text-gray-600 truncate">
+              <span className="block text-xs text-subtle truncate">
                 {ideaCategoryLabel(i.category)}
-                {i.lifecycle && i.lifecycle !== "OPEN" && <span className={`${i.category ? "ml-1.5 " : ""}${i.lifecycle === "DONE" ? "text-emerald-400" : "text-amber-400/90"}`}>{ideaLifecycleMeta(i.lifecycle).label}</span>}
+                {i.lifecycle && i.lifecycle !== "OPEN" && <span className={`${i.category ? "ml-1.5 " : ""}${i.lifecycle === "DONE" ? "text-success" : "text-coin"}`}>{ideaLifecycleMeta(i.lifecycle).label}</span>}
               </span>
             )}
           </span>
           <span className="flex items-center gap-2 shrink-0 ml-2">
             {i.status === "CLOSED"
               ? <Badge tone="neutral">Beendet</Badge>
-              : <button onClick={() => close(i.id)} className="text-xs text-gray-600 hover:text-amber-400 transition-colors">Beenden</button>}
+              : <button onClick={() => close(i.id)} className="text-xs text-subtle hover:text-coin transition-colors">Beenden</button>}
             <VoteRow upvotes={i._count.votes} votedByMe={false} />
             <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); setEditNote(""); }} onDelete={() => remove(i.id)} />
           </span>
@@ -1289,58 +1294,6 @@ function CreateContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: strin
 
 /** Journalist (Bericht), Coach (Trainings-Termin), Visionär (Idee) — alle drei sind Titel + Text. */
 interface DiscordChannel { id: string; name: string; category: string | null }
-
-/** Coach: Einsteiger-Anleitung fürs Community-Board (wird per Daumen-hoch bewertet, zählt in den Score). */
-function GuideForm({ onDone }: { onDone: () => void }) {
-  const [title, setTitle] = useState("");
-  const [game, setGame] = useState("");
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [picker, setPicker] = useState(false);
-
-  function insertImage(asset: { url: string; caption: string | null }) {
-    const alt = (asset.caption ?? "Bild").replace(/[\[\]]/g, "");
-    setBody(b => `${b.trimEnd()}${b.trim() ? "\n\n" : ""}![${alt}](${asset.url})\n\n`);
-    setPicker(false);
-  }
-
-  async function submit() {
-    setBusy(true);
-    try {
-      await api("/api/community-jobs/coach/guides", { method: "POST", body: JSON.stringify({ title, game: game || undefined, bodyMarkdown: body }) });
-      toast.success("Anleitung veröffentlicht");
-      onDone();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      <input value={title} onChange={e => setTitle(e.target.value)} maxLength={120} placeholder="Titel, z.B. „Erste Schritte in R6 Siege“"
-        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
-      <div className="space-y-1">
-        <GameNameInput value={game} onChange={v => setGame(v.slice(0, 40))} placeholder="Spiel (optional) — sein Cover erscheint bei deiner Anleitung"
-          className="w-full bg-line border border-line-strong rounded-lg py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40" />
-      </div>
-      <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={6000} rows={9} placeholder="Deine Tipps und Schritte — Links werden im Board klickbar, **fett** und Bilder sind möglich."
-        className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" onClick={() => setPicker(v => !v)} aria-expanded={picker} className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary transition-colors">
-          <ImagePlus className="w-3 h-3" /> Bild aus der Mediathek einfügen
-        </button>
-        <PhotoRequestButton requesterJob="coach" defaultText={game ? `Screenshot für meine Anleitung zu ${game}` : ""} />
-      </div>
-      {picker && <MediaPickerPanel onPick={insertImage} onClose={() => setPicker(false)} />}
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
-        <Button loading={busy} disabled={!title.trim() || !body.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
-      </div>
-    </div>
-  );
-}
 
 function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string; eventId?: string; prefill?: PostPrefill; onDone: () => void }) {
   const [title, setTitle] = useState(prefill?.title ?? "");
@@ -1399,26 +1352,26 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Text" rows={5}
         className="w-full bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary resize-none" />
       {prefill?.link && (
-        <p className="text-xs text-gray-500 flex items-center gap-1">
+        <p className="text-xs text-subtle flex items-center gap-1">
           <Tag className="w-3 h-3" /> Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.
         </p>
       )}
       {jobKey === "coach" && (
         <>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="space-y-1 text-xs text-gray-500">
+            <label className="space-y-1 text-xs text-subtle">
               Beginn
               <input type="datetime-local" value={startAt} min={toLocalInput(new Date())} onChange={e => setStartAt(e.target.value)}
                 className="block bg-surface-2 border border-line rounded-control px-3 py-2 text-sm text-fg focus:outline-none focus:border-primary" />
             </label>
-            <label className="space-y-1 text-xs text-gray-500">
+            <label className="space-y-1 text-xs text-subtle">
               Plätze (optional)
               <NumberInput min={1} value={capacity} placeholder="unbegrenzt" onChange={e => setCapacity(e.target.value)}
-                className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/40" />
+                className="block w-28 bg-line border border-line-strong rounded-lg px-3 py-2 text-sm text-fg placeholder:text-subtle focus:outline-none focus:border-primary/40" />
             </label>
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="space-y-1 text-xs text-gray-500 flex-1 min-w-[200px]">
+            <label className="space-y-1 text-xs text-subtle flex-1 min-w-[200px]">
               Vorbereitung für Event (optional)
               <Select value={coachEventId} className="w-full" onChange={e => {
                 setCoachEventId(e.target.value);
@@ -1429,7 +1382,7 @@ function TextContentForm({ jobKey, eventId, prefill, onDone }: { jobKey: string;
                 {events.map(ev => <option key={ev.id} value={ev.id}>{ev.title} — {formatBerlinDate(ev.startAt)}</option>)}
               </Select>
             </label>
-            <label className="space-y-1 text-xs text-gray-500">
+            <label className="space-y-1 text-xs text-subtle">
               Wiederholung
               <Select value={String(repeatWeeks)} className="w-full" onChange={e => setRepeatWeeks(Number(e.target.value))}>
                 <option value="1">Einmalig</option>

@@ -85,18 +85,18 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
     <div className="space-y-1.5">
       <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="w-full flex items-center justify-between gap-2 text-left">
         <span className={LABEL}><Megaphone className="inline w-3 h-3 mr-1.5 -mt-0.5" />Kampagnen{campaigns.length > 0 ? ` (${campaigns.length})` : ""}</span>
-        <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3 h-3 text-subtle transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="space-y-2">
-          {campaigns.length === 0 && <p className="text-xs text-gray-600">Eine Kampagne plant zu einem Event mehrere Posts: Ankündigung, Erinnerung 3 Tage vorher und „Heute geht’s los“.</p>}
+          {campaigns.length === 0 && <p className="text-xs text-subtle">Eine Kampagne plant zu einem Event mehrere Posts: Ankündigung, Erinnerung 3 Tage vorher und „Heute geht’s los“.</p>}
           {campaigns.map(c => {
             const now = Date.now();
             return (
               <div key={c.id} className="rounded-lg bg-surface-2 p-2.5 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-gray-200 truncate">{c.event.title} <span className="text-gray-600">· {formatBerlinDate(c.event.startAt)}</span></p>
-                  <button onClick={() => remove(c.id)} title="Kampagne löschen" aria-label="Kampagne löschen" className="p-1 text-gray-500 hover:text-red-400 transition-colors shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <p className="text-xs text-fg/90 truncate">{c.event.title} <span className="text-subtle">· {formatBerlinDate(c.event.startAt)}</span></p>
+                  <button onClick={() => remove(c.id)} title="Kampagne löschen" aria-label="Kampagne löschen" className="p-1 text-subtle hover:text-red-400 transition-colors shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
                 <div className="space-y-1">
                   {STEPS.map(step => {
@@ -107,11 +107,11 @@ export function MarketingCampaignsBlock({ onCompose, refreshKey }: {
                     const label = MARKETING_TEMPLATES.find(t => t.id === step.kind)?.label ?? step.label;
                     return (
                       <div key={step.kind} className="flex items-center justify-between gap-2 text-xs">
-                        <span className={`flex items-center gap-1.5 ${done ? "text-emerald-400" : isDue ? "text-amber-400" : "text-gray-500"}`}>
+                        <span className={`flex items-center gap-1.5 ${done ? "text-success" : isDue ? "text-coin" : "text-subtle"}`}>
                           {done ? <Check className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-current inline-block" />}
                           {label}
                           {planned && <span className="text-primary-fg">· geplant {formatBerlinDate(planned, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
-                          {!done && !planned && step.daysBefore < 999 && <span className="text-gray-600">{isDue ? "· jetzt fällig" : `· ab ${formatBerlinDate(due, { day: "2-digit", month: "2-digit" })}`}</span>}
+                          {!done && !planned && step.daysBefore < 999 && <span className="text-subtle">{isDue ? "· jetzt fällig" : `· ab ${formatBerlinDate(due, { day: "2-digit", month: "2-digit" })}`}</span>}
                         </span>
                         {!done && !planned && (
                           <Button size="sm" variant="outline" onClick={() => onCompose(c.eventId, { template: step.kind, campaignId: c.id })}>Schreiben</Button>
@@ -158,10 +158,10 @@ export function PromotionRequestList({ onWrite }: { onWrite: (r: PromotionReques
     <div className="space-y-1.5">
       <p className={LABEL}>Werbe-Anfragen von Coaches ({items.length})</p>
       {items.map(r => (
-        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-amber-500/20 p-2.5 flex items-start justify-between gap-2">
+        <div key={r.id} className="rounded-lg bg-amber-500/[0.05] border border-coin/20 p-2.5 flex items-start justify-between gap-2">
           <div className="min-w-0 space-y-0.5">
-            <p className="text-xs text-gray-200">{r.session.title} <span className="text-gray-500">· {formatBerlinDate(r.session.startAt, { day: "2-digit", month: "2-digit" })}</span></p>
-            <p className="text-xs text-gray-600">von {r.requester.username ?? r.requester.name}{r.note ? ` · ${r.note}` : ""}</p>
+            <p className="text-xs text-fg/90">{r.session.title} <span className="text-subtle">· {formatBerlinDate(r.session.startAt, { day: "2-digit", month: "2-digit" })}</span></p>
+            <p className="text-xs text-subtle">von {r.requester.username ?? r.requester.name}{r.note ? ` · ${r.note}` : ""}</p>
           </div>
           <Button size="sm" variant="outline" className="shrink-0" onClick={() => onWrite(r)}>Post schreiben</Button>
         </div>

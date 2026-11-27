@@ -22,9 +22,9 @@ interface Stats {
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-2.5 py-2">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-white tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-gray-600 truncate">{sub}</p>}
+      <p className="text-xs text-subtle">{label}</p>
+      <p className="text-sm font-semibold text-fg tabular-nums">{value}</p>
+      {sub && <p className="text-xs text-subtle truncate">{sub}</p>}
     </div>
   );
 }
@@ -44,12 +44,12 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-gray-300 flex items-center gap-1.5">
+        <p className="text-xs text-fg/85 flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5 text-primary" />
           {stats.total} {stats.total === 1 ? "Idee" : "Ideen"} · {stats.votes > 0 ? `Ø ${formatFixed(stats.average, 1)} ★` : "noch keine Bewertung"} · diese Woche {stats.starsThisWeek} ★
         </p>
         <button onClick={() => setOpen(v => !v)} aria-expanded={open}
-          className="text-xs text-gray-500 hover:text-primary transition-colors flex items-center gap-1">
+          className="text-xs text-subtle hover:text-primary transition-colors flex items-center gap-1">
           Auswertung <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
@@ -65,17 +65,17 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
 
           {(lifecycle.review + lifecycle.planned + lifecycle.done + lifecycle.rejected) > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {lifecycle.review > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
-              {lifecycle.planned > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
-              {lifecycle.done > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
-              {lifecycle.rejected > 0 && <span className="text-xs text-gray-400 bg-line rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
+              {lifecycle.review > 0 && <span className="text-xs text-muted bg-line rounded-full px-2 py-0.5">In Prüfung: {lifecycle.review}</span>}
+              {lifecycle.planned > 0 && <span className="text-xs text-muted bg-line rounded-full px-2 py-0.5">Wird umgesetzt: {lifecycle.planned}</span>}
+              {lifecycle.done > 0 && <span className="text-xs text-muted bg-line rounded-full px-2 py-0.5">Umgesetzt: {lifecycle.done}</span>}
+              {lifecycle.rejected > 0 && <span className="text-xs text-muted bg-line rounded-full px-2 py-0.5">Abgelehnt: {lifecycle.rejected}</span>}
             </div>
           )}
 
           {stats.best && (
-            <p className="text-xs text-gray-400">
-              Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-gray-200 hover:text-primary-fg transition-colors">{stats.best.title}</Link>{" "}
-              <span className="text-gray-600">(Ø {formatFixed(stats.best.average, 1)} ★ · {stats.best.count} Stimmen)</span>
+            <p className="text-xs text-muted">
+              Beste Idee: <Link href={`/community-board/idea/${stats.best.id}`} className="text-fg/90 hover:text-primary-fg transition-colors">{stats.best.title}</Link>{" "}
+              <span className="text-subtle">(Ø {formatFixed(stats.best.average, 1)} ★ · {stats.best.count} Stimmen)</span>
             </p>
           )}
 
@@ -83,8 +83,8 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
             <div className="space-y-1">
               <p className={LABEL}>Sterne-Verteilung</p>
               {stats.distribution.map((n, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-3 flex items-center gap-0.5 tabular-nums">{5 - i}<Star className="w-2 h-2 text-amber-400 fill-amber-400" /></span>
+                <div key={i} className="flex items-center gap-1.5 text-xs text-subtle">
+                  <span className="w-3 flex items-center gap-0.5 tabular-nums">{5 - i}<Star className="w-2 h-2 text-coin fill-amber-400" /></span>
                   <div className="flex-1 h-1.5 rounded-full bg-line overflow-hidden"><div className="h-full rounded-full bg-amber-400/80" style={{ width: `${(n / maxDist) * 100}%` }} /></div>
                   <span className="w-5 text-right tabular-nums">{n}</span>
                 </div>
@@ -95,14 +95,14 @@ export function VisionaerStatsBlock({ refreshKey }: { refreshKey?: number }) {
           <div className="space-y-1.5">
             <p className={LABEL}>Sterne pro Woche</p>
             {stats.weekly.length === 0 ? (
-              <p className="text-xs text-gray-600">Noch keine Bewertungen in den letzten 8 Wochen.</p>
+              <p className="text-xs text-subtle">Noch keine Bewertungen in den letzten 8 Wochen.</p>
             ) : (
               <div className="flex items-end gap-1.5 h-16">
                 {stats.weekly.map(w => (
                   <div key={w.weekStart} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0" title={`${formatBerlinDate(w.weekStart)}: ${w.stars} Sterne`}>
-                    <span className="text-[9px] text-gray-500">{w.stars}</span>
+                    <span className="text-[9px] text-subtle">{w.stars}</span>
                     <div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(4, (w.stars / maxWeek) * 36)}px` }} />
-                    <span className="text-[9px] text-gray-600 truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
+                    <span className="text-[9px] text-subtle truncate">{formatBerlinDate(w.weekStart, { day: "2-digit", month: "2-digit" })}</span>
                   </div>
                 ))}
               </div>
