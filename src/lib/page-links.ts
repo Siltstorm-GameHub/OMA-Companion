@@ -14,7 +14,10 @@ export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Clip des Jahres",  url: "/clip-des-jahres" },
   { label: "Clip-Galerie",     url: "/clip-galerie" },
   { label: "Gameserver",       url: "/servers" },
-  { label: "Support",          url: "/donations" },
-  { label: "Fanshop",          url: "/donations" },
+  { label: "OMA Hub",          url: "/hub" },
+  { label: "Spendenpool",      url: "/hub" },
+  { label: "Fanshop",          url: "/hub/fanshop" },
+  { label: "Downloads",        url: "/hub/downloads" },
+  { label: "Wallpaper-Studio", url: "/hub/wallpaper" },
   { label: "Feed",             url: "/feed" },
 ];

@@ -1,11 +1,8 @@
 import { Skeleton } from "@/components/Skeleton";
 
-export default function DonationsLoading() {
+export default function HubLoading() {
   return (
-    <div className="px-4 pt-0 pb-8 sm:py-8">
-      {/* Reiter */}
-      <Skeleton className="h-12 max-w-sm mx-auto rounded-2xl mb-7" />
-
+    <div>
       <div className="mx-auto max-w-5xl space-y-4">
         {/* Nächstes Ziel + Spenden-Button */}
         <Skeleton className="h-48 lg:h-40 rounded-2xl" />

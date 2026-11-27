@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ThumbsUp, Loader2, Star, Flag, MessageCircle, Send, Trash2, BookOpen, CalendarDays, Clock, Smile, ChevronLeft, ChevronRight, X, Share, Lightbulb, Plus, Pencil } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { stashCompose } from "./compose";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
@@ -24,7 +25,7 @@ import type { PollView } from "@/lib/post-poll";
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
 export interface FeedEntry {
-  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
+  kind: "report" | "asset" | "marketing_post" | "idea" | "guide" | "proposal";
   id: string;
   publishedAt: string;
   title?: string;
@@ -69,8 +70,15 @@ export interface FeedEntry {
   version?: number;
   gameAppId?: number | null;
   gameName?: string | null;
-  draftEventId?: string | null;
-  interestParticipate?: number;
+  supporters?: number;
+  supportedByMe?: boolean;
+  /** Event-Vorschlag */
+  preferredTime?: string | null;
+  proposalStatus?: string;
+  organizer?: { id: string; name: string } | null;
+  interested?: number;
+  interestedPeople?: { id: string; name: string; image: string | null }[];
+  interestedByMe?: boolean;
   interestHelp?: number;
   myInterests?: string[];
   imageUrl?: string | null;
@@ -96,6 +104,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 function kindLabel(e: FeedEntry): string {
   if (e.kind === "idea") return "Idee";
   if (e.kind === "guide") return "Anleitung";
+  if (e.kind === "proposal") return "Event-Vorschlag";
   return reportCategoryLabel(e.category) ?? "Beitrag";
 }
 
@@ -444,8 +453,9 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
       )}
       {entry.kind === "idea" && <IdeaBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} onIdeaPage={expandReport} actions={null} bare />}
       {entry.kind === "guide" && <GuideBody entry={entry} />}
+      {entry.kind === "proposal" && <ProposalBody entry={entry} currentUserId={currentUserId} onChanged={onChanged} />}
 
-      {entry.kind === "report" && entry.event?.startAt && <EventMiniCard event={entry.event} />}
+      {(entry.kind === "report" || entry.kind === "proposal") && entry.event?.startAt && <EventMiniCard event={entry.event} />}
 
       {/* Aktionsleiste: gleich für alle Arten */}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
@@ -460,8 +470,16 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
             onDone={onChanged} label="Anleitung" />
         )}
         {entry.kind === "idea" && (
-          <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} canRevote={entry.canRevote} voteCount={entry.voteCount ?? 0}
-            avgStars={entry.avgStars} onDone={onChanged} />
+          <>
+            <SupportButton ideaId={entry.id} supported={!!entry.supportedByMe} count={entry.supporters ?? 0} disabled={mine || !loggedIn} onDone={onChanged} />
+            {!mine && (
+              <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} canRevote={entry.canRevote} voteCount={entry.voteCount ?? 0}
+                avgStars={entry.avgStars} onDone={onChanged} />
+            )}
+          </>
+        )}
+        {entry.kind === "proposal" && (
+          <InterestButton proposalId={entry.id} on={!!entry.interestedByMe} count={entry.interested ?? 0} disabled={!loggedIn || entry.proposalStatus === "SCHEDULED"} onDone={onChanged} />
         )}
         <button type="button" onClick={() => setCommentsOpen(o => !o)} aria-expanded={commentsOpen}
           className={`${ACTION} ${commentsOpen ? "text-fg bg-surface-2" : ""}`}>
@@ -469,7 +487,7 @@ export function FeedCard({ entry, currentUserId, isJournalist, onChanged, expand
           <span className="max-sm:sr-only">{commentCount === 1 ? "Kommentar" : "Kommentare"}</span>
         </button>
         <ShareButton entry={entry} />
-        <CardMenu entry={entry} mine={mine} loggedIn={loggedIn} onContribute={() => setContributing(true)} />
+        <CardMenu entry={entry} mine={mine} loggedIn={loggedIn} onContribute={() => setContributing(true)} onRemoved={onChanged} />
       </div>
 
       <CommentSection entityType={entry.kind} entityId={entry.id} currentUserId={currentUserId}
@@ -507,7 +525,7 @@ function ShareButton({ entry }: { entry: FeedEntry }) {
 }
 
 /** "⋯"-Menü: Idee dazu, Ergänzen, Bearbeiten, Bewertungen ansehen */
-function CardMenu({ entry, mine, loggedIn, onContribute }: { entry: FeedEntry; mine: boolean; loggedIn: boolean; onContribute: () => void }) {
+function CardMenu({ entry, mine, loggedIn, onContribute, onRemoved }: { entry: FeedEntry; mine: boolean; loggedIn: boolean; onContribute: () => void; onRemoved?: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -530,6 +548,13 @@ function CardMenu({ entry, mine, loggedIn, onContribute }: { entry: FeedEntry; m
     entry.kind === "report" && mine,
     mine,
   ].some(Boolean);
+
+  async function removeProposal() {
+    setOpen(false);
+    if (!window.confirm("Event-Vorschlag löschen?")) return;
+    try { await api(`/api/event-proposals/${entry.id}`, { method: "DELETE" }); onRemoved?.(); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
   if (!items) return null;
 
   function ideaFrom() {
@@ -555,7 +580,10 @@ function CardMenu({ entry, mine, loggedIn, onContribute }: { entry: FeedEntry; m
           {entry.kind === "report" && mine && (
             <a role="menuitem" href="/community-board/buero#beitraege" className={MENU_ITEM}><Pencil className="size-4" /> Bearbeiten (im Büro)</a>
           )}
-          {mine && <DisputeTrigger kind={dispute.kind} fetchUrl={dispute.url} listKey="votes" label="Bewertungen ansehen" />}
+          {mine && entry.kind !== "proposal" && <DisputeTrigger kind={dispute.kind} fetchUrl={dispute.url} listKey="votes" label="Bewertungen ansehen" />}
+          {mine && entry.kind === "proposal" && (
+            <button type="button" role="menuitem" onClick={removeProposal} className={`${MENU_ITEM} text-danger`}><Trash2 className="size-4" /> Vorschlag löschen</button>
+          )}
         </div>
       )}
     </div>
@@ -785,6 +813,128 @@ function UpvoteButton({
       {icon ?? <ThumbsUp className={`w-4 h-4 ${votedByMe ? "fill-current" : ""}`} />}
       <span className="tabular-nums font-semibold">{upvotes}</span>
       {!votedByMe && <span className="hidden sm:inline">Daumen hoch</span>}
+    </button>
+  );
+}
+
+/** Ideen: "Unterstützen" mit einem Klick (Hauptsignal). Ab IDEA_SUPPORT_THRESHOLD Unterstützern prüft das Team. */
+/** Event-Vorschlag: "Ich wäre dabei" */
+function InterestButton({ proposalId, on: initialOn, count, disabled, onDone }: { proposalId: string; on: boolean; count: number; disabled: boolean; onDone: () => void }) {
+  const [on, setOn] = useState(initialOn);
+  const [n, setN] = useState(count);
+  const [busy, setBusy] = useState(false);
+  async function toggle() {
+    const next = !on;
+    setOn(next); setN(c => c + (next ? 1 : -1)); setBusy(true);
+    try {
+      await api(`/api/event-proposals/${proposalId}/interest`, { method: "POST", body: JSON.stringify({ on: next }) });
+      onDone();
+    } catch (err) {
+      setOn(!next); setN(c => c + (next ? -1 : 1));
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally { setBusy(false); }
+  }
+  return (
+    <button type="button" onClick={toggle} disabled={busy || disabled} aria-pressed={on}
+      className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-all active:scale-95 disabled:cursor-default ${
+        on ? "border-success bg-success text-canvas" : "border-success/40 bg-success-soft text-success hover:border-success"
+      }`}>
+      <span aria-hidden>🙋</span> <span className="tabular-nums">{n}</span> <span className="max-sm:sr-only">{on ? "Du bist dabei" : "Ich wäre dabei"}</span>
+    </button>
+  );
+}
+
+/** Event-Vorschlag: Inhalt, Wunschtermin, wer dabei wäre, und der Weg zum Event ("Ich organisiere das") */
+function ProposalBody({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const status = entry.proposalStatus ?? "OPEN";
+  const iOrganize = entry.organizer?.id === currentUserId;
+  const people = entry.interestedPeople ?? [];
+
+  async function organize() {
+    setBusy(true);
+    try {
+      await api(`/api/event-proposals/${entry.id}/organize`, { method: "POST" });
+      router.push(`/events/verwalten/neu?mode=event&vorschlag=${entry.id}`);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); setBusy(false); }
+  }
+  async function release() {
+    setBusy(true);
+    try { await api(`/api/event-proposals/${entry.id}/organize`, { method: "DELETE" }); onChanged(); }
+    catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {status === "SCHEDULED"
+          ? <Badge tone="success">Event steht</Badge>
+          : entry.organizer
+            ? <Badge tone="info">{iOrganize ? "Du organisierst das" : `${entry.organizer.name} organisiert das`}</Badge>
+            : <Badge tone="warning">Sucht jemanden, der organisiert</Badge>}
+        {entry.preferredTime && <span className="text-xs text-subtle">Wunschtermin: {entry.preferredTime}</span>}
+      </div>
+      <p className="text-base font-extrabold leading-snug text-fg">{entry.title}</p>
+      {entry.game && (
+        <div className="flex items-center gap-2.5">
+          <GameCover game={entry.game} className="h-10 w-16 shrink-0" rounded="rounded-[0.5rem]" fallbackVariant="plain" />
+          <span className="text-sm font-semibold text-fg/90">{entry.game}</span>
+        </div>
+      )}
+      {entry.description && <MarkdownLite text={entry.description} className="text-sm text-fg/90" />}
+      {people.length > 0 && (
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-2">
+            {people.slice(0, 8).map(p => <RankedAvatar key={p.id} userId={p.id} src={p.image} alt={p.name} size={24} />)}
+          </div>
+          <span className="text-xs text-subtle">{entry.interested} {entry.interested === 1 ? "wäre" : "wären"} dabei</span>
+        </div>
+      )}
+      {status !== "SCHEDULED" && currentUserId && (
+        <div className="flex flex-wrap items-center gap-2 rounded-control border border-line bg-surface-2 p-2.5">
+          {iOrganize ? (
+            <>
+              <a href={`/events/verwalten/neu?mode=event&vorschlag=${entry.id}`} className={buttonClasses("primary", "sm")}>Event anlegen</a>
+              <button type="button" disabled={busy} onClick={release} className={buttonClasses("ghost", "sm")}>Organisation abgeben</button>
+            </>
+          ) : !entry.organizer ? (
+            <>
+              <span className="text-sm text-muted">Lust, das auf die Beine zu stellen?</span>
+              <button type="button" disabled={busy} onClick={organize} className={buttonClasses("primary", "sm", "ml-auto")}>Ich organisiere das</button>
+            </>
+          ) : (
+            <span className="text-sm text-muted">Sobald das Event steht, bekommen alle, die dabei wären, den Link zur Anmeldung.</span>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function SupportButton({ ideaId, supported, count, disabled, onDone }: { ideaId: string; supported: boolean; count: number; disabled: boolean; onDone: () => void }) {
+  const [on, setOn] = useState(supported);
+  const [n, setN] = useState(count);
+  const [busy, setBusy] = useState(false);
+  async function toggle() {
+    const next = !on;
+    setOn(next); setN(c => c + (next ? 1 : -1)); setBusy(true);
+    try {
+      await api(`/api/community-jobs/ideas/${ideaId}/interest`, { method: "POST", body: JSON.stringify({ kind: "SUPPORT", on: next }) });
+      onDone();
+    } catch (err) {
+      setOn(!next); setN(c => c + (next ? -1 : 1));
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally { setBusy(false); }
+  }
+  return (
+    <button type="button" onClick={toggle} disabled={busy || disabled} aria-pressed={on}
+      title={disabled ? "Eigene Ideen kannst du nicht unterstützen" : on ? "Unterstützung zurücknehmen" : "Ich will das auch"}
+      className={`inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-all active:scale-95 disabled:cursor-default ${
+        on ? "border-primary bg-primary text-primary-ink" : "border-primary/40 bg-primary/10 text-primary-fg hover:bg-primary/20"
+      }`}>
+      <ThumbsUp className="size-4" /> <span className="tabular-nums">{n}</span> <span className="max-sm:sr-only">{on ? "Unterstützt" : "Unterstützen"}</span>
     </button>
   );
 }

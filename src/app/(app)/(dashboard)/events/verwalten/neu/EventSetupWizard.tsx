@@ -179,6 +179,14 @@ export default function EventSetupWizard(props: EventWizardProps) {
         </p>
       )}
 
+      {w.proposalPrefill && (
+        <p className="text-xs text-subtle -mt-3 mb-6">
+          Aus dem Event-Vorschlag „<span className="text-fg/90">{w.proposalPrefill.title}</span>“
+          {w.proposalPrefill.preferredTime ? <> · Wunschtermin: <span className="text-fg/90">{w.proposalPrefill.preferredTime}</span></> : null}.
+          Wer dort „Ich wäre dabei“ gesagt hat, bekommt nach dem Anlegen den Link zur Anmeldung.
+        </p>
+      )}
+
       {gamePrefill && !eventTemplate && (
         <p className="text-xs text-subtle -mt-3 mb-6">
           {gamePrefill.slug

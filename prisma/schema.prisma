@@ -33,16 +33,16 @@ model User {
   deletedAt               DateTime? // Konto auf eigenen Wunsch gelöscht und anonymisiert (src/lib/account-deletion.ts) — Login damit gesperrt
   leftServerAt            DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
 
-  twitchLogin        String?   @unique
+  twitchLogin        String?             @unique
   // Twitch-User-ID zu twitchLogin (bleibt bei Umbenennung gleich) — beim Speichern im Profil
   // gesetzt bzw. beim Clip-Gewinner-Abgleich nachgetragen. Siehe src/lib/clip-rewards.ts.
-  twitchUserId       String?   @unique
+  twitchUserId       String?             @unique
   // Weitere Twitch-Accounts dieses Users, die Clips erstellen (z.B. Zuschauer-Account ohne eigenen
   // Stream) — von Admins beim Verknüpfen eines Clip-Gewinners angelegt, damit es nur einmal nötig ist.
   twitchClipperLinks TwitchClipperLink[]
   // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von
   // jedem Event, nur für User mit gesetztem twitchLogin erreichbar. Lazy erzeugt wie Event.overlayToken.
-  overlayToken       String?   @unique
+  overlayToken       String?             @unique
   // Einstellungen des festen Streamer-Overlays (/overlay/streamer/[userId]?token=overlayToken) —
   // JSON: { event: { elements, rotateSeconds } | null, profile: { elements, rotateSeconds } | null },
   // siehe StreamerOverlayConfig in src/components/overlay/layout.ts. Fehlt das Feld, greifen die
@@ -57,10 +57,10 @@ model User {
   overlayControlJson String?
   // VERALTET (war das Opt-in für den Community-Clip-Loop, ersetzt durch overlayClipsOptOut). Bleibt
   // nur stehen, weil der Build-Abgleich (scripts/db-push.mjs) keine Spalten mit Daten löscht.
-  overlayClipsOptIn  Boolean   @default(false)
+  overlayClipsOptIn  Boolean             @default(false)
   // Abmeldung vom Community-Clip-Loop: Clips des eigenen Twitch-Kanals laufen standardmäßig in den
   // Intro-/Clip-/Outro-Szenen anderer Streamer — true = nicht mehr. Siehe src/lib/overlay-clips.ts.
-  overlayClipsOptOut Boolean   @default(false)
+  overlayClipsOptOut Boolean             @default(false)
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
@@ -72,17 +72,17 @@ model User {
   // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | null }.
   // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
   // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
-  vitrineSlotsJson  String?
+  vitrineSlotsJson      String?
   // Zeitpunkt der letzten Vitrinen-Änderung (Fach gesetzt/geleert/auf Auto zurückgestellt) —
   // treibt den "zuletzt aktualisiert"-Hinweis für Besucher (siehe VitrineModal.tsx).
-  vitrineUpdatedAt  DateTime?
+  vitrineUpdatedAt      DateTime?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
-  favoriteGamesJson String?
+  favoriteGamesJson     String?
   // Kosmetik-Shop: ausgerüstetes Set { frame, aura, background, title, nameColor } → Artikel-ID aus
   // lib/cosmetics/catalog.ts. Fehlender Key = nichts gewählt, null = bewusst leer (siehe parseEquipped).
   equippedCosmeticsJson String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
-  notificationPrefs String    @default("{}")
+  notificationPrefs     String    @default("{}")
 
   accounts                    Account[]
   sessions                    Session[]
@@ -132,6 +132,11 @@ model User {
   jobMediaAlbums              JobMediaAlbum[]
   marketingCampaigns          MarketingCampaign[]
   ideaInterests               IdeaInterest[]
+  roadmapItems                RoadmapItem[]
+  roadmapUpdates              RoadmapUpdate[]
+  eventProposals              EventProposal[]              @relation("EventProposalAuthor")
+  organizedProposals          EventProposal[]              @relation("EventProposalOrganizer")
+  eventProposalInterests      EventProposalInterest[]
   promotionRequests           PromotionRequest[]           @relation("PromotionRequester")
   coachTrainingSessions       CoachTrainingSession[]
   coachTrainingSignups        CoachTrainingSignup[]
@@ -167,8 +172,8 @@ model User {
   gameReactions               GameReaction[]
   steamSwipes                 SteamSwipe[]
   igdbSwipes                  IgdbSwipe[]
-  gameTips                    GameTip[]   @relation("GameTipBy")
-  gameTipsReviewed            GameTip[]   @relation("GameTipReviewedBy")
+  gameTips                    GameTip[]                    @relation("GameTipBy")
+  gameTipsReviewed            GameTip[]                    @relation("GameTipReviewedBy")
   gameSwipeState              GameSwipeState?
   gameMatches                 GameMatch[]
   gameVoteBallots             GameVoteBallot[]
@@ -330,77 +335,77 @@ model EventSeries {
 }
 
 model Event {
-  id                  String        @id @default(cuid())
-  title               String
-  description         String?
-  rules               String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
-  game                String?
-  genre               EventGenre?
-  category            EventCategory @default(fun)
-  startAt             DateTime
-  endAt               DateTime? // Optionales Ende (Datum/Uhrzeit) — generisch für alle Event-Typen, siehe formatBerlinRange
-  maxPlayers          Int?
-  pointReward         Int           @default(50)
-  spectatorMode       Boolean       @default(false)
-  spectatorRewardJson String? // JSON: { coins: number, rankPoints: number }
-  type                String        @default("community")
-  status              String        @default("open")
-  hidden              Boolean       @default(false) // true = nur im Admin sichtbar
-  registrationLocked  Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  id                   String        @id @default(cuid())
+  title                String
+  description          String?
+  rules                String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
+  game                 String?
+  genre                EventGenre?
+  category             EventCategory @default(fun)
+  startAt              DateTime
+  endAt                DateTime? // Optionales Ende (Datum/Uhrzeit) — generisch für alle Event-Typen, siehe formatBerlinRange
+  maxPlayers           Int?
+  pointReward          Int           @default(50)
+  spectatorMode        Boolean       @default(false)
+  spectatorRewardJson  String? // JSON: { coins: number, rankPoints: number }
+  type                 String        @default("community")
+  status               String        @default("open")
+  hidden               Boolean       @default(false) // true = nur im Admin sichtbar
+  registrationLocked   Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
   // Optionaler Anmeldeschluss vor dem Start (z.B. 1 Std vorher für die Auslosung). null = bis zum Start.
   registrationClosesAt DateTime?
   // Check-in vor Turnierstart: Fenster öffnet checkInMinutes vor startAt und schließt mit der Auslosung.
   // Ist es aktiv, werden nur eingecheckte Spieler (EventRegistration.checkedInAt) ausgelost.
-  checkInEnabled      Boolean       @default(false)
-  checkInMinutes      Int           @default(30)
+  checkInEnabled       Boolean       @default(false)
+  checkInMinutes       Int           @default(30)
   // Geplante Veröffentlichung: unsichtbare Events (hidden) werden zu diesem Zeitpunkt per Cron sichtbar
   // geschaltet und angekündigt (Discord, Push). null = keine Planung.
-  publishAt           DateTime?
+  publishAt            DateTime?
   // Stand der Veröffentlichungs-Schritte (Discord-Event, Ankündigung, Push) — JSON:
   // { notifiedAt?: string, errors: [{ step, message, at }] }. Fehler sieht der Admin und kann sie
   // erneut ausführen; erfolgreiche Schritte laufen nie doppelt (siehe lib/event-publish.ts).
-  publishStateJson    String?
+  publishStateJson     String?
   // Wenn gesetzt (oder über die Reihe geerbt): Spieler-Selbst-Anmeldung nur für Mitglieder dieses
   // Squads. Event bleibt für alle sichtbar, Zuschauer-Anmeldung bleibt offen.
-  squadId             String?
-  squad               Squad?        @relation(fields: [squadId], references: [id])
-  coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
+  squadId              String?
+  squad                Squad?        @relation(fields: [squadId], references: [id])
+  coverImageUrl        String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
   // OMA Original (nur Mods): Logo-Siegel auf dem Cover. Termine einer Original-Reihe gelten auch ohne
   // dieses Feld als Original (lib/oma-original.ts).
-  omaOriginal         Boolean       @default(false)
+  omaOriginal          Boolean       @default(false)
   // Token für die öffentliche OBS-Overlay-Route (/overlay/[id]?token=…). Wird lazy bei der
   // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.
-  overlayToken        String?       @unique
+  overlayToken         String?       @unique
   // Live-Steuerungszustand des Overlays waehrend des Streams (Touchscreen-Widget) — JSON:
   // { hidden: ElementKey[], zoom: ElementKey | null, scene: "pause" | null,
   //   announcement: { id, text, until, countdown } | null } — scene = "Pause für alle",
   // announcement = Durchsage (siehe parseEventOverlayControl). Ueberschreibt NUR Sichtbarkeit/Zoom
   // zur Laufzeit, das per URL festgelegte Standardlayout (Position/Groesse) bleibt Basis.
   // Fehlt das Feld oder ist es leer, verhaelt sich das Overlay exakt wie zuvor (safe default).
-  overlayControlJson  String?
-  discordEventId      String?       @unique
-  discordMessageId    String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
-  discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
-  seriesId            String?
+  overlayControlJson   String?
+  discordEventId       String?       @unique
+  discordMessageId     String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
+  discordChannelId     String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
+  seriesId             String?
   // Soll-Platz in der Regel der Reihe (lib/series-schedule.ts): bleibt beim Verschieben erhalten.
   // null = Sondertermin bzw. Reihe ohne feste Regel. Je Reihe eindeutig (verhindert doppelte Termine).
-  slotIndex           Int?
-  reminderSentAt      DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
+  slotIndex            Int?
+  reminderSentAt       DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
   // Zeitraum-Events (> 24 h): "Endet bald"-Erinnerung schon verschickt (lib/event-period.ts)
-  endingSoonSentAt    DateTime?
+  endingSoonSentAt     DateTime?
   // Community-Ziel-Zustand, JSON: { milestones: number[] (gemeldete %-Stufen), rewardedAt?: string,
   // rewardedUserIds?: string[] } — getrennt von statConfigJson, damit das Speichern der Turnier-
   // Einstellungen Meldungen/Belohnungen nicht zurücksetzt (lib/community-goal-milestones.ts)
-  goalStateJson       String?
+  goalStateJson        String?
   // JSON: { mvpUserId?, winnerStatField?, seriesWinnerTargetField?, lockedAt }
-  completionData      String?
+  completionData       String?
   // Gesetzt, solange ein Abschluss läuft. Verhindert, dass zwei parallele Abschlüsse
   // beide gegen denselben Ausgangsstand rechnen und Belohnungen doppelt auszahlen.
-  completionLockAt    DateTime?
+  completionLockAt     DateTime?
   // Zeitpunkt des ERSTEN Abschlusses (bleibt bei Re-Edit stehen). Treibt die Siegerehrung im
   // OBS-Overlay und hält das Event danach kurz im Streamer-Overlay (lib/overlay-active-event.ts).
-  completedAt         DateTime?
-  createdAt           DateTime      @default(now())
+  completedAt          DateTime?
+  createdAt            DateTime      @default(now())
 
   // Ehem. Tournament-Felder (zusammengeführt)
   format                String? // single_elimination | double_elimination (Legacy, nicht mehr wählbar) | round_robin | liga (= round_robin mit Hin-/Rückrunde) | ffa | coop_stats | avg_stats
@@ -429,7 +434,7 @@ model Event {
 
   // Community-Events: von einem normalen User (ohne Mod-Rolle) angelegt, siehe EventSeries.createdById
   createdById    String?
-  createdBy      User?   @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy      User?     @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
   // null | "pending" | "approved" — siehe EventSeries.approvalStatus. Events einer wartenden Reihe
   // gelten ebenfalls als wartend (lib/community-events.ts → isAwaitingApproval).
   approvalStatus String?
@@ -458,7 +463,7 @@ model Event {
   gameVote           GameVote?
   // Spielwahl beendet, Regeln/Format fürs gewählte Spiel noch nicht von einem Mod freigegeben —
   // bis dahin keine Auslosung (lib/game-vote)
-  gameRulesPending   Boolean @default(false)
+  gameRulesPending   Boolean                  @default(false)
   comments           EventComment[]
   commentReads       EventCommentRead[]
 
@@ -1099,7 +1104,7 @@ model NotificationRule {
   discordDmEnabled   Boolean @default(false)
   discordChanEnabled Boolean @default(true)
   discordChannelId   String? // leer = DISCORD_NEWS_CHANNEL_ID
-  discordColor       Int?    // Embed-Randfarbe (0xRRGGBB); leer = Standardfarbe der jeweiligen Nachricht
+  discordColor       Int? // Embed-Randfarbe (0xRRGGBB); leer = Standardfarbe der jeweiligen Nachricht
 
   titleTemplate String
   bodyTemplate  String
@@ -1974,11 +1979,86 @@ model CommunityIdea {
 }
 
 /// "Ich wäre dabei" (PARTICIPATE) bzw. "Ich helfe mit" (HELP) zu einer Idee.
+/// Roadmap: vom Team (Mods/Admins) gepflegte Punkte — woran gerade gearbeitet wird bzw. was umgesetzt wurde.
+/// Ideen der Community stehen zusätzlich über ihren Status (CommunityIdea.lifecycle) auf der Roadmap.
+model RoadmapItem {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  category    String? // wie IDEA_CATEGORIES (feature | app | server | other)
+  status      String    @default("PLANNED") // PLANNED (in Arbeit) | DONE (umgesetzt)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  doneAt      DateTime?
+  /// Ideen, die mit diesem Punkt umgesetzt werden (wandern mit dem Punkt auf "Wird umgesetzt"/"Umgesetzt")
+  ideaIds     String[]  @default([])
+  /// Wer dem Punkt folgt ("Auf dem Laufenden bleiben"): bekommt neue Infos und die Meldung bei Umsetzung
+  followerIds String[]  @default([])
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+/// Infos zu einem Roadmap-Punkt (Team): Stand der Arbeit oder Details zu einem umgesetzten Feature, mit Screenshots.
+/// itemType "idea" → CommunityIdea.id, "item" → RoadmapItem.id
+model RoadmapUpdate {
+  id           String   @id @default(cuid())
+  itemType     String
+  itemId       String
+  bodyMarkdown String
+  imageUrls    String[] @default([])
+  authorId     String
+  createdAt    DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([itemType, itemId])
+}
+
+/// Event-Vorschlag im Community-Board: jemand wünscht sich ein Event, andere sagen "Ich wäre dabei",
+/// jemand übernimmt die Organisation und legt daraus ein Event an (eventId). Getrennt von Ideen.
+model EventProposal {
+  id              String    @id @default(cuid())
+  authorId        String
+  title           String
+  description     String
+  game            String?
+  preferredTime   String? // Freitext, z.B. "Freitagabend" oder "Ende Dezember"
+  status          String    @default("OPEN") // OPEN (sucht Organisator) | ORGANIZING | SCHEDULED (Event angelegt) | CLOSED
+  organizerId     String?
+  organizerAt     DateTime?
+  eventId         String?
+  hiddenByAdminAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  author    User                    @relation("EventProposalAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  organizer User?                   @relation("EventProposalOrganizer", fields: [organizerId], references: [id], onDelete: SetNull)
+  interests EventProposalInterest[]
+
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model EventProposalInterest {
+  id         String   @id @default(cuid())
+  proposalId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  proposal EventProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, userId])
+  @@index([userId])
+}
+
 model IdeaInterest {
   id        String   @id @default(cuid())
   ideaId    String
   userId    String
-  kind      String // PARTICIPATE | HELP
+  kind      String // SUPPORT (Unterstützen, Hauptsignal) | HELP (Ich helfe mit) | PARTICIPATE (Altbestand, zählt wie SUPPORT)
   createdAt DateTime @default(now())
 
   idea CommunityIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
@@ -2386,58 +2466,58 @@ model PostPollReward {
 // fieldSources merkt sich je Feld, ob es von Steam oder von einem Menschen stammt.
 
 model Game {
-  id            String    @id @default(cuid())
-  slug          String    @unique
-  nameKey       String    @unique // normalisierter Name für die Dubletten-Prüfung (lib/games/slug.ts)
-  name          String
-  aliases       String[]  @default([]) // andere Schreibweisen ("CS2", "RL") — für den Abgleich mit Events, Servern, Profilen
-  steamAppId    Int?      @unique
-  igdbId        Int? // IGDB (Twitch) — Konsolen, Spieleranzahl, Spiele ohne Steam. Eindeutigkeit prüft der Code (ein @unique bräche den db push im Build ab)
-  coverUrl      String? // von Steam aufgelöst (header_image) — nie vom Client übernommen
-  description   String?
-  genres        String[]  @default([]) // siehe GAME_GENRES in lib/games/options.ts
-  tags          String[]  @default([]) // siehe GAME_TAGS
-  modes         String[]  @default([]) // solo | coop | pvp
-  platforms     String[]  @default([]) // pc | playstation | xbox | switch | mobile
-  crossplay     Boolean   @default(false)
-  isFree        Boolean?
-  minPlayers    Int?
-  maxPlayers    Int?
-  sessionLength String? // kurz | mittel | lang | endlos
-  releaseYear   Int?
+  id                   String    @id @default(cuid())
+  slug                 String    @unique
+  nameKey              String    @unique // normalisierter Name für die Dubletten-Prüfung (lib/games/slug.ts)
+  name                 String
+  aliases              String[]  @default([]) // andere Schreibweisen ("CS2", "RL") — für den Abgleich mit Events, Servern, Profilen
+  steamAppId           Int?      @unique
+  igdbId               Int? // IGDB (Twitch) — Konsolen, Spieleranzahl, Spiele ohne Steam. Eindeutigkeit prüft der Code (ein @unique bräche den db push im Build ab)
+  coverUrl             String? // von Steam aufgelöst (header_image) — nie vom Client übernommen
+  description          String?
+  genres               String[]  @default([]) // siehe GAME_GENRES in lib/games/options.ts
+  tags                 String[]  @default([]) // siehe GAME_TAGS
+  modes                String[]  @default([]) // solo | coop | pvp
+  platforms            String[]  @default([]) // pc | playstation | xbox | switch | mobile
+  crossplay            Boolean   @default(false)
+  isFree               Boolean?
+  minPlayers           Int?
+  maxPlayers           Int?
+  sessionLength        String? // kurz | mittel | lang | endlos
+  releaseYear          Int?
   // Steam-Preis (Cent, DE-Store) — täglich abgeglichen (lib/games/store-sync.ts)
-  priceCents        Int?
-  priceInitialCents Int?
-  discountPercent   Int       @default(0)
-  priceCurrency     String?
-  priceUpdatedAt    DateTime?
-  saleStartedAt     DateTime? // Beginn des aktuellen Angebots — für "Im Angebot"-Benachrichtigungen
+  priceCents           Int?
+  priceInitialCents    Int?
+  discountPercent      Int       @default(0)
+  priceCurrency        String?
+  priceUpdatedAt       DateTime?
+  saleStartedAt        DateTime? // Beginn des aktuellen Angebots — für "Im Angebot"-Benachrichtigungen
   // Abos, in denen das Spiel enthalten ist (siehe GAME_SUBSCRIPTIONS). Game Pass wird automatisch abgeglichen.
-  subscriptions     String[]  @default([])
+  subscriptions        String[]  @default([])
   subscriptionsAddedAt DateTime? // zuletzt ein Abo dazugekommen — GameSwipe zeigt "Neu im Abo"
-  fieldSources  Json? // { feld: "steam" | "user" }
-  enrichedAt    DateTime? // letzter Steam-Abgleich (auch erfolglos) — verhindert Endlos-Wiederholungen
-  status        String    @default("APPROVED") // APPROVED | PENDING | HIDDEN
-  ratingSum     Int       @default(0)
-  ratingCount   Int       @default(0)
-  wantCount     Int       @default(0) // alt ("Würde ich zocken") — abgelöst durch inCount/wishCount, entfällt später
-  ownCount      Int       @default(0) // alt ("Hab ich") — abgelöst durch inCount, entfällt später
-  inCount       Int       @default(0) // "Am Start" (hat es und würde spielen, siehe GameReaction.status)
-  wishCount     Int       @default(0) // "Würde ich holen" (Wunschliste)
+  fieldSources         Json? // { feld: "steam" | "user" }
+  enrichedAt           DateTime? // letzter Steam-Abgleich (auch erfolglos) — verhindert Endlos-Wiederholungen
+  status               String    @default("APPROVED") // APPROVED | PENDING | HIDDEN
+  ratingSum            Int       @default(0)
+  ratingCount          Int       @default(0)
+  wantCount            Int       @default(0) // alt ("Würde ich zocken") — abgelöst durch inCount/wishCount, entfällt später
+  ownCount             Int       @default(0) // alt ("Hab ich") — abgelöst durch inCount, entfällt später
+  inCount              Int       @default(0) // "Am Start" (hat es und würde spielen, siehe GameReaction.status)
+  wishCount            Int       @default(0) // "Würde ich holen" (Wunschliste)
   // Community-Gameserver (lib/games/server-candidates.ts): Kommt das Spiel für einen eigenen OMA-Server in
   // Frage? null = unbekannt. serverSource: "auto" (bekannte Server-Spiele) | "user" (Mitglied) | "team".
-  serverCapable Boolean?
-  serverSource  String?
-  addedById     String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  serverCapable        Boolean?
+  serverSource         String?
+  addedById            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  addedBy   User?          @relation("GameAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
-  reactions GameReaction[]
-  edits     GameEdit[]
-  matches   GameMatch[]
-  tips      GameTip[]
-  voteCandidates GameVoteCandidate[]
+  addedBy         User?                @relation("GameAddedBy", fields: [addedById], references: [id], onDelete: SetNull)
+  reactions       GameReaction[]
+  edits           GameEdit[]
+  matches         GameMatch[]
+  tips            GameTip[]
+  voteCandidates  GameVoteCandidate[]
   serverInterests GameServerInterest[]
 
   @@index([status])
@@ -2446,19 +2526,19 @@ model Game {
 
 /// Bewertung (1–5 Sterne), "Würde ich zocken" und "Hab ich" — pro User und Spiel genau ein Eintrag.
 model GameReaction {
-  userId    String
-  gameId    String
-  rating    Int?
-  wantPlay  Boolean  @default(false) // alt — abgelöst durch status, entfällt später
-  owns      Boolean  @default(false) // alt — abgelöst durch status, entfällt später
+  userId         String
+  gameId         String
+  rating         Int?
+  wantPlay       Boolean   @default(false) // alt — abgelöst durch status, entfällt später
+  owns           Boolean   @default(false) // alt — abgelöst durch status, entfällt später
   /// Swipe-Entscheidung (lib/games/swipe.ts): "in" = Am Start (öffentlich), "wish" = Würde ich holen,
   /// "out" = Nicht meins (privat). null = noch nicht entschieden.
   status         String?
   decidedAt      DateTime?
   /// Erste Entscheidung überhaupt — zählt einmalig für die Monats-Quest (Rückgängig zählt nicht doppelt)
   firstDecidedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
@@ -2486,19 +2566,19 @@ model SteamSwipe {
 /// Spielwahl eines Reihen-Termins (lib/game-vote): Mitglieder haken alle Kandidaten an, die sie spielen
 /// würden (Zustimmungswahl). Status: "prepared" (Mods stellen Kandidaten zusammen) → "open" → "closed".
 model GameVote {
-  id           String    @id @default(cuid())
-  eventId      String    @unique
-  seriesId     String
-  opensAt      DateTime
-  closesAt     DateTime
-  status       String    @default("prepared")
-  winnerGameId String?
-  closedAt     DateTime?
+  id             String    @id @default(cuid())
+  eventId        String    @unique
+  seriesId       String
+  opensAt        DateTime
+  closesAt       DateTime
+  status         String    @default("prepared")
+  winnerGameId   String?
+  closedAt       DateTime?
   // Wie die Wahl entschieden wurde: votes | owned | cost | fit | lot | no_votes | none (kein wählbarer Kandidat)
-  decidedBy    String?
+  decidedBy      String?
   // "Abstimmung endet bald" an Stammspieler ohne Stimme verschickt
   reminderSentAt DateTime?
-  createdAt    DateTime  @default(now())
+  createdAt      DateTime  @default(now())
 
   event      Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   series     EventSeries         @relation(fields: [seriesId], references: [id], onDelete: Cascade)
@@ -2633,4 +2713,28 @@ model GameEdit {
   @@index([gameId])
   @@index([userId, createdAt])
   @@index([createdAt])
+}
+
+/// OMA Hub → Downloads: vom Team hochgeladene digitale Assets (Hintergrundbilder, Setup-Dateien …).
+/// Die Datei liegt in Vercel Blob (Ordner hub-downloads/), siehe src/lib/hub-downloads.ts.
+model HubDownload {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  /// "wallpaper" | "setup" | "other" (HUB_DOWNLOAD_CATEGORIES)
+  category      String   @default("other")
+  /// Optionale Versionsangabe, v. a. für Setup-Dateien (z. B. "1.2.0")
+  version       String?
+  fileUrl       String
+  fileName      String
+  fileSize      Int
+  mimeType      String
+  published     Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  downloadCount Int      @default(0)
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([published, category, sortOrder])
 }

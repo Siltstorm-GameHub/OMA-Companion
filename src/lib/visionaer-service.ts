@@ -15,15 +15,17 @@ import { plainExcerpt } from "./report-text";
 import {
   isIdeaCategory, isIdeaLifecycle, ideaLifecycleMeta, summarizeStars, IDEA_TITLE_MAX, IDEA_BODY_MAX,
   IDEA_MAX_IMAGES, isIdeaImageUrl, isIdeaInterestKind, IDEA_INTEREST_KINDS,
+  countSupporters, IDEA_SUPPORT_THRESHOLD, LIFECYCLES_NEEDING_NOTE, SUPPORT_KINDS,
 } from "./idea-lifecycle";
 import { extractMentionedUserIds } from "./report-mentions";
 import { getSteamAppInfo } from "./steam-app";
 
 /**
- * Visionär: reicht Ideen ein, die Community stimmt mit 1-5 Sternen + Begründung
- * ab. Bleibt laut Plan dauerhaft im Community-Board sicht- und bewertbar, auch
- * nach `votingEndsAt` — `status` ist rein kosmetisch, keine harte Sperre.
- * Zusätzlich hat jede Idee einen vom Team gesetzten Lebenszyklus (`lifecycle`).
+ * Visionär: reicht Ideen ein. Die Community unterstützt sie mit einem Klick (Hauptsignal) und bewertet sie
+ * auf Wunsch ausführlich mit 1-5 Sternen + Begründung (zählt fürs Gehalt). Ideen bleiben dauerhaft bewertbar.
+ * Der einzige Status ist der Lebenszyklus (`lifecycle`, vom Team gesetzt). Die Frist (`votingEndsAt`) wirkt:
+ * Hat die Idee bis dahin genug Unterstützer, geht sie automatisch an das Team ("In Prüfung").
+ * (`status` OPEN/CLOSED ist Altbestand und wird nicht mehr gelesen.)
  */
 
 const JOB_KEY = "visionaer";
@@ -102,12 +104,13 @@ async function announceAndStore(ideaId: string, authorId: string, title: string,
   if (messageId) await prisma.communityIdea.update({ where: { id: ideaId }, data: { discordMessageId: messageId } });
 }
 
-/** Rein kosmetisch — markiert die Idee als "Abstimmung beendet", sperrt aber keine weiteren Stimmen. */
+/** Autor beendet die Frist sofort — die Auswertung (genug Unterstützer → an das Team) macht closeExpiredIdeas. */
 export async function closeIdea(authorId: string, ideaId: string): Promise<SubmitIdeaResult> {
   const idea = await prisma.communityIdea.findUnique({ where: { id: ideaId } });
   if (!idea) return { error: "Idee nicht gefunden" };
-  if (idea.authorId !== authorId) return { error: "Nur der Autor kann die Idee schließen" };
-  await prisma.communityIdea.update({ where: { id: ideaId }, data: { status: "CLOSED", endNotified: true } });
+  if (idea.authorId !== authorId) return { error: "Nur der Autor kann die Frist beenden" };
+  await prisma.communityIdea.update({ where: { id: ideaId }, data: { votingEndsAt: new Date(), endNotified: false } });
+  await closeExpiredIdeas().catch(() => {});
   return { ok: true, ideaId };
 }
 
@@ -192,20 +195,38 @@ export async function setIdeaLifecycle(actorId: string, ideaId: string, lifecycl
   const idea = await prisma.communityIdea.findUnique({ where: { id: ideaId } });
   if (!idea) return { error: "Idee nicht gefunden" };
   const cleanNote = note?.trim().slice(0, 300) || null;
+  if ((LIFECYCLES_NEEDING_NOTE as readonly string[]).includes(lifecycle) && !cleanNote) {
+    return { error: lifecycle === "REJECTED" ? "Bitte kurz begründen, warum die Idee abgelehnt wird" : "Bitte kurz beschreiben, was umgesetzt wurde" };
+  }
   if (idea.lifecycle === lifecycle && (idea.lifecycleNote ?? null) === cleanNote) return { ok: true };
 
   await prisma.communityIdea.update({
     where: { id: ideaId },
     data: { lifecycle, lifecycleNote: cleanNote, lifecycleAt: new Date(), lifecycleById: actorId },
   });
-  if (idea.lifecycle !== lifecycle && idea.authorId !== actorId) {
-    const meta = ideaLifecycleMeta(lifecycle);
-    dispatchNotification("idea_status", {
-      users: [idea.authorId],
-      placeholders: { "{status}": meta.label, "{title}": idea.title, "{note}": cleanNote ?? "Danke für deine Idee!", "{url}": ideaPath(ideaId) },
-    }).catch(() => {});
-  }
+  if (idea.lifecycle !== lifecycle) notifyLifecycle(idea, lifecycle, cleanNote, actorId).catch(() => {});
   return { ok: true };
+}
+
+/**
+ * Statuswechsel an alle Beteiligten: Autor (idea_status) und alle, die unterstützt, "Ich helfe mit" gesagt oder
+ * bewertet haben (idea_status_follower). Der Auslöser selbst bekommt nichts.
+ */
+async function notifyLifecycle(idea: { id: string; title: string; authorId: string }, lifecycle: string, note: string | null, actorId: string | null) {
+  const meta = ideaLifecycleMeta(lifecycle);
+  const base = { "{status}": meta.label, "{title}": idea.title, "{url}": ideaPath(idea.id) };
+  if (idea.authorId !== actorId) {
+    await dispatchNotification("idea_status", { users: [idea.authorId], placeholders: { ...base, "{note}": note ?? "Danke für deine Idee!" } });
+  }
+  const [interests, votes] = await Promise.all([
+    prisma.ideaInterest.findMany({ where: { ideaId: idea.id }, select: { userId: true } }),
+    prisma.communityIdeaVote.findMany({ where: { ideaId: idea.id }, select: { voterId: true } }),
+  ]);
+  const followers = [...new Set([...interests.map(i => i.userId), ...votes.map(v => v.voterId)])]
+    .filter(id => id !== idea.authorId && id !== actorId);
+  if (followers.length > 0) {
+    await dispatchNotification("idea_status_follower", { users: followers, placeholders: { ...base, "{note}": note ?? "" } });
+  }
 }
 
 export type VoteResult = { ok: true } | { error: string };
@@ -247,17 +268,32 @@ async function notifyIdeaVote(ideaId: string, authorId: string, title: string, s
   });
 }
 
-/** Cron: Ideen, deren Abstimmungsfrist abgelaufen ist, schließen (kosmetisch) und dem Autor das Ergebnis schicken. */
+/**
+ * Cron: Fristende auswerten. Hat eine offene Idee genug Unterstützer (IDEA_SUPPORT_THRESHOLD), geht sie automatisch
+ * an das Team ("In Prüfung", alle Beteiligten erfahren es). Sonst bleibt sie offen. Der Autor bekommt das Ergebnis.
+ */
 export async function closeExpiredIdeas(): Promise<{ closed: number }> {
   const due = await prisma.communityIdea.findMany({
     where: { votingEndsAt: { lt: new Date() }, endNotified: false, hiddenByAdminAt: null },
-    include: { votes: { select: { stars: true } } }, take: 100,
+    include: { votes: { select: { stars: true } }, interests: { select: { userId: true, kind: true } } }, take: 100,
   });
   let closed = 0;
   for (const idea of due) {
     const { count, average } = summarizeStars(idea.votes.map(v => v.stars));
-    await prisma.communityIdea.update({ where: { id: idea.id }, data: { status: "CLOSED", endNotified: true } });
+    const supporters = countSupporters(idea.interests);
+    const toTeam = idea.lifecycle === "OPEN" && supporters >= IDEA_SUPPORT_THRESHOLD;
+    await prisma.communityIdea.update({
+      where: { id: idea.id },
+      data: {
+        endNotified: true,
+        ...(toTeam ? { lifecycle: "REVIEW", lifecycleAt: new Date(), lifecycleById: null, lifecycleNote: `${supporters} Unterstützer — das Team schaut sich die Idee an.` } : {}),
+      },
+    });
     closed += 1;
+    if (toTeam) {
+      await notifyLifecycle(idea, "REVIEW", `${supporters} Unterstützer — das Team schaut sich die Idee an.`, null).catch(() => {});
+      continue;
+    }
     await dispatchNotification("idea_voting_ended", {
       users: [idea.authorId],
       placeholders: { "{title}": idea.title, "{count}": String(count), "{average}": count > 0 ? formatFixed(average, 1) : "–", "{url}": ideaPath(idea.id) },
@@ -318,7 +354,7 @@ export async function getVisionaerStats(userId: string) {
   };
 }
 
-// ── Interesse ("Ich wäre dabei" / "Ich helfe mit") ───────────────────────────
+// ── Unterstützen / "Ich helfe mit" ────────────────────────────────────────────
 
 export async function setIdeaInterest(userId: string, ideaId: string, kind: string, on: boolean): Promise<MutationResult> {
   if (!isIdeaInterestKind(kind)) return { error: "Ungültige Art des Interesses" };
@@ -326,7 +362,8 @@ export async function setIdeaInterest(userId: string, ideaId: string, kind: stri
   if (!idea || idea.hiddenByAdminAt) return { error: "Idee nicht gefunden" };
 
   if (!on) {
-    await prisma.ideaInterest.deleteMany({ where: { ideaId, userId, kind } });
+    const kinds = kind === "SUPPORT" ? [...SUPPORT_KINDS] : [kind];
+    await prisma.ideaInterest.deleteMany({ where: { ideaId, userId, kind: { in: kinds } } });
     return { ok: true };
   }
   const existing = await prisma.ideaInterest.findUnique({ where: { ideaId_userId_kind: { ideaId, userId, kind } } });
@@ -344,30 +381,7 @@ export async function setIdeaInterest(userId: string, ideaId: string, kind: stri
   return { ok: true };
 }
 
-// ── Event-Entwurf aus einer Idee (Team) ──────────────────────────────────────
-
-/** Legt einen versteckten Event-Entwurf an (Titel, Beschreibung, Spiel aus der Idee) — das Team feilt im Event-Editor weiter. */
-export async function createEventDraftFromIdea(ideaId: string): Promise<{ ok: true; eventId: string } | { error: string }> {
-  const idea = await prisma.communityIdea.findUnique({ where: { id: ideaId } });
-  if (!idea) return { error: "Idee nicht gefunden" };
-  if (idea.draftEventId && (await prisma.event.findUnique({ where: { id: idea.draftEventId }, select: { id: true } }))) {
-    return { ok: true, eventId: idea.draftEventId };
-  }
-  const participants = await prisma.ideaInterest.count({ where: { ideaId, kind: "PARTICIPATE" } });
-  const event = await prisma.event.create({
-    data: {
-      title: idea.title.slice(0, 100),
-      description: `${plainExcerpt(idea.description, 600)}\n\n(Aus einer Community-Idee: ${BASE_URL}${ideaPath(ideaId)}${participants > 0 ? ` \u00b7 ${participants} Interessierte` : ""})`,
-      game: idea.gameName ?? null,
-      startAt: new Date(Date.now() + 14 * 86_400_000),
-      hidden: true, // Entwurf: nur im Admin sichtbar, bis das Team ihn freigibt
-    },
-  });
-  await prisma.communityIdea.update({ where: { id: ideaId }, data: { draftEventId: event.id } });
-  return { ok: true, eventId: event.id };
-}
-
-// ── Roadmap, Spiele-Wunschliste, Top-Ideen ───────────────────────────────────
+// ── Top-Ideen (Roadmap: lib/roadmap-service.ts) ───────────────────────────────
 
 /** Ideen mit den meisten Sternen, die im Zeitraum eingegangen sind (Basis für Top-Listen und Discord-Zusammenfassung). */
 export async function topIdeasBetween(start: Date, end: Date, take: number) {
@@ -390,49 +404,6 @@ export async function topIdeasBetween(start: Date, end: Date, take: number) {
       stars: g._sum.stars ?? 0, votes: g._count._all, average: g._count._all > 0 ? (g._sum.stars ?? 0) / g._count._all : 0,
     }] : [];
   });
-}
-
-export async function getRoadmap() {
-  const now = new Date();
-  const { weekStart } = getWeekBounds(now);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const withStats = {
-    id: true, title: true, lifecycle: true, lifecycleNote: true, lifecycleAt: true, gameName: true,
-    author: { select: { id: true, username: true, name: true } },
-    votes: { select: { stars: true } },
-  } as const;
-
-  const [planned, done, gameIdeas, topWeek, topMonth] = await Promise.all([
-    prisma.communityIdea.findMany({ where: { lifecycle: "PLANNED", hiddenByAdminAt: null }, orderBy: { lifecycleAt: "desc" }, take: 30, select: withStats }),
-    prisma.communityIdea.findMany({ where: { lifecycle: "DONE", hiddenByAdminAt: null }, orderBy: { lifecycleAt: "desc" }, take: 30, select: withStats }),
-    prisma.communityIdea.findMany({
-      where: { gameAppId: { not: null }, hiddenByAdminAt: null, lifecycle: { not: "REJECTED" } },
-      select: { gameAppId: true, gameName: true, votes: { select: { stars: true } }, interests: { where: { kind: "PARTICIPATE" }, select: { id: true } } },
-    }),
-    topIdeasBetween(weekStart, now, 5),
-    topIdeasBetween(monthStart, now, 5),
-  ]);
-
-  const map = (i: (typeof planned)[number]) => {
-    const { count, average } = summarizeStars(i.votes.map(v => v.stars));
-    return { id: i.id, title: i.title, lifecycle: i.lifecycle, note: i.lifecycleNote, at: i.lifecycleAt, game: i.gameName, author: i.author.username ?? i.author.name ?? "?", count, average };
-  };
-
-  const games = new Map<number, { appId: number; name: string; ideas: number; stars: number; votes: number; participants: number }>();
-  for (const i of gameIdeas) {
-    if (!i.gameAppId) continue;
-    const cur = games.get(i.gameAppId) ?? { appId: i.gameAppId, name: i.gameName ?? `App ${i.gameAppId}`, ideas: 0, stars: 0, votes: 0, participants: 0 };
-    cur.ideas += 1;
-    cur.stars += i.votes.reduce((sum, v) => sum + v.stars, 0);
-    cur.votes += i.votes.length;
-    cur.participants += i.interests.length;
-    games.set(i.gameAppId, cur);
-  }
-  const wishlist = [...games.values()]
-    .map(g => ({ ...g, average: g.votes > 0 ? g.stars / g.votes : 0, score: g.stars + g.participants * 3 }))
-    .sort((a, b) => b.score - a.score).slice(0, 10);
-
-  return { planned: planned.map(map), done: done.map(map), wishlist, topWeek, topMonth };
 }
 
 /** Cron: Top-Ideen der letzten Woche (montags nach Wochenende) bzw. des letzten Monats in den Job-Kanal posten — je Zeitraum einmalig. */

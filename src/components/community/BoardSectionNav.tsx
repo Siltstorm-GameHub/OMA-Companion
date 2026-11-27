@@ -1,5 +1,6 @@
 import Link from "next/link";
 import OfficeCountBadge from "./OfficeCountBadge";
+import RoadmapNewDot from "./RoadmapNewDot";
 
 /**
  * Reiter des Community-Boards (Feed · Büro · Roadmap) — nur am Handy/Tablet, gleiche Optik wie Events und Games.
@@ -25,6 +26,7 @@ export default function BoardSectionNav({ active }: { active: BoardSection }) {
             }`}>
             {t.label}
             {t.key === "buero" && <OfficeCountBadge />}
+            {t.key === "roadmap" && !on && <RoadmapNewDot />}
           </Link>
         );
       })}

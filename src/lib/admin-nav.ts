@@ -73,6 +73,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
           { href: `${JOBS}/ideas`, label: "Ideen" },
         ] },
       { key: "donations", href: "/admin/donations", label: "Spendenpool", icon: "Heart", minRole: "moderator", keywords: ["spende", "fixkosten"] },
+      { key: "downloads", href: "/admin/downloads", label: "Downloads", icon: "Download", minRole: "moderator", keywords: ["hub", "wallpaper", "setup", "dateien"] },
     ],
   },
   {

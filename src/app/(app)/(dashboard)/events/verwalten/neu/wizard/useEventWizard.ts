@@ -50,7 +50,11 @@ export type EventWizardProps = {
   eventTemplate?: EventTemplate;
   /** "Event mit diesem Spiel anlegen" aus der Spieleliste: Spiel (+ Genre) vorausgefüllt */
   gamePrefill?: GamePrefill;
+  /** "Ich organisiere das" aus einem Event-Vorschlag: Titel, Beschreibung, Spiel; das Event wird mit dem Vorschlag verknüpft */
+  proposalPrefill?: ProposalPrefill;
 };
+
+export type ProposalPrefill = { id: string; title: string; description: string; game: string | null; preferredTime: string | null };
 
 export type GamePrefill = { name: string; slug: string; genre: EventGenre | null };
 
@@ -66,6 +70,7 @@ export function useEventWizard({
   seasonPrefill,
   eventTemplate,
   gamePrefill,
+  proposalPrefill,
 }: EventWizardProps) {
   const tpl = eventTemplate;
   const router = useRouter();
@@ -82,14 +87,14 @@ export function useEventWizard({
   const [spectatorMode, setSpectatorMode] = useState(seasonPrefill?.spectatorMode ?? tpl?.spectatorMode ?? false);
 
   // ── Event mode state ─────────────────────────────────────────────────────────
-  const [title, setTitle]             = useState(tpl?.title ?? "");
+  const [title, setTitle]             = useState(tpl?.title ?? proposalPrefill?.title ?? "");
   const [startAt, setStartAt]         = useState(tpl?.startAt ?? "");
   // Generisches, optionales Event-Ende — für alle Event-Typen sichtbar (Event.endAt).
   const [endAt, setEndAt]             = useState(tpl?.endAt ?? "");
-  const [game, setGame]               = useState(tpl?.game ?? gamePrefill?.name ?? "");
+  const [game, setGame]               = useState(tpl?.game ?? gamePrefill?.name ?? proposalPrefill?.game ?? "");
   const [genre, setGenre]             = useState<EventGenre | null>(tpl?.genre ?? gamePrefill?.genre ?? null);
   const [maxPlayers, setMaxPlayers]   = useState(tpl?.maxPlayers ?? "");
-  const [description, setDescription] = useState(tpl?.description ?? "");
+  const [description, setDescription] = useState(tpl?.description ?? proposalPrefill?.description ?? "");
   // Eigenes Cover (Upload, URL oder Vorlage aus EVENT_COVER_PRESETS) — leer = Spiel-Cover bzw. Standard-Motiv
   const [eventCoverUrl, setEventCoverUrl] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState(tpl?.discordChannelId ?? "");
@@ -205,7 +210,7 @@ export function useEventWizard({
   // ── Entwurf (lokal im Browser) ──────────────────────────────────────────────
   // Alle Eingaben werden laufend gespeichert und beim nächsten Öffnen zur Wiederherstellung
   // angeboten (nicht bei Vorlage/neuer Saison — dort ist die Vorbelegung gewollt).
-  const draftEnabled = !eventTemplate && !seasonPrefill && !gamePrefill;
+  const draftEnabled = !eventTemplate && !seasonPrefill && !gamePrefill && !proposalPrefill;
   const initialDraft = useInitialDraft();
   const [draftHandled, setDraftHandled] = useState(false);
   const pendingDraft = draftEnabled && !draftHandled && initialDraft && initialDraft.values.wizardMode !== "select" ? initialDraft : null;
@@ -465,6 +470,7 @@ export function useEventWizard({
       type: eventType,
       seriesId,
       newSeries,
+      ...(proposalPrefill && { proposalId: proposalPrefill.id }),
       discordChannelId: discordChannelId || null,
       hidden: publishMode === "hidden",
       publishAt: publishMode === "scheduled" && publishAt ? fromDatetimeLocalBerlin(publishAt).toISOString() : null,
@@ -630,6 +636,7 @@ export function useEventWizard({
   return {
     eventTemplate,
     gamePrefill,
+    proposalPrefill,
     publishMode, setPublishMode, publishAt, setPublishAt,
     playHomeAway, setPlayHomeAway, pointsMode, setPointsMode, coinsWin, setCoinsWin, coinsDraw, setCoinsDraw,
     checkInEnabled, setCheckInEnabled,

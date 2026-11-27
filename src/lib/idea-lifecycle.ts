@@ -1,12 +1,15 @@
 /** Kategorien und Status-Lebenszyklus für Visionär-Ideen (client-sicher, kein Prisma). */
 
 export const IDEA_CATEGORIES = [
-  { id: "event", label: "Event-Idee" },
+  { id: "event", label: "Event-Idee" }, // Altbestand — Event-Wünsche laufen seit 2026-11 über Event-Vorschläge
   { id: "feature", label: "Community-Feature" },
   { id: "app", label: "App-Verbesserung" },
   { id: "server", label: "Server" },
   { id: "other", label: "Sonstiges" },
 ] as const;
+
+/** Kategorien, die man beim Einreichen wählen kann (ohne "Event-Idee": dafür gibt es Event-Vorschläge) */
+export const IDEA_CATEGORIES_SELECTABLE = IDEA_CATEGORIES.filter(c => c.id !== "event");
 
 export type IdeaCategory = (typeof IDEA_CATEGORIES)[number]["id"];
 
@@ -53,10 +56,29 @@ export function isIdeaImageUrl(url: unknown): url is string {
   return typeof url === "string" && BLOB_IMAGE_HOST.test(url);
 }
 
+/**
+ * Signale an einer Idee: "Unterstützen" ist das Hauptsignal (ein Klick), "Ich helfe mit" ein Zusatz.
+ * PARTICIPATE ("Ich wäre dabei") ist Altbestand aus der Zeit vor den Event-Vorschlägen und zählt wie Unterstützen.
+ */
 export const IDEA_INTEREST_KINDS = [
-  { id: "PARTICIPATE", label: "Ich wäre dabei", doneLabel: "Du bist dabei", verb: "wäre dabei" },
+  { id: "SUPPORT", label: "Unterstützen", doneLabel: "Unterstützt", verb: "unterstützt" },
   { id: "HELP", label: "Ich helfe mit", doneLabel: "Du hilfst mit", verb: "möchte bei der Umsetzung helfen" },
+  { id: "PARTICIPATE", label: "Ich wäre dabei", doneLabel: "Du bist dabei", verb: "wäre dabei" },
 ] as const;
+
+/** Arten, die als Unterstützung zählen (SUPPORT + Altbestand PARTICIPATE) */
+export const SUPPORT_KINDS = ["SUPPORT", "PARTICIPATE"] as const;
+
+/** Ab so vielen Unterstützern geht eine Idee zum Fristende automatisch an das Team ("In Prüfung") */
+export const IDEA_SUPPORT_THRESHOLD = 5;
+
+/** Status, bei denen das Team eine kurze Begründung angeben muss */
+export const LIFECYCLES_NEEDING_NOTE = ["REJECTED", "DONE"] as const;
+
+/** Zahl der Unterstützer (jeder User einmal, egal ob SUPPORT oder Altbestand PARTICIPATE) */
+export function countSupporters(interests: { userId: string; kind: string }[]): number {
+  return new Set(interests.filter(i => (SUPPORT_KINDS as readonly string[]).includes(i.kind)).map(i => i.userId)).size;
+}
 export type IdeaInterestKind = (typeof IDEA_INTEREST_KINDS)[number]["id"];
 export function isIdeaInterestKind(v: unknown): v is IdeaInterestKind {
   return typeof v === "string" && IDEA_INTEREST_KINDS.some(k => k.id === v);

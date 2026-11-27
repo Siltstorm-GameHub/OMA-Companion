@@ -13,6 +13,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import ReportEditor, { type ReportEditorTool } from "@/components/community-jobs/ReportEditor";
 import IdeaForm from "@/components/community-jobs/IdeaForm";
 import GuideForm from "@/components/community-jobs/GuideForm";
+import ProposalForm from "@/components/community-jobs/ProposalForm";
 import { BookOpen, BarChart2, CalendarDays, Clapperboard, FileText, ImagePlus, Lightbulb, Loader2, Pencil, Plus, X } from "@/components/icons";
 import { FeedCard, type FeedEntry } from "./CommunityBoardClient";
 import OfficeSidebar from "./OfficeSidebar";
@@ -20,8 +21,8 @@ import { composeFromParams, takeCompose, type ComposeKind, type ComposeRequest }
 
 export interface BoardMe { id: string; name: string; image: string | null }
 
-type Sort = "new" | "top" | "mine";
-type KindFilter = "post" | "media" | "idea" | "guide";
+type Sort = "new" | "top" | "mine" | "goal";
+type KindFilter = "post" | "media" | "idea" | "guide" | "proposal";
 
 const SORTS: { key: Sort; label: string }[] = [
   { key: "new", label: "Neu" },
@@ -32,6 +33,7 @@ const KINDS: { key: KindFilter; label: string }[] = [
   { key: "post", label: "Beiträge" },
   { key: "media", label: "Fotos & Clips" },
   { key: "idea", label: "Ideen" },
+  { key: "proposal", label: "Event-Vorschläge" },
   { key: "guide", label: "Anleitungen" },
 ];
 const PAGE = 15;
@@ -118,7 +120,8 @@ const TOOLS: { label: string; icon: typeof ImagePlus; tone: string; req: Compose
   { label: "Bild", icon: ImagePlus, tone: "text-success", req: { kind: "post", tool: "photo" } },
   { label: "Clip", icon: Clapperboard, tone: "text-danger", req: { kind: "post", tool: "clip" } },
   { label: "Umfrage", icon: BarChart2, tone: "text-coin", req: { kind: "post", tool: "poll" } },
-  { label: "Event", icon: CalendarDays, tone: "text-primary-fg", req: { kind: "post", tool: "event" } },
+  { label: "Werbung", icon: CalendarDays, tone: "text-primary-fg", req: { kind: "post", tool: "event" } },
+  { label: "Event-Vorschlag", icon: Plus, tone: "text-success", req: { kind: "proposal" } },
   { label: "Idee", icon: Lightbulb, tone: "text-coin", req: { kind: "idea" } },
   { label: "Anleitung", icon: BookOpen, tone: "text-violet-300", req: { kind: "guide" } },
 ];
@@ -127,6 +130,7 @@ const KIND_TABS: { key: ComposeKind; label: string; icon: typeof Pencil }[] = [
   { key: "post", label: "Beitrag", icon: Pencil },
   { key: "idea", label: "Idee", icon: Lightbulb },
   { key: "guide", label: "Anleitung", icon: BookOpen },
+  { key: "proposal", label: "Event-Vorschlag", icon: CalendarDays },
 ];
 
 function Composer({ me, req, editorKey, drafts, onOpen, onClose, onPublished }: {
@@ -167,7 +171,7 @@ function Composer({ me, req, editorKey, drafts, onOpen, onClose, onPublished }: 
     <section aria-label="Neuer Beitrag"
       className="rounded-card border border-primary/40 bg-surface p-3 shadow-card sm:p-4 max-sm:fixed max-sm:inset-0 max-sm:z-50 max-sm:overflow-y-auto max-sm:rounded-none max-sm:border-0 max-sm:bg-canvas max-sm:pb-24">
       <div className="mb-3 flex items-center gap-2">
-        <div role="tablist" aria-label="Art" className="grid flex-1 grid-cols-3 gap-1 rounded-control border border-line bg-surface-2 p-1 sm:max-w-sm">
+        <div role="tablist" aria-label="Art" className="grid flex-1 grid-cols-2 gap-1 rounded-control border border-line bg-surface-2 p-1 sm:grid-cols-4 sm:max-w-xl">
           {KIND_TABS.map(k => (
             <button key={k.key} type="button" role="tab" aria-selected={req.kind === k.key}
               onClick={() => req.kind !== k.key && onOpen({ kind: k.key, eventId: req.eventId })}
@@ -194,6 +198,7 @@ function Composer({ me, req, editorKey, drafts, onOpen, onClose, onPublished }: 
         }} onDone={onPublished} />
       )}
       {req.kind === "guide" && <GuideForm key={editorKey} onDone={onPublished} />}
+      {req.kind === "proposal" && <ProposalForm key={editorKey} onDone={onPublished} />}
     </section>
   );
 }
@@ -202,10 +207,10 @@ function Composer({ me, req, editorKey, drafts, onOpen, onClose, onPublished }: 
 
 async function fetchFeed(sort: Sort, kind: KindFilter | null, cursor: string | null, limit = PAGE) {
   const q = new URLSearchParams({ limit: String(limit) });
-  if (sort === "top") q.set("sort", "top");
+  if (sort === "top" || sort === "goal") q.set("sort", sort);
   if (sort === "mine") q.set("mine", "1");
   if (kind) q.set("kind", kind);
-  if (cursor) q.set(sort === "top" ? "offset" : "before", cursor);
+  if (cursor) q.set(sort === "top" || sort === "goal" ? "offset" : "before", cursor);
   const res = await fetch(`/api/community-board?${q.toString()}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error ?? "Community-Board konnte nicht geladen werden");
@@ -316,13 +321,18 @@ function Feed({ meId, highlightMine, coachCard }: { meId: string; highlightMine:
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {SORTS.map(s => (
+        {[...SORTS, ...(kind === "idea" ? [{ key: "goal" as Sort, label: "Kurz vor dem Ziel" }] : [])].map(s => (
           <button key={s.key} type="button" aria-pressed={sort === s.key} onClick={() => { setItems(null); setSort(s.key); }}
             className={`${CHIP} ${sort === s.key ? CHIP_ON : CHIP_OFF}`}>{s.label}</button>
         ))}
         <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-line-strong" />
         {KINDS.map(k => (
-          <button key={k.key} type="button" aria-pressed={kind === k.key} onClick={() => { setItems(null); setKind(kind === k.key ? null : k.key); }}
+          <button key={k.key} type="button" aria-pressed={kind === k.key} onClick={() => {
+            setItems(null);
+            const next = kind === k.key ? null : k.key;
+            setKind(next);
+            if (sort === "goal" && next !== "idea") setSort("new");
+          }}
             className={`${CHIP} ${kind === k.key ? CHIP_ON : CHIP_OFF}`}>{k.label}</button>
         ))}
       </div>
@@ -362,6 +372,7 @@ function Feed({ meId, highlightMine, coachCard }: { meId: string; highlightMine:
       ) : (
         <>
           {sort === "top" && <p className="text-xs text-subtle">Die beliebtesten Einträge der letzten 7 Tage</p>}
+          {sort === "goal" && <p className="text-xs text-subtle">Offene Ideen, denen nur noch wenige Unterstützer fehlen — hier zählt deine Stimme am meisten.</p>}
           <div className="space-y-4">
             {items.map(entry => (
               <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={meId} isJournalist onChanged={refresh}

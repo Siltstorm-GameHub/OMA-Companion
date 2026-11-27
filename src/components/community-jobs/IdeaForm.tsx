@@ -15,7 +15,7 @@ import { isGameCoverUrl } from "@/lib/game-cover-url";
 import { mentionToken } from "@/lib/report-mentions";
 import { isVideoUrl } from "@/lib/upload-limits";
 import {
-  IDEA_CATEGORIES, IDEA_TITLE_MAX, IDEA_BODY_MAX, IDEA_MAX_IMAGES, ideaLifecycleMeta, isIdeaImageUrl, parseSteamAppId,
+  IDEA_CATEGORIES_SELECTABLE, IDEA_SUPPORT_THRESHOLD, IDEA_TITLE_MAX, IDEA_BODY_MAX, IDEA_MAX_IMAGES, ideaLifecycleMeta, isIdeaImageUrl, parseSteamAppId,
 } from "@/lib/idea-lifecycle";
 
 /**
@@ -63,6 +63,23 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
   const [mentionResults, setMentionResults] = useState<FoundUser[]>([]);
   const [images, setImages] = useState<string[]>(prefill?.imageUrl && isGameCoverUrl(prefill.imageUrl) ? [prefill.imageUrl] : []);
   const [uploading, setUploading] = useState(false);
+  // Frist, Bilder und Steam-Spiel stehen unter "Mehr Optionen" (offen, wenn schon etwas vorbelegt ist)
+  const [moreOpen, setMoreOpen] = useState(!!prefill?.imageUrl);
+  const [supportingId, setSupportingId] = useState<string | null>(null);
+
+  /** Ähnliche Idee unterstützen statt eine neue einzureichen */
+  async function supportInstead(ideaId: string) {
+    setSupportingId(ideaId);
+    try {
+      await api(`/api/community-jobs/ideas/${ideaId}/interest`, { method: "POST", body: JSON.stringify({ kind: "SUPPORT", on: true }) });
+      toast.success("Unterstützt — danke!");
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setSupportingId(null);
+    }
+  }
   const [library, setLibrary] = useState<MediaAsset[]>([]);
   const [libraryQuery, setLibraryQuery] = useState("");
   const [steamInput, setSteamInput] = useState("");
@@ -178,26 +195,22 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
       <div className="flex flex-wrap gap-2">
         <Select value={category} onChange={e => setCategory(e.target.value)} aria-label="Kategorie">
           <option value="">Kategorie wählen…</option>
-          {IDEA_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-        </Select>
-        <Select value={days} onChange={e => setDays(e.target.value)} aria-label="Abstimmungsfrist">
-          <option value="">Ohne Abstimmungsfrist</option>
-          <option value="3">Abstimmung 3 Tage</option>
-          <option value="7">Abstimmung 7 Tage</option>
-          <option value="14">Abstimmung 14 Tage</option>
-          <option value="30">Abstimmung 30 Tage</option>
+          {IDEA_CATEGORIES_SELECTABLE.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
         </Select>
       </div>
 
       <input value={title} onChange={e => setTitle(e.target.value)} maxLength={IDEA_TITLE_MAX} placeholder="Titel deiner Idee" className={FIELD} />
       {similar.length > 0 && (
-        <div className="rounded-lg bg-amber-500/[0.06] border border-coin/20 p-2.5 space-y-1">
-          <p className="text-xs text-coin">Gibt es schon — vielleicht passt eine davon (dann lieber bewerten oder kommentieren):</p>
+        <div className="rounded-control bg-coin-soft border border-coin/25 p-3 space-y-2">
+          <p className="text-xs text-coin">Gibt es vielleicht schon — dann lieber unterstützen, so kommt die Idee schneller ans Ziel:</p>
           {similar.map(s => (
-            <Link key={s.id} href={`/community-board/idea/${s.id}`} target="_blank" className="flex items-center justify-between gap-2 text-xs text-fg/90 hover:text-primary-fg transition-colors">
-              <span className="truncate">{s.title}</span>
-              <span className="shrink-0 text-xs text-subtle">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
-            </Link>
+            <div key={s.id} className="flex items-center gap-2">
+              <Link href={`/community-board/idea/${s.id}`} target="_blank" className="min-w-0 flex-1 text-sm text-fg/90 hover:text-primary-fg transition-colors">
+                <span className="block truncate">{s.title}</span>
+                <span className="block text-xs text-subtle">{ideaLifecycleMeta(s.lifecycle).label} · {s.votes} Stimmen</span>
+              </Link>
+              <Button size="sm" variant="outline" loading={supportingId === s.id} onClick={() => supportInstead(s.id)}>Stattdessen unterstützen</Button>
+            </div>
           ))}
         </div>
       )}
@@ -250,6 +263,25 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           {prefill?.link && <p className="text-xs text-subtle">Link zu {prefill.linkLabel ?? "dem Spiel"} wird automatisch angehängt.</p>}
         </>
       )}
+
+      <button type="button" onClick={() => setMoreOpen(v => !v)} aria-expanded={moreOpen}
+        className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary-fg hover:text-fg">
+        <ChevronRight className={`size-4 transition-transform ${moreOpen ? "rotate-90" : ""}`} />
+        Mehr Optionen <span className="font-normal text-subtle">Frist, Bilder, Spiel</span>
+      </button>
+      {moreOpen && (
+      <div className="space-y-4 rounded-control border border-line bg-surface-2 p-3">
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Frist bis zur Team-Prüfung</p>
+        <Select value={days} onChange={e => setDays(e.target.value)} aria-label="Frist bis zur Team-Prüfung">
+          <option value="">Ohne Frist</option>
+          <option value="3">3 Tage</option>
+          <option value="7">7 Tage</option>
+          <option value="14">14 Tage</option>
+          <option value="30">30 Tage</option>
+        </Select>
+        <p className="text-xs text-subtle">Hat die Idee bis dahin {IDEA_SUPPORT_THRESHOLD} Unterstützer, geht sie automatisch an das Team.</p>
+      </div>
 
       {/* Bilder / Mockups */}
       <div className="space-y-1.5">
@@ -328,6 +360,9 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
           </div>
         )}
       </div>
+
+      </div>
+      )}
 
       {(prefill?.eventId || prefill?.reportId) && <p className="text-xs text-subtle">Die Idee wird mit {prefill.eventId ? "dem Event" : "dem Bericht"} verknüpft.</p>}
 

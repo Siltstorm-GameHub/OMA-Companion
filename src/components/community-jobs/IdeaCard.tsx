@@ -9,7 +9,7 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import MarkdownLite from "./MarkdownLite";
-import { IDEA_LIFECYCLES, IDEA_INTEREST_KINDS, ideaCategoryLabel, ideaLifecycleMeta } from "@/lib/idea-lifecycle";
+import { IDEA_LIFECYCLES, IDEA_INTEREST_KINDS, IDEA_SUPPORT_THRESHOLD, LIFECYCLES_NEEDING_NOTE, ideaCategoryLabel, ideaLifecycleMeta } from "@/lib/idea-lifecycle";
 import { formatBerlinDate } from "@/lib/time";
 
 /** Körper einer Ideen-Karte im Community-Board (und auf der Ideen-Seite): Ergebnis, Status, Frist, Herkunft, Begründungen. */
@@ -20,8 +20,9 @@ export interface IdeaEntry {
   sourceEventId?: string | null; sourceReportId?: string | null;
   voteCount?: number; avgStars?: number; distribution?: number[];
   imageUrls?: string[]; version?: number; editedAt?: string | null; lastEditNote?: string | null;
-  gameAppId?: number | null; gameName?: string | null; draftEventId?: string | null;
-  interestParticipate?: number; interestHelp?: number; myInterests?: string[];
+  gameAppId?: number | null; gameName?: string | null;
+  supporters?: number; supportedByMe?: boolean; interestHelp?: number; myInterests?: string[];
+  lifecycleAt?: string | null; lifecycleBy?: { name: string; image: string | null } | null; teamResponseDays?: number | null;
   author: { id: string; username: string | null; name: string | null };
 }
 
@@ -159,15 +160,16 @@ function InterestBar({ entry, onChanged }: { entry: IdeaEntry; onChanged: () => 
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {IDEA_INTEREST_KINDS.map(k => {
+      {IDEA_INTEREST_KINDS.filter(k => k.id === "HELP").map(k => {
         const on = mine.includes(k.id);
-        const count = k.id === "PARTICIPATE" ? entry.interestParticipate ?? 0 : entry.interestHelp ?? 0;
+        const count = entry.interestHelp ?? 0;
         return (
           <Button key={k.id} size="sm" variant={on ? "primary" : "outline"} loading={busy === k.id} onClick={() => toggle(k.id)}>
             {on ? k.doneLabel : k.label}{count > 0 ? ` (${count})` : ""}
           </Button>
         );
       })}
+      {(entry.interestHelp ?? 0) === 0 && <span className="text-xs text-subtle">Du kannst bei der Umsetzung helfen? Sag Bescheid.</span>}
     </div>
   );
 }
@@ -210,7 +212,7 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
   const [lifecycle, setLifecycle] = useState(entry.lifecycle ?? "OPEN");
   const [note, setNote] = useState(entry.lifecycleNote ?? "");
   const [busy, setBusy] = useState(false);
-  const [draftBusy, setDraftBusy] = useState(false);
+  const needsNote = (LIFECYCLES_NEEDING_NOTE as readonly string[]).includes(lifecycle);
 
   async function save() {
     setBusy(true);
@@ -222,16 +224,6 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
     finally { setBusy(false); }
   }
 
-  async function createDraft() {
-    setDraftBusy(true);
-    try {
-      const d = await api<{ eventId: string }>(`/api/community-jobs/ideas/${entry.id}/event-draft`, { method: "POST" });
-      toast.success("Event-Entwurf angelegt");
-      window.location.href = `/events/verwalten/${d.eventId}`;
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
-    finally { setDraftBusy(false); }
-  }
-
   return (
     <div className="rounded-lg bg-surface-2 border border-line-strong p-2.5 space-y-1.5">
       <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Team: Status setzen</p>
@@ -239,15 +231,30 @@ function StatusControl({ entry, onChanged }: { entry: IdeaEntry; onChanged: () =
         <Select size="sm" value={lifecycle} onChange={e => setLifecycle(e.target.value)} aria-label="Status">
           {IDEA_LIFECYCLES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
         </Select>
-        <input value={note} onChange={e => setNote(e.target.value)} maxLength={300} placeholder="Kurze Begründung (geht an den Autor)"
+        <input value={note} onChange={e => setNote(e.target.value)} maxLength={300}
+          placeholder={needsNote ? "Begründung (Pflicht — geht an alle Beteiligten)" : "Kurze Notiz (optional — geht an alle Beteiligten)"}
           className="flex-1 min-w-[10rem] bg-surface-2 border border-line rounded px-2 py-1 text-xs text-fg placeholder:text-subtle focus:outline-none focus:border-primary" />
-        <Button size="sm" variant="outline" loading={busy} onClick={save}>Speichern</Button>
+        <Button size="sm" variant="outline" loading={busy} disabled={needsNote && !note.trim()} onClick={save}>Speichern</Button>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {entry.draftEventId
-          ? <Link href={`/events/verwalten/${entry.draftEventId}`} className="text-xs text-primary hover:text-primary-fg transition-colors">Event-Entwurf öffnen →</Link>
-          : <Button size="sm" variant="ghost" loading={draftBusy} onClick={createDraft}>Event-Entwurf aus dieser Idee anlegen</Button>}
+    </div>
+  );
+}
+
+/** Fortschritt zur Team-Prüfung: "3 von 5 Unterstützern · Noch 2, dann prüft das Team" */
+function SupportGoal({ supporters, responseDays }: { supporters: number; responseDays: number | null }) {
+  const reached = supporters >= IDEA_SUPPORT_THRESHOLD;
+  const pct = Math.min(100, Math.round((supporters / IDEA_SUPPORT_THRESHOLD) * 100));
+  const missing = IDEA_SUPPORT_THRESHOLD - supporters;
+  return (
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className="font-semibold text-fg">{Math.min(supporters, 99)} von {IDEA_SUPPORT_THRESHOLD} Unterstützern</span>
+        <span className="text-subtle">{reached ? "Ziel erreicht — das Team schaut es sich an" : `Noch ${missing}, dann prüft das Team`}</span>
       </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
+        <div className={`h-full rounded-full ${reached ? "bg-success" : "bg-primary"}`} style={{ width: `${Math.max(4, pct)}%` }} />
+      </div>
+      {responseDays && <p className="text-xs text-subtle">Das Team antwortet meist innerhalb von {responseDays === 1 ? "einem Tag" : `${responseDays} Tagen`}.</p>}
     </div>
   );
 }
@@ -286,14 +293,32 @@ export default function IdeaBody({ entry, currentUserId, onChanged, onIdeaPage =
             : <Badge tone={meta.tone as BadgeTone}>{meta.label}</Badge>)}
           {category && <Badge tone="info">{category}</Badge>}
           {ends && (endsInFuture
-            ? <Badge tone="warning">Abstimmung noch {daysLeftLabel(ends)}</Badge>
-            : <span className="text-xs text-subtle">Abstimmung beendet</span>)}
+            ? <Badge tone="warning">Noch {daysLeftLabel(ends)} · ab {IDEA_SUPPORT_THRESHOLD} Unterstützern prüft das Team</Badge>
+            : <span className="text-xs text-subtle">Frist abgelaufen</span>)}
         </div>
         <p className="text-sm font-semibold text-fg">
           {onIdeaPage ? entry.title : <Link href={`/community-board/idea/${entry.id}`} className="hover:text-primary-fg transition-colors">{entry.title}</Link>}
         </p>
-        {entry.lifecycleNote && entry.lifecycle !== "OPEN" && <p className="text-xs text-muted">Team: {entry.lifecycleNote}</p>}
       </div>
+
+      {/* Team-Antwort: eigene Box direkt unter dem Titel */}
+      {entry.lifecycle && entry.lifecycle !== "OPEN" && (entry.lifecycleNote || entry.lifecycleBy) && (
+        <div className="flex gap-2.5 rounded-control border border-primary/30 bg-primary-soft p-3">
+          {entry.lifecycleBy?.image
+            // eslint-disable-next-line @next/next/no-img-element -- Discord-Avatar
+            ? <img src={entry.lifecycleBy.image} alt="" className="size-8 shrink-0 rounded-full" />
+            : <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-3 text-xs font-bold text-primary-fg">OMA</span>}
+          <div className="min-w-0">
+            <p className="text-xs text-primary-fg">
+              <b>Antwort vom Team</b>{entry.lifecycleBy ? ` · ${entry.lifecycleBy.name}` : ""}{entry.lifecycleAt ? ` · ${formatBerlinDate(entry.lifecycleAt)}` : ""}
+            </p>
+            <p className="mt-0.5 text-sm text-fg/90">{entry.lifecycleNote ?? meta.label}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Ziel: ab IDEA_SUPPORT_THRESHOLD Unterstützern prüft das Team */}
+      {(entry.lifecycle ?? "OPEN") === "OPEN" && <SupportGoal supporters={entry.supporters ?? 0} responseDays={entry.teamResponseDays ?? null} />}
 
       <MarkdownLite text={entry.description ?? ""} className="text-xs text-muted" />
       <ImageGrid urls={entry.imageUrls ?? []} />

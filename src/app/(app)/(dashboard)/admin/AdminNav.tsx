@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Bell, Briefcase, CalendarDays, ChevronDown, Clapperboard, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
+  Bell, Briefcase, CalendarDays, ChevronDown, Clapperboard, Download, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
   Megaphone, Scale, Search, Server, Shield, ShoppingBag, Tv2, Users, X,
 } from "@/components/icons";
 import { usePolling } from "@/lib/usePolling";
@@ -14,7 +14,7 @@ import {
 } from "@/lib/admin-nav";
 
 const ICONS = {
-  Bell, Briefcase, CalendarDays, Clapperboard, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
+  Bell, Briefcase, CalendarDays, Clapperboard, Download, Gamepad2, Handshake, Heart, LayoutDashboard, LayoutGrid,
   Megaphone, Scale, Server, Shield, ShoppingBag, Tv2, Users,
 } as const;
 

@@ -14,7 +14,7 @@ import type { VoteEvent } from "./score-engine";
  * (registriert in journalist/fotograf/marketing-manager/visionaer-service.ts).
  */
 
-export const COMMENT_ENTITY_TYPES = ["report", "idea", "guide"] as const;
+export const COMMENT_ENTITY_TYPES = ["report", "idea", "guide", "proposal"] as const;
 export type CommentEntityType = (typeof COMMENT_ENTITY_TYPES)[number];
 
 function isValidEntityType(v: unknown): v is CommentEntityType {
@@ -26,6 +26,7 @@ async function entityExists(entityType: CommentEntityType, entityId: string): Pr
     case "report": return !!(await prisma.jobReport.findUnique({ where: { id: entityId }, select: { id: true } }));
     case "idea": return !!(await prisma.communityIdea.findUnique({ where: { id: entityId }, select: { id: true } }));
     case "guide": return !!(await prisma.coachGuide.findUnique({ where: { id: entityId }, select: { id: true } }));
+    case "proposal": return !!(await prisma.eventProposal.findUnique({ where: { id: entityId }, select: { id: true } }));
   }
 }
 

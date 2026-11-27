@@ -1,4 +1,5 @@
 import { eventGenreForGameName } from "@/lib/games/event-genre-server";
+import { linkProposalEvent } from "@/lib/event-proposal-service";
 import { normalizeCategory } from "@/lib/event-category";
 import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/auth";
@@ -324,6 +325,12 @@ export async function POST(req: NextRequest) {
   // Die Veröffentlichung läuft nach der Antwort (after), damit ein langsamer Push-Versand das Anlegen
   // nicht ins Timeout treibt; Fehler protokolliert publishEvent je Schritt (siehe lib/event-publish.ts).
   if (!event.hidden) after(() => publishEvent(event.id));
+  // Aus einem Event-Vorschlag im Community-Board: verknüpfen und die Interessierten einladen
+  if (typeof body.proposalId === "string" && body.proposalId) {
+    const proposalId = body.proposalId.slice(0, 40);
+    after(() => linkProposalEvent(currentUser, proposalId, { id: event.id, title: event.title, startAt: event.startAt })
+      .catch(err => console.error("[event-proposal]", err)));
+  }
 
   return NextResponse.json(event, { status: 201 });
 }

@@ -1195,7 +1195,7 @@ function CoachRatingsReceived() {
 }
 
 function IdeaList() {
-  const [items, setItems] = useState<{ id: string; title: string; description?: string; status: string; lifecycle?: string; category?: string | null; version?: number; _count: { votes: number } }[]>([]);
+  const [items, setItems] = useState<{ id: string; title: string; description?: string; votingEndsAt?: string | null; lifecycle?: string; category?: string | null; version?: number; _count: { votes: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1222,7 +1222,7 @@ function IdeaList() {
   async function close(id: string) {
     try {
       await api(`/api/community-jobs/ideas/${id}/close`, { method: "POST" });
-      toast.success("Abstimmung beendet"); reload();
+      toast.success("Frist beendet"); reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
 
@@ -1256,9 +1256,10 @@ function IdeaList() {
             )}
           </span>
           <span className="flex items-center gap-2 shrink-0 ml-2">
-            {i.status === "CLOSED"
-              ? <Badge tone="neutral">Beendet</Badge>
-              : <button onClick={() => close(i.id)} className="text-xs text-subtle hover:text-coin transition-colors">Beenden</button>}
+            {(i.lifecycle ?? "OPEN") === "OPEN" && i.votingEndsAt && new Date(i.votingEndsAt) > new Date() && (
+              <button onClick={() => close(i.id)} title="Frist jetzt beenden — mit genug Unterstützern geht die Idee an das Team"
+                className="text-xs text-subtle hover:text-coin transition-colors">Frist beenden</button>
+            )}
             <VoteRow upvotes={i._count.votes} votedByMe={false} />
             <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); setEditNote(""); }} onDelete={() => remove(i.id)} />
           </span>

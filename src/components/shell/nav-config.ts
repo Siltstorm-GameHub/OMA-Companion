@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { OmaProduct } from "@/components/OmaWordmark";
 import {
-  Bell, CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Home, Lightbulb, ScrollText, Server, Trophy, User, Users,
+  Bell, CalendarDays, Clapperboard, Coins, Gamepad2, Handshake, Heart, Home, Lightbulb, ScrollText, Server, Trophy, User, Users,
 } from "@/components/icons";
 
 /**
@@ -35,7 +35,7 @@ export interface NavChild {
   /** Nur für eingeloggte Mitglieder */
   auth?: boolean;
   /** Zahl offener Aufgaben am Eintrag (wird in der Seitenleiste nachgeladen) */
-  count?: "eventManage" | "boardOffice";
+  count?: "eventManage" | "boardOffice" | "roadmapNew";
   /** Eigenes OMA-Produkt: OMA-Logo vor dem Namen in Produktfarbe (components/OmaWordmark.tsx) */
   brand?: OmaProduct;
 }
@@ -60,7 +60,15 @@ export const GAMES_SUBNAV: NavChild[] = [
 export const BOARD_SUBNAV: NavChild[] = [
   { href: "/community-board", label: "Feed", exact: true, alsoActiveOn: ["/community-board/report", "/community-board/idea", "/community-board/album", "/interviews"] },
   { href: "/community-board/buero", label: "Büro", auth: true, count: "boardOffice" },
-  { href: "/community-board/roadmap", label: "Roadmap" },
+  { href: "/community-board/roadmap", label: "Roadmap", count: "roadmapNew" },
+];
+
+/** Unterseiten des OMA Hubs (Seitenleiste; am Handy: components/hub/HubSectionNav) */
+export const HUB_SUBNAV: NavChild[] = [
+  { href: "/hub", label: "Spendenpool", exact: true },
+  { href: "/hub/fanshop", label: "Fanshop" },
+  { href: "/hub/downloads", label: "Downloads" },
+  { href: "/hub/wallpaper", label: "Wallpaper-Studio" },
 ];
 
 export function isChildActive(pathname: string, child: NavChild): boolean {
@@ -84,6 +92,7 @@ export const COMMUNITY_NAV: NavItem[] = [
   { href: "/squads", label: "Squads", icon: Users },
   { href: "/clip-galerie", label: "Clips", icon: Clapperboard, alsoActiveOn: CLIP_PATHS },
   { href: "/servers", label: "Gameserver", icon: Server },
+  { href: "/hub", label: "OMA Hub", icon: Heart, children: HUB_SUBNAV },
 ];
 
 /** Persönliche Bereiche: am Desktop im Avatar-Menü, am Handy unter "Ich". */
@@ -102,7 +111,7 @@ export const MOBILE_NAV: NavItem[] = [
     href: "/community",
     label: "Community",
     icon: Handshake,
-    alsoActiveOn: ["/leaderboard", "/community-board", "/squads", "/clip-galerie", "/servers", "/donations", ...CLIP_PATHS, ...COMMUNITY_BOARD_PATHS],
+    alsoActiveOn: ["/leaderboard", "/community-board", "/squads", "/clip-galerie", "/servers", "/hub", ...CLIP_PATHS, ...COMMUNITY_BOARD_PATHS],
   },
   { href: "/profile", label: "Ich", icon: User, alsoActiveOn: ["/quests", "/points", "/benachrichtigungen"] },
 ];

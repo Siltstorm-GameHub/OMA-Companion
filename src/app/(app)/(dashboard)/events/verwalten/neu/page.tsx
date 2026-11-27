@@ -8,6 +8,7 @@ import { getCommunityLimits } from "@/lib/community-event-limits";
 import type { GamePrefill } from "./wizard/useEventWizard";
 import { eventGenreForGame } from "@/lib/games/event-genre";
 import { BLOCKS_GAME } from "@/lib/blocks/event-config";
+import { proposalForWizard } from "@/lib/event-proposal-service";
 import type { EventTemplate, PlacementReward, PollConfig } from "./wizard/shared";
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -88,12 +89,14 @@ async function loadGamePrefill(slug: string): Promise<GamePrefill | null> {
 export default async function NewEventPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string; blocks?: string; series?: string }>;
+  searchParams: Promise<{ mode?: string; squadId?: string; from?: string; game?: string; blocks?: string; series?: string; vorschlag?: string }>;
 }) {
   // Jeder eingeloggte User darf Events/Reihen anlegen (Community-Events). Nicht-Moderatoren sehen
   // nur Reihen, die sie selbst verwalten, und nur Squads, die sie captainen (Squad-Bindung optional).
   const { user, scope, captainedSquadIds } = await requireEventArea();
-  const { mode, squadId: initialSquadId, from, game: gameSlug, blocks, series: initialSeriesId } = await searchParams;
+  const { mode, squadId: initialSquadId, from, game: gameSlug, blocks, series: initialSeriesId, vorschlag } = await searchParams;
+  // "Ich organisiere das" aus einem Event-Vorschlag im Community-Board: Titel, Beschreibung und Spiel vorbelegen
+  const proposalPrefill = vorschlag ? await proposalForWizard(user, vorschlag.slice(0, 40)) : null;
   const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
   // (2) Schnellstart "Wie zuletzt": die letzten drei selbst angelegten Events zum Kopieren
@@ -145,7 +148,8 @@ export default async function NewEventPage({
       isCommunity={scope !== null}
       communityLimits={communityLimits ? { standalone: communityLimits.standalone, seriesEvent: communityLimits.seriesEvent } : null}
       initialSquadId={eventTemplate?.squadId || initialSquadId}
-      initialMode={eventTemplate || gamePrefill || mode === "event" ? "event" : mode === "series" ? "series" : "select"}
+      initialMode={eventTemplate || gamePrefill || proposalPrefill || mode === "event" ? "event" : mode === "series" ? "series" : "select"}
+      proposalPrefill={proposalPrefill ?? undefined}
       eventTemplate={eventTemplate ?? undefined}
       gamePrefill={gamePrefill ?? undefined}
       initialSeriesId={initialSeriesId && series.some(s => s.id === initialSeriesId) ? initialSeriesId : undefined}

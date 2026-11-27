@@ -58,6 +58,8 @@ const nextConfig: NextConfig = {
       { source: "/admin/series", destination: "/events/verwalten", permanent: true },
       { source: "/admin/series/:id", destination: "/events/verwalten/reihen/:id", permanent: true },
       { source: "/admin/series/:id/:path+", destination: "/events/verwalten/reihen/:id/:path+", permanent: true },
+      // Bis 2026-11 lagen Spendenpool und Fanshop unter /donations — jetzt OMA Hub (Bot-Posts, Lesezeichen).
+      { source: "/donations", destination: "/hub", permanent: true },
     ];
   },
   images: {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
 import type { LucideIcon } from "lucide-react";
 import { GateLink } from "@/components/GuestGate";
-import { ChevronRight, Heart, Trophy } from "@/components/icons";
+import { ChevronRight, Trophy } from "@/components/icons";
 import { COMMUNITY_NAV } from "@/components/shell/nav-config";
 
 export const metadata: Metadata = { title: "Community | OMA" };
@@ -14,13 +14,16 @@ const DESCRIPTIONS: Record<string, string> = {
   "/squads": "Feste Gruppen finden oder gründen",
   "/clip-galerie": "Clip des Monats, Clip des Jahres und die Galerie",
   "/servers": "Unsere Gameserver und Zugänge",
+  "/hub": "Spendenpool, Fanshop, Downloads und Wallpaper-Studio",
 };
 
 // Rangliste und Support stehen am Desktop in Menü bzw. Seitenleiste — am Handy sammelt diese Seite sie.
 const TILES: Tile[] = [
   { href: "/leaderboard", label: "Rangliste", text: "Rang-Punkte, Saisons und Wanderpokale", icon: Trophy, tone: "coin" },
-  ...COMMUNITY_NAV.map((n) => ({ href: n.href, label: n.label, text: DESCRIPTIONS[n.href] ?? "", icon: n.icon })),
-  { href: "/donations", label: "Support", text: "Spendenpool: Server, Preise und Events", icon: Heart, tone: "live" },
+  ...COMMUNITY_NAV.map((n) => ({
+    href: n.href, label: n.label, text: DESCRIPTIONS[n.href] ?? "", icon: n.icon,
+    tone: n.href === "/hub" ? ("live" as const) : undefined,
+  })),
 ];
 
 /** Kachel-Übersicht hinter dem Reiter "Community" der unteren Leiste (Handy). */

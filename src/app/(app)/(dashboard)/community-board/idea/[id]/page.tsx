@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { ideaFeedInclude, toIdeaFeedEntry } from "@/lib/idea-feed";
+import { enrichIdeaEntries, ideaFeedInclude, toIdeaFeedEntry } from "@/lib/idea-feed";
 import IdeaPageClient from "./IdeaPageClient";
 
 export const dynamic = "force-dynamic";
@@ -16,5 +16,6 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   if (!idea || idea.hiddenByAdminAt) notFound();
 
   // Datumsfelder für die Client-Komponente serialisieren.
-  return <IdeaPageClient entry={JSON.parse(JSON.stringify(toIdeaFeedEntry(idea, user.id)))} />;
+  const [entry] = await enrichIdeaEntries([toIdeaFeedEntry(idea, user.id)]);
+  return <IdeaPageClient entry={JSON.parse(JSON.stringify(entry))} />;
 }

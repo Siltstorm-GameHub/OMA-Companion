@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import SupportTabs from "@/components/support/SupportTabs";
-import FanshopSection from "@/components/support/FanshopSection";
+import type { Metadata } from "next";
 import DonationPoolView, { type PoolDonor } from "@/components/support/DonationPoolView";
 import { allocatePool, averageMonthlyDonations, buildLedger, donorStreak } from "@/lib/donation-pool";
 import { getBerlinDateParts } from "@/lib/time";
 
-export default async function DonationsPage() {
+export const metadata: Metadata = { title: "Spendenpool | OMA Hub" };
+
+/** OMA Hub → Reiter Spendenpool (früher /donations; alte Links leiten per next.config hierher). */
+export default async function HubDonationsPage() {
   const now = new Date();
   const [session, monthlyGroups, donorGroups, expenses, ideas, fixedCosts] = await Promise.all([
     auth(),
@@ -70,9 +72,5 @@ export default async function DonationsPage() {
     currentMonth: getBerlinDateParts(now).month,
   };
 
-  return (
-    <div className="px-4 pt-0 pb-8 sm:py-8">
-      <SupportTabs donations={<DonationPoolView data={data} />} fanshop={<FanshopSection />} />
-    </div>
-  );
+  return <DonationPoolView data={data} />;
 }

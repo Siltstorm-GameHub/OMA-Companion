@@ -1,6 +1,7 @@
 "use client";
 
 import { useOfficeCount } from "@/components/community/OfficeCountBadge";
+import { useRoadmapNew } from "@/components/community/RoadmapNewDot";
 import OmaWordmark from "@/components/OmaWordmark";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -54,7 +55,7 @@ export function Sidebar({ support }: { support: SupportProgress | null }) {
           <NavSection title="Menü" items={MAIN_NAV} pathname={pathname} label="Hauptnavigation" />
           <NavSection title="Community" items={COMMUNITY_NAV} pathname={pathname} label="Community" />
           <LiveNow />
-          <SupportCard active={pathname.startsWith("/donations")} support={support} />
+          <SupportCard active={pathname.startsWith("/hub")} support={support} />
         </>
       )}
     </aside>
@@ -70,6 +71,7 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
   // Zahl am Untermenü "Büro" des Community-Boards — nur, wenn das Board offen ist
   const boardOpen = props.items.some(i => i.children?.some(c => c.count === "boardOffice") && isActive(props.pathname, i));
   const officeCount = useOfficeCount(boardOpen && loggedIn);
+  const roadmapNew = useRoadmapNew(boardOpen && loggedIn);
   useEffect(() => {
     if (!eventsOpen || !loggedIn) return;
     let cancelled = false;
@@ -115,6 +117,7 @@ function NavSection(props: { title: string; items: NavItem[]; pathname: string; 
                       {c.brand
                         ? <span className="flex-1 truncate"><OmaWordmark product={c.brand} size="xs" plainName={!on} /></span>
                         : <span className="flex-1 truncate">{c.label}</span>}
+                      {c.count === "roadmapNew" && roadmapNew && !on && <span className="size-2 rounded-full bg-primary" aria-label="Neu seit deinem letzten Besuch" />}
                       {n > 0 && (
                         <span className="min-w-5 rounded-full bg-warning px-1.5 text-center text-xs font-bold leading-5 tabular-nums text-canvas" aria-label={`${n} offen`}>
                           {n > 99 ? "99+" : n}
@@ -184,7 +187,7 @@ function SupportCard({ active, support }: { active: boolean; support: SupportPro
         <p className="mt-1 text-xs leading-relaxed text-muted">Server, Preise und Events laufen über den Spendenpool.</p>
       )}
       <GateLink
-        href="/donations"
+        href="/hub"
         aria-current={active ? "page" : undefined}
         className="mt-3 flex min-h-10 items-center justify-center rounded-control bg-primary px-3 text-sm font-bold text-primary-ink hover:bg-primary-hover"
       >
