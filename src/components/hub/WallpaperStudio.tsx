@@ -14,6 +14,10 @@ import {
   type WallpaperOptions,
   type WallpaperTemplate,
 } from "@/lib/wallpaper-render";
+import { PAUSE_BACKGROUNDS, pauseThumbnail } from "@/components/overlay/pauseBackgrounds";
+
+/** Die Pausen-Hintergründe des Stream-Overlays (nur die mit Bild) als Szenen für das Wallpaper. */
+const SCENES = PAUSE_BACKGROUNDS.filter((b): b is typeof b & { image: string } => !!b.image);
 
 const PREVIEW_MAX = 1280;
 const LOGO_SRC = "/brand/logo-512.png";
@@ -49,6 +53,10 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [fontFamily, setFontFamily] = useState<string | null>(null);
 
+  const [sceneKey, setSceneKey] = useState<string | null>(null);
+  const [loadedScene, setLoadedScene] = useState<{ key: string; img: HTMLImageElement } | null>(null);
+  // Nur die geladene Szene zeigen, die auch gerade gewählt ist (OMA-Standard = null)
+  const scene = sceneKey && loadedScene?.key === sceneKey ? loadedScene.img : null;
   const [template, setTemplate] = useState<WallpaperTemplate>("emblem");
   const [formatKey, setFormatKey] = useState<WallpaperFormatKey>("fhd");
   const [accent, setAccent] = useState<string>(WALLPAPER_ACCENTS[0].hex);
@@ -77,6 +85,17 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
       .catch(() => { if (alive) { setPhoto(null); toast.error("Profilbild konnte nicht geladen werden — lade stattdessen ein eigenes Bild hoch."); } });
     return () => { alive = false; };
   }, [source, avatarSrc]);
+
+  // Szene in voller Größe erst laden, wenn sie gewählt wird (die Auswahl zeigt nur Vorschaubilder)
+  useEffect(() => {
+    const src = SCENES.find((s) => s.key === sceneKey)?.image;
+    if (!src || !sceneKey) return;
+    let alive = true;
+    loadImage(src)
+      .then((img) => { if (alive) setLoadedScene({ key: sceneKey, img }); })
+      .catch(() => { if (alive) toast.error("Hintergrund konnte nicht geladen werden"); });
+    return () => { alive = false; };
+  }, [sceneKey]);
 
   useEffect(() => () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); }, []);
 
@@ -113,9 +132,9 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const raf = requestAnimationFrame(() => renderWallpaper(ctx, { ...options, width: w, height: h }, { photo: activePhoto, logo }));
+    const raf = requestAnimationFrame(() => renderWallpaper(ctx, { ...options, width: w, height: h }, { photo: activePhoto, logo, scene }));
     return () => cancelAnimationFrame(raf);
-  }, [options, format, activePhoto, logo]);
+  }, [options, format, activePhoto, logo, scene]);
 
   // Ausschnitt per Ziehen in der Vorschau verschieben
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
@@ -143,7 +162,7 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
       canvas.width = format.w; canvas.height = format.h;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas nicht verfügbar");
-      renderWallpaper(ctx, { ...options, width: format.w, height: format.h }, { photo: activePhoto, logo });
+      renderWallpaper(ctx, { ...options, width: format.w, height: format.h }, { photo: activePhoto, logo, scene });
       const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
       if (!blob) throw new Error("Bild konnte nicht erzeugt werden");
       const url = URL.createObjectURL(blob);
@@ -255,7 +274,32 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
         </Card>
 
         <Card className="space-y-3">
-          <h2 className="font-bold text-fg">3 · Text</h2>
+          <div>
+            <h2 className="font-bold text-fg">3 · Hintergrund</h2>
+            <p className="text-xs text-subtle">Die Szenen aus unserem Stream-Overlay — oder der OMA-Standard.</p>
+          </div>
+          <div className="grid max-h-80 grid-cols-3 gap-2 overflow-y-auto pr-1">
+            <button type="button" onClick={() => setSceneKey(null)} aria-pressed={sceneKey === null} title="OMA-Standard"
+              className={`group relative aspect-video overflow-hidden rounded-control border-2 ${sceneKey === null ? "border-primary" : "border-transparent hover:border-line-strong"}`}
+              style={{ background: `radial-gradient(circle at 25% 25%, ${accent}66, transparent 60%), linear-gradient(135deg, #0E1628, #05080F)` }}>
+              <span className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-white">OMA-Standard</span>
+            </button>
+            {SCENES.map((s) => (
+              <button key={s.key} type="button" onClick={() => setSceneKey(s.key)} aria-pressed={sceneKey === s.key} title={`${s.label} · ${s.hint}`}
+                className={`relative aspect-video overflow-hidden rounded-control border-2 ${sceneKey === s.key ? "border-primary" : "border-transparent hover:border-line-strong"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={pauseThumbnail(s) ?? s.image} alt="" loading="lazy" className="size-full object-cover" />
+                <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1 py-0.5 text-[10px] font-semibold text-white">{s.label}</span>
+              </button>
+            ))}
+          </div>
+          {sceneKey && (formatKey === "uhd" || formatKey === "uw" || formatKey === "qhd" || formatKey === "tablet") && (
+            <p className="text-xs text-subtle">Die Szenen liegen in Full HD vor — in größeren Formaten wirkt der Hintergrund etwas weicher.</p>
+          )}
+        </Card>
+
+        <Card className="space-y-3">
+          <h2 className="font-bold text-fg">4 · Text</h2>
           <Input label="Schriftzug" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} />
           <Input label="Unterzeile" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} maxLength={50} />
           <label className="flex items-center gap-2 text-sm text-fg">
@@ -265,7 +309,7 @@ export default function WallpaperStudio({ userName, avatarSrc }: { userName: str
         </Card>
 
         <Card className="space-y-3">
-          <h2 className="font-bold text-fg">4 · Format</h2>
+          <h2 className="font-bold text-fg">5 · Format</h2>
           {(["Desktop", "Handy"] as const).map((group) => (
             <div key={group} className="space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-subtle">{group}</span>

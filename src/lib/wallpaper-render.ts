@@ -52,7 +52,12 @@ export type WallpaperOptions = {
   fontFamily: string;
 };
 
-export type WallpaperImages = { photo: HTMLImageElement | ImageBitmap | null; logo: HTMLImageElement | null };
+export type WallpaperImages = {
+  photo: HTMLImageElement | ImageBitmap | null;
+  logo: HTMLImageElement | null;
+  /** Optionale Hintergrund-Szene (z. B. die Pausen-Hintergründe des Stream-Overlays); null = OMA-Standard */
+  scene?: HTMLImageElement | null;
+};
 
 const INK = "#0B1120";
 const PAPER = "#F7F7F5";
@@ -132,6 +137,23 @@ function baseBackground(ctx: CanvasRenderingContext2D, w: number, h: number, acc
   for (let x = (w % step) / 2; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
   for (let y = (h % step) / 2; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
   ctx.restore();
+}
+
+/**
+ * Hintergrund der Vorlage: gewählte Szene (abgedunkelt, mit leichtem Akzentlicht, damit Bild und
+ * Schrift davor lesbar bleiben) oder der generierte OMA-Standard.
+ */
+function background(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: WallpaperImages, u: number) {
+  const { width: w, height: h } = o;
+  if (!im.scene) { baseBackground(ctx, w, h, o.accent, u); return; }
+  drawCover(ctx, im.scene, 0, 0, w, h);
+  ctx.fillStyle = "rgba(5,8,15,0.42)";
+  ctx.fillRect(0, 0, w, h);
+  const rg = ctx.createRadialGradient(w / 2, h * 0.45, 0, w / 2, h * 0.45, 700 * u);
+  rg.addColorStop(0, rgba(o.accent, 0.18));
+  rg.addColorStop(1, rgba(o.accent, 0));
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, w, h);
 }
 
 function vignette(ctx: CanvasRenderingContext2D, w: number, h: number, a = 0.7) {
@@ -261,7 +283,7 @@ function cornerLogo(ctx: CanvasRenderingContext2D, o: WallpaperOptions, logo: HT
 
 function renderEmblem(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: WallpaperImages, u: number) {
   const { width: w, height: h } = o;
-  baseBackground(ctx, w, h, o.accent, u);
+  background(ctx, o, im, u);
   const portrait = h > w;
   const r = 230 * u;
   if (portrait) {
@@ -279,7 +301,9 @@ function renderEmblem(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: Wa
 
 function renderBackdrop(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: WallpaperImages, u: number) {
   const { width: w, height: h } = o;
-  if (im.photo) drawBlurredCover(ctx, im.photo, w, h);
+  // Mit gewählter Szene liegt die Szene dahinter, sonst das eigene Bild weichgezeichnet
+  if (im.scene) drawCover(ctx, im.scene, 0, 0, w, h);
+  else if (im.photo) drawBlurredCover(ctx, im.photo, w, h);
   else baseBackground(ctx, w, h, o.accent, u);
 
   // Abdunkeln + Akzentschleier
@@ -330,7 +354,7 @@ function renderBackdrop(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: 
 
 function renderSplit(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: WallpaperImages, u: number) {
   const { width: w, height: h } = o;
-  baseBackground(ctx, w, h, o.accent, u);
+  background(ctx, o, im, u);
   const portrait = h > w;
   const slant = 160 * u;
 
@@ -386,8 +410,15 @@ function renderSplit(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: Wal
 
 function renderMosaic(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: WallpaperImages, u: number) {
   const { width: w, height: h } = o;
-  ctx.fillStyle = "#070B14";
+  if (im.scene) {
+    drawCover(ctx, im.scene, 0, 0, w, h);
+    ctx.fillStyle = "rgba(5,8,15,0.35)";
+  } else {
+    ctx.fillStyle = "#070B14";
+  }
   ctx.fillRect(0, 0, w, h);
+  // Vor einer Szene die Kacheln zurücknehmen, damit die Szene durchscheint
+  const tileAlpha = im.scene ? 0.4 : 0.55;
 
   // Gedrehtes Raster aus runden Kacheln
   const tile = 150 * u;
@@ -405,7 +436,7 @@ function renderMosaic(ctx: CanvasRenderingContext2D, o: WallpaperOptions, im: Wa
       ctx.beginPath();
       ctx.arc(x, y, tile / 2, 0, Math.PI * 2);
       ctx.clip();
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = tileAlpha;
       if (im.photo) drawCover(ctx, im.photo, x - tile / 2, y - tile / 2, tile, tile, o.zoom, o.offsetX, o.offsetY);
       else placeholderPhoto(ctx, x - tile / 2, y - tile / 2, tile, tile, o.accent);
       ctx.restore();
