@@ -1,5 +1,6 @@
 "use client";
 
+import FileDropZone from "@/components/FileDropZone";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Upload, X, Loader2, Images, Check } from "@/components/icons";
@@ -71,6 +72,7 @@ export default function ImageUploadField({
   }
 
   return (
+    <FileDropZone onFiles={files => { if (files[0]) handleFile(files[0]); }} label="Bild hier ablegen" className="rounded-control">
     <div className="space-y-2">
       <label className="block text-xs font-medium text-gray-400">{label}</label>
 
@@ -193,5 +195,6 @@ export default function ImageUploadField({
         <p className="text-xs text-red-400">Bild konnte nicht geladen werden — URL prüfen.</p>
       )}
     </div>
+    </FileDropZone>
   );
 }

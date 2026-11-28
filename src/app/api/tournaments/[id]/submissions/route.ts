@@ -27,7 +27,11 @@ function fail(err: unknown) {
   throw err;
 }
 
-/** Teilnehmer meldet ein Ergebnis (eigenes oder das eines anderen Spielers) samt Screenshot-Nachweis (erneutes Senden ersetzt die eigene Meldung). */
+/**
+ * Teilnehmer meldet ein Ergebnis (eigenes oder das eines anderen Spielers), erneutes Senden ersetzt die eigene Meldung.
+ * Mit Screenshot ist es sofort sichtbar (vorläufig). Ohne Screenshot wird es erst eingetragen, wenn der Gegner es
+ * bestätigt (gleiches Ergebnis) oder ein Verwalter es prüft.
+ */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   const user = await getSessionUser();
@@ -40,13 +44,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // "Bestätigen": der Gegner übernimmt eine vorhandene Meldung des anderen Spielers ohne eigenen Screenshot
   const isConfirm = body.confirm === true;
-  const urls: unknown = isConfirm ? [] : body.screenshotUrls;
-  if (!isConfirm && (!Array.isArray(urls) || urls.length < 1 || urls.length > MAX_SCREENSHOTS || !urls.every(isProofUrl))) {
-    return NextResponse.json(
-      { error: `Mindestens 1, höchstens ${MAX_SCREENSHOTS} Screenshots als Nachweis erforderlich` },
-      { status: 400 },
-    );
+  const urls: unknown = isConfirm ? [] : (body.screenshotUrls ?? []);
+  if (!isConfirm && (!Array.isArray(urls) || urls.length > MAX_SCREENSHOTS || !urls.every(isProofUrl))) {
+    return NextResponse.json({ error: `Höchstens ${MAX_SCREENSHOTS} Screenshots als Nachweis` }, { status: 400 });
   }
+  // Ohne Nachweis: nicht vorläufig eintragen, sondern auf Bestätigung (Gegner oder Verwalter) warten
+  const hasProof = Array.isArray(urls) && urls.length > 0;
 
   const match = await prisma.match.findFirst({
     where: { id: body.matchId, eventId },
@@ -152,7 +155,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Kann das Ergebnis gerade nicht eingetragen werden (z.B. Folgespiel schon gespielt), bleibt die Meldung
     // gespeichert und wartet auf die Prüfung — statt dem Spieler einen Fehler zu zeigen, obwohl sie gespeichert ist
     let heldBack: string | null = null;
-    if (!adminConfirmed) {
+    if (!adminConfirmed && (hasProof || isConfirm)) {
       try {
         await applySubmissionValues(eventId, submission.id, subjectId, match.id, values, true, { id: user.id, label: "Spieler-Meldung" });
       } catch (err) {
@@ -183,8 +186,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const conflict = !!opponentSub && opponentSub.status === "pending" && !confirmedByBoth
       && (opponentSub.score1 !== values.score1 || opponentSub.score2 !== values.score2);
     await notifyManagersOfSubmission(eventId, { reporterId: user.id, conflict }).catch(() => {});
+    const noProof = !hasProof && !isConfirm && !confirmedByBoth;
     return NextResponse.json({
-      ...submission, visible: !adminConfirmed && !heldBack, confirmedByBoth, heldBack, conflict,
+      ...submission, visible: confirmedByBoth || (!adminConfirmed && !heldBack && !noProof), confirmedByBoth, heldBack, conflict, noProof,
     }, { status: existing ? 200 : 201 });
   } catch (err) {
     return fail(err);

@@ -338,16 +338,16 @@ export default async function TournamentDetailPage({
   const opponentReportRows = canReportResults && myDuelMatchIds.length > 0
     ? await prisma.matchResultSubmission.findMany({
         where: { eventId, matchId: { in: myDuelMatchIds }, userId: { not: userId }, forUserId: "", status: "pending" },
-        select: { matchId: true, userId: true, score1: true, score2: true, advancerId: true },
+        select: { matchId: true, userId: true, score1: true, score2: true, advancerId: true, screenshotUrls: true },
       })
     : [];
-  const userById = new Map<string, { id: string; name: string | null; username: string | null }>([
+  const userById = new Map<string, { id: string; name: string | null; username: string | null; image: string | null }>([
     ...event.registrations.map(r => [r.userId, r.user] as const),
     ...event.participants.map(p => [p.userId, p.user] as const),
   ]);
   const toU = (id: string | null) => {
     const u = id ? userById.get(id) : null;
-    return u ? { id: u.id, name: u.name, username: u.username } : null;
+    return u ? { id: u.id, name: u.name, username: u.username, image: u.image } : null;
   };
   const reportMatches: ReportMatch[] = canReportResults
     ? event.matches
@@ -366,10 +366,14 @@ export default async function TournamentDetailPage({
             players: isDuel ? [] : m.entries.flatMap(e => { const u = toU(e.userId); return u ? [u] : []; }),
             played: !!m.playedAt,
             mine: m.player1Id === userId || m.player2Id === userId || m.entries.some(e => e.userId === userId),
+            meId: userId ?? null,
             opponentReport: (() => {
               const opp = isDuel ? (m.player1Id === userId ? m.player2Id : m.player2Id === userId ? m.player1Id : null) : null;
               const r = opp ? opponentReportRows.find(x => x.matchId === m.id && x.userId === opp) : null;
-              return r ? { score1: r.score1, score2: r.score2, reporterName: nm(toU(r.userId)), advancerId: r.advancerId } : null;
+              if (!r) return null;
+              let shots: string[] = [];
+              try { const v = JSON.parse(r.screenshotUrls ?? "[]"); if (Array.isArray(v)) shots = v.filter((x): x is string => typeof x === "string"); } catch { /* leer */ }
+              return { score1: r.score1, score2: r.score2, reporterName: nm(toU(r.userId)), advancerId: r.advancerId, screenshotUrls: shots };
             })(),
             knockout: isDuel && isKnockoutMatch(event.format, m.groupIndex),
             leg: m.leg,

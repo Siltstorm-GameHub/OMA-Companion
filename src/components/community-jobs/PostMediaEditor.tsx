@@ -1,4 +1,5 @@
 "use client";
+import FileDropZone from "@/components/FileDropZone";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { upload } from "@vercel/blob/client";
@@ -106,7 +107,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
     onChange([...media, ...items].slice(0, POST_MEDIA_MAX));
   }
 
-  async function addImages(list: FileList | null) {
+  async function addImages(list: FileList | File[] | null) {
     if (!list) return;
     const files = [...list].filter(f => f.type.startsWith("image/")).slice(0, free);
     if (files.length < list.length) toast.error(`Nur Bilder, höchstens ${POST_MEDIA_MAX} pro Beitrag (Clips einzeln hochladen)`);
@@ -135,6 +136,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
   }
 
   return (
+    <FileDropZone onFiles={addImages} disabled={free <= 0 || !!progress} label="Bilder hier ablegen" className="rounded-control">
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs text-subtle flex items-center gap-1.5"><Images className="w-3.5 h-3.5" /> Bilder &amp; Clips (optional, bis {POST_MEDIA_MAX})</p>
@@ -185,6 +187,7 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
           <label className={`inline-flex items-center gap-1.5 text-xs rounded-lg border border-line-strong px-3 py-1.5 cursor-pointer hover:border-primary/30 ${progress ? "opacity-50 pointer-events-none" : "text-fg/85"}`}>
             {progress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {progress ? `Lädt ${progress.done}/${progress.total}…` : "Bilder hochladen"}
+            <span className="sr-only"> (oder hierher ziehen bzw. mit Strg+V einfügen)</span>
             <input type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden"
               onChange={e => { addImages(e.target.files); e.target.value = ""; }} />
           </label>
@@ -201,5 +204,6 @@ export default function PostMediaEditor({ media, onChange, albumId, onAlbumChang
       {mode === "studio" && <StudioEditor allowWatermark onExported={url => { add([{ url, caption: "", type: "GRAPHIC" }]); setMode(null); }} />}
       {mode === "collage" && <MonthCollageBuilder onExported={(url, caption) => { add([{ url, caption, type: "COLLAGE" }]); setMode(null); }} />}
     </div>
+    </FileDropZone>
   );
 }

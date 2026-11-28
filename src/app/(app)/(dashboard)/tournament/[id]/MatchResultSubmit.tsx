@@ -6,10 +6,11 @@ import { confirmEventTiming } from "@/lib/event-timing-warning";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import ProofUploader from "@/components/match-results/ProofUploader";
+import ImageLightbox from "@/components/ImageLightbox";
 import { Check, ChevronDown, X } from "@/components/icons";
 import { NumberInput } from "@/components/ui/NumberInput";
 
-type U = { id: string; name: string | null; username: string | null };
+type U = { id: string; name: string | null; username: string | null; image?: string | null };
 export type ReportMatch = {
   id: string;
   label: string;
@@ -22,7 +23,9 @@ export type ReportMatch = {
   /** Der aktuelle User spielt in diesem Match mit */
   mine: boolean;
   /** 1v1: offene Meldung des Gegners — der User kann sie mit einem Klick bestätigen */
-  opponentReport?: { score1: number | null; score2: number | null; reporterName: string; advancerId?: string | null } | null;
+  opponentReport?: { score1: number | null; score2: number | null; reporterName: string; advancerId?: string | null; screenshotUrls?: string[] } | null;
+  /** Aktueller User (für "Du" im Formular) */
+  meId?: string | null;
   /** Spiel im K.O.-Baum: bei Gleichstand muss angegeben werden, wer (nach Elfmeterschießen) weiterkommt */
   knockout?: boolean;
   /** Hin-/Rückspiel: 1 = Hinspiel, 2 = Rückspiel (entscheidet nach Gesamtergebnis) */
@@ -58,14 +61,37 @@ const inputCls =
 /** Öffnet das Meldeformular eines Matches von außen (z. B. "Stimmt nicht" in der "Für dich"-Karte) */
 export const OPEN_REPORT_EVENT = "oma:open-report";
 
+/** Avatar + Name ("Du" für einen selbst) über dem Zähler — damit keiner die Seiten verwechselt */
+function PlayerHead({ u, me }: { u: U | null; me: boolean }) {
+  const name = me ? "Du" : uname(u);
+  return (
+    <span className="flex flex-col items-center gap-1">
+      {u?.image
+        // eslint-disable-next-line @next/next/no-img-element -- Discord-Avatar
+        ? <img src={u.image} alt="" className={`size-10 rounded-full ${me ? "ring-2 ring-primary" : ""}`} />
+        : <span className={`grid size-10 place-items-center rounded-full bg-surface-3 text-sm font-bold text-fg ${me ? "ring-2 ring-primary" : ""}`}>{name.slice(0, 1).toUpperCase()}</span>}
+      <span className={`max-w-full truncate text-sm font-bold ${me ? "text-primary-fg" : "text-fg"}`}>{name}</span>
+    </span>
+  );
+}
+
+/** "Sieg für Tim", "Du gewinnst", "Unentschieden" — Live-Vorschau unter den Zählern */
+function outcomeLabel(m: ReportMatch, s1: string, s2: string): string | null {
+  if (s1 === "" || s2 === "") return null;
+  const a = Number(s1), b = Number(s2);
+  if (a === b) return "Unentschieden";
+  const winner = a > b ? m.player1 : m.player2;
+  return winner?.id && winner.id === m.meId ? "Du gewinnst" : `Sieg für ${uname(winner)}`;
+}
+
 /** Tor-Zähler mit großen −/+ Knöpfen statt kleinem Zahlenfeld (Daumen-freundlich) */
-function ScoreStepper({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ScoreStepper({ label, value, onChange, head }: { label: string; value: string; onChange: (v: string) => void; head?: ReactNode }) {
   const n = value === "" ? null : Number(value);
   const set = (v: number) => onChange(String(Math.max(0, v)));
   const BTN = "grid size-11 shrink-0 place-items-center rounded-control border border-line-strong bg-surface-2 text-xl font-bold text-fg hover:bg-surface-3 active:scale-95 transition disabled:opacity-40";
   return (
     <div className="min-w-0 space-y-1.5 text-center">
-      <p className="truncate text-sm font-bold text-fg">{label}</p>
+      {head ?? <p className="truncate text-sm font-bold text-fg">{label}</p>}
       <div className="flex items-center justify-center gap-2">
         <button type="button" aria-label={`${label}: eins weniger`} className={BTN} disabled={!n} onClick={() => set((n ?? 0) - 1)}>−</button>
         <input inputMode="numeric" pattern="[0-9]*" aria-label={`Tore ${label}`} value={value}
@@ -150,6 +176,12 @@ export function MatchForm({
   const conflict = !!opp && !!s && s.status === "pending" && (s.score1 !== opp.score1 || s.score2 !== opp.score2);
   const [urls, setUrls] = useState<string[]>(s?.screenshotUrls ?? []);
   const [busy, setBusy] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(!!s?.note);
+  const [viewer, setViewer] = useState<string[] | null>(null);
+  // Widerspruch: "Bei meinem bleiben" blendet die Auswahl aus, "Verwalter fragen" öffnet ein Notizfeld
+  const [conflictDone, setConflictDone] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const [askNote, setAskNote] = useState("");
   // In der Karte "Dein Match" bleibt das Formular zu, bis man auf "Ergebnis melden" tippt
   const [open, setOpen] = useState(!s && !bare);
   useEffect(() => {
@@ -184,8 +216,22 @@ export function MatchForm({
     }
   }
 
+  async function askManager() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/tournaments/${eventId}/submissions/ask-manager`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ matchId: m.id, note: askNote }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return toast.error(data.error ?? "Senden fehlgeschlagen");
+      toast.success("Die Verwalter sind informiert — sie entscheiden anhand eurer Meldungen");
+      setAskOpen(false); setConflictDone(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit() {
-    if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
     if (askAdvancer && m.leg !== 2 && !advancerId) return toast.error("Gleichstand im K.O.-Spiel: bitte angeben, wer nach Elfmeterschießen weiterkommt");
     if (!(await beforeSubmit())) return;
     setBusy(true);
@@ -203,6 +249,7 @@ export function MatchForm({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return toast.error(data.error ?? "Senden fehlgeschlagen");
       if (data.confirmedByBoth) toast.success("Passt zur Meldung deines Gegners — das Ergebnis gilt jetzt endgültig");
+      else if (data.noProof) toast.success("Gespeichert — es zählt, sobald dein Gegner bestätigt", { description: "Oder ein Verwalter prüft es. Mit Screenshot wäre es sofort sichtbar." });
       else if (data.conflict) toast.warning("Gespeichert, aber dein Gegner hat etwas anderes gemeldet", { description: "Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots." });
       else if (data.heldBack) toast.success("Meldung gespeichert — ein Verwalter trägt sie ein", { description: data.heldBack });
       else if (data.visible === false) toast.success("Korrektur gemeldet — ein Verwalter prüft sie, bis dahin gilt das bestätigte Ergebnis");
@@ -241,23 +288,58 @@ export function MatchForm({
 
       {s?.reviewNote && <p className="text-xs text-muted">{s.reviewNote.startsWith("Von beiden Spielern") ? s.reviewNote : `Verwalter: ${s.reviewNote}`}</p>}
 
-      {/* Widerspruch: eigene Meldung und die des Gegners passen nicht zusammen */}
-      {!locked && conflict && opp && s && (
-        <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2 space-y-1.5">
-          <p className="text-xs text-warning font-bold">Eure Meldungen passen nicht zusammen</p>
-          <p className="text-xs text-fg/90">
-            Du: {uname(m.player1)} {s.score1 ?? "–"} : {s.score2 ?? "–"} {uname(m.player2)}<br />
-            {opp.reporterName}: {uname(m.player1)} {opp.score1 ?? "–"} : {opp.score2 ?? "–"} {uname(m.player2)}
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <button onClick={confirmOpponent} disabled={busy}
-              className="min-h-9 px-3.5 rounded-control bg-warning text-canvas hover:brightness-110 text-sm font-bold disabled:opacity-50">
-              Seins stimmt — übernehmen
-            </button>
-            <span className="text-xs text-muted">Sprecht euch ab. Sonst entscheidet ein Verwalter anhand der Screenshots.</span>
+      {/* Widerspruch: beide Meldungen nebeneinander (mit Screenshots), drei Wege: übernehmen, bleiben, Verwalter fragen */}
+      {!locked && conflict && opp && s && !conflictDone && (
+        <div className="space-y-2.5 rounded-control border border-warning/30 bg-warning-soft p-3">
+          <p className="text-sm font-bold text-warning">Eure Meldungen passen nicht zusammen</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { who: "Deine Meldung", a: s.score1, b: s.score2, shots: s.screenshotUrls },
+              { who: `Meldung von ${opp.reporterName}`, a: opp.score1, b: opp.score2, shots: opp.screenshotUrls ?? [] },
+            ].map(x => (
+              <div key={x.who} className="min-w-0 space-y-1.5 rounded-control border border-line bg-surface p-2.5">
+                <p className="truncate text-xs text-muted">{x.who}</p>
+                <p className="text-xl font-extrabold tabular-nums text-fg">{x.a ?? "–"} : {x.b ?? "–"}</p>
+                <p className="truncate text-xs text-subtle">{uname(m.player1)} : {uname(m.player2)}</p>
+                {x.shots.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {x.shots.map((u, i) => (
+                      <button key={u} type="button" onClick={() => setViewer(x.shots.slice(i).concat(x.shots.slice(0, i)))} aria-label="Screenshot groß ansehen"
+                        className="size-12 overflow-hidden rounded-[0.5rem] border border-line">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- Upload */}
+                        <img src={u} alt="" className="size-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-subtle">ohne Screenshot</p>}
+              </div>
+            ))}
           </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={confirmOpponent} disabled={busy}
+              className="min-h-10 rounded-control bg-warning px-3.5 text-sm font-bold text-canvas hover:brightness-110 disabled:opacity-50">
+              Seins übernehmen
+            </button>
+            <button type="button" onClick={() => { setConflictDone(true); toast("Deine Meldung bleibt — ein Verwalter entscheidet anhand der Screenshots"); }}
+              className="min-h-10 rounded-control border border-line-strong bg-surface px-3.5 text-sm font-semibold text-fg hover:bg-surface-2">
+              Bei meinem bleiben
+            </button>
+            <button type="button" onClick={() => setAskOpen(v => !v)} aria-expanded={askOpen}
+              className="min-h-10 rounded-control px-3.5 text-sm font-semibold text-warning hover:bg-surface">
+              Verwalter fragen
+            </button>
+          </div>
+          {askOpen && (
+            <div className="flex flex-wrap gap-2">
+              <input value={askNote} onChange={e => setAskNote(e.target.value)} maxLength={300} placeholder="Kurz erklären, was passiert ist (optional)"
+                className={`${inputCls} flex-1 min-w-[12rem]`} />
+              <button type="button" onClick={askManager} disabled={busy}
+                className="min-h-10 rounded-control bg-primary px-3.5 text-sm font-bold text-primary-ink hover:bg-primary-hover disabled:opacity-50">Senden</button>
+            </div>
+          )}
         </div>
       )}
+      {viewer && <ImageLightbox images={viewer} onClose={() => setViewer(null)} />}
 
       {/* Gegner hat schon gemeldet: mit einem Klick bestätigen (kein eigener Screenshot nötig) */}
       {!locked && m.isDuel && m.opponentReport && !conflict && s?.status !== "approved" && s?.status !== "corrected" && (
@@ -309,9 +391,16 @@ export function MatchForm({
 
             <Step n={1} title={m.isDuel ? "Ergebnis" : "Werte"} done={m.isDuel ? score1 !== "" && score2 !== "" : Object.values(stats).some(v => v !== "")}>
               {m.isDuel ? (
-                <div className="grid grid-cols-2 gap-3 rounded-control bg-surface-2/60 p-3">
-                  <ScoreStepper label={uname(m.player1)} value={score1} onChange={setScore1} />
-                  <ScoreStepper label={uname(m.player2)} value={score2} onChange={setScore2} />
+                <div className="space-y-2 rounded-control bg-surface-2/60 p-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <ScoreStepper label={uname(m.player1)} value={score1} onChange={setScore1}
+                      head={<PlayerHead u={m.player1} me={!!m.meId && m.player1?.id === m.meId} />} />
+                    <ScoreStepper label={uname(m.player2)} value={score2} onChange={setScore2}
+                      head={<PlayerHead u={m.player2} me={!!m.meId && m.player2?.id === m.meId} />} />
+                  </div>
+                  {outcomeLabel(m, score1, score2) && (
+                    <p className="text-center text-sm font-semibold text-primary-fg" aria-live="polite">{outcomeLabel(m, score1, score2)}</p>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
@@ -341,26 +430,32 @@ export function MatchForm({
               )}
             </Step>
 
-            <Step n={2} title="Nachweis (Screenshot, max. 4)" done={urls.length > 0}>
+            <Step n={2} title="Nachweis (optional, max. 4)" done={urls.length > 0}>
               <ProofUploader value={urls} onChange={setUrls} />
+              <p className="text-xs text-muted">
+                {urls.length > 0
+                  ? "Mit Screenshot ist das Ergebnis sofort sichtbar."
+                  : "Ohne Screenshot zählt es erst, wenn dein Gegner bestätigt oder ein Verwalter es prüft."}
+              </p>
             </Step>
 
-            <Step n={3} title="Senden" done={false}>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={500}
-                placeholder="Anmerkung (optional)"
-                className={inputCls}
-              />
+            {noteOpen ? (
+              <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} autoFocus
+                placeholder="Anmerkung (optional), z. B. Verbindungsabbruch in Runde 2" className={inputCls} />
+            ) : (
+              <button type="button" onClick={() => setNoteOpen(true)} className="text-sm font-semibold text-subtle hover:text-fg">+ Anmerkung</button>
+            )}
+
+            {/* Senden: am Handy unten im Panel festgeklebt, damit der Knopf ohne Scrollen erreichbar ist */}
+            <div className={bare ? "max-lg:sticky max-lg:bottom-0 max-lg:-mx-4 max-lg:border-t max-lg:border-line max-lg:bg-surface max-lg:px-4 max-lg:pt-3" : ""}>
               <button
                 onClick={submit}
                 disabled={busy}
                 className="w-full sm:w-auto min-h-11 px-5 rounded-control bg-primary hover:bg-primary-hover text-primary-ink text-sm font-bold disabled:opacity-50"
               >
-                {busy ? "Sende…" : s ? "Meldung aktualisieren" : "Ergebnis senden"}
+                {busy ? "Sende…" : s ? "Meldung aktualisieren" : urls.length > 0 ? "Ergebnis senden" : "Ohne Screenshot senden"}
               </button>
-            </Step>
+            </div>
           </div>
         </>
       )}
@@ -373,7 +468,7 @@ export function ReportHint() {
   return (
     <details className="text-xs text-subtle group">
       <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-        Mit Screenshot melden — sofort sichtbar. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-primary-fg group-open:hidden">Mehr</span>
+        Mit Screenshot ist es sofort sichtbar, ohne erst nach Bestätigung. Bestätigt dein Gegner, gilt es sofort, sonst prüft ein Verwalter. <span className="text-primary-fg group-open:hidden">Mehr</span>
       </summary>
       <p className="mt-1">
         Du kannst dein Ergebnis oder das eines anderen Spielers eintragen. Bis es endgültig ist, steht es als „vorläufig“ da.
@@ -421,7 +516,6 @@ function MultiForm({
   const filled = m.players.filter(p => statFields.some(f => (rows[p.id]?.[f] ?? "").trim() !== ""));
 
   async function submit() {
-    if (urls.length === 0) return toast.error("Bitte mindestens einen Screenshot hochladen");
     if (filled.length === 0) return toast.error("Bitte für mindestens einen Spieler Werte eintragen");
     if (!(await beforeSubmit())) return;
     setBusy(true);

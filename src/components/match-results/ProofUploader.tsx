@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Camera, X, Loader2 } from "@/components/icons";
+import FileDropZone from "@/components/FileDropZone";
+import ImageLightbox from "@/components/ImageLightbox";
 
 /** Mehrere Screenshots als Ergebnis-Nachweis hochladen (Upload-Kind "match-proof"). */
 export default function ProofUploader({
@@ -15,9 +17,10 @@ export default function ProofUploader({
   max?: number;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [viewer, setViewer] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFiles(files: FileList) {
+  async function handleFiles(files: FileList | File[]) {
     setUploading(true);
     const added: string[] = [];
     try {
@@ -43,12 +46,15 @@ export default function ProofUploader({
   }
 
   return (
+    <FileDropZone onFiles={handleFiles} disabled={uploading || value.length >= max} label="Screenshot hier ablegen" className="rounded-control">
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        {value.map((url) => (
+        {value.map((url, i) => (
           <div key={url} className="relative w-20 h-20 rounded-lg overflow-hidden border border-line-strong">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="Screenshot" className="w-full h-full object-cover" />
+            <button type="button" onClick={() => setViewer(i)} aria-label="Screenshot groß ansehen" className="block size-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="Screenshot" className="w-full h-full object-cover" />
+            </button>
             <button
               type="button"
               onClick={() => onChange(value.filter((u) => u !== url))}
@@ -79,6 +85,9 @@ export default function ProofUploader({
         className="hidden"
         onChange={(e) => e.target.files && handleFiles(e.target.files)}
       />
+      {value.length < max && <p className="text-xs text-subtle">Tipp: Screenshots einfach hierher ziehen oder mit Strg+V einfügen.</p>}
+      {viewer !== null && <ImageLightbox images={value} start={viewer} onClose={() => setViewer(null)} />}
     </div>
+    </FileDropZone>
   );
 }

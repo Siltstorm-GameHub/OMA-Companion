@@ -15,6 +15,7 @@ import { IDEA_CATEGORIES, ideaCategoryLabel } from "@/lib/idea-lifecycle";
 import type { RoadmapColumn, RoadmapEntry } from "@/lib/roadmap-service";
 import { buttonClasses } from "@/components/ui/button-styles";
 import MarkdownLite from "@/components/community-jobs/MarkdownLite";
+import FileDropZone from "@/components/FileDropZone";
 import { Bell, ChevronDown, ImagePlus, Loader2, Plus, Star, Trash2, Trophy, Upload, X } from "@/components/icons";
 import { markRoadmapVisit, readRoadmapVisit } from "@/components/community/RoadmapNewDot";
 
@@ -324,7 +325,7 @@ function UpdateForm({ type, id, onDone }: { type: "idea" | "item"; id: string; o
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  async function add(files: FileList | null) {
+  async function add(files: FileList | File[] | null) {
     if (!files) return;
     setUploading(true);
     try {
@@ -347,9 +348,10 @@ function UpdateForm({ type, id, onDone }: { type: "idea" | "item"; id: string; o
   }
 
   return (
+    <FileDropZone onFiles={add} disabled={uploading || images.length >= MAX_IMAGES} label="Screenshots hier ablegen" className="rounded-control">
     <div className="space-y-2 rounded-control border border-line bg-surface-2 p-2.5">
       <textarea value={text} onChange={e => setText(e.target.value)} rows={3} maxLength={4000}
-        placeholder="Stand der Arbeit oder Details zum Feature (Markdown: **fett**, - Liste)" className={`${FIELD} resize-y bg-surface`} />
+        placeholder="Stand der Arbeit oder Details zum Feature — Screenshots einfach hierher ziehen oder mit Strg+V einfügen" className={`${FIELD} resize-y bg-surface`} />
       {images.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {images.map(url => (
@@ -374,6 +376,7 @@ function UpdateForm({ type, id, onDone }: { type: "idea" | "item"; id: string; o
           className={buttonClasses("primary", "sm", "ml-auto")}>{busy ? "Speichert …" : "Info posten"}</button>
       </div>
     </div>
+    </FileDropZone>
   );
 }
 

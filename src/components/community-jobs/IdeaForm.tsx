@@ -1,4 +1,5 @@
 "use client";
+import FileDropZone from "@/components/FileDropZone";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -191,6 +192,7 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
   const togglePanel = (p: "emoji" | "mention" | "library" | "cover") => setPanel(cur => (cur === p ? null : p));
 
   return (
+    <FileDropZone onFiles={files => { for (const f of files.slice(0, IDEA_MAX_IMAGES - images.length)) uploadImage(f); }} disabled={uploading || images.length >= IDEA_MAX_IMAGES} label="Bild an die Idee hängen" className="rounded-control">
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Select value={category} onChange={e => setCategory(e.target.value)} aria-label="Kategorie">
@@ -264,28 +266,9 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         </>
       )}
 
-      <button type="button" onClick={() => setMoreOpen(v => !v)} aria-expanded={moreOpen}
-        className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary-fg hover:text-fg">
-        <ChevronRight className={`size-4 transition-transform ${moreOpen ? "rotate-90" : ""}`} />
-        Mehr Optionen <span className="font-normal text-subtle">Frist, Bilder, Spiel</span>
-      </button>
-      {moreOpen && (
-      <div className="space-y-4 rounded-control border border-line bg-surface-2 p-3">
-      <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Frist bis zur Team-Prüfung</p>
-        <Select value={days} onChange={e => setDays(e.target.value)} aria-label="Frist bis zur Team-Prüfung">
-          <option value="">Ohne Frist</option>
-          <option value="3">3 Tage</option>
-          <option value="7">7 Tage</option>
-          <option value="14">14 Tage</option>
-          <option value="30">30 Tage</option>
-        </Select>
-        <p className="text-xs text-subtle">Hat die Idee bis dahin {IDEA_SUPPORT_THRESHOLD} Unterstützer, geht sie automatisch an das Team.</p>
-      </div>
-
       {/* Bilder / Mockups */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Bilder &amp; Mockups (optional, bis zu {IDEA_MAX_IMAGES})</p>
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Bilder &amp; Screenshots (optional, bis zu {IDEA_MAX_IMAGES}) — auch per Ziehen oder Strg+V</p>
         <div className="flex flex-wrap items-center gap-2">
           {images.map(u => (
             <span key={u} className="relative">
@@ -340,6 +323,25 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         )}
       </div>
 
+      <button type="button" onClick={() => setMoreOpen(v => !v)} aria-expanded={moreOpen}
+        className="inline-flex min-h-9 items-center gap-1.5 text-sm font-semibold text-primary-fg hover:text-fg">
+        <ChevronRight className={`size-4 transition-transform ${moreOpen ? "rotate-90" : ""}`} />
+        Mehr Optionen <span className="font-normal text-subtle">Frist, Steam-Spiel</span>
+      </button>
+      {moreOpen && (
+      <div className="space-y-4 rounded-control border border-line bg-surface-2 p-3">
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Frist bis zur Team-Prüfung</p>
+        <Select value={days} onChange={e => setDays(e.target.value)} aria-label="Frist bis zur Team-Prüfung">
+          <option value="">Ohne Frist</option>
+          <option value="3">3 Tage</option>
+          <option value="7">7 Tage</option>
+          <option value="14">14 Tage</option>
+          <option value="30">30 Tage</option>
+        </Select>
+        <p className="text-xs text-subtle">Hat die Idee bis dahin {IDEA_SUPPORT_THRESHOLD} Unterstützer, geht sie automatisch an das Team.</p>
+      </div>
+
       {/* Steam-Spiel */}
       <div className="space-y-1.5">
         <p className="text-xs font-semibold text-subtle uppercase tracking-widest">Spiel auf Steam (optional)</p>
@@ -370,5 +372,6 @@ export default function IdeaForm({ prefill, onDone }: { prefill?: IdeaPrefill; o
         <Button loading={busy} disabled={!canSubmit || uploading} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Veröffentlichen</Button>
       </div>
     </div>
+    </FileDropZone>
   );
 }
