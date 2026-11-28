@@ -6,7 +6,7 @@
 export type HomeTaskTone = "amber" | "violet" | "orange" | "teal" | "twitch";
 
 export type HomeTask = {
-  key: "spin" | "clip" | "swipe" | "results" | "thanks" | "quest";
+  key: "spin" | "clip" | "swipe" | "results" | "thanks" | "quest" | "idea" | "proposal" | "roadmap" | "blocks";
   /** Kurzer Titel der Kachel */
   label: string;
   /** Zweite Zeile: Nutzen oder Frist */
@@ -57,7 +57,16 @@ export interface HomeTaskInput {
   quests: { title: string; current: number; target: number; completed: boolean; reward?: number }[];
   /** Bezugszeitpunkt für Fristen (ms) */
   now?: number;
+  /** Community (lib/home-task-sources.ts) */
+  ideasNearGoal?: { count: number; href: string } | null;
+  proposalOpen?: { id: string; title: string; interested: number } | null;
+  /** key: für das Wegklicken (Cookie wie bei Ergebnissen) */
+  roadmapNew?: { key: string; title: string; href: string } | null;
+  blocks?: { place: number; daysLeft: number } | null;
 }
+
+/** Höchstens so viele Kacheln — sonst wird die Leiste unübersichtlich (Reihenfolge = Wichtigkeit) */
+export const HOME_TASKS_MAX = 6;
 
 /** Ab diesem Fortschritt gilt eine Quest als "fast fertig" und bekommt eine Kachel */
 export const QUEST_NEAR_DONE = 0.5;
@@ -138,7 +147,38 @@ export function buildHomeTasks(input: HomeTaskInput): HomeTask[] {
     });
   }
 
-  return tasks;
+  if (input.blocks) {
+    const { place, daysLeft } = input.blocks;
+    tasks.push({
+      key: "blocks", label: `Blocks: Platz ${place}`, href: "/games/blocks", tone: "violet",
+      sub: daysLeft <= 1 ? "Monatswertung endet heute" : `Monatswertung endet in ${daysLeft} Tagen`,
+    });
+  }
+
+  if (input.proposalOpen) {
+    const p = input.proposalOpen;
+    tasks.push({
+      key: "proposal", label: "Sucht Organisator", href: `/community-board#proposal-${p.id}`, tone: "teal",
+      sub: `${p.title} · ${p.interested} wären dabei`,
+    });
+  }
+
+  if (input.ideasNearGoal) {
+    const n = input.ideasNearGoal.count;
+    tasks.push({
+      key: "idea", label: n === 1 ? "Idee kurz vor dem Ziel" : `${n} Ideen kurz vor dem Ziel`, href: input.ideasNearGoal.href, tone: "amber",
+      sub: "Deine Unterstützung bringt sie ans Team",
+    });
+  }
+
+  if (input.roadmapNew && !hidden.has(input.roadmapNew.key)) {
+    tasks.push({
+      key: "roadmap", label: "Neu umgesetzt", href: input.roadmapNew.href, tone: "teal",
+      sub: input.roadmapNew.title, dismissIds: [input.roadmapNew.key],
+    });
+  }
+
+  return tasks.slice(0, HOME_TASKS_MAX);
 }
 
 /** Summe der zu holenden Münzen (Kopf der Karte) */

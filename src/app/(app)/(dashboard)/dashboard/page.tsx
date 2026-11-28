@@ -15,24 +15,30 @@ import { resolveSeriesColor } from "@/lib/series-icons";
 import { spinDateKey } from "@/lib/daily-spin";
 import { getSwipeSummary } from "@/lib/games/deck";
 import StyledUserName from "@/components/cosmetics/StyledUserName";
-import { getVisibleServers } from "@/lib/gameservers";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import EventsTile from "@/components/EventsTile";
 import { EVENT_CARD_INCLUDE, isUserRegistered, playersOf } from "@/lib/event-card-data";
 import { loadEventViewerContext } from "@/lib/event-viewer";
 import { friendsFirst, parseRanking, rankingWithTies, relevanceTags, startsInLabel } from "@/lib/event-display";
 import { buildHomeTasks, closestQuests, parseHiddenResults, RESULTS_HIDE_COOKIE } from "@/lib/home-tasks";
+import { loadCommunityTaskInputs } from "@/lib/home-task-sources";
+import { loadWeeklyRecap, RECAP_HIDE_COOKIE } from "@/lib/weekly-recap";
+import WeeklyRecap from "./WeeklyRecap";
+import QuietRefresh from "@/components/QuietRefresh";
+import ClipWinnerLine from "@/components/ClipWinnerLine";
 import { cookies } from "next/headers";
 import { getShopConfig } from "@/lib/shop-config";
 import HomeTaskBar from "./HomeTaskBar";
 import { loadDailyPolls } from "@/lib/daily-poll";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
+import { GuestWelcome } from "@/components/GuestGate";
 import { eventPayout } from "@/lib/placement-rewards";
 import { homeRows, pickHomeFeature, runningPeriodEvents, weekCount, type HomeEventCandidate, type HomeResult } from "@/lib/home-event-feature";
 import { isOmaOriginal, isOmaOriginalSeries } from "@/lib/oma-original";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
-import GameserverWidget from "./GameserverWidget";
+import HomeGameservers from "./HomeGameservers";
+import { Suspense } from "react";
 import CommunityBoardWidget from "./CommunityBoardWidget";
 import EventChatModule from "./EventChatModule";
 import {
@@ -162,14 +168,14 @@ const getGlobalDashboardData = unstable_cache(
 
 /**
  * Nicht nutzerbezogene Werte der Übersicht (Quests des Monats, Tagesnachricht, Clip des Monats,
- * Rangliste Top 5, Squads, Wanderpokal). Kamen früher bei JEDEM Render einzeln aus der DB — jetzt
+ * Rangliste Top 5, Wanderpokal). Kamen früher bei JEDEM Render einzeln aus der DB — jetzt
  * höchstens einmal pro Minute und Server-Instanz (lib/memory-cache). Nutzerbezogenes (eigener
  * Quest-Fortschritt, eigene Stimme, eigener Rang …) wird weiterhin pro Request geladen.
  */
 function getHomeGlobals(month: number, year: number) {
   return cachedInMemory(`dashboard-home-globals:${year}-${month}`, 60_000, async () => {
     const now = new Date();
-    const [monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows, latestWanderpokal] = await Promise.all([
+    const [monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, latestWanderpokal] = await Promise.all([
       prisma.quest.findMany({ where: { month, year }, orderBy: { reward: "desc" } }),
       prisma.dailyMessage.findFirst({
         where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
@@ -191,11 +197,6 @@ function getHomeGlobals(month: number, year: number) {
         orderBy: { rankPoints: "desc" },
         take: 5,
         select: { id: true, username: true, name: true, image: true, rankPoints: true },
-      }),
-      prisma.squad.findMany({
-        orderBy: { memberships: { _count: "desc" } },
-        take: 3,
-        select: { id: true, name: true, _count: { select: { memberships: true } } },
       }),
       prisma.wanderpocalHolder.findFirst({ orderBy: { heldSince: "desc" }, select: { scopeType: true, scopeValue: true } }),
     ]);
@@ -226,7 +227,7 @@ function getHomeGlobals(month: number, year: number) {
     ]);
 
     return {
-      monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows,
+      monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers,
       latestWanderpokal, winnerNominationIds, winnerClipsUnordered, clipRankingRows, wanderpokalHolders,
     };
   });
@@ -276,10 +277,11 @@ export default async function DashboardPage() {
   const [
     homeGlobals,
     myQuestProgress,
-    servers,
     homeEventRows,
     spunToday,
     swipe,
+    communityTasks,
+    weeklyRecap,
   ] = await Promise.all([
     getHomeGlobals(month, year),
     userId
@@ -288,7 +290,6 @@ export default async function DashboardPage() {
           select: { questId: true, completed: true, current: true },
         })
       : Promise.resolve([]),
-    getVisibleServers(userId),
     // Kandidaten für die Startseiten-Event-Kachel (lib/home-event-feature.ts) — pro Request, weil
     // Anmeldung, offene Stimmen und Relevanz vom Betrachter abhängen.
     prisma.event.findMany({
@@ -318,10 +319,14 @@ export default async function DashboardPage() {
       : true,
     // GameSwipe: wie viele Spiele warten auf eine Entscheidung, läuft ein Drop der Woche? (Hinweis unter dem Kopf)
     userId ? getSwipeSummary(userId).catch(() => null) : null,
+    // Ideen kurz vor dem Ziel, Event-Vorschlag sucht Organisator, Neu umgesetzt, Blocks-Monatsende
+    loadCommunityTaskInputs(userId, now),
+    // Montags/dienstags: Rückblick auf die letzte Woche (wegklickbar)
+    (async () => loadWeeklyRecap(userId, now, (await cookies()).get(RECAP_HIDE_COOKIE)?.value).catch(() => null))(),
   ]);
 
   const {
-    monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers, topSquadRows,
+    monthQuests, activeDailyMessage, finishedClipContest, activeClipContest, topRankUsers,
     latestWanderpokal, winnerNominationIds, winnerClipsUnordered, clipRankingRows, wanderpokalHolders,
   } = homeGlobals;
   // Eigener Fortschritt zu den (gecachten) Quests des Monats
@@ -414,9 +419,8 @@ export default async function DashboardPage() {
     };
   }
   const rankTop: HomeRankRow[] = topRankUsers.map(u => ({ id: u.id, name: uName(u), image: u.image, rankPoints: u.rankPoints }));
-  const homeSquads: HomeSquad[] = mySquadRows.length > 0
-    ? mySquadRows.map(m => ({ id: m.squad.id, name: m.squad.name, memberCount: m.squad._count.memberships, mine: true }))
-    : topSquadRows.map(s => ({ id: s.id, name: s.name, memberCount: s._count.memberships, mine: false }));
+  // Nur die eigenen Squads — wer in keinem ist, findet sie unter Community (kein Baustein auf der Startseite)
+  const homeSquads: HomeSquad[] = mySquadRows.map(m => ({ id: m.squad.id, name: m.squad.name, memberCount: m.squad._count.memberships, mine: true }));
   const holderNames = wanderpokalHolders.map(h => uName(h.user));
   const wanderpokal = latestWanderpokal && holderNames.length > 0
     ? {
@@ -627,6 +631,7 @@ export default async function DashboardPage() {
     hiddenResultIds: parseHiddenResults((await cookies()).get(RESULTS_HIDE_COOKIE)?.value),
     quests: questRows,
     now: now.getTime(),
+    ...communityTasks,
   });
   const nextQuests = closestQuests(questRows, 2);
   const questCoinsEarned = questRows.filter(q => q.completed).reduce((s, q) => s + q.reward, 0);
@@ -663,8 +668,13 @@ export default async function DashboardPage() {
     };
   });
 
+  // Läuft gerade etwas für dich (Event in den nächsten 2 Std, läuft, dein offenes Match)? Dann still mitaktualisieren.
+  const stageLive = !!homeMatch || homeCandidates.some(e =>
+    e.status === "active" || (e.startAt.getTime() > now.getTime() && e.startAt.getTime() - now.getTime() < 2 * 3_600_000));
+
   return (
     <div className="animate-fade-in">
+      {stageLive && <QuietRefresh intervalMs={60_000} />}
       <div className="px-4 sm:px-6 pb-6 max-w-7xl mx-auto space-y-6">
 
         {/* ── Handy: "Gerade live" als wischbare Leiste (Desktop: in der Seitenleiste) ── */}
@@ -683,21 +693,12 @@ export default async function DashboardPage() {
             )}
           </section>
         ) : (
-          /* Gäste: Einladung statt gesperrter Platzhalter */
-          <section aria-label="Willkommen" className="rounded-card border border-line bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-primary-fg">Old Masters Allies</p>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-fg leading-tight mt-1">Zocken, Events, Community</h1>
-              <p className="text-sm text-muted mt-1.5">
-                Melde dich mit Discord an, um bei Events mitzumachen, Punkte zu sammeln und in der Rangliste aufzusteigen.
-              </p>
-            </div>
-            <Link href="/login?callbackUrl=%2Fdashboard"
-              className="shrink-0 inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-[#5865F2] hover:bg-[#4752c4] px-5 text-sm font-bold text-white transition-colors">
-              Mit Discord anmelden
-            </Link>
-          </section>
+          /* Gäste: ein Willkommen mit beiden Wegen (Discord beitreten, Anmelden) — der allgemeine Vorschau-Hinweis
+             ist auf der Übersicht ausgeblendet, damit nichts doppelt dasteht */
+          <GuestWelcome />
         )}
+
+        {weeklyRecap && <WeeklyRecap data={weeklyRecap} />}
 
         {/* ── Mitteilung des Teams (nur wenn es eine gibt, wegklickbar) ── */}
         {activeDailyMessage && (
@@ -722,7 +723,9 @@ export default async function DashboardPage() {
             />
             {homeMatch && <MyMatchModule match={homeMatch} />}
             {/* Laufende Community-Ziele: "Gemeinsam schaffen wir …" mit Fortschritt */}
-            <CommunityGoalsBanner userId={userId} />
+            <Suspense fallback={<div className="h-16 animate-pulse rounded-card border border-line bg-surface" aria-hidden />}>
+              <CommunityGoalsBanner userId={userId} />
+            </Suspense>
             <UpcomingEventsModule events={upcomingCovers} />
           </div>
 
@@ -736,14 +739,16 @@ export default async function DashboardPage() {
               trend={rankTrend}
               wanderpokal={wanderpokal}
             />
-            <SquadsModule squads={homeSquads} />
+            {homeSquads.length > 0 && <SquadsModule squads={homeSquads} />}
           </div>
         </div>
 
         <WatchTogetherTeaser />
 
-        {/* ── Clip des Monats | rechts daneben Reihen, Quests, Gameserver (nur wenn es welche gibt) ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* ── Clip des Monats: groß nur während der Abstimmung (mit "Abstimmen"), sonst eine Zeile mit dem Sieger ──
+             daneben bzw. darunter Reihen, Quests, Gameserver (nur wenn es welche gibt) */}
+        {activeClipContest ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <ClipOfMonthTile
             winners={winnerClips}
             monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
@@ -768,16 +773,41 @@ export default async function DashboardPage() {
                 quests={nextQuests.map(q => ({ id: q.id, title: q.title, current: q.current, target: q.target, reward: q.reward }))}
               />
             )}
-            {userId && servers.length > 0 && (
-              <section aria-label="Gameserver">
-                <ModuleHeader title="Gameserver" href="/servers" />
-                <div className="rounded-card border border-line bg-surface overflow-hidden">
-                  <GameserverWidget servers={servers} />
-                </div>
-              </section>
+            {/* Gameserver laden für sich nach (Belegung je Server) — die Seite wartet nicht darauf */}
+            {userId && (
+              <Suspense fallback={null}>
+                <HomeGameservers userId={userId} />
+              </Suspense>
             )}
           </div>
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <ClipWinnerLine
+              monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : ""}
+              title={winnerClips[0] ? (winnerClips[0].clipTitle ?? "Clip des Monats") : null}
+              creator={winnerClips[0] ? (winnerClips[0].twitchCreatorLogin ?? winnerClips[0].submittedBy?.username ?? winnerClips[0].submittedBy?.name ?? null) : null}
+            />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <SeriesModule rows={homeSeriesRows} mine={mySeriesRows.length > 0} />
+            {userId && (
+              <QuestsModule
+                done={myQuestsDone}
+                total={totalMonthQuests}
+                coinsEarned={questCoinsEarned}
+                monthEndsIn={startsInLabel(startOfNextMonth, now)}
+                quests={nextQuests.map(q => ({ id: q.id, title: q.title, current: q.current, target: q.target, reward: q.reward }))}
+              />
+            )}
+            {/* Gameserver laden für sich nach (Belegung je Server) — die Seite wartet nicht darauf */}
+            {userId && (
+              <Suspense fallback={null}>
+                <HomeGameservers userId={userId} />
+              </Suspense>
+            )}
+          </div>
+          </div>
+        )}
 
         {/* ── Aus der Community: Feed, neueste Berichte, WhatsApp ───────── */}
         <section aria-label="Aus der Community" className="space-y-3">

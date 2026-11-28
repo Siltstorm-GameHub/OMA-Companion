@@ -97,7 +97,7 @@ export default function BoardClient({ me, coachCard }: { me: BoardMe; coachCard?
         <div ref={composerRef} className="scroll-mt-24">
           <Composer me={me} req={compose} editorKey={composeKey} drafts={drafts} onOpen={open} onClose={() => setCompose(null)} onPublished={published} />
         </div>
-        <Feed key={feedKey} meId={me.id} highlightMine={justPublished} coachCard={coachCard} />
+        <Feed key={feedKey} meId={me.id} highlightMine={justPublished} coachCard={coachCard} startGoal={params.get("ansicht") === "ziel"} />
       </div>
       <aside className="hidden lg:block lg:sticky lg:top-[5.5rem]">
         <OfficeSidebar onCompose={open} />
@@ -220,7 +220,7 @@ async function fetchFeed(sort: Sort, kind: KindFilter | null, cursor: string | n
 const INTRO_KEY = "oma.board.intro.v1";
 const POLL_MS = 60_000;
 
-function Feed({ meId, highlightMine, coachCard }: { meId: string; highlightMine: boolean; coachCard?: React.ReactNode }) {
+function Feed({ meId, highlightMine, coachCard, startGoal = false }: { meId: string; highlightMine: boolean; coachCard?: React.ReactNode; startGoal?: boolean }) {
   const [fresh, setFresh] = useState<FeedEntry[] | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(false);
@@ -233,8 +233,9 @@ function Feed({ meId, highlightMine, coachCard }: { meId: string; highlightMine:
     setShowIntro(false);
     try { window.localStorage.setItem(INTRO_KEY, "1"); } catch { /* egal */ }
   }
-  const [sort, setSort] = useState<Sort>("new");
-  const [kind, setKind] = useState<KindFilter | null>(null);
+  // ?ansicht=ziel (z. B. von "Heute für dich"): Ideen, denen nur noch wenige Unterstützer fehlen
+  const [sort, setSort] = useState<Sort>(startGoal ? "goal" : "new");
+  const [kind, setKind] = useState<KindFilter | null>(startGoal ? "idea" : null);
   const [items, setItems] = useState<FeedEntry[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);

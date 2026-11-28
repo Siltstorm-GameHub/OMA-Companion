@@ -3,34 +3,34 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ImagePlus } from "@/components/icons";
-import { ChevronRight } from "@/components/icons";
-import { ThumbsUp, Newspaper, Megaphone, Lightbulb, Loader2, BookOpen } from "@/components/icons";
-import { acc, type AccentName } from "@/lib/accentColors";
+import { BookOpen, CalendarDays, ImagePlus, Lightbulb, Loader2, Megaphone, Newspaper, ThumbsUp } from "@/components/icons";
+import { GateLink } from "@/components/GuestGate";
 import RankedAvatar from "@/components/RankedAvatar";
 import { isVideoUrl } from "@/lib/upload-limits";
+import { buttonClasses } from "@/components/ui/button-styles";
 
 /**
- * Social-Media-artiges Feed-Widget fürs Dashboard — dieselbe API wie die volle
- * Community-Board-Seite, nur die letzten paar Einträge. Horizontal scrollender
- * Story-/Post-Feed mit fester Zeilenhöhe, aber variabler Kartenbreite: Bild-Posts
- * behalten ihr echtes Seitenverhältnis (Hochformat schmaler, Querformat breiter),
- * Text-Posts richten sich nach der Caption-Länge — nur per min-/max-Width gedeckelt,
- * damit die Reihe nicht aus dem Ruder läuft. Kein JS-Messen nötig: die Breite
- * ergibt sich aus dem einzigen nicht-absolut-positionierten Kind (Bild bzw. Textblock).
+ * "Aus der Community" auf der Übersicht: die neuesten Einträge des Community-Boards als waagerechte Reihe
+ * (gleiche API wie das Board). Jede Art hat ihre Aktion direkt auf der Karte: Daumen (Beiträge, Anleitungen),
+ * "Unterstützen" (Ideen), "Ich wäre dabei" (Event-Vorschläge). Die Überschrift setzt die Seite (ModuleHeader).
+ * Gäste sehen eine Vorschau, was es im Board gibt, statt eines leeren Bereichs.
  */
 
+type Kind = "report" | "asset" | "marketing_post" | "idea" | "guide" | "proposal";
+
 interface FeedEntry {
-  kind: "report" | "asset" | "marketing_post" | "idea" | "guide";
+  kind: Kind;
   id: string;
-  publishedAt: string;
   title?: string;
   caption?: string;
-  url?: string; // Bild-URL bei kind="asset"
-  author: { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
+  url?: string;
+  author: { id: string; username: string | null; name: string | null; image: string | null };
   upvotes?: number;
-  voteCount?: number;
   votedByMe?: boolean;
+  supporters?: number;
+  supportedByMe?: boolean;
+  interested?: number;
+  interestedByMe?: boolean;
   coverAsset?: { url: string } | null;
   gameCover?: { url: string } | null;
   imageUrl?: string | null;
@@ -38,196 +38,174 @@ interface FeedEntry {
   media?: { url: string }[];
 }
 
-const KIND_ICON: Record<FeedEntry["kind"], typeof Newspaper> = {
-  report: Newspaper, asset: ImagePlus, marketing_post: Megaphone, idea: Lightbulb, guide: BookOpen,
+const KIND_META: Record<Kind, { label: string; icon: typeof Newspaper; tone: string }> = {
+  report: { label: "Beitrag", icon: Newspaper, tone: "text-primary-fg" },
+  asset: { label: "Foto", icon: ImagePlus, tone: "text-violet-300" },
+  marketing_post: { label: "Werbung", icon: Megaphone, tone: "text-coin" },
+  idea: { label: "Idee", icon: Lightbulb, tone: "text-coin" },
+  guide: { label: "Anleitung", icon: BookOpen, tone: "text-violet-300" },
+  proposal: { label: "Event-Vorschlag", icon: CalendarDays, tone: "text-success" },
 };
 
-const KIND_ACCENT: Record<FeedEntry["kind"], AccentName> = {
-  report: "teal", asset: "violet", marketing_post: "amber", idea: "rose", guide: "teal",
-};
-
-/** Endpunkt zum Daumen-Geben je Beitragsart. Ideen brauchen Sterne + Begründung, dort geht es über die Karte im Board. */
-function voteUrl(e: FeedEntry): string | null {
-  switch (e.kind) {
-    case "report": return `/api/community-jobs/reports/${e.id}/vote`;
-    case "guide": return `/api/community-jobs/coach/guides/${e.id}/vote`;
-    default: return null;
-  }
-}
-
-const THUMB_ON = "bg-primary border-primary text-primary-ink";
-const THUMB_OFF = "bg-black/55 border-primary/50 text-primary-fg hover:bg-primary/20";
-
-/** Daumen direkt auf der Karte (über dem Karten-Link). Eigene Beiträge und Ideen zeigen nur die Zahl bzw. den Weg ins Board. */
-function ThumbVote({ entry, meId, onChange }: { entry: FeedEntry; meId?: string; onChange: (voted: boolean, delta: number) => void }) {
-  const [busy, setBusy] = useState(false);
-  const count = entry.upvotes ?? entry.voteCount ?? 0;
-  const url = voteUrl(entry);
-  const own = !!meId && entry.author.id === meId;
-
-  if (!url || own) {
-    return (
-      <span className="relative z-20 flex items-center gap-1 text-xs text-gray-400">
-        <ThumbsUp className="w-3 h-3" /> {count}{entry.kind === "idea" ? " · bewerten im Board" : ""}
-      </span>
-    );
-  }
-  const voted = !!entry.votedByMe;
-
-  async function toggle() {
-    if (busy || !url) return;
-    setBusy(true);
-    onChange(!voted, voted ? -1 : 1); // optimistisch
-    try {
-      const res = await fetch(url, { method: voted ? "DELETE" : "POST" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? "Bewertung fehlgeschlagen");
-      }
-    } catch (err) {
-      onChange(voted, voted ? 1 : -1); // zurückrollen
-      toast.error(err instanceof Error ? err.message : "Bewertung fehlgeschlagen");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <button onClick={toggle} disabled={busy} aria-pressed={voted} aria-label={voted ? "Daumen zurücknehmen" : "Daumen hoch"}
-      className={`relative z-20 self-start inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border transition-all duration-150 active:scale-90 ${voted ? THUMB_ON : THUMB_OFF} max-lg:min-h-10`}>
-      <ThumbsUp className={`w-3.5 h-3.5 ${voted ? "fill-current" : ""}`} /> <span className="tabular-nums">{count}</span>
-    </button>
-  );
-}
-
-function entryLabel(e: FeedEntry): string {
-  return e.title ?? e.caption ?? "Neuer Beitrag";
+function entryHref(e: FeedEntry): string {
+  if (e.kind === "report") return `/community-board/report/${e.id}`;
+  if (e.kind === "idea") return `/community-board/idea/${e.id}`;
+  return `/community-board#${e.kind}-${e.id}`;
 }
 
 function entryImage(e: FeedEntry): string | null {
   if (e.kind === "asset") return e.url ?? null;
-  if (e.kind === "report") return e.coverAsset?.url ?? e.gameCover?.url ?? e.media?.find(m => !/\.(mp4|webm|mov)(\?|$)/i.test(m.url))?.url ?? null;
+  if (e.kind === "report") return e.coverAsset?.url ?? e.gameCover?.url ?? e.media?.find(m => !isVideoUrl(m.url))?.url ?? null;
   if (e.kind === "marketing_post") return e.imageUrl ?? e.asset?.url ?? null;
   return null;
 }
 
-export default function CommunityBoardWidget() {
-  const [feed, setFeed] = useState<FeedEntry[] | null>(null);
-  const { data: session } = useSession();
-  const meId = (session?.user as { id?: string } | undefined)?.id;
+/** Aktion je Art: [Zähler, an?, Text an, Text aus, Endpunkt + Body] */
+function actionFor(e: FeedEntry) {
+  switch (e.kind) {
+    case "report":
+    case "guide": {
+      const url = e.kind === "report" ? `/api/community-jobs/reports/${e.id}/vote` : `/api/community-jobs/coach/guides/${e.id}/vote`;
+      return { count: e.upvotes ?? 0, on: !!e.votedByMe, labelOn: "", labelOff: "", icon: "thumb" as const,
+        send: (next: boolean) => fetch(url, { method: next ? "POST" : "DELETE" }) };
+    }
+    case "idea":
+      return { count: e.supporters ?? 0, on: !!e.supportedByMe, labelOn: "Unterstützt", labelOff: "Unterstützen", icon: "thumb" as const,
+        send: (next: boolean) => fetch(`/api/community-jobs/ideas/${e.id}/interest`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "SUPPORT", on: next }),
+        }) };
+    case "proposal":
+      return { count: e.interested ?? 0, on: !!e.interestedByMe, labelOn: "Dabei", labelOff: "Ich wäre dabei", icon: "hand" as const,
+        send: (next: boolean) => fetch(`/api/event-proposals/${e.id}/interest`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: next }),
+        }) };
+    default:
+      return null;
+  }
+}
 
-  function applyVote(entry: FeedEntry, voted: boolean, delta: number) {
-    setFeed(cur => cur && cur.map(e => (e.kind === entry.kind && e.id === entry.id
-      ? { ...e, votedByMe: voted, ...(e.upvotes !== undefined ? { upvotes: Math.max(0, (e.upvotes ?? 0) + delta) } : { voteCount: Math.max(0, (e.voteCount ?? 0) + delta) }) }
-      : e)));
+function CardAction({ entry, meId }: { entry: FeedEntry; meId?: string }) {
+  const a = actionFor(entry);
+  const [on, setOn] = useState(a?.on ?? false);
+  const [count, setCount] = useState(a?.count ?? 0);
+  const [busy, setBusy] = useState(false);
+  if (!a) return null;
+  const own = !!meId && entry.author.id === meId;
+
+  async function toggle() {
+    if (busy || !a) return;
+    const next = !on;
+    setBusy(true); setOn(next); setCount(c => Math.max(0, c + (next ? 1 : -1)));
+    try {
+      const res = await a.send(next);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "Fehlgeschlagen");
+    } catch (err) {
+      setOn(!next); setCount(c => Math.max(0, c + (next ? -1 : 1)));
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally { setBusy(false); }
   }
 
-  useEffect(() => {
-    fetch("/api/community-board?limit=8")
-      .then(r => r.json())
-      .then(d => setFeed(d.feed ?? []))
-      .catch(() => setFeed([]));
-  }, []);
-
+  const label = on ? a.labelOn : a.labelOff;
+  const glyph = a.icon === "hand" ? <span aria-hidden>🙋</span> : <ThumbsUp className="size-3.5" />;
+  if (own) {
+    return <span className="relative z-20 inline-flex items-center gap-1 text-xs text-muted">{glyph} {count}</span>;
+  }
   return (
-    <div className="animate-slide-up">
-      <div className="flex items-center justify-between mb-2.5">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Newspaper className="w-4 h-4 text-primary" /> Neues aus der Community
-        </h2>
-        <Link href="/community-board" className="text-xs flex items-center gap-0.5 text-primary hover:text-primary-fg transition-colors">
-          Alle <ChevronRight className="w-3 h-3" />
-        </Link>
-      </div>
+    <button type="button" onClick={toggle} disabled={busy} aria-pressed={on}
+      className={`relative z-20 inline-flex min-h-9 items-center gap-1.5 self-start rounded-full border px-3 text-xs font-semibold transition-all active:scale-95 ${
+        on ? "border-primary bg-primary text-primary-ink" : "border-primary/50 bg-canvas/70 text-primary-fg hover:bg-primary/20"
+      }`}>
+      {glyph} <span className="tabular-nums">{count}</span>{label && <span>{label}</span>}
+    </button>
+  );
+}
 
-      {feed === null ? (
-        <div className="glass card-shine rounded-2xl p-6 flex items-center justify-center">
-          <Loader2 className="w-4 h-4 text-primary animate-spin" />
-        </div>
-      ) : feed.length === 0 ? (
-        <div className="glass card-shine rounded-2xl p-4">
-          <p className="text-xs text-gray-600 text-center">Noch keine Community-Job-Beiträge</p>
-        </div>
-      ) : (
-        <div className="flex items-stretch gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {feed.map(entry => {
-            const Icon = KIND_ICON[entry.kind];
-            const accentName = KIND_ACCENT[entry.kind];
-            const image = entryImage(entry);
+export default function CommunityBoardWidget() {
+  const [feed, setFeed] = useState<FeedEntry[] | null>(null);
+  const { data: session, status } = useSession();
+  const meId = (session?.user as { id?: string } | undefined)?.id;
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    let cancelled = false;
+    fetch("/api/community-board?limit=8")
+      .then(r => (r.ok ? r.json() : { feed: [] }))
+      .then(d => { if (!cancelled) setFeed(d.feed ?? []); })
+      .catch(() => { if (!cancelled) setFeed([]); });
+    return () => { cancelled = true; };
+  }, [status]);
+
+  // Gäste: was es im Board gibt — statt eines leeren Bereichs
+  if (status === "unauthenticated") {
+    return (
+      <div className="rounded-card border border-line bg-surface p-5 shadow-card">
+        <p className="text-sm font-bold text-fg">Teilen, bewerten, mitmachen</p>
+        <p className="mt-1 text-sm text-muted">Im Community-Board teilen Mitglieder Fotos, Clips und Berichte, schlagen Events vor und bringen Ideen ein.</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(["report", "proposal", "idea", "guide"] as const).map(k => {
+            const m = KIND_META[k];
             return (
-              <div key={`${entry.kind}-${entry.id}`}
-                className="group relative shrink-0 snap-start h-56 sm:h-64 w-fit rounded-2xl overflow-hidden transition-transform duration-200 hover:-translate-y-1 active:scale-[0.98]"
-                style={{
-                  border: `1px solid ${acc(accentName, 0.22)}`,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
-                  minWidth: image ? "120px" : "150px",
-                  maxWidth: image ? "300px" : "230px",
-                }}>
-                {/* Ganze Karte führt ins Board — der Daumen liegt darüber (z-20) und klickt für sich. */}
-                <Link href="/community-board" aria-label={entryLabel(entry)} className="absolute inset-0 z-10" />
-                {image ? (
-                  // Bild/Video ist das einzige nicht-absolute Kind → bestimmt die Kartenbreite
-                  // anhand des echten Seitenverhältnisses bei fester Kartenhöhe.
-                  isVideoUrl(image) ? (
-                    <video src={image} muted playsInline className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-110" />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host, Breite folgt dem Seitenverhältnis
-                    <img src={image} alt="" className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-110" />
-                  )
-                ) : (
-                  <>
-                    <div className="absolute inset-0"
-                      style={{ background: `radial-gradient(circle at 50% 30%, ${acc(accentName, 0.22)}, var(--color-surface) 75%)` }} />
-                    {/* Nicht-absoluter Textblock → bestimmt die Kartenbreite anhand der Caption-Länge */}
-                    <div className="relative h-full flex flex-col justify-end p-2.5 gap-1">
-                      <div className="flex items-center gap-1.5">
-                        <RankedAvatar userId={entry.author.id} src={entry.author.image}
-                          alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
-                        <span className="text-xs text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-white leading-snug line-clamp-6 group-hover:text-teal-200 transition-colors whitespace-normal">
-                        {entryLabel(entry)}
-                      </p>
-                      <ThumbVote entry={entry} meId={meId} onChange={(voted, delta) => applyVote(entry, voted, delta)} />
-                    </div>
-                  </>
-                )}
-
-                {image && (
-                  <>
-                    {/* Kind-Badge oben links */}
-                    <span className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center"
-                      style={{ background: "color-mix(in srgb, var(--color-surface) 60%, transparent)", border: `1px solid ${acc(accentName, 0.4)}` }}>
-                      <Icon className="w-3 h-3" style={{ color: acc(accentName, 1) }} />
-                    </span>
-
-                    {/* Textlesbarkeit unten */}
-                    <div className="absolute inset-x-0 bottom-0 h-3/5 pointer-events-none"
-                      style={{ background: "linear-gradient(to top, rgba(6,6,8,0.95), transparent)" }} />
-
-                    {/* Content unten: Avatar + Titel + Upvotes */}
-                    <div className="absolute inset-x-0 bottom-0 p-2.5 flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5">
-                        <RankedAvatar userId={entry.author.id} src={entry.author.image}
-                          alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
-                        <span className="text-xs text-gray-300 truncate">
-                          {entry.author.username ?? entry.author.name}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-white leading-snug line-clamp-2 group-hover:text-teal-200 transition-colors">
-                        {entryLabel(entry)}
-                      </p>
-                      <ThumbVote entry={entry} meId={meId} onChange={(voted, delta) => applyVote(entry, voted, delta)} />
-                    </div>
-                  </>
-                )}
-              </div>
+              <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs text-fg/90">
+                <m.icon className={`size-3.5 ${m.tone}`} /> {k === "report" ? "Fotos & Berichte" : m.label === "Idee" ? "Ideen" : m.label === "Anleitung" ? "Anleitungen" : "Event-Vorschläge"}
+              </span>
             );
           })}
         </div>
-      )}
+        <GateLink href="/community-board" className={buttonClasses("secondary", "md", "mt-4")}>Zum Community-Board</GateLink>
+      </div>
+    );
+  }
+
+  if (feed === null) {
+    return <div className="flex items-center justify-center rounded-card border border-line bg-surface p-6"><Loader2 className="size-4 animate-spin text-primary" /></div>;
+  }
+  if (feed.length === 0) {
+    return (
+      <div className="rounded-card border border-line bg-surface p-5 text-center">
+        <p className="text-sm text-muted">Noch nichts los — teil als Erste:r ein Bild, eine Idee oder einen Event-Vorschlag.</p>
+        <Link href="/community-board?neu=beitrag" className={buttonClasses("primary", "sm", "mt-3")}>Etwas teilen</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="-mx-4 flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:px-0">
+      {feed.map(entry => {
+        const meta = KIND_META[entry.kind] ?? KIND_META.report;
+        const image = entryImage(entry);
+        const name = entry.author.username ?? entry.author.name ?? "?";
+        const title = entry.title ?? entry.caption ?? "Neuer Beitrag";
+        return (
+          <article key={`${entry.kind}-${entry.id}`}
+            className="group relative h-56 w-fit shrink-0 snap-start overflow-hidden rounded-card border border-line bg-surface shadow-card sm:h-64"
+            style={{ minWidth: image ? "120px" : "170px", maxWidth: image ? "300px" : "240px" }}>
+            {/* Ganze Karte führt zum Eintrag — die Aktion liegt darüber (z-20) */}
+            <Link href={entryHref(entry)} aria-label={`${meta.label}: ${title}`} className="absolute inset-0 z-10" />
+            {image ? (
+              isVideoUrl(image)
+                ? <video src={image} muted playsInline className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-105" />
+                // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host, Breite folgt dem Seitenverhältnis
+                : <img src={image} alt="" className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-105" />
+            ) : (
+              // Ohne Bild bestimmt der Text die Breite
+              <div className="relative flex h-full flex-col gap-2 p-3">
+                <p className="line-clamp-6 whitespace-normal text-sm font-bold leading-snug text-fg group-hover:text-primary-fg">{title}</p>
+              </div>
+            )}
+            <span className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-canvas/85 px-2 py-0.5 text-xs font-semibold ${meta.tone}`}>
+              <meta.icon className="size-3.5" /> {meta.label}
+            </span>
+            <div className={`absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-2.5 ${image ? "bg-gradient-to-t from-canvas via-canvas/80 to-transparent pt-10" : ""}`}>
+              <div className="flex items-center gap-1.5">
+                <RankedAvatar userId={entry.author.id} src={entry.author.image} alt={name} size={20} />
+                <span className="truncate text-xs text-fg/85">{name}</span>
+              </div>
+              {image && <p className="line-clamp-2 text-xs font-semibold leading-snug text-fg">{title}</p>}
+              <CardAction entry={entry} meId={meId} />
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

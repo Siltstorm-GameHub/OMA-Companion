@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { addHiddenResults, buildHomeTasks, closestQuests, endsIn, homeTaskCoins, parseHiddenResults, type HomeTaskInput } from "./home-tasks";
+import { addHiddenResults, buildHomeTasks, closestQuests, endsIn, HOME_TASKS_MAX, homeTaskCoins, parseHiddenResults, type HomeTaskInput } from "./home-tasks";
 
 const base: HomeTaskInput = {
   loggedIn: true, spunToday: true, swipe: null, clipVotingOpen: false, clipVoted: false, recentResults: [], quests: [],
@@ -89,5 +89,32 @@ describe("Aufgabenleiste der Startseite", () => {
     ]);
     assert.deepEqual(buildHomeTasks({ ...base, communityThanks, hiddenResultIds: ["c1"] }).map(x => x.sub), ["Quiz"]);
     assert.deepEqual(buildHomeTasks({ ...base, communityThanks, hiddenResultIds: ["c1", "c2"] }), []);
+  });
+test("Community: Blocks-Monatsende, Event-Vorschlag, Ideen kurz vor dem Ziel, Neu umgesetzt (wegklickbar)", () => {
+    const input: HomeTaskInput = {
+      ...base,
+      blocks: { place: 4, daysLeft: 2 },
+      proposalOpen: { id: "p1", title: "Mario Kart", interested: 3 },
+      ideasNearGoal: { count: 2, href: "/community-board?ansicht=ziel" },
+      roadmapNew: { key: "rm-item-r1", title: "Event-Vorschläge", href: "/community-board/roadmap#item-r1" },
+    };
+    assert.deepEqual(buildHomeTasks(input).map(t => [t.key, t.label, t.sub]), [
+      ["blocks", "Blocks: Platz 4", "Monatswertung endet in 2 Tagen"],
+      ["proposal", "Sucht Organisator", "Mario Kart · 3 wären dabei"],
+      ["idea", "2 Ideen kurz vor dem Ziel", "Deine Unterstützung bringt sie ans Team"],
+      ["roadmap", "Neu umgesetzt", "Event-Vorschläge"],
+    ]);
+    assert.equal(buildHomeTasks({ ...input, hiddenResultIds: ["rm-item-r1"] }).some(t => t.key === "roadmap"), false);
+  });
+
+  test("höchstens HOME_TASKS_MAX Kacheln", () => {
+    const tasks = buildHomeTasks({
+      ...base, spunToday: false, clipVotingOpen: true, swipe: { open: 3, drop: null },
+      recentResults: [{ id: "x", title: "X", href: "/x" }],
+      quests: [{ title: "Q", current: 9, target: 10, completed: false }],
+      blocks: { place: 1, daysLeft: 1 }, proposalOpen: { id: "p", title: "P", interested: 2 },
+      ideasNearGoal: { count: 1, href: "/i" }, roadmapNew: { key: "rm", title: "R", href: "/r" },
+    });
+    assert.equal(tasks.length, HOME_TASKS_MAX);
   });
 });

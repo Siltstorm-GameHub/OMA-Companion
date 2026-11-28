@@ -60,7 +60,7 @@ export function GuestGateProvider({
   );
 }
 
-function DiscordJoinButton({ href, className }: { href: string; className?: string }) {
+export function DiscordJoinButton({ href, className }: { href: string; className?: string }) {
   return (
     <a
       href={href}
@@ -145,7 +145,9 @@ function GateModal({ opts, inviteUrl, onClose }: { opts: GateOptions; inviteUrl:
  */
 export function GuestBanner() {
   const { isGuest, inviteUrl, openGate } = useGuestGate();
-  if (!isGuest) return null;
+  const pathname = usePathname();
+  // Auf der Übersicht steht das Willkommen mit denselben Knöpfen direkt auf der Seite (GuestWelcome)
+  if (!isGuest || pathname === "/dashboard") return null;
 
   return (
     <div
@@ -237,5 +239,38 @@ export function GuestMoreCta({ message, className = "" }: { message: string; cla
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Willkommen für Gäste auf der Übersicht — ersetzt dort den allgemeinen Vorschau-Hinweis (GuestBanner), damit
+ * oben nicht zwei Anmelde-Aufforderungen übereinander stehen. Beide Wege: Discord beitreten und Anmelden.
+ */
+export function GuestWelcome() {
+  const { inviteUrl, openGate } = useGuestGate();
+  return (
+    <section aria-label="Willkommen" className="rounded-card border border-primary/40 bg-surface p-5 sm:p-6 shadow-card flex flex-col lg:flex-row lg:items-center gap-4">
+      <div className="flex-1 min-w-0">
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-primary-fg">Old Masters Allies</p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold leading-tight text-fg">Zocken, Events, Community</h1>
+        <p className="mt-1.5 text-sm text-muted">
+          Du siehst gerade die Vorschau. {inviteUrl ? "Tritt dem Discord-Server bei und melde dich an" : "Melde dich mit Discord an"}, um bei Events mitzumachen, Punkte zu sammeln und in der Rangliste aufzusteigen.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
+        {inviteUrl && (
+          <DiscordJoinButton href={inviteUrl}
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-primary px-4 text-sm font-bold text-primary-ink hover:bg-primary-hover transition-colors" />
+        )}
+        <DiscordLoginButton callbackUrl="/dashboard"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-[#5865F2] px-5 text-sm font-bold text-white hover:bg-[#4752c4] transition-colors disabled:opacity-60">
+          Mit Discord anmelden
+        </DiscordLoginButton>
+        <button type="button" onClick={() => openGate({ title: "So kommst du rein", message: "Zwei kurze Schritte, dann steht dir alles offen:" })}
+          className="min-h-11 px-2 text-sm text-subtle underline underline-offset-2 hover:text-primary-fg transition-colors">
+          Wie geht das?
+        </button>
+      </div>
+    </section>
   );
 }

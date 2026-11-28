@@ -117,6 +117,8 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
       now,
     });
     const hidden = spotlight && cookieStore.get(goalHideCookie(ev.id))?.value === spotlight.key;
+    // Geschaffte Ziele brauchen keine große Karte mehr — sie stehen als eine Zeile ("✓ Geschafft") unten in der Liste
+    const done = progress.reached;
     return {
       eventId: ev.id,
       title: goal.title || ev.title,
@@ -125,13 +127,14 @@ export default async function CommunityGoalsBanner({ userId }: { userId?: string
       pace,
       myValue: userId ? progress.byUser[userId] ?? 0 : 0,
       isParticipant: ev.registrations.length > 0,
-      spotlight: hidden ? null : spotlight,
+      spotlight: hidden || done ? null : spotlight,
       history: [...(ev.seriesId ? historyBySeries.get(ev.seriesId) ?? [] : [])].reverse(),
     };
   });
 
   const big = items.filter(i => i.spotlight);
-  const small = items.filter(i => !i.spotlight);
+  // Laufende zuerst, geschaffte unten
+  const small = items.filter(i => !i.spotlight).sort((a, b) => Number(a.progress.reached) - Number(b.progress.reached));
 
   return (
     <div className="space-y-2">
@@ -209,7 +212,7 @@ function SpotlightCard({ item }: { item: GoalItem }) {
 function CompactRow({ item }: { item: GoalItem }) {
   const { goal, main, reached } = item.progress;
   const status = reached
-    ? <span className="text-amber-300">✓ geschafft</span>
+    ? <span className="text-success">✓ Geschafft · {valueLabel(main.total, goal)} / {formatGoalNumber(goal.target, goal)}</span>
     : item.pace?.status === "behind"
       ? <span className="text-amber-300/90">{item.remainingLabel ?? "läuft"}</span>
       : <span>{item.remainingLabel ?? "läuft"}</span>;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
-import { Clapperboard, Dices, Gamepad2, Heart, Target, Trophy } from "@/components/icons";
+import { CalendarPlus, Clapperboard, Dices, Gamepad2, Heart, LayoutGrid, Lightbulb, Rocket, Target, Trophy } from "@/components/icons";
 import CoinIcon from "@/components/CoinIcon";
 import HomeTaskDismiss from "@/components/HomeTaskDismiss";
 import { homeTaskCoins, type HomeTask, type HomeTaskTone } from "@/lib/home-tasks";
@@ -14,6 +14,10 @@ const ICON: Record<HomeTask["key"], ComponentType<{ className?: string }>> = {
   results: Trophy,
   thanks: Heart,
   quest: Target,
+  idea: Lightbulb,
+  proposal: CalendarPlus,
+  roadmap: Rocket,
+  blocks: LayoutGrid,
 };
 
 /** Icon-Fläche und Fortschrittsfarbe je Ton */
@@ -46,7 +50,8 @@ export default function HomeTaskBar({ tasks, polls, loggedIn }: { tasks: HomeTas
               {coins > 0 && <> · bis zu {coins.toLocaleString("de-DE")} <CoinIcon size={12} /></>}
             </span>
           </div>
-          <ul className="-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0 lg:grid lg:auto-cols-fr lg:grid-flow-col lg:overflow-visible">
+          {/* Bis 4 Kacheln in einer Reihe, ab 5 im Raster (sonst werden die Titel zu stark gekürzt) */}
+          <ul className={`-mx-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:px-0 lg:grid lg:overflow-visible ${tasks.length <= 4 ? "lg:auto-cols-fr lg:grid-flow-col" : "lg:grid-cols-3"}`}>
             {tasks.map((t) => {
               const Icon = ICON[t.key];
               const tone = TONE[t.tone];
