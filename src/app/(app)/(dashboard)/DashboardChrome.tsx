@@ -2,7 +2,7 @@
 import { BackToTop } from "@/components/BackToTop";
 import { CommunityHub } from "@/components/CommunityHub";
 import { GuestGateProvider, GuestBanner } from "@/components/GuestGate";
-import { Sidebar, type SupportProgress } from "@/components/shell/Sidebar";
+import { Sidebar, type SupportView } from "@/components/shell/Sidebar";
 import { TopBar } from "@/components/shell/TopBar";
 import { BottomNav } from "@/components/shell/BottomNav";
 
@@ -27,7 +27,7 @@ export default function DashboardChrome({
   partnerFooter: React.ReactNode;
   isGuest: boolean;
   inviteUrl: string | null;
-  support: SupportProgress | null;
+  support: SupportView;
 }) {
   return (
     <GuestGateProvider isGuest={isGuest} inviteUrl={inviteUrl}>
